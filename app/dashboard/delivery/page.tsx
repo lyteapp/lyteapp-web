@@ -1,9 +1,20 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import dynamic from 'next/dynamic'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import './delivery.css'
+
+const MapView = dynamic(() => import('./MapView'), {
+  ssr: false,
+  loading: () => (
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#E8EEF4', flexDirection: 'column', gap: 10 }}>
+      <div style={{ width: 24, height: 24, borderRadius: '50%', border: '3px solid rgba(124,58,237,0.15)', borderTopColor: '#7C3AED', animation: 'dbSpin 0.8s linear infinite' }} />
+      <span style={{ fontSize: 12, color: '#9CA3AF' }}>Cargando mapa...</span>
+    </div>
+  ),
+})
 
 type Tab = 'live' | 'today' | 'couriers' | 'zones' | 'settlements'
 type DeliveryStatus = 'ready' | 'picked_up' | 'delivered' | 'cancelled'
@@ -427,52 +438,15 @@ export default function DeliveryPage() {
           </div>
 
           {/* ── MAP PANEL ── */}
-          <div className="dv-panel dv-map-panel">
-            <div className="dv-map-bg" />
-            <svg className="dv-map-svg" viewBox="0 0 500 540" preserveAspectRatio="xMidYMid slice">
-              <path d="M 40 80 L 180 110 L 260 200 L 370 240 L 460 320" stroke="#9FAFC2" strokeWidth="6" fill="none" strokeLinecap="round" opacity="0.5"/>
-              <path d="M 20 280 L 140 290 L 220 360 L 360 380 L 480 440" stroke="#9FAFC2" strokeWidth="5" fill="none" strokeLinecap="round" opacity="0.4"/>
-              <path d="M 200 20 L 230 180 L 220 320 L 250 480" stroke="#9FAFC2" strokeWidth="4" fill="none" strokeLinecap="round" opacity="0.4"/>
-              <path d="M 350 20 L 360 180 L 380 320 L 400 500" stroke="#9FAFC2" strokeWidth="4" fill="none" strokeLinecap="round" opacity="0.4"/>
-              <ellipse cx="180" cy="180" rx="60" ry="40" fill="#C4B5FD" opacity="0.18"/>
-              <ellipse cx="380" cy="380" rx="50" ry="35" fill="#A8F0C6" opacity="0.18"/>
-              {inRoute.map((del, i) => {
-                const cx = [320, 120, 400, 80, 200][i % 5]
-                const cy = [160, 320, 420, 200, 380][i % 5]
-                const drv = del.driver as Driver | null
-                const initials = drv ? drv.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : '?'
-                return (
-                  <g key={del.id}>
-                    <circle cx={cx} cy={cy} r="22" fill="#7C3AED" opacity="0.15">
-                      <animate attributeName="r" values="22;26;22" dur="2.4s" repeatCount="indefinite"/>
-                    </circle>
-                    <circle cx={cx} cy={cy} r="14" fill="white" stroke="#4C1D95" strokeWidth="1.5"/>
-                    <text x={cx} y={cy + 4} textAnchor="middle" fontFamily="system-ui" fontSize="10" fontWeight="600" fill="#4C1D95">{initials}</text>
-                  </g>
-                )
-              })}
-              <g>
-                <rect x="225" y="225" width="32" height="32" rx="9" fill="#4C1D95"/>
-                <polygon points="234,233 250,241 234,249" fill="white"/>
-              </g>
-            </svg>
-
-            <div className="dv-map-badge">
-              <span className="dv-live-dot" />
-              <span>Mapa en vivo · {inRoute.length} en ruta</span>
-            </div>
-
-            <div className="dv-map-legend">
-              <div className="dv-legend-title">Leyenda</div>
-              <div className="dv-legend-row"><span className="dv-legend-dot" style={{ background: '#4C1D95' }}/><span>En ruta</span></div>
-              <div className="dv-legend-row"><span className="dv-legend-dot" style={{ background: '#BA7517' }}/><span>Atrasado</span></div>
-              <div className="dv-legend-row"><span className="dv-legend-dot" style={{ background: '#1D9E75' }}/><span>Disponible</span></div>
-            </div>
-
-            <div className="dv-map-controls">
-              <button className="dv-map-ctrl">+</button>
-              <button className="dv-map-ctrl">−</button>
-            </div>
+          <div className="dv-panel dv-map-panel" style={{ position: 'relative' }}>
+            <MapView
+              inRoute={inRoute.map(del => ({
+                id: del.id,
+                customer_name: del.customer_name,
+                driver_name: (del.driver as Driver | null)?.name ?? null,
+                picked_up_at: del.picked_up_at,
+              }))}
+            />
           </div>
 
           {/* ── DETAIL PANEL ── */}

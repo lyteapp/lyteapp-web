@@ -162,6 +162,17 @@ export default function ProductosPage() {
     setVariantImgUploadIdx(null)
   }
 
+  function moveVariant(i: number, dir: -1 | 1) {
+    const j = i + dir
+    setOptColorVariants(arr => {
+      if (j < 0 || j >= arr.length) return arr
+      const next = [...arr];
+      [next[i], next[j]] = [next[j], next[i]]
+      return next
+    })
+    setIsDirty(true)
+  }
+
   async function handleSave() {
     if (!store || !name.trim()) { setError(t('prod.error.name')); return }
     const priceNum = parseFloat(price)
@@ -384,6 +395,10 @@ export default function ProductosPage() {
             <div className="pr-opts-box-body">
               {optColorVariants.map((v, i) => (
                 <div key={i} className="pr-variant-row">
+                  <div className="cat-order-btns">
+                    <button className="cat-order-btn" onClick={() => moveVariant(i, -1)} disabled={i === 0}>▲</button>
+                    <button className="cat-order-btn" onClick={() => moveVariant(i, 1)} disabled={i === optColorVariants.length - 1}>▼</button>
+                  </div>
                   <input
                     type="color"
                     className="pr-variant-color-input"

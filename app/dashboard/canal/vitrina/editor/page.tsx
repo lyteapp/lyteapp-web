@@ -517,7 +517,6 @@ export default function EditorPage() {
         </button>
 
         {/* Backdrop */}
-        {activeTool && <div className="ed-tool-backdrop" onClick={() => setActiveTool(null)} />}
 
         {/* Panel — Color de fondo */}
         {activeTool === 'colors' && (

@@ -126,6 +126,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pageTitles: Record<string, string> = {
     '/dashboard': t('nav.dashboard'),
     '/dashboard/pedidos': t('nav.orders'),
+    '/dashboard/delivery': 'Delivery',
     '/dashboard/productos': t('nav.products'),
     '/dashboard/productos/categorias': 'Categorias',
     '/dashboard/chats': t('nav.chats'),
@@ -184,6 +185,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </Link>
             )
           })}
+
+          {/* Delivery */}
+          <Link
+            href="/dashboard/delivery"
+            className={`db-nav-item${pathname.startsWith('/dashboard/delivery') ? ' active' : ''}`}
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor">
+              <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+              <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1v-1h1a1 1 0 00.9-.561l2-4A1 1 0 0014 9h-3V5a1 1 0 00-1-1H3z" />
+              <path d="M11 5h2.31l-1.5 3H11V5z" />
+            </svg>
+            {t('nav.delivery')}
+          </Link>
 
           {/* Productos (expandable) */}
           <button

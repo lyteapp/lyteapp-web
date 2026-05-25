@@ -393,14 +393,13 @@
 /* ── BOTTOM SAVE BAR ── */
 .pr-bottom-save {
   display: flex; align-items: center; gap: 12px;
-  max-width: 720px; margin-top: 28px;
-  padding: 20px 24px;
-  background: white; border: 1px solid rgba(124,58,237,0.15);
-  border-radius: 16px;
-  position: sticky; bottom: 16px;
-  box-shadow: 0 4px 24px rgba(15,23,42,0.08);
+  padding: 16px 24px;
+  background: white; border-top: 1px solid rgba(124,58,237,0.15);
+  position: fixed; bottom: 0; left: 240px; right: 0;
+  box-shadow: 0 -4px 24px rgba(15,23,42,0.08);
+  z-index: 50;
   opacity: 0; pointer-events: none;
-  transform: translateY(8px);
+  transform: translateY(100%);
   transition: opacity 0.2s, transform 0.2s;
 }
 .pr-bottom-save.pr-bottom-save-visible {
@@ -421,7 +420,7 @@
 }
 .pr-card-save-btn:hover { background: #6D28D9; }
 .pr-save-btn-lg {
-  flex: 1; font-size: 15px; padding: 13px 28px;
+  font-size: 15px; padding: 13px 28px;
 }
 
 /* ── CATEGORIAS PAGE ── */
@@ -517,7 +516,6 @@
   .pr-img-upload { max-width: 200px; margin: 0 auto; }
   .pr-opt-extra-row { flex-wrap: wrap; }
   .pr-opt-add-choice-row { flex-direction: column; align-items: stretch; }
-  .pr-bottom-save { flex-direction: column; position: static; }
-  .pr-bottom-save .pr-cancel-btn,
-  .pr-bottom-save .pr-save-btn-lg { width: 100%; text-align: center; }
+  .pr-bottom-save { left: 0; flex-direction: row; }
+  .pr-bottom-save .pr-save-btn-lg { flex: 1; text-align: center; }
 }

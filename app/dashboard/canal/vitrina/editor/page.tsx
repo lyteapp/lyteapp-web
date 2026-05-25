@@ -166,6 +166,23 @@ export default function EditorPage() {
         --sf-price-color: ${accentColor} !important;
         --sf-price-font: ${font};
       }
+      .sf-nav-name       { font-size: ${(fontSizePx * 1.07).toFixed(1)}px !important; }
+      .sf-store-name     { font-size: ${(fontSizePx * 1.6).toFixed(1)}px !important; }
+      .sf-store-desc     { font-size: ${(fontSizePx * 0.93).toFixed(1)}px !important; }
+      .sf-section-title  { font-size: ${(fontSizePx * 1.2).toFixed(1)}px !important; }
+      .sf-card-name      { font-size: ${(fontSizePx * 0.93).toFixed(1)}px !important; }
+      .sf-card-desc      { font-size: ${(fontSizePx * 0.8).toFixed(1)}px !important; }
+      .sf-card-price     { font-size: ${(fontSizePx * 1.07).toFixed(1)}px !important; }
+      .sf-vit-hero-name  { font-size: ${(fontSizePx * 1.47).toFixed(1)}px !important; }
+      .sf-vit-hero-desc  { font-size: ${(fontSizePx * 0.93).toFixed(1)}px !important; }
+      .sf-vit-hero-price { font-size: ${(fontSizePx * 1.73).toFixed(1)}px !important; }
+      .sf-esc-name       { font-size: ${(fontSizePx * 0.93).toFixed(1)}px !important; }
+      .sf-esc-price      { font-size: ${(fontSizePx * 0.87).toFixed(1)}px !important; }
+      .sf-cat-name       { font-size: ${(fontSizePx * 0.93).toFixed(1)}px !important; }
+      .sf-cat-desc       { font-size: ${(fontSizePx * 0.8).toFixed(1)}px !important; }
+      .sf-cat-price      { font-size: ${fontSizePx}px !important; }
+      .sf-modal-name     { font-size: ${(fontSizePx * 1.13).toFixed(1)}px !important; }
+      .sf-modal-desc     { font-size: ${(fontSizePx * 0.87).toFixed(1)}px !important; }
       .sf-card-price, .sf-esc-price, .sf-cat-price, .sf-vit-hero-price {
         color: ${accentColor} !important;
         font-size: ${prSizeMap[priceSize]} !important;

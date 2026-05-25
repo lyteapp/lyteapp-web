@@ -17,6 +17,7 @@ function PedidoContent() {
   const storeSlug = params.store as string
   const waParam = searchParams.get('wa')
   const orderId = searchParams.get('id')
+  const deliveryId = searchParams.get('delivery')
 
   useEffect(() => {
     if (waParam) {
@@ -35,8 +36,23 @@ function PedidoContent() {
         <h1 className="sf-confirm-title">Pedido confirmado</h1>
         <p className="sf-confirm-sub">
           {orderId ? `Pedido #${orderId} recibido.` : 'Tu pedido fue recibido.'}{' '}
-          Toca el boton para enviarlo por WhatsApp.
+          {waParam ? 'Toca el boton para enviarlo por WhatsApp.' : ''}
         </p>
+        {deliveryId && (
+          <a
+            href={`/delivery/${deliveryId}`}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center',
+              background: '#7C3AED', color: 'white', borderRadius: 12, padding: '13px 20px',
+              textDecoration: 'none', fontWeight: 600, fontSize: 14, marginBottom: 12,
+            }}
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+              <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+            </svg>
+            Rastrear mi pedido
+          </a>
+        )}
         {waParam && (
           <a href={waParam} className="sf-confirm-wa">
             {WA_ICON}

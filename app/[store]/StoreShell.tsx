@@ -107,6 +107,10 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const [submitting, setSubmitting] = useState(false)
   const [error, setError]           = useState('')
   const [orderId, setOrderId]       = useState('')
+  const [deliveryTrackId, setDeliveryTrackId] = useState('')
+  const [locationState, setLocationState] = useState<'idle' | 'requesting' | 'granted' | 'denied'>('idle')
+  const [customerLat, setCustomerLat] = useState<number | null>(null)
+  const [customerLng, setCustomerLng] = useState<number | null>(null)
   const [installPrompt, setInstallPrompt] = useState<Event & { prompt(): void } | null>(null)
   const [showIosHint, setShowIosHint] = useState(false)
   const [isIos, setIsIos]   = useState(false)
@@ -266,6 +270,20 @@ export default function StoreShell({ store, products, categories = [] }: { store
     })
   }
 
+  function requestLocation() {
+    if (!navigator.geolocation) return
+    setLocationState('requesting')
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        setCustomerLat(pos.coords.latitude)
+        setCustomerLng(pos.coords.longitude)
+        setLocationState('granted')
+      },
+      () => setLocationState('denied'),
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }
+
   // ── Order submit ──
   async function handleSubmit() {
     if (!customerName.trim() || !customerPhone.trim()) { setError(t('store.error.required')); return }
@@ -296,6 +314,24 @@ export default function StoreShell({ store, products, categories = [] }: { store
         }))
       )
 
+      // Auto-create delivery record for tracking
+      const newDeliveryId = crypto.randomUUID()
+      await supabase.from('deliveries').insert({
+        id: newDeliveryId,
+        store_id: store.id,
+        order_id: newOrderId,
+        customer_name: customerName.trim(),
+        customer_phone: customerPhone.trim(),
+        delivery_address: '',
+        status: 'ready',
+        driver_fee: 0,
+        fee_paid: false,
+        customer_lat: customerLat,
+        customer_lng: customerLng,
+        is_customer_order: true,
+      })
+      setDeliveryTrackId(newDeliveryId)
+
       // Comanda lines
       const lines: string[] = [
         `*Comanda #${newOrderId.slice(0, 8).toUpperCase()}*`,
@@ -315,6 +351,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
         }),
         '', `*Total: $${cartTotal.toFixed(2)}*`,
         ...(customerNotes ? ['', `*Notas:* ${customerNotes}`] : []),
+        ...(newDeliveryId ? ['', `Rastrea tu pedido: https://lyte-app.com/delivery/${newDeliveryId}`] : []),
       ]
 
       const shortId = newOrderId.slice(0, 8).toUpperCase()
@@ -322,7 +359,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
 
       if (store.whatsapp) {
         const num = store.whatsapp.replace(/\D/g, '')
-        router.push(`/${store.slug}/pedido?id=${shortId}&wa=${encodeURIComponent(`whatsapp://send?phone=${num}&text=${encodeURIComponent(lines.join('\n'))}`)}`)
+        router.push(`/${store.slug}/pedido?id=${shortId}&delivery=${newDeliveryId}&wa=${encodeURIComponent(`whatsapp://send?phone=${num}&text=${encodeURIComponent(lines.join('\n'))}`)}`)
       } else {
         setView('confirmed')
       }
@@ -339,7 +376,22 @@ export default function StoreShell({ store, products, categories = [] }: { store
         <div className="sf-confirm-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 32, height: 32 }}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg></div>
         <h1 className="sf-confirm-title">{t('store.confirmed.title')}</h1>
         <p className="sf-confirm-sub">{t('store.confirmed.sub', { id: orderId })}</p>
-        <button className="sf-confirm-btn" onClick={() => { setView('catalog'); setCustomerName(''); setCustomerPhone(''); setCustomerNotes(''); setSelectedPayment(''); setPaymentFreeText('') }}>
+        {deliveryTrackId && (
+          <a
+            href={`/delivery/${deliveryTrackId}`}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center',
+              background: '#7C3AED', color: 'white', borderRadius: 12, padding: '13px 20px',
+              textDecoration: 'none', fontWeight: 600, fontSize: 14, marginBottom: 12,
+            }}
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+              <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+            </svg>
+            Rastrear mi pedido
+          </a>
+        )}
+        <button className="sf-confirm-btn" onClick={() => { setView('catalog'); setCustomerName(''); setCustomerPhone(''); setCustomerNotes(''); setSelectedPayment(''); setPaymentFreeText(''); setDeliveryTrackId(''); setLocationState('idle') }}>
           {t('store.confirmed.continue')}
         </button>
         <Link href="/" className="sf-confirm-link">{t('store.confirmed.link')}</Link>
@@ -458,6 +510,47 @@ export default function StoreShell({ store, products, categories = [] }: { store
             </div>
           )}
         </div>
+
+        {/* Location permission card */}
+        {locationState === 'idle' && (
+          <div style={{ background: '#F5F3EF', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 4 }}>
+            <svg viewBox="0 0 20 20" fill="#7C3AED" width="20" height="20" style={{ flexShrink: 0, marginTop: 1 }}>
+              <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+            </svg>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', marginBottom: 2 }}>Rastreo en tiempo real</div>
+              <div style={{ fontSize: 12, color: '#64748B', marginBottom: 10, lineHeight: 1.4 }}>Comparte tu ubicacion para recibir un link y ver como viene tu pedido.</div>
+              <button
+                onClick={requestLocation}
+                style={{ background: '#7C3AED', color: 'white', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+              >
+                Compartir ubicacion
+              </button>
+            </div>
+          </div>
+        )}
+        {locationState === 'requesting' && (
+          <div style={{ background: '#F5F3EF', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <div style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid rgba(124,58,237,0.2)', borderTopColor: '#7C3AED', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+            <span style={{ fontSize: 12, color: '#64748B' }}>Obteniendo ubicacion...</span>
+          </div>
+        )}
+        {locationState === 'granted' && (
+          <div style={{ background: '#ECFDF5', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <svg viewBox="0 0 20 20" fill="#10B981" width="16" height="16" style={{ flexShrink: 0 }}>
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+            </svg>
+            <span style={{ fontSize: 12, color: '#065F46', fontWeight: 500 }}>Ubicacion compartida. Recibiras un link de rastreo.</span>
+          </div>
+        )}
+        {locationState === 'denied' && (
+          <div style={{ background: '#FFF7ED', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <svg viewBox="0 0 20 20" fill="#F59E0B" width="16" height="16" style={{ flexShrink: 0 }}>
+              <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+            </svg>
+            <span style={{ fontSize: 12, color: '#92400E' }}>Sin ubicacion. Tu pedido se procesara igual.</span>
+          </div>
+        )}
 
         {error && <div className="sf-co-error">{error}</div>}
         <button className="sf-submit-btn" onClick={handleSubmit} disabled={submitting || cartItems.length === 0}>

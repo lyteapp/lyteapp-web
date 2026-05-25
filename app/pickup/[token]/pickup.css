@@ -1,0 +1,123 @@
+.pk-wrap {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #F5F3EF;
+  padding: 24px 20px;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.pk-card {
+  background: white;
+  border-radius: 20px;
+  padding: 32px 28px;
+  max-width: 360px;
+  width: 100%;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  text-align: center;
+}
+
+.pk-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.pk-icon.success  { background: #D1FAE5; }
+.pk-icon.loading  { background: #EDE9FE; }
+.pk-icon.error    { background: #FEE2E2; }
+.pk-icon.already  { background: #DBEAFE; }
+
+.pk-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0 0 8px;
+}
+
+.pk-sub {
+  font-size: 14px;
+  color: #64748B;
+  margin: 0 0 28px;
+  line-height: 1.5;
+}
+
+.pk-name {
+  font-size: 22px;
+  font-weight: 800;
+  color: #4C1D95;
+  margin: 0 0 24px;
+}
+
+.pk-deliver-btn {
+  width: 100%;
+  background: #1D9E75;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.pk-deliver-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.pk-spinner {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  animation: pkSpin 0.7s linear infinite;
+}
+
+.pk-spinner-lg {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 3px solid rgba(124,58,237,0.15);
+  border-top-color: #7C3AED;
+  animation: pkSpin 0.8s linear infinite;
+}
+
+@keyframes pkSpin {
+  to { transform: rotate(360deg); }
+}
+
+.pk-footer {
+  margin-top: 24px;
+  font-size: 12px;
+  color: #94A3B8;
+}
+
+.pk-footer a {
+  color: #7C3AED;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.pk-track-link {
+  display: block;
+  margin-top: 16px;
+  padding: 12px;
+  background: #F5F3EF;
+  border-radius: 10px;
+  font-size: 13px;
+  color: #7C3AED;
+  text-decoration: none;
+  font-weight: 500;
+}

@@ -120,7 +120,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const [modalAdditionals, setModalAdditionals] = useState<Set<number>>(new Set())
   const [modalNotes, setModalNotes]           = useState('')
   const [modalQty, setModalQty]               = useState(1)
-  const [lightboxImg, setLightboxImg]         = useState<string | null>(null)
+  const [lightbox, setLightbox] = useState<{ images: string[]; idx: number } | null>(null)
   const touchStartX = useRef<number>(0)
   const swipedRef   = useRef<boolean>(false)
 
@@ -467,7 +467,11 @@ export default function StoreShell({ store, products, categories = [] }: { store
 
             <div className="sf-modal-product-head">
               {modalDisplayImage && (
-                <img src={modalDisplayImage} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" onClick={() => setLightboxImg(modalDisplayImage)} />
+                <img src={modalDisplayImage} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" onClick={() => {
+                  const cvs = modalProduct.options?.colorVariants
+                  const imgs = cvs?.length ? cvs.map(v => v.imageUrl).filter(Boolean) as string[] : [modalDisplayImage!]
+                  setLightbox({ images: imgs, idx: cvs?.length ? Math.max(0, cvs.findIndex(v => v.label === modalColor)) : 0 })
+                }} />
               )}
               <div className="sf-modal-product-info">
                 <div className="sf-modal-name">{modalProduct.name}</div>
@@ -579,10 +583,38 @@ export default function StoreShell({ store, products, categories = [] }: { store
         </div>
       )}
 
-      {lightboxImg && (
-        <div className="sf-lightbox" onClick={() => setLightboxImg(null)}>
-          <button className="sf-lightbox-close" onClick={() => setLightboxImg(null)}>×</button>
-          <img src={lightboxImg} alt="" className="sf-lightbox-img" onClick={e => e.stopPropagation()} />
+      {lightbox && (
+        <div className="sf-lightbox" onClick={() => setLightbox(null)}>
+          <button className="sf-lightbox-close" onClick={() => setLightbox(null)}>×</button>
+          <div
+            className="sf-lightbox-viewport"
+            onTouchStart={lightbox.images.length > 1 ? e => { touchStartX.current = e.touches[0].clientX; swipedRef.current = false } : undefined}
+            onTouchMove={lightbox.images.length > 1 ? e => { if (Math.abs(e.touches[0].clientX - touchStartX.current) > 10) e.stopPropagation() } : undefined}
+            onTouchEnd={lightbox.images.length > 1 ? e => {
+              const dx = (e.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current
+              if (Math.abs(dx) > 40) {
+                swipedRef.current = true
+                const next = dx < 0 ? Math.min(lightbox.images.length - 1, lightbox.idx + 1) : Math.max(0, lightbox.idx - 1)
+                setLightbox(lb => lb ? { ...lb, idx: next } : null)
+              }
+            } : undefined}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="sf-lightbox-strip" style={{ width: `${lightbox.images.length * 100}%`, transform: `translateX(-${lightbox.idx * (100 / lightbox.images.length)}%)` }}>
+              {lightbox.images.map((img, i) => (
+                <div key={i} className="sf-lightbox-frame" style={{ width: `${100 / lightbox.images.length}%` }}>
+                  <img src={img} alt="" className="sf-lightbox-img" />
+                </div>
+              ))}
+            </div>
+          </div>
+          {lightbox.images.length > 1 && (
+            <div className="sf-lightbox-dots">
+              {lightbox.images.map((_, i) => (
+                <div key={i} className={`sf-slide-dot${lightbox.idx === i ? ' on' : ''}`} />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -644,10 +676,19 @@ export default function StoreShell({ store, products, categories = [] }: { store
           } : undefined}
           onClick={e => { if (swipedRef.current) { e.stopPropagation(); swipedRef.current = false } }}
         >
-          {displayImg
-            ? <img src={displayImg} alt={product.name} className="sf-card-img" />
-            : <div className="sf-card-img-empty">{PLACEHOLDER}</div>
-          }
+          {variants?.length ? (
+            <div className="sf-slide-strip" style={{ width: `${variants.length * 100}%`, transform: `translateX(-${(selIdx ?? 0) * (100 / variants.length)}%)` }}>
+              {variants.map((v, i) => (
+                <div key={i} className="sf-slide-frame" style={{ width: `${100 / variants.length}%` }}>
+                  {v.imageUrl ? <img src={v.imageUrl} alt={product.name} className="sf-card-img" /> : <div className="sf-card-img-empty">{PLACEHOLDER}</div>}
+                </div>
+              ))}
+            </div>
+          ) : displayImg ? (
+            <img src={displayImg} alt={product.name} className="sf-card-img" />
+          ) : (
+            <div className="sf-card-img-empty">{PLACEHOLDER}</div>
+          )}
           {qty > 0 && <div className="sf-card-badge">{qty}</div>}
           {(variants?.length ?? 0) > 1 && (
             <div className="sf-slide-dots">
@@ -700,9 +741,19 @@ export default function StoreShell({ store, products, categories = [] }: { store
           } : undefined}
           onClick={e => { if (swipedRef.current) { e.stopPropagation(); swipedRef.current = false } }}
         >
-          {displayImg
-            ? <img src={displayImg} alt={product.name} className="sf-esc-img" />
-            : <div className="sf-esc-img sf-esc-img-empty">{PLACEHOLDER}</div>}
+          {variants?.length ? (
+            <div className="sf-slide-strip" style={{ width: `${variants.length * 100}%`, transform: `translateX(-${(selIdx ?? 0) * (100 / variants.length)}%)` }}>
+              {variants.map((v, i) => (
+                <div key={i} className="sf-slide-frame" style={{ width: `${100 / variants.length}%` }}>
+                  {v.imageUrl ? <img src={v.imageUrl} alt={product.name} className="sf-esc-img" /> : <div className="sf-esc-img sf-esc-img-empty">{PLACEHOLDER}</div>}
+                </div>
+              ))}
+            </div>
+          ) : displayImg ? (
+            <img src={displayImg} alt={product.name} className="sf-esc-img" />
+          ) : (
+            <div className="sf-esc-img sf-esc-img-empty">{PLACEHOLDER}</div>
+          )}
           {getProdQty(product.id) > 0 && <div className="sf-card-badge">{getProdQty(product.id)}</div>}
           {(variants?.length ?? 0) > 1 && (
             <div className="sf-slide-dots">
@@ -752,9 +803,19 @@ export default function StoreShell({ store, products, categories = [] }: { store
           } : undefined}
           onClick={e => { if (swipedRef.current) { e.stopPropagation(); swipedRef.current = false } }}
         >
-          {displayImg
-            ? <img src={displayImg} alt={product.name} className="sf-cat-img" />
-            : <div className="sf-cat-img sf-cat-img-empty">{PLACEHOLDER}</div>}
+          {variants?.length ? (
+            <div className="sf-slide-strip" style={{ width: `${variants.length * 100}%`, transform: `translateX(-${(selIdx ?? 0) * (100 / variants.length)}%)` }}>
+              {variants.map((v, i) => (
+                <div key={i} className="sf-slide-frame" style={{ width: `${100 / variants.length}%` }}>
+                  {v.imageUrl ? <img src={v.imageUrl} alt={product.name} className="sf-cat-img" /> : <div className="sf-cat-img sf-cat-img-empty">{PLACEHOLDER}</div>}
+                </div>
+              ))}
+            </div>
+          ) : displayImg ? (
+            <img src={displayImg} alt={product.name} className="sf-cat-img" />
+          ) : (
+            <div className="sf-cat-img sf-cat-img-empty">{PLACEHOLDER}</div>
+          )}
           {getProdQty(product.id) > 0 && <div className="sf-card-badge">{getProdQty(product.id)}</div>}
           {(variants?.length ?? 0) > 1 && (
             <div className="sf-slide-dots">
@@ -989,7 +1050,11 @@ export default function StoreShell({ store, products, categories = [] }: { store
 
             <div className="sf-modal-product-head">
               {modalDisplayImage && (
-                <img src={modalDisplayImage} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" onClick={() => setLightboxImg(modalDisplayImage)} />
+                <img src={modalDisplayImage} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" onClick={() => {
+                  const cvs = modalProduct.options?.colorVariants
+                  const imgs = cvs?.length ? cvs.map(v => v.imageUrl).filter(Boolean) as string[] : [modalDisplayImage!]
+                  setLightbox({ images: imgs, idx: cvs?.length ? Math.max(0, cvs.findIndex(v => v.label === modalColor)) : 0 })
+                }} />
               )}
               <div className="sf-modal-product-info">
                 <div className="sf-modal-name">{modalProduct.name}</div>
@@ -1101,10 +1166,38 @@ export default function StoreShell({ store, products, categories = [] }: { store
         </div>
       )}
 
-      {lightboxImg && (
-        <div className="sf-lightbox" onClick={() => setLightboxImg(null)}>
-          <button className="sf-lightbox-close" onClick={() => setLightboxImg(null)}>×</button>
-          <img src={lightboxImg} alt="" className="sf-lightbox-img" onClick={e => e.stopPropagation()} />
+      {lightbox && (
+        <div className="sf-lightbox" onClick={() => setLightbox(null)}>
+          <button className="sf-lightbox-close" onClick={() => setLightbox(null)}>×</button>
+          <div
+            className="sf-lightbox-viewport"
+            onTouchStart={lightbox.images.length > 1 ? e => { touchStartX.current = e.touches[0].clientX; swipedRef.current = false } : undefined}
+            onTouchMove={lightbox.images.length > 1 ? e => { if (Math.abs(e.touches[0].clientX - touchStartX.current) > 10) e.stopPropagation() } : undefined}
+            onTouchEnd={lightbox.images.length > 1 ? e => {
+              const dx = (e.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current
+              if (Math.abs(dx) > 40) {
+                swipedRef.current = true
+                const next = dx < 0 ? Math.min(lightbox.images.length - 1, lightbox.idx + 1) : Math.max(0, lightbox.idx - 1)
+                setLightbox(lb => lb ? { ...lb, idx: next } : null)
+              }
+            } : undefined}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="sf-lightbox-strip" style={{ width: `${lightbox.images.length * 100}%`, transform: `translateX(-${lightbox.idx * (100 / lightbox.images.length)}%)` }}>
+              {lightbox.images.map((img, i) => (
+                <div key={i} className="sf-lightbox-frame" style={{ width: `${100 / lightbox.images.length}%` }}>
+                  <img src={img} alt="" className="sf-lightbox-img" />
+                </div>
+              ))}
+            </div>
+          </div>
+          {lightbox.images.length > 1 && (
+            <div className="sf-lightbox-dots">
+              {lightbox.images.map((_, i) => (
+                <div key={i} className={`sf-slide-dot${lightbox.idx === i ? ' on' : ''}`} />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -339,3 +339,44 @@
 .pd-comanda-btn.ready    { border-color: rgba(22,163,74,0.35);   color: #86EFAC; }
 .pd-comanda-btn.complete { border-color: rgba(22,163,74,0.35);   color: #86EFAC; background: rgba(22,163,74,0.12); }
 .pd-comanda-btn.wa       { border-color: rgba(37,211,102,0.25);  color: #86EFAC; }
+
+/* ── MOBILE PORTRAIT ── */
+@media (max-width: 600px) {
+  .pd-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .pd-header-left { display: none; }
+  .pd-filters {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 6px;
+    padding-bottom: 2px;
+  }
+  .pd-filters::-webkit-scrollbar { display: none; }
+  .pd-filter-btn {
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+  .pd-display-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 14px;
+    border-radius: 12px;
+    font-size: 15px;
+    gap: 8px;
+  }
+}
+
+/* ── MOBILE LANDSCAPE ── */
+@media (orientation: landscape) and (max-height: 500px) {
+  .pd-header-left { display: none; }
+  .pd-filters { flex-wrap: wrap; }
+  .pd-filter-btn { padding: 5px 12px; font-size: 11px; }
+}

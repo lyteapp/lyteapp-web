@@ -599,29 +599,33 @@ export default function StoreShell({ store, products, categories = [] }: { store
 
   const renderEscRow = (product: Product) => (
     <div key={product.id} className="sf-esc-row" onClick={() => openProductModal(product)}>
-      {product.image_url
-        ? <img src={product.image_url} alt={product.name} className="sf-esc-img" />
-        : <div className="sf-esc-img sf-esc-img-empty">{PLACEHOLDER}</div>}
+      <div className="sf-esc-img-wrap">
+        {product.image_url
+          ? <img src={product.image_url} alt={product.name} className="sf-esc-img" />
+          : <div className="sf-esc-img sf-esc-img-empty">{PLACEHOLDER}</div>}
+        {cart[product.id] && <div className="sf-card-badge">{cart[product.id].quantity}</div>}
+      </div>
       <div className="sf-esc-info">
         <div className="sf-esc-name">{product.name}</div>
         <div className="sf-esc-price">${Number(product.price).toFixed(2)}</div>
       </div>
-      {cart[product.id] && <div className="sf-card-badge">{cart[product.id].quantity}</div>}
     </div>
   )
 
   const renderCatRow = (product: Product) => (
     <div key={product.id} className="sf-cat-card" onClick={() => openProductModal(product)}>
-      {product.image_url
-        ? <img src={product.image_url} alt={product.name} className="sf-cat-img" />
-        : <div className="sf-cat-img sf-cat-img-empty">{PLACEHOLDER}</div>}
+      <div className="sf-cat-img-wrap">
+        {product.image_url
+          ? <img src={product.image_url} alt={product.name} className="sf-cat-img" />
+          : <div className="sf-cat-img sf-cat-img-empty">{PLACEHOLDER}</div>}
+        {cart[product.id] && <div className="sf-card-badge">{cart[product.id].quantity}</div>}
+      </div>
       <div className="sf-cat-info">
         <div className="sf-cat-name">{product.name}</div>
         {product.description && <div className="sf-cat-desc">{product.description}</div>}
       </div>
       <div className="sf-cat-action">
         <div className="sf-cat-price">${Number(product.price).toFixed(2)}</div>
-        {cart[product.id] && <div className="sf-card-badge">{cart[product.id].quantity}</div>}
       </div>
     </div>
   )

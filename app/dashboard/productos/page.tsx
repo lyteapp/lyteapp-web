@@ -46,6 +46,8 @@ export default function ProductosPage() {
   const [error, setError]           = useState('')
   const [categories, setCategories] = useState<Category[]>([])
   const [categoryId, setCategoryId] = useState<string>('')
+  const [isDirty, setIsDirty]       = useState(false)
+  const [pendingToggles, setPendingToggles] = useState<Record<string, boolean>>({})
 
   // options state
   const [optVariables, setOptVariables]     = useState<VariableGroup[]>([])
@@ -84,7 +86,7 @@ export default function ProductosPage() {
     setEditing(null)
     setName(''); setDescription(''); setPrice('')
     setIsActive(true); setImageUrl(''); setError('')
-    setCategoryId('')
+    setCategoryId(''); setIsDirty(false)
     resetOpts(); setMode('form')
   }
 
@@ -93,7 +95,7 @@ export default function ProductosPage() {
     setName(p.name); setDescription(p.description ?? '')
     setPrice(String(p.price)); setIsActive(p.is_active)
     setImageUrl(p.image_url ?? ''); setError('')
-    setCategoryId(p.category_id ?? '')
+    setCategoryId(p.category_id ?? ''); setIsDirty(false)
     const opts = p.options ?? {}
     setOptVariables(opts.variables ?? [])
     setOptColors(opts.colors ?? [])
@@ -162,7 +164,7 @@ export default function ProductosPage() {
       : await supabase.from('products').insert(payload)
 
     if (err) setError(err.message)
-    else { await loadData(); setMode('list') }
+    else { await loadData(); setMode('list'); setIsDirty(false) }
     setSaving(false)
   }
 
@@ -172,9 +174,16 @@ export default function ProductosPage() {
     setProducts(p => p.filter(x => x.id !== id))
   }
 
-  async function toggleActive(p: Product) {
-    await supabase.from('products').update({ is_active: !p.is_active }).eq('id', p.id)
-    setProducts(prev => prev.map(x => x.id === p.id ? { ...x, is_active: !x.is_active } : x))
+  function toggleActive(p: Product) {
+    const current = pendingToggles[p.id] ?? p.is_active
+    setPendingToggles(prev => ({ ...prev, [p.id]: !current }))
+  }
+
+  async function savePendingToggle(p: Product) {
+    const newVal = pendingToggles[p.id] ?? p.is_active
+    await supabase.from('products').update({ is_active: newVal }).eq('id', p.id)
+    setProducts(prev => prev.map(x => x.id === p.id ? { ...x, is_active: newVal } : x))
+    setPendingToggles(prev => { const n = { ...prev }; delete n[p.id]; return n })
   }
 
   if (loading) return <div className="pr-spinner-wrap"><div className="pr-spinner" /></div>
@@ -225,12 +234,12 @@ export default function ProductosPage() {
           <div className="pr-field">
             <label className="pr-label">{t('prod.name.label')}</label>
             <input type="text" className="pr-input" placeholder={t('prod.name.placeholder')}
-              value={name} onChange={e => setName(e.target.value)} />
+              value={name} onChange={e => { setName(e.target.value); setIsDirty(true) }} />
           </div>
           <div className="pr-field">
             <label className="pr-label">{t('prod.desc.label')}</label>
             <textarea className="pr-textarea" placeholder={t('prod.desc.placeholder')} rows={3}
-              value={description} onChange={e => setDescription(e.target.value)} />
+              value={description} onChange={e => { setDescription(e.target.value); setIsDirty(true) }} />
           </div>
           {categories.length > 0 && (
             <div className="pr-field">
@@ -238,7 +247,7 @@ export default function ProductosPage() {
               <select
                 className="pr-select"
                 value={categoryId}
-                onChange={e => setCategoryId(e.target.value)}
+                onChange={e => { setCategoryId(e.target.value); setIsDirty(true) }}
               >
                 <option value="">Sin categoria</option>
                 {categories.map(cat => (
@@ -254,12 +263,12 @@ export default function ProductosPage() {
               <div className="pr-prefix-wrap">
                 <span className="pr-prefix">$</span>
                 <input type="number" className="pr-prefix-input" placeholder="0.00" min="0" step="0.01"
-                  value={price} onChange={e => setPrice(e.target.value)} />
+                  value={price} onChange={e => { setPrice(e.target.value); setIsDirty(true) }} />
               </div>
             </div>
             <div className="pr-field">
               <label className="pr-label">{t('prod.visible.label')}</label>
-              <div className="pr-toggle-row" onClick={() => setIsActive(a => !a)}>
+              <div className="pr-toggle-row" onClick={() => { setIsActive(a => !a); setIsDirty(true) }}>
                 <div className={`pr-toggle ${isActive ? 'on' : ''}`}><div className="pr-toggle-knob" /></div>
                 <span className="pr-toggle-lbl">{isActive ? t('prod.status.active') : t('prod.status.inactive')}</span>
               </div>
@@ -418,7 +427,7 @@ export default function ProductosPage() {
 
       {/* ── BOTTOM SAVE BAR ── */}
       {error && <div className="pr-error" style={{ maxWidth: 720 }}>{error}</div>}
-      <div className="pr-bottom-save">
+      <div className={`pr-bottom-save${isDirty ? ' pr-bottom-save-visible' : ''}`}>
         <button className="pr-cancel-btn" onClick={() => setMode('list')}>{t('prod.cancel')}</button>
         <button className="pr-save-btn pr-save-btn-lg" onClick={handleSave} disabled={saving || imgUploading}>
           {saving ? t('prod.saving') : 'Guardar producto'}
@@ -461,8 +470,10 @@ export default function ProductosPage() {
         <div className="pr-list">
           {products.map(p => {
             const hasOpts = !!(p.options?.variables?.length || p.options?.colors?.length || p.options?.additionals?.length || p.options?.allowNotes)
+            const hasPending = p.id in pendingToggles
+            const displayActive = hasPending ? pendingToggles[p.id] : p.is_active
             return (
-              <div key={p.id} className="pr-card" onClick={() => openEdit(p)}>
+              <div key={p.id} className={`pr-card${hasPending ? ' pr-card-pending' : ''}`} onClick={() => openEdit(p)}>
                 <div className="pr-card-img-wrap">
                   {p.image_url
                     ? <img src={p.image_url} alt={p.name} className="pr-card-img" />
@@ -481,8 +492,13 @@ export default function ProductosPage() {
                   </div>
                 </div>
                 <div className="pr-card-right" onClick={e => e.stopPropagation()}>
-                  <div className={`pr-pill ${p.is_active ? 'active' : 'inactive'}`} onClick={() => toggleActive(p)}>
-                    {p.is_active ? t('prod.status.active') : t('prod.status.inactive')}
+                  {hasPending && (
+                    <button className="pr-card-save-btn" onClick={() => savePendingToggle(p)}>
+                      Guardar
+                    </button>
+                  )}
+                  <div className={`pr-pill ${displayActive ? 'active' : 'inactive'}`} onClick={() => toggleActive(p)}>
+                    {displayActive ? t('prod.status.active') : t('prod.status.inactive')}
                   </div>
                   <button className="pr-del-btn" onClick={() => handleDelete(p.id)}>✕</button>
                 </div>

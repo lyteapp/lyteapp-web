@@ -395,11 +395,31 @@
   display: flex; align-items: center; gap: 12px;
   max-width: 720px; margin-top: 28px;
   padding: 20px 24px;
-  background: white; border: 1px solid rgba(15,23,42,0.08);
+  background: white; border: 1px solid rgba(124,58,237,0.15);
   border-radius: 16px;
   position: sticky; bottom: 16px;
   box-shadow: 0 4px 24px rgba(15,23,42,0.08);
+  opacity: 0; pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity 0.2s, transform 0.2s;
 }
+.pr-bottom-save.pr-bottom-save-visible {
+  opacity: 1; pointer-events: all;
+  transform: translateY(0);
+}
+
+.pr-card-pending {
+  border-color: rgba(124,58,237,0.3);
+  box-shadow: 0 0 0 3px rgba(124,58,237,0.08);
+}
+.pr-card-save-btn {
+  font-size: 12px; font-weight: 700;
+  padding: 6px 14px; border-radius: 8px;
+  background: #7C3AED; color: white; border: none;
+  cursor: pointer; font-family: var(--font-geist-sans), sans-serif;
+  transition: background 0.15s;
+}
+.pr-card-save-btn:hover { background: #6D28D9; }
 .pr-save-btn-lg {
   flex: 1; font-size: 15px; padding: 13px 28px;
 }

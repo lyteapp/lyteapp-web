@@ -55,7 +55,6 @@
 }
 .pr-card-price {
   font-size: 14px; font-weight: 700; color: #7C3AED;
-  font-family: var(--font-geist-mono), monospace;
 }
 
 .pr-card-right {
@@ -181,7 +180,6 @@
 .pr-prefix-input {
   flex: 1; border: none; outline: none; background: transparent;
   padding: 12px 14px 12px 0; font-size: 14px; color: #0F172A;
-  font-family: var(--font-geist-mono), monospace;
 }
 .pr-prefix-input::placeholder { color: #94A3B8; }
 
@@ -379,7 +377,7 @@
 .pr-opt-extra-price {
   flex: 1; border: none; outline: none; background: transparent;
   padding: 9px 10px 9px 0; font-size: 13px; color: #0F172A;
-  font-family: var(--font-geist-mono), monospace; width: 0;
+  width: 0;
 }
 .pr-opt-del {
   width: 30px; height: 30px; border-radius: 8px;

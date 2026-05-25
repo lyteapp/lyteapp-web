@@ -687,8 +687,10 @@ html, body { overflow-x: hidden; }
   padding: 0 4px 12px;
 }
 .sf-pshape-circle .sf-card:hover     { box-shadow: none; border-color: transparent; }
-.sf-pshape-circle .sf-card-img-wrap  { border-radius: 50%; overflow: hidden; }
+.sf-pshape-circle .sf-card-img-wrap  { border-radius: 50%; overflow: visible; }
 .sf-pshape-circle .sf-card-img       { border-radius: 50%; }
+.sf-pshape-circle .sf-card-img-empty { border-radius: 50%; overflow: hidden; }
+.sf-pshape-circle .sf-card-badge     { top: 12%; right: 12%; }
 .sf-pshape-circle .sf-card-body      { padding: 10px 4px 0; text-align: center; }
 .sf-pshape-circle .sf-card-footer    { justify-content: center; }
 

@@ -28,7 +28,7 @@ type SelectedOptions = {
   notes?:       string
 }
 type CartItem = {
-  id: string; name: string; price: number; extraPrice: number
+  id: string; productId?: string; name: string; price: number; extraPrice: number
   image_url: string | null; quantity: number
   options?: ProductOptions; selectedOptions?: SelectedOptions
 }
@@ -74,13 +74,12 @@ type Store = {
   template_config?: TemplateConfig | null
 }
 
-function hasOptions(p: Product): boolean {
-  return !!(
-    p.options?.variables?.some(g => g.choices.length > 0) ||
-    (p.options?.colors?.length ?? 0) > 0 ||
-    (p.options?.additionals?.length ?? 0) > 0 ||
-    p.options?.allowNotes
-  )
+
+function buildCartKey(productId: string, color?: string, variables?: Record<string, string>): string {
+  const parts = [productId]
+  if (color) parts.push(color)
+  if (variables) Object.entries(variables).sort(([a],[b]) => a.localeCompare(b)).forEach(([k,v]) => parts.push(`${k}:${v}`))
+  return parts.join('|||')
 }
 
 const WA_ICON = (
@@ -166,6 +165,10 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const cartItems  = Object.values(cart).filter(i => i.quantity > 0)
   const cartCount  = cartItems.reduce((s, i) => s + i.quantity, 0)
   const cartTotal  = cartItems.reduce((s, i) => s + (i.price + i.extraPrice) * i.quantity, 0)
+
+  function getProdQty(productId: string): number {
+    return Object.values(cart).filter(i => (i.productId ?? i.id) === productId).reduce((s, i) => s + i.quantity, 0)
+  }
   const enabledMethods = parsePaymentMethods(store.payment_methods)
   const showInstallBtn = !installed && (isIos || !!installPrompt)
 
@@ -204,25 +207,16 @@ export default function StoreShell({ store, products, categories = [] }: { store
 
   // ── Modal helpers ──
   function openProductModal(p: Product) {
-    const existing = cart[p.id]
     setModalProduct(p)
-    setModalVars(existing?.selectedOptions?.variables ?? {})
-    let initialColor = existing?.selectedOptions?.color
-    if (!initialColor && p.options?.colorVariants?.length) {
-      const idx = selectedVariants[p.id]
-      initialColor = idx !== undefined
-        ? (p.options.colorVariants[idx]?.label ?? p.options.colorVariants[0]?.label)
-        : p.options.colorVariants[0]?.label
+    setModalVars({})
+    let initialColor: string | undefined
+    if (p.options?.colorVariants?.length) {
+      initialColor = p.options.colorVariants[0]?.label
     }
     setModalColor(initialColor)
-    const existingAdds = existing?.selectedOptions?.additionals ?? []
-    const addIdxs = new Set<number>()
-    p.options?.additionals?.forEach((a, i) => {
-      if (existingAdds.some(ea => ea.name === a.name)) addIdxs.add(i)
-    })
-    setModalAdditionals(addIdxs)
-    setModalNotes(existing?.selectedOptions?.notes ?? '')
-    setModalQty(existing?.quantity ?? 1)
+    setModalAdditionals(new Set())
+    setModalNotes('')
+    setModalQty(1)
   }
 
   function confirmModal() {
@@ -232,12 +226,14 @@ export default function StoreShell({ store, products, categories = [] }: { store
     const variantImage = modalColor && modalProduct.options?.colorVariants?.length
       ? (modalProduct.options.colorVariants.find(v => v.label === modalColor)?.imageUrl ?? null)
       : null
-    setCart(prev => ({
-      ...prev,
-      [modalProduct.id]: {
-        id: modalProduct.id, name: modalProduct.name,
+    const newKey = buildCartKey(modalProduct.id, modalColor, Object.keys(modalVars).length ? modalVars : undefined)
+    setCart(prev => {
+      const next = { ...prev }
+      const baseQty = next[newKey]?.quantity ?? 0
+      next[newKey] = {
+        id: newKey, productId: modalProduct.id, name: modalProduct.name,
         price: modalProduct.price, extraPrice,
-        image_url: variantImage ?? modalProduct.image_url, quantity: modalQty,
+        image_url: variantImage ?? modalProduct.image_url, quantity: baseQty + modalQty,
         options: modalProduct.options ?? undefined,
         selectedOptions: {
           variables:   Object.keys(modalVars).length ? modalVars : undefined,
@@ -246,12 +242,8 @@ export default function StoreShell({ store, products, categories = [] }: { store
           notes:       modalNotes.trim() || undefined,
         },
       }
-    }))
-    setModalProduct(null)
-  }
-
-  function removeFromCart(id: string) {
-    setCart(prev => { const { [id]: _, ...rest } = prev; return rest })
+      return next
+    })
     setModalProduct(null)
   }
 
@@ -287,7 +279,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
 
       await supabase.from('order_items').insert(
         cartItems.map(i => ({
-          order_id: newOrderId, product_id: i.id,
+          order_id: newOrderId, product_id: i.productId ?? i.id,
           product_name: i.name, product_price: i.price,
           quantity: i.quantity,
           subtotal: +((i.price + i.extraPrice) * i.quantity).toFixed(2),
@@ -357,6 +349,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
         : modalProduct.image_url)
     : null
 
+
   // ── CHECKOUT ──
   if (view === 'checkout') return (
     <div className={`sf-page sf-tpl-${store.template ?? 'clasico'} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize}`} style={pageStyle}>
@@ -400,17 +393,11 @@ export default function StoreShell({ store, products, categories = [] }: { store
                 )}
                 <div className="sf-co-price">${((item.price + item.extraPrice) * item.quantity).toFixed(2)}</div>
               </div>
-              {hasOptions({ id: item.id, name: item.name, price: item.price, description: null, image_url: item.image_url, options: item.options }) ? (
-                <button className="sf-co-edit-btn" onClick={() => openProductModal({ id: item.id, name: item.name, price: item.price, description: null, image_url: item.image_url, options: item.options })}>
-                  Editar
-                </button>
-              ) : (
-                <div className="sf-qty">
-                  <button onClick={() => updateQty(item.id, -1)}>−</button>
-                  <span>{item.quantity}</span>
-                  <button onClick={() => updateQty(item.id, +1)}>+</button>
-                </div>
-              )}
+              <div className="sf-qty">
+                <button onClick={() => updateQty(item.id, -1)}>−</button>
+                <span>{item.quantity}</span>
+                <button onClick={() => updateQty(item.id, +1)}>+</button>
+              </div>
             </div>
           ))}
           <div className="sf-co-total">
@@ -581,15 +568,8 @@ export default function StoreShell({ store, products, categories = [] }: { store
                 <span>{modalQty}</span>
                 <button onClick={() => setModalQty(q => q + 1)}>+</button>
               </div>
-              {cart[modalProduct.id] && (
-                <button className="sf-modal-del" onClick={() => removeFromCart(modalProduct.id)}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
-              )}
-              <button className="sf-modal-confirm" onClick={confirmModal}>
-                {cart[modalProduct.id] ? 'Actualizar' : 'Agregar'} · ${((modalProduct.price + modalExtraPrice) * modalQty).toFixed(2)}
+<button className="sf-modal-confirm" onClick={confirmModal}>
+                Agregar · ${((modalProduct.price + modalExtraPrice) * modalQty).toFixed(2)}
               </button>
             </div>
           </div>
@@ -631,7 +611,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
   )
 
   const renderCard = (product: Product) => {
-    const inCart   = cart[product.id]
+    const qty      = getProdQty(product.id)
     const variants = product.options?.colorVariants
     const selIdx   = selectedVariants[product.id]
     const displayImg = variants?.length && selIdx !== undefined
@@ -644,7 +624,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
             ? <img src={displayImg} alt={product.name} className="sf-card-img" />
             : <div className="sf-card-img-empty">{PLACEHOLDER}</div>
           }
-          {inCart && <div className="sf-card-badge">{inCart.quantity}</div>}
+          {qty > 0 && <div className="sf-card-badge">{qty}</div>}
         </div>
         <div className="sf-card-body">
           <div className="sf-card-name">{product.name}</div>
@@ -678,7 +658,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
           {displayImg
             ? <img src={displayImg} alt={product.name} className="sf-esc-img" />
             : <div className="sf-esc-img sf-esc-img-empty">{PLACEHOLDER}</div>}
-          {cart[product.id] && <div className="sf-card-badge">{cart[product.id].quantity}</div>}
+          {getProdQty(product.id) > 0 && <div className="sf-card-badge">{getProdQty(product.id)}</div>}
         </div>
         <div className="sf-esc-info">
           <div className="sf-esc-name">{product.name}</div>
@@ -709,7 +689,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
           {displayImg
             ? <img src={displayImg} alt={product.name} className="sf-cat-img" />
             : <div className="sf-cat-img sf-cat-img-empty">{PLACEHOLDER}</div>}
-          {cart[product.id] && <div className="sf-card-badge">{cart[product.id].quantity}</div>}
+          {getProdQty(product.id) > 0 && <div className="sf-card-badge">{getProdQty(product.id)}</div>}
         </div>
         <div className="sf-cat-info">
           <div className="sf-cat-name">{product.name}</div>
@@ -807,7 +787,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
                       ? <img src={vitHero.image_url} alt={vitHero.name} className="sf-vit-hero-img" />
                       : <div className="sf-vit-hero-img-empty">{PLACEHOLDER}</div>
                     }
-                    {cart[vitHero.id] && <div className="sf-card-badge sf-vit-badge">{cart[vitHero.id].quantity}</div>}
+                    {getProdQty(vitHero.id) > 0 && <div className="sf-card-badge sf-vit-badge">{getProdQty(vitHero.id)}</div>}
                   </div>
                   <div className="sf-vit-hero-body">
                     <div className="sf-vit-hero-name">{vitHero.name}</div>
@@ -1040,15 +1020,8 @@ export default function StoreShell({ store, products, categories = [] }: { store
                 <span>{modalQty}</span>
                 <button onClick={() => setModalQty(q => q + 1)}>+</button>
               </div>
-              {cart[modalProduct.id] && (
-                <button className="sf-modal-del" onClick={() => removeFromCart(modalProduct.id)}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
-              )}
-              <button className="sf-modal-confirm" onClick={confirmModal}>
-                {cart[modalProduct.id] ? 'Actualizar' : 'Agregar'} · ${((modalProduct.price + modalExtraPrice) * modalQty).toFixed(2)}
+<button className="sf-modal-confirm" onClick={confirmModal}>
+                Agregar · ${((modalProduct.price + modalExtraPrice) * modalQty).toFixed(2)}
               </button>
             </div>
           </div>

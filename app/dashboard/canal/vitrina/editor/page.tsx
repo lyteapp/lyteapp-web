@@ -193,6 +193,9 @@ export default function EditorPage() {
       .sf-cat-price      { font-size: ${fontSizePx}px !important; }
       .sf-modal-name     { font-size: ${(fontSizePx * 1.13).toFixed(1)}px !important; }
       .sf-modal-desc     { font-size: ${(fontSizePx * 0.87).toFixed(1)}px !important; }
+      .sf-cart-label     { font-size: ${(fontSizePx * 0.93).toFixed(1)}px !important; }
+      .sf-cart-total     { font-size: ${(fontSizePx * 0.93).toFixed(1)}px !important; }
+      .sf-cart-badge     { font-size: ${(fontSizePx * 0.8).toFixed(1)}px !important; }
       .sf-card-price, .sf-esc-price, .sf-cat-price, .sf-vit-hero-price {
         color: ${accentColor} !important;
         font-size: ${prSizeMap[priceSize]} !important;

@@ -182,12 +182,14 @@ export default function DeliveryPage() {
     if (!storeId || !drName.trim()) return
     setDrSaving(true)
     if (editDriver) {
-      await supabase.from('delivery_drivers').update({ name: drName.trim(), phone: drPhone.trim() || null }).eq('id', editDriver.id)
+      const { error } = await supabase.from('delivery_drivers').update({ name: drName.trim(), phone: drPhone.trim() || null }).eq('id', editDriver.id)
+      if (error) { showToast('Error al guardar: ' + error.message); setDrSaving(false); return }
     } else {
-      await supabase.from('delivery_drivers').insert({ store_id: storeId, name: drName.trim(), phone: drPhone.trim() || null })
+      const { error } = await supabase.from('delivery_drivers').insert({ store_id: storeId, name: drName.trim(), phone: drPhone.trim() || null, is_active: true })
+      if (error) { showToast('Error al guardar: ' + error.message); setDrSaving(false); return }
     }
     setDrName(''); setDrPhone(''); setEditDriver(null); setShowDriverForm(false); setDrSaving(false)
-    showToast(editDriver ? 'Motorista actualizado' : 'Motorista agregado')
+    showToast(editDriver ? 'Despachador actualizado' : 'Despachador agregado')
     await loadData(storeId)
   }
 
@@ -197,7 +199,7 @@ export default function DeliveryPage() {
   }
 
   async function deleteDriver(id: string) {
-    if (!confirm('Eliminar motorista?')) return
+    if (!confirm('Eliminar despachador?')) return
     await supabase.from('delivery_drivers').delete().eq('id', id)
     setDrivers(p => p.filter(d => d.id !== id))
   }
@@ -217,7 +219,7 @@ export default function DeliveryPage() {
   // Derived data
   const inRoute   = deliveries.filter(d => d.status === 'picked_up')
   const waiting   = deliveries.filter(d => d.status === 'ready')
-  const activeDrivers = drivers.filter(d => d.is_active)
+  const activeDrivers = drivers.filter(d => d.is_active !== false)
   const todayDels = deliveries.filter(d => isToday(d.created_at))
 
   const avgMinutes = (() => {
@@ -296,14 +298,14 @@ export default function DeliveryPage() {
             </div>
           </div>
           <div className={`dv-kpi${waiting.length > 0 ? ' warn' : ''}`}>
-            <div className="dv-kpi-label">Esperando motorizado</div>
+            <div className="dv-kpi-label">Esperando despachador</div>
             <div className="dv-kpi-value">
               <span className="dv-kpi-num">{waiting.length + readyOrders.length}</span>
               <span className="dv-kpi-sub">{waiting.length + readyOrders.length > 0 ? 'pendientes' : 'ninguno'}</span>
             </div>
           </div>
           <div className="dv-kpi">
-            <div className="dv-kpi-label">Motorizados activos</div>
+            <div className="dv-kpi-label">Despachadores activos</div>
             <div className="dv-kpi-value">
               <span className="dv-kpi-num">{activeDrivers.length}</span>
               <span className="dv-kpi-sub">de {drivers.length}</span>
@@ -333,7 +335,7 @@ export default function DeliveryPage() {
             <div className="dv-panel-header">
               <div>
                 <h3>Cola de despacho</h3>
-                <p>Pedidos listos esperando motorizado</p>
+                <p>Pedidos listos esperando despachador</p>
               </div>
               {readyOrders.length > 0 && (
                 <span className="dv-header-badge warn">{readyOrders.length}</span>
@@ -482,7 +484,7 @@ export default function DeliveryPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M22 32h20M32 22v20"/>
                 </svg>
                 <h4>Sin pedido seleccionado</h4>
-                <p>Elige un pedido de la cola para asignar un motorista.</p>
+                <p>Elige un pedido de la cola para asignar un despachador.</p>
               </div>
             ) : (
               <>
@@ -509,10 +511,10 @@ export default function DeliveryPage() {
 
                 {/* Suggested drivers */}
                 <div className="dv-detail-section">
-                  <div className="dv-detail-label">Motoristas disponibles</div>
+                  <div className="dv-detail-label">Despachadores disponibles</div>
                   <div className="dv-driver-suggest">
                     {activeDrivers.length === 0 ? (
-                      <div style={{ fontSize: 12, color: 'var(--dv-ink-muted)' }}>Sin motoristas activos</div>
+                      <div style={{ fontSize: 12, color: 'var(--dv-ink-muted)' }}>Sin despachadores activos</div>
                     ) : (
                       activeDrivers.map((drv, i) => {
                         const busyWithDelivery = inRoute.find(d => d.driver_id === drv.id)
@@ -551,7 +553,7 @@ export default function DeliveryPage() {
                     </div>
                     <div className="dv-form-row2">
                       <div className="dv-form-field">
-                        <label className="dv-form-label">Motorista</label>
+                        <label className="dv-form-label">Despachador</label>
                         <select className="dv-select" value={dDriverId} onChange={e => setDDriverId(e.target.value)}>
                           <option value="">Sin asignar</option>
                           {activeDrivers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
@@ -572,7 +574,7 @@ export default function DeliveryPage() {
                 <div className="dv-detail-section">
                   <div className="dv-money-box">
                     <div className="dv-money-row"><span>Total del pedido</span><span>${Number(selectedOrder.total).toFixed(2)}</span></div>
-                    <div className="dv-money-row"><span>Fee al motorista</span><span>${parseFloat(dFee) > 0 ? parseFloat(dFee).toFixed(2) : '—'}</span></div>
+                    <div className="dv-money-row"><span>Fee al despachador</span><span>${parseFloat(dFee) > 0 ? parseFloat(dFee).toFixed(2) : '—'}</span></div>
                     <div className="dv-money-total"><span>Total cobrado al cliente</span><span>${Number(selectedOrder.total).toFixed(2)}</span></div>
                     {selectedOrder.payment_method && (
                       <div className="dv-money-footer"><span>✓ {selectedOrder.payment_method}</span></div>
@@ -628,7 +630,7 @@ export default function DeliveryPage() {
                 <tr>
                   <th>Cliente</th>
                   <th>Direccion</th>
-                  <th>Motorista</th>
+                  <th>Despachador</th>
                   <th>Listo</th>
                   <th>Recogido</th>
                   <th>Entregado</th>
@@ -686,13 +688,13 @@ export default function DeliveryPage() {
               {activeDrivers.length} activos · {drivers.length - activeDrivers.length} offline
             </div>
             <button className="dv-btn-add" onClick={() => { setDrName(''); setDrPhone(''); setEditDriver(null); setShowDriverForm(true) }}>
-              + Agregar motorista
+              + Agregar despachador
             </button>
           </div>
 
           {showDriverForm && (
             <div className="dv-driver-form-card">
-              <div className="dv-driver-form-title">{editDriver ? 'Editar motorista' : 'Nuevo motorista'}</div>
+              <div className="dv-driver-form-title">{editDriver ? 'Editar despachador' : 'Nuevo despachador'}</div>
               <div className="dv-driver-form-row">
                 <div className="dv-form-field">
                   <label className="dv-form-label">Nombre *</label>
@@ -714,7 +716,7 @@ export default function DeliveryPage() {
 
           {drivers.length === 0 ? (
             <div className="dv-empty-wrap">
-              <h4>Sin motoristas registrados</h4>
+              <h4>Sin despachadores registrados</h4>
               <p>Agrega tu equipo para asignar entregas</p>
             </div>
           ) : (
@@ -862,13 +864,13 @@ export default function DeliveryPage() {
 
           {settlements.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--dv-ink-muted)', fontSize: 13 }}>
-              Sin datos de liquidacion. Asigna motoristas a las entregas para ver sus fees.
+              Sin datos de liquidacion. Asigna despachadores a las entregas para ver sus fees.
             </div>
           ) : (
             <table className="dv-data-table">
               <thead>
                 <tr>
-                  <th>Motorista</th>
+                  <th>Despachador</th>
                   <th>Entregas</th>
                   <th>Comision base</th>
                   <th style={{ textAlign: 'right' }}>Total a pagar</th>
@@ -932,7 +934,7 @@ export default function DeliveryPage() {
                 Expira en {Math.floor(qrSeconds / 60)}:{String(qrSeconds % 60).padStart(2, '0')}
               </div>
               <p className="dv-qr-hint">
-                El motorista escanea esto para confirmar la recogida y notificar al cliente
+                El despachador escanea esto para confirmar la recogida y notificar al cliente
               </p>
               <div className="dv-qr-url">{trackUrl(qrDel.id)}</div>
             </div>

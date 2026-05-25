@@ -558,8 +558,7 @@ html, body { overflow-x: hidden; }
 .sf-modal-desc { font-size: 0.87em; color: #64748B; margin-top: 4px; line-height: 1.4; }
 .sf-modal-base-price {
   font-size: 18px; font-weight: 800; color: var(--sf-price-color, #7C3AED);
-  font-family: var(--font-geist-mono), monospace; margin-top: 6px;
-  letter-spacing: -0.03em;
+  margin-top: 6px; letter-spacing: -0.03em;
 }
 
 .sf-modal-body {

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { useT } from '../../lib/LocaleProvider'
@@ -425,14 +426,17 @@ export default function ProductosPage() {
         </div>
       </div>
 
-      {/* ── BOTTOM SAVE BAR ── */}
+      {/* ── BOTTOM SAVE BAR (portal to escape transform containing block) ── */}
       {error && <div className="pr-error" style={{ maxWidth: 720 }}>{error}</div>}
-      <div className={`pr-bottom-save${isDirty ? ' pr-bottom-save-visible' : ''}`}>
-        <button className="pr-cancel-btn" onClick={() => setMode('list')}>{t('prod.cancel')}</button>
-        <button className="pr-save-btn pr-save-btn-lg" onClick={handleSave} disabled={saving || imgUploading}>
-          {saving ? t('prod.saving') : 'Guardar producto'}
-        </button>
-      </div>
+      {createPortal(
+        <div className={`pr-bottom-save${isDirty ? ' pr-bottom-save-visible' : ''}`}>
+          <button className="pr-cancel-btn" onClick={() => setMode('list')}>{t('prod.cancel')}</button>
+          <button className="pr-save-btn pr-save-btn-lg" onClick={handleSave} disabled={saving || imgUploading}>
+            {saving ? t('prod.saving') : 'Guardar producto'}
+          </button>
+        </div>,
+        document.body
+      )}
     </div>
   )
 

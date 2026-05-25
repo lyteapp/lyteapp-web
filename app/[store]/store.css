@@ -679,24 +679,33 @@ html, body { overflow-x: hidden; }
 .sf-pshape-sharp .sf-cat-img         { border-radius: 2px; }
 .sf-pshape-sharp .sf-vit-hero-img    { border-radius: 4px; }
 
+/* Circle shape: remove all frames/boxes */
 .sf-pshape-circle .sf-card {
   background: transparent;
   border-color: transparent;
   box-shadow: none;
   padding: 0 4px 12px;
 }
-.sf-pshape-circle .sf-card:hover {
-  box-shadow: none;
-  border-color: transparent;
-}
-.sf-pshape-circle .sf-card-img-wrap  {
-  border-radius: 50%;
-  overflow: hidden;
-}
+.sf-pshape-circle .sf-card:hover     { box-shadow: none; border-color: transparent; }
+.sf-pshape-circle .sf-card-img-wrap  { border-radius: 50%; overflow: hidden; }
 .sf-pshape-circle .sf-card-img       { border-radius: 50%; }
 .sf-pshape-circle .sf-card-body      { padding: 10px 4px 0; text-align: center; }
 .sf-pshape-circle .sf-card-footer    { justify-content: center; }
+
+.sf-pshape-circle .sf-esc-row {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  padding: 8px 4px;
+}
 .sf-pshape-circle .sf-esc-img        { border-radius: 50%; }
+
+.sf-pshape-circle .sf-cat-card {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  padding: 8px 4px;
+}
 .sf-pshape-circle .sf-cat-img        { border-radius: 50%; }
 
 /* Photo size */

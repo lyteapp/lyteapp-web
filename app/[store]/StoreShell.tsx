@@ -559,6 +559,15 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const catFiltered = tpl === 'catalogo'
     ? products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.description ?? '').toLowerCase().includes(searchQuery.toLowerCase()))
     : products
+  const catGroupsFiltered = catGroups.map(({ cat, items }) => ({
+    cat,
+    items: tpl === 'catalogo'
+      ? items.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.description ?? '').toLowerCase().includes(searchQuery.toLowerCase()))
+      : items,
+  })).filter(g => g.items.length > 0)
+  const uncatGroupFiltered = tpl === 'catalogo'
+    ? uncategorized.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.description ?? '').toLowerCase().includes(searchQuery.toLowerCase()))
+    : uncategorized
 
   const PLACEHOLDER = (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 22, height: 22 }}>
@@ -587,6 +596,35 @@ export default function StoreShell({ store, products, categories = [] }: { store
       </div>
     )
   }
+
+  const renderEscRow = (product: Product) => (
+    <div key={product.id} className="sf-esc-row" onClick={() => openProductModal(product)}>
+      {product.image_url
+        ? <img src={product.image_url} alt={product.name} className="sf-esc-img" />
+        : <div className="sf-esc-img sf-esc-img-empty">{PLACEHOLDER}</div>}
+      <div className="sf-esc-info">
+        <div className="sf-esc-name">{product.name}</div>
+        <div className="sf-esc-price">${Number(product.price).toFixed(2)}</div>
+      </div>
+      {cart[product.id] && <div className="sf-card-badge">{cart[product.id].quantity}</div>}
+    </div>
+  )
+
+  const renderCatRow = (product: Product) => (
+    <div key={product.id} className="sf-cat-card" onClick={() => openProductModal(product)}>
+      {product.image_url
+        ? <img src={product.image_url} alt={product.name} className="sf-cat-img" />
+        : <div className="sf-cat-img sf-cat-img-empty">{PLACEHOLDER}</div>}
+      <div className="sf-cat-info">
+        <div className="sf-cat-name">{product.name}</div>
+        {product.description && <div className="sf-cat-desc">{product.description}</div>}
+      </div>
+      <div className="sf-cat-action">
+        <div className="sf-cat-price">${Number(product.price).toFixed(2)}</div>
+        {cart[product.id] && <div className="sf-card-badge">{cart[product.id].quantity}</div>}
+      </div>
+    </div>
+  )
 
   return (
     <div className={`sf-page sf-tpl-${tpl} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize}`} style={pageStyle}>
@@ -640,73 +678,100 @@ export default function StoreShell({ store, products, categories = [] }: { store
               <div className="sf-empty-title">{t('store.comingSoon')}</div>
               <div className="sf-empty-sub">{t('store.comingSoonSub')}</div>
             </div>
-          ) : tpl === 'vitrina' && vitHero ? (
-            <>
-              <div className="sf-vit-hero" onClick={() => openProductModal(vitHero)}>
-                <div className="sf-vit-hero-img-wrap">
-                  {vitHero.image_url
-                    ? <img src={vitHero.image_url} alt={vitHero.name} className="sf-vit-hero-img" />
-                    : <div className="sf-vit-hero-img-empty">{PLACEHOLDER}</div>
-                  }
-                  {cart[vitHero.id] && <div className="sf-card-badge sf-vit-badge">{cart[vitHero.id].quantity}</div>}
-                </div>
-                <div className="sf-vit-hero-body">
-                  <div className="sf-vit-hero-name">{vitHero.name}</div>
-                  {vitHero.description && <div className="sf-vit-hero-desc">{vitHero.description}</div>}
-                  <div className="sf-vit-hero-footer">
-                    <div className="sf-vit-hero-price">${Number(vitHero.price).toFixed(2)}</div>
+          ) : tpl === 'vitrina' ? (
+            hasCats ? (
+              <>
+                {catGroups.map(({ cat, items }) => (
+                  <div key={cat.id} className="sf-cat-section">
+                    <h2 className="sf-section-title sf-cat-section-title">{cat.name}</h2>
+                    <div className="sf-grid">{items.map(renderCard)}</div>
+                  </div>
+                ))}
+                {uncategorized.length > 0 && (
+                  <div className="sf-cat-section">
+                    <h2 className="sf-section-title sf-cat-section-title">{t('store.ourProducts')}</h2>
+                    <div className="sf-grid">{uncategorized.map(renderCard)}</div>
+                  </div>
+                )}
+              </>
+            ) : vitHero ? (
+              <>
+                <div className="sf-vit-hero" onClick={() => openProductModal(vitHero)}>
+                  <div className="sf-vit-hero-img-wrap">
+                    {vitHero.image_url
+                      ? <img src={vitHero.image_url} alt={vitHero.name} className="sf-vit-hero-img" />
+                      : <div className="sf-vit-hero-img-empty">{PLACEHOLDER}</div>
+                    }
+                    {cart[vitHero.id] && <div className="sf-card-badge sf-vit-badge">{cart[vitHero.id].quantity}</div>}
+                  </div>
+                  <div className="sf-vit-hero-body">
+                    <div className="sf-vit-hero-name">{vitHero.name}</div>
+                    {vitHero.description && <div className="sf-vit-hero-desc">{vitHero.description}</div>}
+                    <div className="sf-vit-hero-footer">
+                      <div className="sf-vit-hero-price">${Number(vitHero.price).toFixed(2)}</div>
+                    </div>
                   </div>
                 </div>
-              </div>
-              {vitRest.length > 0 && (
-                <><h2 className="sf-section-title sf-vit-more-title">{t('store.ourProducts')}</h2>
-                <div className="sf-grid">{vitRest.map(renderCard)}</div></>
-              )}
-            </>
+                {vitRest.length > 0 && (
+                  <><h2 className="sf-section-title sf-vit-more-title">{t('store.ourProducts')}</h2>
+                  <div className="sf-grid">{vitRest.map(renderCard)}</div></>
+                )}
+              </>
+            ) : null
           ) : tpl === 'escaparate' ? (
-            <>
-              <div className="sf-esc-featured">{escFeatured.map(renderCard)}</div>
-              {escRest.length > 0 && (
-                <div className="sf-esc-list">
-                  {escRest.map(product => (
-                    <div key={product.id} className="sf-esc-row" onClick={() => openProductModal(product)}>
-                      {product.image_url
-                        ? <img src={product.image_url} alt={product.name} className="sf-esc-img" />
-                        : <div className="sf-esc-img sf-esc-img-empty">{PLACEHOLDER}</div>}
-                      <div className="sf-esc-info">
-                        <div className="sf-esc-name">{product.name}</div>
-                        <div className="sf-esc-price">${Number(product.price).toFixed(2)}</div>
-                      </div>
-                      {cart[product.id] && <div className="sf-card-badge">{cart[product.id].quantity}</div>}
+            hasCats ? (
+              <>
+                {catGroups.map(({ cat, items }) => (
+                  <div key={cat.id} className="sf-cat-section">
+                    <h2 className="sf-section-title sf-cat-section-title">{cat.name}</h2>
+                    <div className="sf-esc-list">{items.map(renderEscRow)}</div>
+                  </div>
+                ))}
+                {uncategorized.length > 0 && (
+                  <div className="sf-cat-section">
+                    <h2 className="sf-section-title sf-cat-section-title">{t('store.ourProducts')}</h2>
+                    <div className="sf-esc-list">{uncategorized.map(renderEscRow)}</div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="sf-esc-featured">{escFeatured.map(renderCard)}</div>
+                {escRest.length > 0 && (
+                  <div className="sf-esc-list">{escRest.map(renderEscRow)}</div>
+                )}
+              </>
+            )
+          ) : tpl === 'catalogo' ? (
+            hasCats ? (
+              catGroupsFiltered.length === 0 && uncatGroupFiltered.length === 0 ? (
+                <div className="sf-empty">
+                  <div className="sf-empty-title">Sin resultados</div>
+                  <div className="sf-empty-sub">Prueba con otro término.</div>
+                </div>
+              ) : (
+                <>
+                  {catGroupsFiltered.map(({ cat, items }) => (
+                    <div key={cat.id} className="sf-cat-section">
+                      <h2 className="sf-section-title sf-cat-section-title">{cat.name}</h2>
+                      <div className="sf-cat-list">{items.map(renderCatRow)}</div>
                     </div>
                   ))}
-                </div>
-              )}
-            </>
-          ) : tpl === 'catalogo' ? (
-            catFiltered.length === 0 ? (
+                  {uncatGroupFiltered.length > 0 && (
+                    <div className="sf-cat-section">
+                      <h2 className="sf-section-title sf-cat-section-title">{t('store.ourProducts')}</h2>
+                      <div className="sf-cat-list">{uncatGroupFiltered.map(renderCatRow)}</div>
+                    </div>
+                  )}
+                </>
+              )
+            ) : catFiltered.length === 0 ? (
               <div className="sf-empty">
                 <div className="sf-empty-title">Sin resultados</div>
                 <div className="sf-empty-sub">Prueba con otro término.</div>
               </div>
             ) : (
-              <div className="sf-cat-list">
-                {catFiltered.map(product => (
-                  <div key={product.id} className="sf-cat-card" onClick={() => openProductModal(product)}>
-                    {product.image_url
-                      ? <img src={product.image_url} alt={product.name} className="sf-cat-img" />
-                      : <div className="sf-cat-img sf-cat-img-empty">{PLACEHOLDER}</div>}
-                    <div className="sf-cat-info">
-                      <div className="sf-cat-name">{product.name}</div>
-                      {product.description && <div className="sf-cat-desc">{product.description}</div>}
-                    </div>
-                    <div className="sf-cat-action">
-                      <div className="sf-cat-price">${Number(product.price).toFixed(2)}</div>
-                      {cart[product.id] && <div className="sf-card-badge">{cart[product.id].quantity}</div>}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <div className="sf-cat-list">{catFiltered.map(renderCatRow)}</div>
             )
           ) : hasCats ? (
             <>

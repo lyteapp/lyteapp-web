@@ -121,8 +121,12 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const [modalNotes, setModalNotes]           = useState('')
   const [modalQty, setModalQty]               = useState(1)
   const [lightbox, setLightbox] = useState<{ images: string[]; idx: number } | null>(null)
-  const touchStartX = useRef<number>(0)
-  const swipedRef   = useRef<boolean>(false)
+  const touchStartX             = useRef<number>(0)
+  const swipedRef               = useRef<boolean>(false)
+  const dragStartIdxRef         = useRef<number>(0)
+  const stripRefs               = useRef<Map<string, HTMLDivElement>>(new Map())
+  const lightboxStripRef        = useRef<HTMLDivElement | null>(null)
+  const lightboxDragStartIdxRef = useRef<number>(0)
 
   useEffect(() => {
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !(window.navigator as Navigator & { standalone?: boolean }).standalone
@@ -588,19 +592,39 @@ export default function StoreShell({ store, products, categories = [] }: { store
           <button className="sf-lightbox-close" onClick={() => setLightbox(null)}>×</button>
           <div
             className="sf-lightbox-viewport"
-            onTouchStart={lightbox.images.length > 1 ? e => { touchStartX.current = e.touches[0].clientX; swipedRef.current = false } : undefined}
-            onTouchMove={lightbox.images.length > 1 ? e => { if (Math.abs(e.touches[0].clientX - touchStartX.current) > 10) e.stopPropagation() } : undefined}
+            onTouchStart={lightbox.images.length > 1 ? e => {
+              touchStartX.current = e.touches[0].clientX
+              swipedRef.current = false
+              lightboxDragStartIdxRef.current = lightbox.idx
+              if (lightboxStripRef.current) lightboxStripRef.current.classList.add('dragging')
+            } : undefined}
+            onTouchMove={lightbox.images.length > 1 ? e => {
+              const dx = e.touches[0].clientX - touchStartX.current
+              if (Math.abs(dx) > 5) {
+                e.stopPropagation()
+                const strip = lightboxStripRef.current
+                if (strip) {
+                  const n = lightbox.images.length
+                  const fw = strip.offsetWidth / n
+                  const pct = (Math.max(0, Math.min((n - 1) * fw, lightboxDragStartIdxRef.current * fw - dx)) / (n * fw)) * 100
+                  strip.style.transform = `translateX(-${pct}%)`
+                }
+              }
+            } : undefined}
             onTouchEnd={lightbox.images.length > 1 ? e => {
               const dx = (e.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current
+              if (lightboxStripRef.current) lightboxStripRef.current.classList.remove('dragging')
               if (Math.abs(dx) > 40) {
                 swipedRef.current = true
-                const next = dx < 0 ? Math.min(lightbox.images.length - 1, lightbox.idx + 1) : Math.max(0, lightbox.idx - 1)
+                const next = dx < 0 ? Math.min(lightbox.images.length - 1, lightboxDragStartIdxRef.current + 1) : Math.max(0, lightboxDragStartIdxRef.current - 1)
                 setLightbox(lb => lb ? { ...lb, idx: next } : null)
+              } else {
+                setLightbox(lb => lb ? { ...lb, idx: lightboxDragStartIdxRef.current } : null)
               }
             } : undefined}
             onClick={e => e.stopPropagation()}
           >
-            <div className="sf-lightbox-strip" style={{ width: `${lightbox.images.length * 100}%`, transform: `translateX(-${lightbox.idx * (100 / lightbox.images.length)}%)` }}>
+            <div className="sf-lightbox-strip" ref={lightboxStripRef} style={{ width: `${lightbox.images.length * 100}%`, transform: `translateX(-${lightbox.idx * (100 / lightbox.images.length)}%)` }}>
               {lightbox.images.map((img, i) => (
                 <div key={i} className="sf-lightbox-frame" style={{ width: `${100 / lightbox.images.length}%` }}>
                   <img src={img} alt="" className="sf-lightbox-img" />
@@ -663,21 +687,44 @@ export default function StoreShell({ store, products, categories = [] }: { store
       <div key={product.id} className="sf-card" onClick={() => openProductModal(product)}>
         <div
           className="sf-card-img-wrap"
-          onTouchStart={variants?.length ? e => { touchStartX.current = e.touches[0].clientX; swipedRef.current = false } : undefined}
-          onTouchMove={variants?.length ? e => { if (Math.abs(e.touches[0].clientX - touchStartX.current) > 10) e.stopPropagation() } : undefined}
+          onTouchStart={variants?.length ? e => {
+            touchStartX.current = e.touches[0].clientX
+            swipedRef.current = false
+            dragStartIdxRef.current = selIdx ?? 0
+            const strip = stripRefs.current.get(product.id)
+            if (strip) strip.classList.add('dragging')
+          } : undefined}
+          onTouchMove={variants?.length ? e => {
+            const dx = e.touches[0].clientX - touchStartX.current
+            if (Math.abs(dx) > 5) {
+              e.stopPropagation()
+              const strip = stripRefs.current.get(product.id)
+              if (strip) {
+                const n = variants.length
+                const fw = strip.offsetWidth / n
+                const pct = (Math.max(0, Math.min((n - 1) * fw, dragStartIdxRef.current * fw - dx)) / (n * fw)) * 100
+                strip.style.transform = `translateX(-${pct}%)`
+              }
+            }
+          } : undefined}
           onTouchEnd={variants?.length ? e => {
             const dx = (e.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current
+            const strip = stripRefs.current.get(product.id)
+            if (strip) strip.classList.remove('dragging')
             if (Math.abs(dx) > 25) {
               swipedRef.current = true
-              const cur = selIdx ?? 0
-              const next = dx < 0 ? Math.min(variants.length - 1, cur + 1) : Math.max(0, cur - 1)
+              const next = dx < 0 ? Math.min(variants.length - 1, dragStartIdxRef.current + 1) : Math.max(0, dragStartIdxRef.current - 1)
               setSelectedVariants(p => ({ ...p, [product.id]: next }))
+            } else {
+              setSelectedVariants(p => ({ ...p, [product.id]: dragStartIdxRef.current }))
             }
           } : undefined}
           onClick={e => { if (swipedRef.current) { e.stopPropagation(); swipedRef.current = false } }}
         >
           {variants?.length ? (
-            <div className="sf-slide-strip" style={{ width: `${variants.length * 100}%`, transform: `translateX(-${(selIdx ?? 0) * (100 / variants.length)}%)` }}>
+            <div className="sf-slide-strip"
+              ref={el => { if (el) stripRefs.current.set(product.id, el); else stripRefs.current.delete(product.id) }}
+              style={{ width: `${variants.length * 100}%`, transform: `translateX(-${(selIdx ?? 0) * (100 / variants.length)}%)` }}>
               {variants.map((v, i) => (
                 <div key={i} className="sf-slide-frame" style={{ width: `${100 / variants.length}%` }}>
                   {v.imageUrl ? <img src={v.imageUrl} alt={product.name} className="sf-card-img" /> : <div className="sf-card-img-empty">{PLACEHOLDER}</div>}
@@ -728,21 +775,44 @@ export default function StoreShell({ store, products, categories = [] }: { store
       <div key={product.id} className="sf-esc-row" onClick={() => openProductModal(product)}>
         <div
           className="sf-esc-img-wrap"
-          onTouchStart={variants?.length ? e => { touchStartX.current = e.touches[0].clientX; swipedRef.current = false } : undefined}
-          onTouchMove={variants?.length ? e => { if (Math.abs(e.touches[0].clientX - touchStartX.current) > 10) e.stopPropagation() } : undefined}
+          onTouchStart={variants?.length ? e => {
+            touchStartX.current = e.touches[0].clientX
+            swipedRef.current = false
+            dragStartIdxRef.current = selIdx ?? 0
+            const strip = stripRefs.current.get(product.id)
+            if (strip) strip.classList.add('dragging')
+          } : undefined}
+          onTouchMove={variants?.length ? e => {
+            const dx = e.touches[0].clientX - touchStartX.current
+            if (Math.abs(dx) > 5) {
+              e.stopPropagation()
+              const strip = stripRefs.current.get(product.id)
+              if (strip) {
+                const n = variants.length
+                const fw = strip.offsetWidth / n
+                const pct = (Math.max(0, Math.min((n - 1) * fw, dragStartIdxRef.current * fw - dx)) / (n * fw)) * 100
+                strip.style.transform = `translateX(-${pct}%)`
+              }
+            }
+          } : undefined}
           onTouchEnd={variants?.length ? e => {
             const dx = (e.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current
+            const strip = stripRefs.current.get(product.id)
+            if (strip) strip.classList.remove('dragging')
             if (Math.abs(dx) > 25) {
               swipedRef.current = true
-              const cur = selIdx ?? 0
-              const next = dx < 0 ? Math.min(variants.length - 1, cur + 1) : Math.max(0, cur - 1)
+              const next = dx < 0 ? Math.min(variants.length - 1, dragStartIdxRef.current + 1) : Math.max(0, dragStartIdxRef.current - 1)
               setSelectedVariants(p => ({ ...p, [product.id]: next }))
+            } else {
+              setSelectedVariants(p => ({ ...p, [product.id]: dragStartIdxRef.current }))
             }
           } : undefined}
           onClick={e => { if (swipedRef.current) { e.stopPropagation(); swipedRef.current = false } }}
         >
           {variants?.length ? (
-            <div className="sf-slide-strip" style={{ width: `${variants.length * 100}%`, transform: `translateX(-${(selIdx ?? 0) * (100 / variants.length)}%)` }}>
+            <div className="sf-slide-strip"
+              ref={el => { if (el) stripRefs.current.set(product.id, el); else stripRefs.current.delete(product.id) }}
+              style={{ width: `${variants.length * 100}%`, transform: `translateX(-${(selIdx ?? 0) * (100 / variants.length)}%)` }}>
               {variants.map((v, i) => (
                 <div key={i} className="sf-slide-frame" style={{ width: `${100 / variants.length}%` }}>
                   {v.imageUrl ? <img src={v.imageUrl} alt={product.name} className="sf-esc-img" /> : <div className="sf-esc-img sf-esc-img-empty">{PLACEHOLDER}</div>}
@@ -790,21 +860,44 @@ export default function StoreShell({ store, products, categories = [] }: { store
       <div key={product.id} className="sf-cat-card" onClick={() => openProductModal(product)}>
         <div
           className="sf-cat-img-wrap"
-          onTouchStart={variants?.length ? e => { touchStartX.current = e.touches[0].clientX; swipedRef.current = false } : undefined}
-          onTouchMove={variants?.length ? e => { if (Math.abs(e.touches[0].clientX - touchStartX.current) > 10) e.stopPropagation() } : undefined}
+          onTouchStart={variants?.length ? e => {
+            touchStartX.current = e.touches[0].clientX
+            swipedRef.current = false
+            dragStartIdxRef.current = selIdx ?? 0
+            const strip = stripRefs.current.get(product.id)
+            if (strip) strip.classList.add('dragging')
+          } : undefined}
+          onTouchMove={variants?.length ? e => {
+            const dx = e.touches[0].clientX - touchStartX.current
+            if (Math.abs(dx) > 5) {
+              e.stopPropagation()
+              const strip = stripRefs.current.get(product.id)
+              if (strip) {
+                const n = variants.length
+                const fw = strip.offsetWidth / n
+                const pct = (Math.max(0, Math.min((n - 1) * fw, dragStartIdxRef.current * fw - dx)) / (n * fw)) * 100
+                strip.style.transform = `translateX(-${pct}%)`
+              }
+            }
+          } : undefined}
           onTouchEnd={variants?.length ? e => {
             const dx = (e.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current
+            const strip = stripRefs.current.get(product.id)
+            if (strip) strip.classList.remove('dragging')
             if (Math.abs(dx) > 25) {
               swipedRef.current = true
-              const cur = selIdx ?? 0
-              const next = dx < 0 ? Math.min(variants.length - 1, cur + 1) : Math.max(0, cur - 1)
+              const next = dx < 0 ? Math.min(variants.length - 1, dragStartIdxRef.current + 1) : Math.max(0, dragStartIdxRef.current - 1)
               setSelectedVariants(p => ({ ...p, [product.id]: next }))
+            } else {
+              setSelectedVariants(p => ({ ...p, [product.id]: dragStartIdxRef.current }))
             }
           } : undefined}
           onClick={e => { if (swipedRef.current) { e.stopPropagation(); swipedRef.current = false } }}
         >
           {variants?.length ? (
-            <div className="sf-slide-strip" style={{ width: `${variants.length * 100}%`, transform: `translateX(-${(selIdx ?? 0) * (100 / variants.length)}%)` }}>
+            <div className="sf-slide-strip"
+              ref={el => { if (el) stripRefs.current.set(product.id, el); else stripRefs.current.delete(product.id) }}
+              style={{ width: `${variants.length * 100}%`, transform: `translateX(-${(selIdx ?? 0) * (100 / variants.length)}%)` }}>
               {variants.map((v, i) => (
                 <div key={i} className="sf-slide-frame" style={{ width: `${100 / variants.length}%` }}>
                   {v.imageUrl ? <img src={v.imageUrl} alt={product.name} className="sf-cat-img" /> : <div className="sf-cat-img sf-cat-img-empty">{PLACEHOLDER}</div>}
@@ -1171,19 +1264,39 @@ export default function StoreShell({ store, products, categories = [] }: { store
           <button className="sf-lightbox-close" onClick={() => setLightbox(null)}>×</button>
           <div
             className="sf-lightbox-viewport"
-            onTouchStart={lightbox.images.length > 1 ? e => { touchStartX.current = e.touches[0].clientX; swipedRef.current = false } : undefined}
-            onTouchMove={lightbox.images.length > 1 ? e => { if (Math.abs(e.touches[0].clientX - touchStartX.current) > 10) e.stopPropagation() } : undefined}
+            onTouchStart={lightbox.images.length > 1 ? e => {
+              touchStartX.current = e.touches[0].clientX
+              swipedRef.current = false
+              lightboxDragStartIdxRef.current = lightbox.idx
+              if (lightboxStripRef.current) lightboxStripRef.current.classList.add('dragging')
+            } : undefined}
+            onTouchMove={lightbox.images.length > 1 ? e => {
+              const dx = e.touches[0].clientX - touchStartX.current
+              if (Math.abs(dx) > 5) {
+                e.stopPropagation()
+                const strip = lightboxStripRef.current
+                if (strip) {
+                  const n = lightbox.images.length
+                  const fw = strip.offsetWidth / n
+                  const pct = (Math.max(0, Math.min((n - 1) * fw, lightboxDragStartIdxRef.current * fw - dx)) / (n * fw)) * 100
+                  strip.style.transform = `translateX(-${pct}%)`
+                }
+              }
+            } : undefined}
             onTouchEnd={lightbox.images.length > 1 ? e => {
               const dx = (e.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current
+              if (lightboxStripRef.current) lightboxStripRef.current.classList.remove('dragging')
               if (Math.abs(dx) > 40) {
                 swipedRef.current = true
-                const next = dx < 0 ? Math.min(lightbox.images.length - 1, lightbox.idx + 1) : Math.max(0, lightbox.idx - 1)
+                const next = dx < 0 ? Math.min(lightbox.images.length - 1, lightboxDragStartIdxRef.current + 1) : Math.max(0, lightboxDragStartIdxRef.current - 1)
                 setLightbox(lb => lb ? { ...lb, idx: next } : null)
+              } else {
+                setLightbox(lb => lb ? { ...lb, idx: lightboxDragStartIdxRef.current } : null)
               }
             } : undefined}
             onClick={e => e.stopPropagation()}
           >
-            <div className="sf-lightbox-strip" style={{ width: `${lightbox.images.length * 100}%`, transform: `translateX(-${lightbox.idx * (100 / lightbox.images.length)}%)` }}>
+            <div className="sf-lightbox-strip" ref={lightboxStripRef} style={{ width: `${lightbox.images.length * 100}%`, transform: `translateX(-${lightbox.idx * (100 / lightbox.images.length)}%)` }}>
               {lightbox.images.map((img, i) => (
                 <div key={i} className="sf-lightbox-frame" style={{ width: `${100 / lightbox.images.length}%` }}>
                   <img src={img} alt="" className="sf-lightbox-img" />

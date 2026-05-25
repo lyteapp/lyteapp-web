@@ -20,8 +20,10 @@ type Product = {
   description: string | null; price: number
   image_url: string | null; is_active: boolean
   options?: ProductOptions | null
+  category_id?: string | null
 }
 
+type Category = { id: string; name: string; position: number }
 type Store = { id: string; slug: string }
 
 export default function ProductosPage() {
@@ -42,6 +44,8 @@ export default function ProductosPage() {
   const [imgUploading, setImgUploading] = useState(false)
   const [saving, setSaving]         = useState(false)
   const [error, setError]           = useState('')
+  const [categories, setCategories] = useState<Category[]>([])
+  const [categoryId, setCategoryId] = useState<string>('')
 
   // options state
   const [optVariables, setOptVariables]     = useState<VariableGroup[]>([])
@@ -60,10 +64,12 @@ export default function ProductosPage() {
       .from('stores').select('id, slug').eq('owner_id', user!.id).maybeSingle()
     setStore(storeData)
     if (storeData) {
-      const { data: prods } = await supabase
-        .from('products').select('*').eq('store_id', storeData.id)
-        .order('created_at', { ascending: false })
+      const [{ data: prods }, { data: cats }] = await Promise.all([
+        supabase.from('products').select('*').eq('store_id', storeData.id).order('created_at', { ascending: false }),
+        supabase.from('categories').select('*').eq('store_id', storeData.id).order('position'),
+      ])
       setProducts(prods ?? [])
+      setCategories(cats ?? [])
     }
     setLoading(false)
   }
@@ -78,6 +84,7 @@ export default function ProductosPage() {
     setEditing(null)
     setName(''); setDescription(''); setPrice('')
     setIsActive(true); setImageUrl(''); setError('')
+    setCategoryId('')
     resetOpts(); setMode('form')
   }
 
@@ -86,6 +93,7 @@ export default function ProductosPage() {
     setName(p.name); setDescription(p.description ?? '')
     setPrice(String(p.price)); setIsActive(p.is_active)
     setImageUrl(p.image_url ?? ''); setError('')
+    setCategoryId(p.category_id ?? '')
     const opts = p.options ?? {}
     setOptVariables(opts.variables ?? [])
     setOptColors(opts.colors ?? [])
@@ -147,6 +155,7 @@ export default function ProductosPage() {
       description: description.trim() || null,
       price: priceNum, image_url: imageUrl || null, is_active: isActive,
       options: hasOpts ? opts : null,
+      category_id: categoryId || null,
     }
     const { error: err } = editing
       ? await supabase.from('products').update(payload).eq('id', editing.id)
@@ -223,6 +232,22 @@ export default function ProductosPage() {
             <textarea className="pr-textarea" placeholder={t('prod.desc.placeholder')} rows={3}
               value={description} onChange={e => setDescription(e.target.value)} />
           </div>
+          {categories.length > 0 && (
+            <div className="pr-field">
+              <label className="pr-label">Categoria</label>
+              <select
+                className="pr-select"
+                value={categoryId}
+                onChange={e => setCategoryId(e.target.value)}
+              >
+                <option value="">Sin categoria</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="pr-two-col">
             <div className="pr-field">
               <label className="pr-label">{t('prod.price.label')}</label>

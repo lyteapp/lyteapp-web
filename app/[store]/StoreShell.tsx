@@ -33,6 +33,7 @@ type CartItem = {
 type Product = {
   id: string; name: string; description: string | null
   price: number; image_url: string | null; options?: ProductOptions | null
+  category_id?: string | null
 }
 type PaymentMethod = { type: string; label: string; enabled: boolean; details: Record<string, string> }
 
@@ -91,7 +92,7 @@ const IG_ICON = (
   </svg>
 )
 
-export default function StoreShell({ store, products }: { store: Store; products: Product[] }) {
+export default function StoreShell({ store, products, categories = [] }: { store: Store; products: Product[]; categories: { id: string; name: string; position: number }[] }) {
   const t = useT()
   const router = useRouter()
   const [cart, setCart]                   = useState<Record<string, CartItem>>({})
@@ -543,7 +544,14 @@ export default function StoreShell({ store, products }: { store: Store; products
   )
 
   // ── CATALOG ──
-  const tpl         = store.template ?? 'clasico'
+  const tpl = store.template ?? 'clasico'
+
+  // Category grouping
+  const catGroups = categories
+    .map(cat => ({ cat, items: products.filter(p => p.category_id === cat.id) }))
+    .filter(g => g.items.length > 0)
+  const uncategorized = products.filter(p => !p.category_id || !categories.find(c => c.id === p.category_id))
+  const hasCats = catGroups.length > 0
   const escFeatured = products.slice(0, 2)
   const escRest     = products.slice(2)
   const vitHero     = products.length > 0 ? products[0] : null
@@ -700,6 +708,21 @@ export default function StoreShell({ store, products }: { store: Store; products
                 ))}
               </div>
             )
+          ) : hasCats ? (
+            <>
+              {catGroups.map(({ cat, items }) => (
+                <div key={cat.id} className="sf-cat-section">
+                  <h2 className="sf-section-title sf-cat-section-title">{cat.name}</h2>
+                  <div className="sf-grid">{items.map(renderCard)}</div>
+                </div>
+              ))}
+              {uncategorized.length > 0 && (
+                <div className="sf-cat-section">
+                  <h2 className="sf-section-title sf-cat-section-title">{t('store.ourProducts')}</h2>
+                  <div className="sf-grid">{uncategorized.map(renderCard)}</div>
+                </div>
+              )}
+            </>
           ) : (
             <>
               <h2 className="sf-section-title">{t('store.ourProducts')}</h2>

@@ -39,10 +39,13 @@ export default async function StorePage({ params }: { params: Promise<{ store: s
 
   if (!store) notFound()
 
-  const { data: products } = await supabase
-    .from('products').select('*')
-    .eq('store_id', store.id).eq('is_active', true)
-    .order('created_at', { ascending: false })
+  const [{ data: products }, { data: categories }] = await Promise.all([
+    supabase.from('products').select('*')
+      .eq('store_id', store.id).eq('is_active', true)
+      .order('created_at', { ascending: false }),
+    supabase.from('categories').select('*')
+      .eq('store_id', store.id).order('position', { ascending: true }),
+  ])
 
-  return <StoreShell store={store} products={products ?? []} />
+  return <StoreShell store={store} products={products ?? []} categories={categories ?? []} />
 }

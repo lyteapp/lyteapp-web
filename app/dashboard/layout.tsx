@@ -64,8 +64,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [storeId, setStoreId] = useState<string | null>(null)
   const [orderNotif, setOrderNotif] = useState<{ name: string; total: number } | null>(null)
   const notifTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [canalOpen, setCanalOpen] = useState(false)
-  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [canalOpen, setCanalOpen]         = useState(false)
+  const [productosOpen, setProductosOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen]   = useState(false)
   const [mobileNav, setMobileNav] = useState(false)
   const { play, unlock } = useLyteSound()
 
@@ -107,6 +108,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     if (pathname.startsWith('/dashboard/canal')) setCanalOpen(true)
+    if (pathname.startsWith('/dashboard/productos')) setProductosOpen(true)
     if (pathname.startsWith('/dashboard/configuracion')) setSettingsOpen(true)
     setMobileNav(false)
   }, [pathname])
@@ -126,6 +128,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     '/dashboard': t('nav.dashboard'),
     '/dashboard/pedidos': t('nav.orders'),
     '/dashboard/productos': t('nav.products'),
+    '/dashboard/productos/categorias': 'Categorias',
     '/dashboard/chats': t('nav.chats'),
     '/dashboard/analitics': t('nav.analytics'),
     '/dashboard/tienda': t('nav.myStore'),
@@ -172,20 +175,40 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Nav */}
         <nav className="db-nav">
-          {/* Main items: Dashboard, Orders, Products */}
-          {navItems.slice(0, 3).map((item) => {
+          {/* Main items: Dashboard, Orders */}
+          {navItems.slice(0, 2).map((item) => {
             const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href)
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`db-nav-item${isActive ? ' active' : ''}`}
-              >
+              <Link key={item.href} href={item.href} className={`db-nav-item${isActive ? ' active' : ''}`}>
                 {item.icon}
                 {t(item.tKey)}
               </Link>
             )
           })}
+
+          {/* Productos (expandable) */}
+          <button
+            className={`db-canal-toggle${productosOpen ? ' open' : ''}${pathname.startsWith('/dashboard/productos') ? ' active' : ''}`}
+            onClick={() => setProductosOpen(o => !o)}
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 2a4 4 0 00-4 4v1H5a1 1 0 00-.994.89l-1 9A1 1 0 004 18h12a1 1 0 00.994-1.11l-1-9A1 1 0 0015 7h-1V6a4 4 0 00-4-4zm2 5V6a2 2 0 10-4 0v1h4zm-6 3a1 1 0 112 0 1 1 0 01-2 0zm7-1a1 1 0 100 2 1 1 0 000-2z" clipRule="evenodd" />
+            </svg>
+            {t('nav.products')}
+            <svg className="db-canal-chevron" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
+          {productosOpen && (
+            <div className="db-canal-items">
+              <Link href="/dashboard/productos" className={`db-canal-item${pathname === '/dashboard/productos' ? ' active' : ''}`}>
+                Mis productos
+              </Link>
+              <Link href="/dashboard/productos/categorias" className={`db-canal-item${pathname === '/dashboard/productos/categorias' ? ' active' : ''}`}>
+                Categorias
+              </Link>
+            </div>
+          )}
 
           {/* Diseño (web builder) */}
           <button

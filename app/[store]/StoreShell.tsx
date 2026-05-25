@@ -250,6 +250,13 @@ export default function StoreShell({ store, products, categories = [] }: { store
     setModalProduct(null)
   }
 
+  function removeFromCart(id: string) {
+    setCart(prev => { const { [id]: _, ...rest } = prev; return rest })
+    setModalProduct(null)
+  }
+
+  function clearCart() { setCart({}) }
+
   function updateQty(id: string, delta: number) {
     setCart(prev => {
       const next = (prev[id]?.quantity ?? 0) + delta
@@ -366,7 +373,10 @@ export default function StoreShell({ store, products, categories = [] }: { store
 
       <div className="sf-checkout-wrap">
         <div className="sf-co-section">
-          <h3 className="sf-co-section-title">{t('store.summary')}</h3>
+          <div className="sf-co-section-head">
+            <h3 className="sf-co-section-title">{t('store.summary')}</h3>
+            <button className="sf-co-clear-btn" onClick={clearCart}>Vaciar</button>
+          </div>
           {cartItems.map(item => (
             <div key={item.id} className="sf-co-row">
               {item.image_url
@@ -571,6 +581,13 @@ export default function StoreShell({ store, products, categories = [] }: { store
                 <span>{modalQty}</span>
                 <button onClick={() => setModalQty(q => q + 1)}>+</button>
               </div>
+              {cart[modalProduct.id] && (
+                <button className="sf-modal-del" onClick={() => removeFromCart(modalProduct.id)}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              )}
               <button className="sf-modal-confirm" onClick={confirmModal}>
                 {cart[modalProduct.id] ? 'Actualizar' : 'Agregar'} · ${((modalProduct.price + modalExtraPrice) * modalQty).toFixed(2)}
               </button>
@@ -1023,6 +1040,13 @@ export default function StoreShell({ store, products, categories = [] }: { store
                 <span>{modalQty}</span>
                 <button onClick={() => setModalQty(q => q + 1)}>+</button>
               </div>
+              {cart[modalProduct.id] && (
+                <button className="sf-modal-del" onClick={() => removeFromCart(modalProduct.id)}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              )}
               <button className="sf-modal-confirm" onClick={confirmModal}>
                 {cart[modalProduct.id] ? 'Actualizar' : 'Agregar'} · ${((modalProduct.price + modalExtraPrice) * modalQty).toFixed(2)}
               </button>

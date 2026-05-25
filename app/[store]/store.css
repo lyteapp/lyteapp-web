@@ -183,6 +183,19 @@ html, body { overflow-x: hidden; }
   border-radius: 18px; padding: 20px;
 }
 .sf-co-section-title { font-size: 14px; font-weight: 700; color: #0F172A; letter-spacing: -0.02em; margin-bottom: 16px; }
+.sf-co-section-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.sf-co-section-head .sf-co-section-title { margin-bottom: 0; }
+.sf-co-clear-btn {
+  font-size: 12px; font-weight: 600; color: #EF4444;
+  background: rgba(239,68,68,0.08); border: none;
+  border-radius: 8px; padding: 5px 10px;
+  cursor: pointer; font-family: inherit;
+  transition: background 0.15s;
+}
+.sf-co-clear-btn:hover { background: rgba(239,68,68,0.15); }
 
 .sf-co-row {
   display: flex; align-items: center; gap: 12px;
@@ -646,6 +659,13 @@ html, body { overflow-x: hidden; }
 }
 .sf-modal-confirm:hover { filter: brightness(0.88); }
 .sf-modal-confirm:active { transform: scale(0.98); }
+.sf-modal-del {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: #FEF2F2; color: #EF4444; border: none;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0; transition: background 0.15s;
+}
+.sf-modal-del:hover { background: #FEE2E2; }
 
 @media (min-width: 640px) {
   .sf-modal-overlay { align-items: center; justify-content: center; }

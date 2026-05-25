@@ -632,9 +632,10 @@ export default function StoreShell({ store, products, categories = [] }: { store
         <div
           className="sf-card-img-wrap"
           onTouchStart={variants?.length ? e => { touchStartX.current = e.touches[0].clientX; swipedRef.current = false } : undefined}
+          onTouchMove={variants?.length ? e => { if (Math.abs(e.touches[0].clientX - touchStartX.current) > 10) e.stopPropagation() } : undefined}
           onTouchEnd={variants?.length ? e => {
-            const dx = e.changedTouches[0].clientX - touchStartX.current
-            if (Math.abs(dx) > 35) {
+            const dx = (e.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current
+            if (Math.abs(dx) > 25) {
               swipedRef.current = true
               const cur = selIdx ?? 0
               const next = dx < 0 ? Math.min(variants.length - 1, cur + 1) : Math.max(0, cur - 1)
@@ -687,9 +688,10 @@ export default function StoreShell({ store, products, categories = [] }: { store
         <div
           className="sf-esc-img-wrap"
           onTouchStart={variants?.length ? e => { touchStartX.current = e.touches[0].clientX; swipedRef.current = false } : undefined}
+          onTouchMove={variants?.length ? e => { if (Math.abs(e.touches[0].clientX - touchStartX.current) > 10) e.stopPropagation() } : undefined}
           onTouchEnd={variants?.length ? e => {
-            const dx = e.changedTouches[0].clientX - touchStartX.current
-            if (Math.abs(dx) > 35) {
+            const dx = (e.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current
+            if (Math.abs(dx) > 25) {
               swipedRef.current = true
               const cur = selIdx ?? 0
               const next = dx < 0 ? Math.min(variants.length - 1, cur + 1) : Math.max(0, cur - 1)
@@ -738,9 +740,10 @@ export default function StoreShell({ store, products, categories = [] }: { store
         <div
           className="sf-cat-img-wrap"
           onTouchStart={variants?.length ? e => { touchStartX.current = e.touches[0].clientX; swipedRef.current = false } : undefined}
+          onTouchMove={variants?.length ? e => { if (Math.abs(e.touches[0].clientX - touchStartX.current) > 10) e.stopPropagation() } : undefined}
           onTouchEnd={variants?.length ? e => {
-            const dx = e.changedTouches[0].clientX - touchStartX.current
-            if (Math.abs(dx) > 35) {
+            const dx = (e.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current
+            if (Math.abs(dx) > 25) {
               swipedRef.current = true
               const cur = selIdx ?? 0
               const next = dx < 0 ? Math.min(variants.length - 1, cur + 1) : Math.max(0, cur - 1)

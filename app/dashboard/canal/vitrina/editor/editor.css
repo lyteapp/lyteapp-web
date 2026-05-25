@@ -1704,9 +1704,14 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
 .ed-preview-empty p { line-height: 1.5; }
 
 /* ── PANEL SAVE BUTTON ───────────────────────────────── */
-.ed-tp-save {
-  width: 100%;
+.ed-tp-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-top: 16px;
+}
+.ed-tp-save {
+  flex: 1;
   padding: 9px;
   border-radius: 9px;
   border: none;
@@ -1720,6 +1725,19 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
 }
 .ed-tp-save:hover:not(:disabled) { background: var(--ed-violet); }
 .ed-tp-save:disabled { opacity: 0.55; cursor: not-allowed; }
+.ed-tp-close {
+  flex-shrink: 0;
+  width: 34px; height: 34px;
+  border-radius: 8px;
+  border: 1px solid rgba(15,23,42,0.1);
+  background: #F8FAFC;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: #64748B;
+  transition: background 0.15s, color 0.15s;
+}
+.ed-tp-close svg { width: 14px; height: 14px; }
+.ed-tp-close:hover { background: #F1F5F9; color: #0F172A; }
 
 /* ── PANEL SUBTITLE ──────────────────────────────────── */
 .ed-tp-subtitle {

@@ -342,7 +342,6 @@ export default function EditorPage() {
   // ── Save to DB ─────────────────────────────────────────
   async function saveSettings() {
     if (!storeId || saving) return
-    setActiveTool(null)
     setSaving(true)
     const template_config = {
       ...baseConfig,
@@ -370,9 +369,16 @@ export default function EditorPage() {
 
   function PanelSave() {
     return (
-      <button className="ed-tp-save" onClick={saveSettings} disabled={saving}>
-        {toolSaved ? 'Guardado' : saving ? 'Guardando...' : 'Guardar'}
-      </button>
+      <div className="ed-tp-actions">
+        <button className="ed-tp-save" onClick={saveSettings} disabled={saving}>
+          {toolSaved ? 'Guardado' : saving ? 'Guardando...' : 'Guardar'}
+        </button>
+        <button className="ed-tp-close" onClick={() => setActiveTool(null)} title="Cerrar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
     )
   }
 

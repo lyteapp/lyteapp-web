@@ -65,6 +65,7 @@ type TemplateConfig = {
   priceColor?: string; priceFont?: string
   priceSize?: 'small' | 'medium' | 'large'
   photoSize?: 'small' | 'medium' | 'large'
+  categoryPhotoShapes?: Record<string, string>
 }
 type Store = {
   id: string; name: string; slug: string
@@ -201,9 +202,10 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const cfgTextAlign   = cfg.textAlign ?? 'left'
   const cfgPhotoShape  = cfg.photoShape ?? 'square'
   const cfgPhotoSize   = cfg.photoSize  ?? 'medium'
-  const cfgPriceColor  = cfg.priceColor ?? '#7C3AED'
+  const cfgPriceColor      = cfg.priceColor ?? '#7C3AED'
   const cfgPriceFontFamily = cfg.priceFont ? FONT_MAP[cfg.priceFont] : undefined
-  const cfgPriceSize   = cfg.priceSize ?? 'medium'
+  const cfgPriceSize       = cfg.priceSize ?? 'medium'
+  const cfgCategoryShapes  = cfg.categoryPhotoShapes ?? {}
   const pageStyle: React.CSSProperties = {
     ...(cfg.pageBg ? { background: cfg.pageBg } : {}),
     ...(cfgFontFamily ? { fontFamily: cfgFontFamily } : {}),
@@ -994,7 +996,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
             hasCats ? (
               <>
                 {catGroups.map(({ cat, items }) => (
-                  <div key={cat.id} className="sf-cat-section">
+                  <div key={cat.id} className={`sf-cat-section${cfgCategoryShapes[cat.id] ? ` sf-pshape-${cfgCategoryShapes[cat.id]}` : ''}`}>
                     <h2 className="sf-section-title sf-cat-section-title">{cat.name}</h2>
                     <div className="sf-grid">{items.map(renderCard)}</div>
                   </div>
@@ -1034,7 +1036,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
             hasCats ? (
               <>
                 {catGroups.map(({ cat, items }) => (
-                  <div key={cat.id} className="sf-cat-section">
+                  <div key={cat.id} className={`sf-cat-section${cfgCategoryShapes[cat.id] ? ` sf-pshape-${cfgCategoryShapes[cat.id]}` : ''}`}>
                     <h2 className="sf-section-title sf-cat-section-title">{cat.name}</h2>
                     <div className="sf-esc-list">{items.map(renderEscRow)}</div>
                   </div>
@@ -1064,7 +1066,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
               ) : (
                 <>
                   {catGroupsFiltered.map(({ cat, items }) => (
-                    <div key={cat.id} className="sf-cat-section">
+                    <div key={cat.id} className={`sf-cat-section${cfgCategoryShapes[cat.id] ? ` sf-pshape-${cfgCategoryShapes[cat.id]}` : ''}`}>
                       <h2 className="sf-section-title sf-cat-section-title">{cat.name}</h2>
                       <div className="sf-cat-list">{items.map(renderCatRow)}</div>
                     </div>
@@ -1088,7 +1090,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
           ) : hasCats ? (
             <>
               {catGroups.map(({ cat, items }) => (
-                <div key={cat.id} className="sf-cat-section">
+                <div key={cat.id} className={`sf-cat-section${cfgCategoryShapes[cat.id] ? ` sf-pshape-${cfgCategoryShapes[cat.id]}` : ''}`}>
                   <h2 className="sf-section-title sf-cat-section-title">{cat.name}</h2>
                   <div className="sf-grid">{items.map(renderCard)}</div>
                 </div>

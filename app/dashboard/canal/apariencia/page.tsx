@@ -91,16 +91,26 @@ const TEMPLATES = [
   },
 ]
 
+type Category = { id: string; name: string }
+
+const PHOTO_SHAPES = [
+  { id: 'square', name: 'Redondeada' },
+  { id: 'sharp',  name: 'Recta'      },
+  { id: 'circle', name: 'Circular'   },
+]
+
 export default function Apariencia() {
   const { user } = useAuth()
-  const [template, setTemplate]     = useState('clasico')
-  const [color, setColor]           = useState('#7C3AED')
-  const [priceColor, setPriceColor] = useState('#7C3AED')
-  const [priceSize, setPriceSize]   = useState<'small' | 'medium' | 'large'>('medium')
-  const [priceFont, setPriceFont]   = useState('')
-  const [saving, setSaving]         = useState(false)
-  const [success, setSuccess]       = useState(false)
-  const [error, setError]           = useState('')
+  const [template, setTemplate]         = useState('clasico')
+  const [color, setColor]               = useState('#7C3AED')
+  const [priceColor, setPriceColor]     = useState('#7C3AED')
+  const [priceSize, setPriceSize]       = useState<'small' | 'medium' | 'large'>('medium')
+  const [priceFont, setPriceFont]       = useState('')
+  const [categories, setCategories]     = useState<Category[]>([])
+  const [categoryShapes, setCategoryShapes] = useState<Record<string, string>>({})
+  const [saving, setSaving]             = useState(false)
+  const [success, setSuccess]           = useState(false)
+  const [error, setError]               = useState('')
   const colorInputRef      = useRef<HTMLInputElement>(null)
   const priceColorInputRef = useRef<HTMLInputElement>(null)
 
@@ -108,17 +118,22 @@ export default function Apariencia() {
     if (!user) return
     supabase
       .from('stores')
-      .select('template,brand_color,template_config')
+      .select('id,template,brand_color,template_config')
       .eq('owner_id', user.id)
       .maybeSingle()
-      .then(({ data }) => {
+      .then(async ({ data }) => {
         if (!data) return
         if (data.template) setTemplate(data.template)
         if (data.brand_color) setColor(data.brand_color)
-        const cfg = (data.template_config ?? {}) as Record<string, string>
-        if (cfg.priceColor) setPriceColor(cfg.priceColor)
+        const cfg = (data.template_config ?? {}) as Record<string, unknown>
+        if (cfg.priceColor) setPriceColor(cfg.priceColor as string)
         if (cfg.priceSize)  setPriceSize(cfg.priceSize as 'small' | 'medium' | 'large')
-        if (cfg.priceFont !== undefined) setPriceFont(cfg.priceFont ?? '')
+        if (cfg.priceFont !== undefined) setPriceFont((cfg.priceFont as string) ?? '')
+        if (cfg.categoryPhotoShapes) setCategoryShapes(cfg.categoryPhotoShapes as Record<string, string>)
+        const { data: cats } = await supabase
+          .from('categories').select('id,name')
+          .eq('store_id', data.id).order('position', { ascending: true })
+        if (cats) setCategories(cats)
       })
   }, [user])
 
@@ -131,6 +146,7 @@ export default function Apariencia() {
       priceColor,
       priceSize,
       ...(priceFont ? { priceFont } : {}),
+      ...(Object.keys(categoryShapes).length > 0 ? { categoryPhotoShapes: categoryShapes } : {}),
     }
 
     const { data: existing } = await supabase.from('stores').select('id').eq('owner_id', user.id).maybeSingle()
@@ -291,6 +307,49 @@ export default function Apariencia() {
 
           </div>
         </div>
+
+        {/* Forma por categoria */}
+        {categories.length > 0 && (
+          <div className="cn-section">
+            <div className="cn-section-head">
+              <div className="cn-section-icon">
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <div className="cn-section-title">Forma de imagen por categoría</div>
+                <div className="cn-section-sub">Personaliza la forma de las fotos de cada sección</div>
+              </div>
+            </div>
+            <div className="cn-section-body">
+              {categories.map(cat => (
+                <div key={cat.id} className="cn-field">
+                  <div className="cn-label">{cat.name}</div>
+                  <div className="cn-pill-row">
+                    <button
+                      type="button"
+                      className={`cn-pill-btn${!categoryShapes[cat.id] ? ' selected' : ''}`}
+                      onClick={() => setCategoryShapes(p => { const n = { ...p }; delete n[cat.id]; return n })}
+                    >
+                      Global
+                    </button>
+                    {PHOTO_SHAPES.map(s => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        className={`cn-pill-btn${categoryShapes[cat.id] === s.id ? ' selected' : ''}`}
+                        onClick={() => setCategoryShapes(p => ({ ...p, [cat.id]: s.id }))}
+                      >
+                        {s.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {error && <div className="cn-error">{error}</div>}
         {success && <div className="cn-success">Apariencia guardada correctamente.</div>}

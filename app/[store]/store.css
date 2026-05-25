@@ -828,6 +828,60 @@ html, body { overflow-x: hidden; }
 .sf-imgsize-large .sf-cat-img           { width: 86px; height: 86px; }
 .sf-imgsize-large .sf-vit-hero-img-wrap { aspect-ratio: 2/3; }
 
+/* ── PER-CATEGORY PHOTO SHAPE OVERRIDES ── */
+/* Specificity: 3 classes beats page-level 2 classes, so these always win */
+
+.sf-cat-section.sf-pshape-square .sf-card {
+  background: white; border: 1px solid rgba(15,23,42,0.07);
+  border-radius: 18px; box-shadow: none; padding: 0;
+}
+.sf-cat-section.sf-pshape-square .sf-card:hover { box-shadow: 0 8px 28px rgba(15,23,42,0.09); border-color: rgba(15,23,42,0.07); }
+.sf-cat-section.sf-pshape-square .sf-card-img-wrap { border-radius: 0; overflow: hidden; }
+.sf-cat-section.sf-pshape-square .sf-card-img { border-radius: 0; }
+.sf-cat-section.sf-pshape-square .sf-card-img-empty { border-radius: 0; overflow: hidden; }
+.sf-cat-section.sf-pshape-square .sf-card-badge { top: 10px; right: 10px; }
+.sf-cat-section.sf-pshape-square .sf-card-body { padding: 14px; text-align: left; }
+.sf-cat-section.sf-pshape-square .sf-card-footer { justify-content: space-between; }
+.sf-cat-section.sf-pshape-square .sf-esc-img { border-radius: 10px; }
+.sf-cat-section.sf-pshape-square .sf-esc-row { background: white; border: 1px solid rgba(15,23,42,0.07); box-shadow: none; padding: 12px; }
+.sf-cat-section.sf-pshape-square .sf-esc-img-wrap .sf-card-badge { top: -6px; right: -6px; }
+.sf-cat-section.sf-pshape-square .sf-cat-card { background: white; border: 1px solid rgba(15,23,42,0.07); box-shadow: none; padding: 12px; }
+.sf-cat-section.sf-pshape-square .sf-cat-img { border-radius: 10px; }
+.sf-cat-section.sf-pshape-square .sf-cat-img-wrap .sf-card-badge { top: -6px; right: -6px; }
+
+.sf-cat-section.sf-pshape-sharp .sf-card {
+  background: white; border: 1px solid rgba(15,23,42,0.07);
+  border-radius: 4px; box-shadow: none; padding: 0;
+}
+.sf-cat-section.sf-pshape-sharp .sf-card:hover { box-shadow: 0 8px 28px rgba(15,23,42,0.09); border-color: rgba(15,23,42,0.07); }
+.sf-cat-section.sf-pshape-sharp .sf-card-img-wrap { border-radius: 0; overflow: hidden; }
+.sf-cat-section.sf-pshape-sharp .sf-card-img { border-radius: 0; }
+.sf-cat-section.sf-pshape-sharp .sf-card-img-empty { border-radius: 0; overflow: hidden; }
+.sf-cat-section.sf-pshape-sharp .sf-card-badge { top: 10px; right: 10px; }
+.sf-cat-section.sf-pshape-sharp .sf-card-body { padding: 14px; text-align: left; }
+.sf-cat-section.sf-pshape-sharp .sf-card-footer { justify-content: space-between; }
+.sf-cat-section.sf-pshape-sharp .sf-esc-img { border-radius: 2px; }
+.sf-cat-section.sf-pshape-sharp .sf-esc-row { background: white; border: 1px solid rgba(15,23,42,0.07); box-shadow: none; padding: 12px; }
+.sf-cat-section.sf-pshape-sharp .sf-esc-img-wrap .sf-card-badge { top: -6px; right: -6px; }
+.sf-cat-section.sf-pshape-sharp .sf-cat-card { background: white; border: 1px solid rgba(15,23,42,0.07); box-shadow: none; padding: 12px; }
+.sf-cat-section.sf-pshape-sharp .sf-cat-img { border-radius: 2px; }
+.sf-cat-section.sf-pshape-sharp .sf-cat-img-wrap .sf-card-badge { top: -6px; right: -6px; }
+
+.sf-cat-section.sf-pshape-circle .sf-card { background: transparent; border-color: transparent; box-shadow: none; padding: 0 4px 12px; }
+.sf-cat-section.sf-pshape-circle .sf-card:hover { box-shadow: none; border-color: transparent; }
+.sf-cat-section.sf-pshape-circle .sf-card-img-wrap { border-radius: 50%; overflow: visible; }
+.sf-cat-section.sf-pshape-circle .sf-card-img { border-radius: 50%; }
+.sf-cat-section.sf-pshape-circle .sf-card-img-empty { border-radius: 50%; overflow: hidden; }
+.sf-cat-section.sf-pshape-circle .sf-card-badge { top: 12%; right: 12%; }
+.sf-cat-section.sf-pshape-circle .sf-card-body { padding: 10px 4px 0; text-align: center; }
+.sf-cat-section.sf-pshape-circle .sf-card-footer { justify-content: center; }
+.sf-cat-section.sf-pshape-circle .sf-esc-row { background: transparent; border-color: transparent; box-shadow: none; padding: 8px 4px; }
+.sf-cat-section.sf-pshape-circle .sf-esc-img { border-radius: 50%; }
+.sf-cat-section.sf-pshape-circle .sf-esc-img-wrap .sf-card-badge { top: -4px; right: -4px; }
+.sf-cat-section.sf-pshape-circle .sf-cat-card { background: transparent; border-color: transparent; box-shadow: none; padding: 8px 4px; }
+.sf-cat-section.sf-pshape-circle .sf-cat-img { border-radius: 50%; }
+.sf-cat-section.sf-pshape-circle .sf-cat-img-wrap .sf-card-badge { top: -4px; right: -4px; }
+
 /* ── COLOR VARIANT SWATCHES ── */
 .sf-card-swatches,
 .sf-esc-swatches,

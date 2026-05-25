@@ -1835,3 +1835,127 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
     width: 172px;
   }
 }
+
+/* ── Category shape pills ─────────────────────────────── */
+.ed-tp-divider {
+  height: 1px;
+  background: rgba(15,23,42,0.07);
+  margin: 14px 0;
+}
+
+.ed-cat-shapes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ed-cat-shape-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.ed-cat-shape-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(15,23,42,0.5);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ed-cat-shape-pills {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.ed-cat-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 6px;
+  border: 1px solid rgba(15,23,42,0.1);
+  background: #F8FAFC;
+  color: #475569;
+  cursor: pointer;
+  font-family: var(--font-geist-sans), sans-serif;
+  transition: all 0.15s;
+}
+
+.ed-cat-pill:hover {
+  border-color: rgba(124,58,237,0.3);
+  color: #7C3AED;
+}
+
+.ed-cat-pill.ed-cat-pill-active {
+  background: #7C3AED;
+  color: white;
+  border-color: #7C3AED;
+}
+
+/* ── Template picker ──────────────────────────────────── */
+.ed-template-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ed-template-card {
+  border: 2px solid rgba(15,23,42,0.08);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+  text-align: left;
+  position: relative;
+  padding: 0;
+  width: 100%;
+}
+
+.ed-template-card:hover {
+  border-color: rgba(124,58,237,0.3);
+}
+
+.ed-template-card.ed-template-card-active {
+  border-color: #7C3AED;
+}
+
+.ed-template-preview {
+  height: 100px;
+  overflow: hidden;
+  padding: 8px;
+}
+
+.ed-template-foot {
+  padding: 8px 10px;
+  border-top: 1px solid rgba(15,23,42,0.06);
+}
+
+.ed-template-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0F172A;
+  margin-bottom: 1px;
+}
+
+.ed-template-desc {
+  font-size: 10px;
+  color: #94A3B8;
+}
+
+.ed-template-check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #7C3AED;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

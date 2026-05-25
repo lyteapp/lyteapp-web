@@ -46,10 +46,93 @@ const PAGE_FONTS = [
   { id: 'nunito',       name: 'Nunito'     },
   { id: 'oswald',       name: 'Oswald'     },
   { id: 'fraunces',     name: 'Elegante'   },
-  { id: 'playfair',     name: 'Clásica'    },
+  { id: 'playfair',     name: 'Clasica'    },
   { id: 'merriweather', name: 'Editorial'  },
   { id: 'cormorant',    name: 'Lujo'       },
 ]
+
+const TEMPLATES = [
+  {
+    id: 'clasico',
+    name: 'Clasico',
+    desc: 'Limpio y profesional',
+    preview: (
+      <div style={{ background: '#F8F7F4', borderRadius: 6, padding: 6, height: '100%' }}>
+        <div style={{ background: '#fff', borderRadius: 4, padding: 6, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div style={{ width: 14, height: 14, borderRadius: 3, background: '#7C3AED' }} />
+          <div style={{ height: 4, background: '#E2E8F0', borderRadius: 2, flex: 1 }} />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>
+          {[0,1,2,3].map(i => (
+            <div key={i} style={{ background: '#fff', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={{ height: 20, background: '#F1F5F9' }} />
+              <div style={{ padding: '3px 4px' }}>
+                <div style={{ height: 3, background: '#E2E8F0', borderRadius: 2, marginBottom: 2 }} />
+                <div style={{ height: 3, background: '#F1F5F9', borderRadius: 2, width: '60%' }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: 'oscuro',
+    name: 'Oscuro',
+    desc: 'Elegante y moderno',
+    preview: (
+      <div style={{ background: '#0F172A', borderRadius: 6, padding: 6, height: '100%' }}>
+        <div style={{ background: '#1E293B', borderRadius: 4, padding: 6, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div style={{ width: 14, height: 14, borderRadius: 3, background: '#7C3AED' }} />
+          <div style={{ height: 4, background: '#334155', borderRadius: 2, flex: 1 }} />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>
+          {[0,1,2,3].map(i => (
+            <div key={i} style={{ background: '#1E293B', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={{ height: 20, background: '#334155' }} />
+              <div style={{ padding: '3px 4px' }}>
+                <div style={{ height: 3, background: '#475569', borderRadius: 2, marginBottom: 2 }} />
+                <div style={{ height: 3, background: '#334155', borderRadius: 2, width: '60%' }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: 'minimal',
+    name: 'Minimal',
+    desc: 'Simple y rapido',
+    preview: (
+      <div style={{ background: '#F8FAFC', borderRadius: 6, padding: 6, height: '100%' }}>
+        <div style={{ background: '#fff', borderRadius: 4, padding: 6, marginBottom: 4, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div style={{ width: 14, height: 14, borderRadius: 3, background: '#7C3AED' }} />
+          <div style={{ height: 4, background: '#E2E8F0', borderRadius: 2, flex: 1 }} />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {[0,1,2].map(i => (
+            <div key={i} style={{ background: '#fff', borderRadius: 4, padding: 5, display: 'flex', alignItems: 'center', gap: 4, boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
+              <div style={{ width: 16, height: 16, background: '#F1F5F9', borderRadius: 3, flexShrink: 0 }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ height: 3, background: '#E2E8F0', borderRadius: 2, marginBottom: 2, width: '70%' }} />
+                <div style={{ height: 3, background: '#F1F5F9', borderRadius: 2, width: '40%' }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    ),
+  },
+]
+
+const PHOTO_SHAPES_CAT = [
+  { id: 'square', name: 'Redondeada' },
+  { id: 'sharp',  name: 'Recta'      },
+  { id: 'circle', name: 'Circular'   },
+]
+
+type Category = { id: string; name: string }
 
 export default function EditorPage() {
   const router = useRouter()
@@ -67,7 +150,12 @@ export default function EditorPage() {
   const [accentColor, setAccentColor] = useState('#7C3AED')
   const [priceSize, setPriceSize]   = useState<'small' | 'medium' | 'large'>('medium')
 
-  const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | null>(null)
+  const [template, setTemplate]             = useState('clasico')
+  const [categories, setCategories]         = useState<Category[]>([])
+  const [categoryShapes, setCategoryShapes] = useState<Record<string, string>>({})
+  const [baseConfig, setBaseConfig]         = useState<Record<string, unknown>>({})
+
+  const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'template' | null>(null)
   const [iframeKey, setIframeKey]   = useState(0)
   const [saving, setSaving]         = useState(false)
   const [toolSaved, setToolSaved]   = useState(false)
@@ -81,24 +169,30 @@ export default function EditorPage() {
       if (!data.user) return
       const { data: store } = await supabase
         .from('stores')
-        .select('id, slug, template_config')
+        .select('id, slug, template, brand_color, template_config')
         .eq('owner_id', data.user.id)
         .maybeSingle()
       if (!store) return
       setStoreId(store.id)
       setStoreSlug(store.slug)
-      const cfg = (store as { template_config?: Record<string, string> }).template_config
-      if (cfg) {
-        if (cfg.pageBg)     setPageBg(cfg.pageBg)
-        if (cfg.pageFont)   setPageFont(cfg.pageFont)
-        if (cfg.fontSizePx) setFontSizePx(Number(cfg.fontSizePx))
-        else if (cfg.fontSize) setFontSizePx(cfg.fontSize === 'small' ? 13 : cfg.fontSize === 'large' ? 18 : 15)
-        if (cfg.textAlign)  setTextAlign(cfg.textAlign as 'left' | 'center')
-        if (cfg.photoShape) setPhotoShape(cfg.photoShape as 'sharp' | 'square' | 'circle')
-        if (cfg.photoSize)  setPhotoSize(cfg.photoSize as 'small' | 'medium' | 'large')
-        if (cfg.priceColor) setAccentColor(cfg.priceColor)
-        if (cfg.priceSize)  setPriceSize(cfg.priceSize as 'small' | 'medium' | 'large')
-      }
+      if ((store as { template?: string }).template) setTemplate((store as { template: string }).template)
+      const cfg = (store as { template_config?: Record<string, unknown> }).template_config ?? {}
+      setBaseConfig(cfg)
+      if (cfg.pageBg)     setPageBg(cfg.pageBg as string)
+      if (cfg.pageFont)   setPageFont(cfg.pageFont as string)
+      if (cfg.fontSizePx) setFontSizePx(Number(cfg.fontSizePx))
+      else if (cfg.fontSize) setFontSizePx(cfg.fontSize === 'small' ? 13 : cfg.fontSize === 'large' ? 18 : 15)
+      if (cfg.textAlign)  setTextAlign(cfg.textAlign as 'left' | 'center')
+      if (cfg.photoShape) setPhotoShape(cfg.photoShape as 'sharp' | 'square' | 'circle')
+      if (cfg.photoSize)  setPhotoSize(cfg.photoSize as 'small' | 'medium' | 'large')
+      if (cfg.priceColor) setAccentColor(cfg.priceColor as string)
+      else if ((store as { brand_color?: string }).brand_color) setAccentColor((store as { brand_color: string }).brand_color)
+      if (cfg.priceSize)  setPriceSize(cfg.priceSize as 'small' | 'medium' | 'large')
+      if (cfg.categoryPhotoShapes) setCategoryShapes(cfg.categoryPhotoShapes as Record<string, string>)
+      const { data: cats } = await supabase
+        .from('categories').select('id,name')
+        .eq('store_id', store.id).order('position', { ascending: true })
+      if (cats) setCategories(cats)
     })
   }, [])
 
@@ -248,14 +342,23 @@ export default function EditorPage() {
   // ── Save to DB ─────────────────────────────────────────
   async function saveSettings() {
     if (!storeId || saving) return
+    setActiveTool(null)
     setSaving(true)
+    const template_config = {
+      ...baseConfig,
+      pageBg, pageFont, fontSizePx, textAlign,
+      photoShape, photoSize,
+      priceColor: accentColor, priceFont: pageFont, priceSize,
+      ...(Object.keys(categoryShapes).length > 0
+        ? { categoryPhotoShapes: categoryShapes }
+        : { categoryPhotoShapes: undefined }),
+    }
     await supabase.from('stores').update({
-      template_config: {
-        pageBg, pageFont, fontSizePx, textAlign,
-        photoShape, photoSize,
-        priceColor: accentColor, priceFont: pageFont, priceSize,
-      }
+      template,
+      brand_color: accentColor,
+      template_config,
     }).eq('id', storeId)
+    setBaseConfig(template_config)
     setSaving(false)
     setToolSaved(true)
     setIframeKey(k => k + 1)
@@ -268,7 +371,7 @@ export default function EditorPage() {
   function PanelSave() {
     return (
       <button className="ed-tp-save" onClick={saveSettings} disabled={saving}>
-        {toolSaved ? 'Guardado' : saving ? 'Guardando…' : 'Guardar'}
+        {toolSaved ? 'Guardado' : saving ? 'Guardando...' : 'Guardar'}
       </button>
     )
   }
@@ -336,7 +439,7 @@ export default function EditorPage() {
           </svg>
         </button>
 
-        {/* Letras (tipografía unificada) */}
+        {/* Letras */}
         <button
           className={`ed-tool-btn${activeTool === 'text' ? ' ed-tool-active' : ''}`}
           title="Letras"
@@ -347,7 +450,7 @@ export default function EditorPage() {
           </svg>
         </button>
 
-        {/* Forma y tamaño de fotos */}
+        {/* Fotos */}
         <button
           className={`ed-tool-btn${activeTool === 'shape' ? ' ed-tool-active' : ''}`}
           title="Fotos"
@@ -356,6 +459,19 @@ export default function EditorPage() {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <rect x="2" y="7" width="9" height="9" rx="2" />
             <circle cx="18" cy="11.5" r="4.5" />
+          </svg>
+        </button>
+
+        {/* Plantilla */}
+        <button
+          className={`ed-tool-btn${activeTool === 'template' ? ' ed-tool-active' : ''}`}
+          title="Plantilla"
+          onClick={() => setActiveTool(p => p === 'template' ? null : 'template')}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="5" rx="1" />
+            <rect x="3" y="11" width="8" height="10" rx="1" />
+            <rect x="13" y="11" width="8" height="10" rx="1" />
           </svg>
         </button>
 
@@ -431,7 +547,7 @@ export default function EditorPage() {
             </div>
 
             <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>
-              Tamaño
+              Tamano
               <span className="ed-size-slider-val">{fontSizePx}px</span>
             </div>
             <div className="ed-size-slider-wrap">
@@ -448,7 +564,7 @@ export default function EditorPage() {
               <span className="ed-size-slider-hint ed-size-slider-hint-lg">A</span>
             </div>
 
-            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Alineación</div>
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Alineacion</div>
             <div className="ed-align-opts">
               <button
                 className={`ed-align-opt${textAlign === 'left' ? ' ed-align-opt-active' : ''}`}
@@ -513,7 +629,7 @@ export default function EditorPage() {
         {activeTool === 'shape' && (
           <div className="ed-tool-panel ed-tool-panel-lg">
             <div className="ed-tp-title">Fotos</div>
-            <div className="ed-tp-subtitle">Forma</div>
+            <div className="ed-tp-subtitle">Forma global</div>
             <div className="ed-shape-opts">
               {([
                 { id: 'sharp',  label: 'Angular',    icon: <rect x="3" y="3" width="18" height="18" rx="1" /> },
@@ -530,7 +646,7 @@ export default function EditorPage() {
                 </button>
               ))}
             </div>
-            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Tamaño</div>
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Tamano</div>
             <div className="ed-size-opts">
               {([
                 { id: 'small',  label: 'Compacto' },
@@ -551,6 +667,65 @@ export default function EditorPage() {
                     {s.id === 'large'  && <rect x="6"  y="2"  width="12" height="20" rx="2" />}
                   </svg>
                   <span className="ed-size-label">{s.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {categories.length > 0 && (
+              <>
+                <div className="ed-tp-divider" />
+                <div className="ed-tp-subtitle">Forma por categoria</div>
+                <div className="ed-cat-shapes">
+                  {categories.map(cat => (
+                    <div key={cat.id} className="ed-cat-shape-row">
+                      <div className="ed-cat-shape-label">{cat.name}</div>
+                      <div className="ed-cat-shape-pills">
+                        <button
+                          type="button"
+                          className={`ed-cat-pill${!categoryShapes[cat.id] ? ' ed-cat-pill-active' : ''}`}
+                          onClick={() => setCategoryShapes(p => { const n = { ...p }; delete n[cat.id]; return n })}
+                        >
+                          Global
+                        </button>
+                        {PHOTO_SHAPES_CAT.map(s => (
+                          <button
+                            key={s.id}
+                            type="button"
+                            className={`ed-cat-pill${categoryShapes[cat.id] === s.id ? ' ed-cat-pill-active' : ''}`}
+                            onClick={() => setCategoryShapes(p => ({ ...p, [cat.id]: s.id }))}
+                          >
+                            {s.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            <PanelSave />
+          </div>
+        )}
+
+        {/* Panel — Plantilla */}
+        {activeTool === 'template' && (
+          <div className="ed-tool-panel ed-tool-panel-lg">
+            <div className="ed-tp-title">Plantilla</div>
+            <div className="ed-tp-subtitle">Estilo de tu tienda</div>
+            <div className="ed-template-grid">
+              {TEMPLATES.map(t => (
+                <button
+                  key={t.id}
+                  className={`ed-template-card${template === t.id ? ' ed-template-card-active' : ''}`}
+                  onClick={() => setTemplate(t.id)}
+                >
+                  <div className="ed-template-preview">{t.preview}</div>
+                  <div className="ed-template-foot">
+                    <div className="ed-template-name">{t.name}</div>
+                    <div className="ed-template-desc">{t.desc}</div>
+                  </div>
+                  {template === t.id && <div className="ed-template-check">&#10003;</div>}
                 </button>
               ))}
             </div>

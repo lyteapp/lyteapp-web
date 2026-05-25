@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { useT } from '../../lib/LocaleProvider'
@@ -65,7 +64,6 @@ export default function ProductosPage() {
   const [variantImgUploading, setVariantImgUploading] = useState(false)
   const imgRef = useRef<HTMLInputElement>(null)
   const variantImgRef = useRef<HTMLInputElement>(null)
-
   useEffect(() => { if (user) loadData() }, [user])
 
   async function loadData() {
@@ -139,10 +137,13 @@ export default function ProductosPage() {
     const file = e.target.files?.[0]
     if (!file || !store) return
     setImgUploading(true)
+    setIsDirty(true)
     const ext  = file.name.split('.').pop()
     const path = `${store.id}-${Date.now()}.${ext}`
-    const { error } = await supabase.storage.from('product-images').upload(path, file, { upsert: true, contentType: file.type })
-    if (!error) setImageUrl(supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl)
+    const { error: uploadError } = await supabase.storage.from('product-images').upload(path, file, { upsert: true, contentType: file.type })
+    if (!uploadError) {
+      setImageUrl(supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl)
+    }
     setImgUploading(false)
   }
 
@@ -247,6 +248,9 @@ export default function ProductosPage() {
       <div className="pr-form-header">
         <button className="pr-back-btn" onClick={() => setMode('list')}>{t('prod.back')}</button>
         <h2 className="pr-form-title">{editing ? t('prod.edit.title') : t('prod.new.title')}</h2>
+        <button className="pr-save-btn" onClick={handleSave} disabled={saving || imgUploading} style={{ marginLeft: 'auto' }}>
+          {saving ? t('prod.saving') : 'Guardar producto'}
+        </button>
       </div>
 
       {/* Main card: image + fields */}
@@ -496,17 +500,7 @@ export default function ProductosPage() {
         </div>
       </div>
 
-      {/* ── BOTTOM SAVE BAR (portal to escape transform containing block) ── */}
       {error && <div className="pr-error" style={{ maxWidth: 720 }}>{error}</div>}
-      {createPortal(
-        <div className={`pr-bottom-save${isDirty ? ' pr-bottom-save-visible' : ''}`}>
-          <button className="pr-cancel-btn" onClick={() => setMode('list')}>{t('prod.cancel')}</button>
-          <button className="pr-save-btn pr-save-btn-lg" onClick={handleSave} disabled={saving || imgUploading}>
-            {saving ? t('prod.saving') : 'Guardar producto'}
-          </button>
-        </div>,
-        document.body
-      )}
     </div>
   )
 

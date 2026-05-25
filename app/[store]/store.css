@@ -733,6 +733,40 @@ html, body { overflow-x: hidden; }
 .sf-imgsize-large .sf-cat-img           { width: 86px; height: 86px; }
 .sf-imgsize-large .sf-vit-hero-img-wrap { aspect-ratio: 2/3; }
 
+/* ── COLOR VARIANT SWATCHES ── */
+.sf-card-swatches,
+.sf-esc-swatches,
+.sf-cat-swatches {
+  display: flex; flex-wrap: wrap; gap: 5px;
+  margin-top: 6px;
+}
+.sf-color-swatch {
+  width: 16px; height: 16px; border-radius: 50%; border: none;
+  box-shadow: 0 0 0 1.5px rgba(15,23,42,0.18), inset 0 0 0 2px rgba(255,255,255,0.5);
+  cursor: pointer; flex-shrink: 0; padding: 0;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.sf-color-swatch:hover { transform: scale(1.2); }
+.sf-color-swatch.selected {
+  box-shadow: 0 0 0 2px white, 0 0 0 4px rgba(15,23,42,0.3);
+  transform: scale(1.15);
+}
+/* Modal color swatches */
+.sf-modal-color-swatches {
+  display: flex; flex-wrap: wrap; gap: 10px;
+}
+.sf-modal-color-swatch {
+  width: 32px; height: 32px; border-radius: 50%; border: none;
+  box-shadow: 0 0 0 1.5px rgba(15,23,42,0.2), inset 0 0 0 2px rgba(255,255,255,0.4);
+  cursor: pointer; flex-shrink: 0; padding: 0;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.sf-modal-color-swatch:hover { transform: scale(1.1); }
+.sf-modal-color-swatch.selected {
+  box-shadow: 0 0 0 3px white, 0 0 0 5px rgba(15,23,42,0.3);
+  transform: scale(1.08);
+}
+
 /* Text alignment */
 .sf-align-center .sf-section-title      { text-align: center; }
 .sf-align-center .sf-card-body          { text-align: center; }

@@ -9,11 +9,13 @@ import './productos.css'
 
 type VariableGroup = { label: string; choices: string[] }
 type Additional    = { name: string; price: number }
+type ColorVariant  = { label: string; color: string; imageUrl: string }
 type ProductOptions = {
-  variables?:   VariableGroup[]
-  colors?:      string[]
-  additionals?: Additional[]
-  allowNotes?:  boolean
+  variables?:     VariableGroup[]
+  colors?:        string[]
+  colorVariants?: ColorVariant[]
+  additionals?:   Additional[]
+  allowNotes?:    boolean
 }
 
 type Product = {
@@ -58,7 +60,11 @@ export default function ProductosPage() {
   const [optAdditionals, setOptAdditionals] = useState<Additional[]>([])
   const [optAllowNotes, setOptAllowNotes]   = useState(false)
 
+  const [optColorVariants, setOptColorVariants]       = useState<ColorVariant[]>([])
+  const [variantImgUploadIdx, setVariantImgUploadIdx] = useState<number | null>(null)
+  const [variantImgUploading, setVariantImgUploading] = useState(false)
   const imgRef = useRef<HTMLInputElement>(null)
+  const variantImgRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { if (user) loadData() }, [user])
 
@@ -80,6 +86,7 @@ export default function ProductosPage() {
   function resetOpts() {
     setOptVariables([]); setChoiceInputs({})
     setOptColors([]); setColorInput('')
+    setOptColorVariants([])
     setOptAdditionals([]); setOptAllowNotes(false)
   }
 
@@ -100,6 +107,7 @@ export default function ProductosPage() {
     const opts = p.options ?? {}
     setOptVariables(opts.variables ?? [])
     setOptColors(opts.colors ?? [])
+    setOptColorVariants(opts.colorVariants ?? [])
     setOptAdditionals(opts.additionals ?? [])
     setOptAllowNotes(opts.allowNotes ?? false)
     setChoiceInputs({}); setColorInput('')
@@ -138,6 +146,22 @@ export default function ProductosPage() {
     setImgUploading(false)
   }
 
+  async function handleVariantImgUpload(e: { target: { files: FileList | null } }) {
+    const file = e.target.files?.[0]
+    if (!file || !store || variantImgUploadIdx === null) return
+    setVariantImgUploading(true)
+    const ext  = file.name.split('.').pop()
+    const path = `${store.id}-var-${Date.now()}.${ext}`
+    const { error } = await supabase.storage.from('product-images').upload(path, file, { upsert: true, contentType: file.type })
+    if (!error) {
+      const url = supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl
+      setOptColorVariants(prev => prev.map((v, i) => i === variantImgUploadIdx ? { ...v, imageUrl: url } : v))
+      setIsDirty(true)
+    }
+    setVariantImgUploading(false)
+    setVariantImgUploadIdx(null)
+  }
+
   async function handleSave() {
     if (!store || !name.trim()) { setError(t('prod.error.name')); return }
     const priceNum = parseFloat(price)
@@ -145,12 +169,14 @@ export default function ProductosPage() {
     setSaving(true); setError('')
 
     const opts: ProductOptions = {
-      variables:   optVariables.filter(g => g.label.trim() && g.choices.length > 0),
-      colors:      optColors.filter(Boolean),
-      additionals: optAdditionals.filter(a => a.name.trim()),
-      allowNotes:  optAllowNotes,
+      variables:     optVariables.filter(g => g.label.trim() && g.choices.length > 0),
+      colors:        optColors.filter(Boolean),
+      colorVariants: optColorVariants.filter(v => v.label.trim() || v.imageUrl),
+      additionals:   optAdditionals.filter(a => a.name.trim()),
+      allowNotes:    optAllowNotes,
     }
     const hasOpts = opts.variables!.length > 0 || opts.colors!.length > 0 ||
+      (opts.colorVariants?.length ?? 0) > 0 ||
       opts.additionals!.length > 0 || opts.allowNotes
 
     const payload = {
@@ -228,6 +254,7 @@ export default function ProductosPage() {
             {imageUrl && !imgUploading && <div className="pr-img-overlay pr-img-hover">{t('prod.img.change')}</div>}
           </div>
           <input ref={imgRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImgUpload} />
+          <input ref={variantImgRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleVariantImgUpload} />
           <p className="pr-img-tip">{t('prod.img.tip')}</p>
         </div>
 
@@ -341,37 +368,65 @@ export default function ProductosPage() {
           )}
         </div>
 
-        {/* Colores */}
+        {/* Variantes de color */}
         <div className="pr-opts-box">
           <div className="pr-opts-box-head">
             <div>
-              <div className="pr-opts-box-label">Colores</div>
-              <div className="pr-opts-box-hint">El cliente elige el color del producto</div>
+              <div className="pr-opts-box-label">Variantes de color</div>
+              <div className="pr-opts-box-hint">Cada color puede tener su propia foto del producto</div>
             </div>
+            <button className="pr-opts-add-btn" onClick={() => {
+              setOptColorVariants(v => [...v, { label: '', color: '#7C3AED', imageUrl: '' }])
+              setIsDirty(true)
+            }}>+ Agregar</button>
           </div>
-          <div className="pr-opts-box-body">
-            <div className="pr-opt-choices">
-              {optColors.map((c, i) => (
-                <div key={i} className="pr-opt-chip">
-                  {c}
-                  <button onClick={() => setOptColors(colors => colors.filter((_, j) => j !== i))}>×</button>
+          {optColorVariants.length > 0 && (
+            <div className="pr-opts-box-body">
+              {optColorVariants.map((v, i) => (
+                <div key={i} className="pr-variant-row">
+                  <input
+                    type="color"
+                    className="pr-variant-color-input"
+                    value={v.color}
+                    onChange={e => {
+                      setOptColorVariants(arr => arr.map((x, j) => j === i ? { ...x, color: e.target.value } : x))
+                      setIsDirty(true)
+                    }}
+                  />
+                  <div className="pr-variant-fields">
+                    <input
+                      className="pr-variant-label-input"
+                      placeholder="Nombre del color (ej: Rojo, Azul marino...)"
+                      value={v.label}
+                      onChange={e => {
+                        setOptColorVariants(arr => arr.map((x, j) => j === i ? { ...x, label: e.target.value } : x))
+                        setIsDirty(true)
+                      }}
+                    />
+                    <div
+                      className="pr-variant-img-btn"
+                      onClick={() => { setVariantImgUploadIdx(i); variantImgRef.current?.click() }}
+                    >
+                      {v.imageUrl
+                        ? <><img src={v.imageUrl} alt="" className="pr-variant-img-preview" /><span>Cambiar foto</span></>
+                        : <>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+                            </svg>
+                            <span>{variantImgUploading && variantImgUploadIdx === i ? 'Subiendo...' : 'Agregar foto'}</span>
+                          </>
+                      }
+                    </div>
+                  </div>
+                  <button className="pr-opt-del" onClick={() => {
+                    setOptColorVariants(arr => arr.filter((_, j) => j !== i))
+                    setIsDirty(true)
+                  }}>×</button>
                 </div>
               ))}
-              <input
-                className="pr-opt-chip-input"
-                placeholder="Escribe un color y presiona Enter"
-                value={colorInput}
-                onChange={e => setColorInput(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && colorInput.trim()) {
-                    setOptColors(c => [...c, colorInput.trim()])
-                    setColorInput('')
-                    e.preventDefault()
-                  }
-                }}
-              />
             </div>
-          </div>
+          )}
         </div>
 
         {/* Adicionales */}

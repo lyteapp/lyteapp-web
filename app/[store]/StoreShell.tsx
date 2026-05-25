@@ -13,11 +13,13 @@ const supabase = createClient(
 
 type VariableGroup  = { label: string; choices: string[] }
 type Additional     = { name: string; price: number }
+type ColorVariant   = { label: string; color: string; imageUrl: string }
 type ProductOptions = {
-  variables?:   VariableGroup[]
-  colors?:      string[]
-  additionals?: Additional[]
-  allowNotes?:  boolean
+  variables?:     VariableGroup[]
+  colors?:        string[]
+  colorVariants?: ColorVariant[]
+  additionals?:   Additional[]
+  allowNotes?:    boolean
 }
 type SelectedOptions = {
   variables?:   Record<string, string>
@@ -110,6 +112,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const [isIos, setIsIos]   = useState(false)
   const [installed, setInstalled] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, number>>({})
 
   // Product options modal
   const [modalProduct, setModalProduct]       = useState<Product | null>(null)
@@ -204,7 +207,14 @@ export default function StoreShell({ store, products, categories = [] }: { store
     const existing = cart[p.id]
     setModalProduct(p)
     setModalVars(existing?.selectedOptions?.variables ?? {})
-    setModalColor(existing?.selectedOptions?.color)
+    let initialColor = existing?.selectedOptions?.color
+    if (!initialColor && p.options?.colorVariants?.length) {
+      const idx = selectedVariants[p.id]
+      initialColor = idx !== undefined
+        ? (p.options.colorVariants[idx]?.label ?? p.options.colorVariants[0]?.label)
+        : p.options.colorVariants[0]?.label
+    }
+    setModalColor(initialColor)
     const existingAdds = existing?.selectedOptions?.additionals ?? []
     const addIdxs = new Set<number>()
     p.options?.additionals?.forEach((a, i) => {
@@ -219,12 +229,15 @@ export default function StoreShell({ store, products, categories = [] }: { store
     if (!modalProduct) return
     const selectedAdds = (modalProduct.options?.additionals ?? []).filter((_, i) => modalAdditionals.has(i))
     const extraPrice   = selectedAdds.reduce((s, a) => s + a.price, 0)
+    const variantImage = modalColor && modalProduct.options?.colorVariants?.length
+      ? (modalProduct.options.colorVariants.find(v => v.label === modalColor)?.imageUrl ?? null)
+      : null
     setCart(prev => ({
       ...prev,
       [modalProduct.id]: {
         id: modalProduct.id, name: modalProduct.name,
         price: modalProduct.price, extraPrice,
-        image_url: modalProduct.image_url, quantity: modalQty,
+        image_url: variantImage ?? modalProduct.image_url, quantity: modalQty,
         options: modalProduct.options ?? undefined,
         selectedOptions: {
           variables:   Object.keys(modalVars).length ? modalVars : undefined,
@@ -330,6 +343,12 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const modalExtraPrice = modalProduct
     ? (modalProduct.options?.additionals ?? []).filter((_, i) => modalAdditionals.has(i)).reduce((s, a) => s + a.price, 0)
     : 0
+
+  const modalDisplayImage = modalProduct
+    ? (modalProduct.options?.colorVariants?.length && modalColor
+        ? (modalProduct.options.colorVariants.find(v => v.label === modalColor)?.imageUrl ?? modalProduct.image_url)
+        : modalProduct.image_url)
+    : null
 
   // ── CHECKOUT ──
   if (view === 'checkout') return (
@@ -447,8 +466,8 @@ export default function StoreShell({ store, products, categories = [] }: { store
             <button className="sf-modal-close" onClick={() => setModalProduct(null)}>×</button>
 
             <div className="sf-modal-product-head">
-              {modalProduct.image_url && (
-                <img src={modalProduct.image_url} alt={modalProduct.name} className="sf-modal-img" />
+              {modalDisplayImage && (
+                <img src={modalDisplayImage} alt={modalProduct.name} className="sf-modal-img" />
               )}
               <div className="sf-modal-product-info">
                 <div className="sf-modal-name">{modalProduct.name}</div>
@@ -475,7 +494,26 @@ export default function StoreShell({ store, products, categories = [] }: { store
                 </div>
               ))}
 
-              {(modalProduct.options?.colors?.length ?? 0) > 0 && (
+              {(modalProduct.options?.colorVariants?.length ?? 0) > 0 ? (
+                <div className="sf-modal-section">
+                  <div className="sf-modal-section-title">Color</div>
+                  <div className="sf-modal-color-swatches">
+                    {modalProduct.options!.colorVariants!.map((v, i) => (
+                      <button
+                        key={i}
+                        className={`sf-modal-color-swatch${modalColor === v.label ? ' selected' : ''}`}
+                        style={{ background: v.color }}
+                        title={v.label}
+                        onClick={() => {
+                          const next = modalColor === v.label ? undefined : v.label
+                          setModalColor(next)
+                          if (next) setSelectedVariants(p => ({ ...p, [modalProduct!.id]: i }))
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : (modalProduct.options?.colors?.length ?? 0) > 0 ? (
                 <div className="sf-modal-section">
                   <div className="sf-modal-section-title">Color</div>
                   <div className="sf-modal-chips">
@@ -490,7 +528,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
                     ))}
                   </div>
                 </div>
-              )}
+              ) : null}
 
               {(modalProduct.options?.additionals?.length ?? 0) > 0 && (
                 <div className="sf-modal-section">
@@ -576,12 +614,17 @@ export default function StoreShell({ store, products, categories = [] }: { store
   )
 
   const renderCard = (product: Product) => {
-    const inCart = cart[product.id]
+    const inCart   = cart[product.id]
+    const variants = product.options?.colorVariants
+    const selIdx   = selectedVariants[product.id]
+    const displayImg = variants?.length && selIdx !== undefined
+      ? (variants[selIdx]?.imageUrl || product.image_url)
+      : product.image_url
     return (
       <div key={product.id} className="sf-card" onClick={() => openProductModal(product)}>
         <div className="sf-card-img-wrap">
-          {product.image_url
-            ? <img src={product.image_url} alt={product.name} className="sf-card-img" />
+          {displayImg
+            ? <img src={displayImg} alt={product.name} className="sf-card-img" />
             : <div className="sf-card-img-empty">{PLACEHOLDER}</div>
           }
           {inCart && <div className="sf-card-badge">{inCart.quantity}</div>}
@@ -589,6 +632,15 @@ export default function StoreShell({ store, products, categories = [] }: { store
         <div className="sf-card-body">
           <div className="sf-card-name">{product.name}</div>
           {product.description && <div className="sf-card-desc">{product.description}</div>}
+          {variants?.length ? (
+            <div className="sf-card-swatches" onClick={e => e.stopPropagation()}>
+              {variants.map((v, i) => (
+                <button key={i} className={`sf-color-swatch${selIdx === i ? ' selected' : ''}`}
+                  style={{ background: v.color }} title={v.label}
+                  onClick={() => setSelectedVariants(p => ({ ...p, [product.id]: i }))} />
+              ))}
+            </div>
+          ) : null}
           <div className="sf-card-footer">
             <div className="sf-card-price">${Number(product.price).toFixed(2)}</div>
           </div>
@@ -597,38 +649,70 @@ export default function StoreShell({ store, products, categories = [] }: { store
     )
   }
 
-  const renderEscRow = (product: Product) => (
-    <div key={product.id} className="sf-esc-row" onClick={() => openProductModal(product)}>
-      <div className="sf-esc-img-wrap">
-        {product.image_url
-          ? <img src={product.image_url} alt={product.name} className="sf-esc-img" />
-          : <div className="sf-esc-img sf-esc-img-empty">{PLACEHOLDER}</div>}
-        {cart[product.id] && <div className="sf-card-badge">{cart[product.id].quantity}</div>}
+  const renderEscRow = (product: Product) => {
+    const variants = product.options?.colorVariants
+    const selIdx   = selectedVariants[product.id]
+    const displayImg = variants?.length && selIdx !== undefined
+      ? (variants[selIdx]?.imageUrl || product.image_url)
+      : product.image_url
+    return (
+      <div key={product.id} className="sf-esc-row" onClick={() => openProductModal(product)}>
+        <div className="sf-esc-img-wrap">
+          {displayImg
+            ? <img src={displayImg} alt={product.name} className="sf-esc-img" />
+            : <div className="sf-esc-img sf-esc-img-empty">{PLACEHOLDER}</div>}
+          {cart[product.id] && <div className="sf-card-badge">{cart[product.id].quantity}</div>}
+        </div>
+        <div className="sf-esc-info">
+          <div className="sf-esc-name">{product.name}</div>
+          {variants?.length ? (
+            <div className="sf-esc-swatches" onClick={e => e.stopPropagation()}>
+              {variants.map((v, i) => (
+                <button key={i} className={`sf-color-swatch${selIdx === i ? ' selected' : ''}`}
+                  style={{ background: v.color }} title={v.label}
+                  onClick={() => setSelectedVariants(p => ({ ...p, [product.id]: i }))} />
+              ))}
+            </div>
+          ) : null}
+          <div className="sf-esc-price">${Number(product.price).toFixed(2)}</div>
+        </div>
       </div>
-      <div className="sf-esc-info">
-        <div className="sf-esc-name">{product.name}</div>
-        <div className="sf-esc-price">${Number(product.price).toFixed(2)}</div>
-      </div>
-    </div>
-  )
+    )
+  }
 
-  const renderCatRow = (product: Product) => (
-    <div key={product.id} className="sf-cat-card" onClick={() => openProductModal(product)}>
-      <div className="sf-cat-img-wrap">
-        {product.image_url
-          ? <img src={product.image_url} alt={product.name} className="sf-cat-img" />
-          : <div className="sf-cat-img sf-cat-img-empty">{PLACEHOLDER}</div>}
-        {cart[product.id] && <div className="sf-card-badge">{cart[product.id].quantity}</div>}
+  const renderCatRow = (product: Product) => {
+    const variants = product.options?.colorVariants
+    const selIdx   = selectedVariants[product.id]
+    const displayImg = variants?.length && selIdx !== undefined
+      ? (variants[selIdx]?.imageUrl || product.image_url)
+      : product.image_url
+    return (
+      <div key={product.id} className="sf-cat-card" onClick={() => openProductModal(product)}>
+        <div className="sf-cat-img-wrap">
+          {displayImg
+            ? <img src={displayImg} alt={product.name} className="sf-cat-img" />
+            : <div className="sf-cat-img sf-cat-img-empty">{PLACEHOLDER}</div>}
+          {cart[product.id] && <div className="sf-card-badge">{cart[product.id].quantity}</div>}
+        </div>
+        <div className="sf-cat-info">
+          <div className="sf-cat-name">{product.name}</div>
+          {product.description && <div className="sf-cat-desc">{product.description}</div>}
+          {variants?.length ? (
+            <div className="sf-cat-swatches" onClick={e => e.stopPropagation()}>
+              {variants.map((v, i) => (
+                <button key={i} className={`sf-color-swatch${selIdx === i ? ' selected' : ''}`}
+                  style={{ background: v.color }} title={v.label}
+                  onClick={() => setSelectedVariants(p => ({ ...p, [product.id]: i }))} />
+              ))}
+            </div>
+          ) : null}
+        </div>
+        <div className="sf-cat-action">
+          <div className="sf-cat-price">${Number(product.price).toFixed(2)}</div>
+        </div>
       </div>
-      <div className="sf-cat-info">
-        <div className="sf-cat-name">{product.name}</div>
-        {product.description && <div className="sf-cat-desc">{product.description}</div>}
-      </div>
-      <div className="sf-cat-action">
-        <div className="sf-cat-price">${Number(product.price).toFixed(2)}</div>
-      </div>
-    </div>
-  )
+    )
+  }
 
   return (
     <div className={`sf-page sf-tpl-${tpl} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize}`} style={pageStyle}>
@@ -834,8 +918,8 @@ export default function StoreShell({ store, products, categories = [] }: { store
             <button className="sf-modal-close" onClick={() => setModalProduct(null)}>×</button>
 
             <div className="sf-modal-product-head">
-              {modalProduct.image_url && (
-                <img src={modalProduct.image_url} alt={modalProduct.name} className="sf-modal-img" />
+              {modalDisplayImage && (
+                <img src={modalDisplayImage} alt={modalProduct.name} className="sf-modal-img" />
               )}
               <div className="sf-modal-product-info">
                 <div className="sf-modal-name">{modalProduct.name}</div>
@@ -862,7 +946,26 @@ export default function StoreShell({ store, products, categories = [] }: { store
                 </div>
               ))}
 
-              {(modalProduct.options?.colors?.length ?? 0) > 0 && (
+              {(modalProduct.options?.colorVariants?.length ?? 0) > 0 ? (
+                <div className="sf-modal-section">
+                  <div className="sf-modal-section-title">Color</div>
+                  <div className="sf-modal-color-swatches">
+                    {modalProduct.options!.colorVariants!.map((v, i) => (
+                      <button
+                        key={i}
+                        className={`sf-modal-color-swatch${modalColor === v.label ? ' selected' : ''}`}
+                        style={{ background: v.color }}
+                        title={v.label}
+                        onClick={() => {
+                          const next = modalColor === v.label ? undefined : v.label
+                          setModalColor(next)
+                          if (next) setSelectedVariants(p => ({ ...p, [modalProduct!.id]: i }))
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : (modalProduct.options?.colors?.length ?? 0) > 0 ? (
                 <div className="sf-modal-section">
                   <div className="sf-modal-section-title">Color</div>
                   <div className="sf-modal-chips">
@@ -877,7 +980,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
                     ))}
                   </div>
                 </div>
-              )}
+              ) : null}
 
               {(modalProduct.options?.additionals?.length ?? 0) > 0 && (
                 <div className="sf-modal-section">

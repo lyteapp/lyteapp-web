@@ -17,7 +17,19 @@ type Store = {
   whatsapp: string | null
   instagram: string | null
   template: string | null
+  template_config: Record<string, unknown> | null
 }
+
+const PRICE_PRESETS = ['#7C3AED', '#2563EB', '#DC2626', '#D97706', '#059669', '#DB2777', '#0F172A', '#64748B']
+
+const PRICE_FONTS = [
+  { id: '',           name: 'Predeterminada' },
+  { id: 'geist',      name: 'Geist' },
+  { id: 'poppins',    name: 'Poppins' },
+  { id: 'montserrat', name: 'Montserrat' },
+  { id: 'lato',       name: 'Lato' },
+  { id: 'oswald',     name: 'Oswald' },
+]
 
 const TEMPLATES = [
   {
@@ -118,9 +130,14 @@ export default function TiendaPage() {
   const [template, setTemplate] = useState('clasico')
   const [logoUploading, setLogoUploading] = useState(false)
   const [bannerUploading, setBannerUploading] = useState(false)
+  const [templateConfig, setTemplateConfig] = useState<Record<string, unknown>>({})
+  const [priceColor, setPriceColor] = useState('#7C3AED')
+  const [priceSize, setPriceSize]   = useState<'small' | 'medium' | 'large'>('medium')
+  const [priceFont, setPriceFont]   = useState('')
 
-  const logoRef = useRef<HTMLInputElement>(null)
-  const bannerRef = useRef<HTMLInputElement>(null)
+  const logoRef          = useRef<HTMLInputElement>(null)
+  const bannerRef        = useRef<HTMLInputElement>(null)
+  const priceColorRef    = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!user) return
@@ -136,6 +153,11 @@ export default function TiendaPage() {
         setLogoUrl(data.logo_url ?? '')
         setBannerUrl(data.banner_url ?? '')
         setTemplate(data.template ?? 'clasico')
+        const cfg = (data.template_config ?? {}) as Record<string, unknown>
+        setTemplateConfig(cfg)
+        if (cfg.priceColor) setPriceColor(cfg.priceColor as string)
+        if (cfg.priceSize)  setPriceSize(cfg.priceSize as 'small' | 'medium' | 'large')
+        if (cfg.priceFont !== undefined) setPriceFont((cfg.priceFont as string) ?? '')
       }
       setPageLoading(false)
     })
@@ -175,6 +197,12 @@ export default function TiendaPage() {
   async function handleSave() {
     if (!user || !name.trim() || !slug.trim()) { setError('El nombre y la URL son obligatorios.'); return }
     setSaving(true); setError('')
+    const newTemplateConfig = {
+      ...templateConfig,
+      priceColor,
+      priceSize,
+      ...(priceFont ? { priceFont } : { priceFont: undefined }),
+    }
     const payload = {
       owner_id: user.id,
       name: name.trim(),
@@ -185,6 +213,7 @@ export default function TiendaPage() {
       logo_url: logoUrl || null,
       banner_url: bannerUrl || null,
       template,
+      template_config: newTemplateConfig,
     }
     const { error: err, data } = store
       ? await supabase.from('stores').update(payload).eq('id', store.id).select().single()
@@ -322,6 +351,62 @@ export default function TiendaPage() {
                 {template === t.id && <div className="ts-template-check">✓</div>}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* ── PRECIOS ── */}
+        <div className="ts-section">
+          <div className="ts-section-title">Estilo de precios</div>
+          <div className="ts-price-block">
+
+            <div className="ts-price-field">
+              <div className="ts-label">Color</div>
+              <div className="ts-colors">
+                {PRICE_PRESETS.map(c => (
+                  <div
+                    key={c}
+                    className={`ts-color-swatch${priceColor === c ? ' selected' : ''}`}
+                    style={{ background: c }}
+                    onClick={() => setPriceColor(c)}
+                  />
+                ))}
+                <div
+                  className="ts-color-custom"
+                  style={{ background: PRICE_PRESETS.includes(priceColor) ? undefined : priceColor }}
+                  onClick={() => priceColorRef.current?.click()}
+                >
+                  {PRICE_PRESETS.includes(priceColor) ? '+' : null}
+                  <input ref={priceColorRef} type="color" value={priceColor} onChange={e => setPriceColor(e.target.value)} />
+                </div>
+              </div>
+              <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 24, height: 24, borderRadius: 6, background: priceColor }} />
+                <span style={{ fontSize: 12, fontFamily: 'var(--font-geist-mono), monospace', color: '#475569', fontWeight: 600 }}>{priceColor.toUpperCase()}</span>
+              </div>
+            </div>
+
+            <div className="ts-price-field">
+              <div className="ts-label">Tamaño</div>
+              <div className="ts-pill-row">
+                {(['small', 'medium', 'large'] as const).map(s => (
+                  <button key={s} type="button" className={`ts-pill-btn${priceSize === s ? ' selected' : ''}`} onClick={() => setPriceSize(s)}>
+                    {s === 'small' ? 'Pequeño' : s === 'medium' ? 'Mediano' : 'Grande'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="ts-price-field">
+              <div className="ts-label">Fuente</div>
+              <div className="ts-pill-row">
+                {PRICE_FONTS.map(f => (
+                  <button key={f.id} type="button" className={`ts-pill-btn${priceFont === f.id ? ' selected' : ''}`} onClick={() => setPriceFont(f.id)}>
+                    {f.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
           </div>
         </div>
 

@@ -81,7 +81,7 @@
 .pr-del-btn:hover { background: #FEE2E2; }
 
 /* ── FORM ── */
-.pr-form-wrap { max-width: 720px; }
+.pr-form-wrap { max-width: 720px; padding-bottom: 80px; }
 
 .pr-form-header {
   display: flex; align-items: center;
@@ -391,11 +391,17 @@
 /* ── BOTTOM SAVE BAR ── */
 .pr-bottom-save {
   display: flex; align-items: center; gap: 12px;
-  padding: 16px 24px;
-  background: white; border-top: 1px solid rgba(124,58,237,0.15);
+  padding: 14px 32px;
+  background: white;
+  border-top: 1px solid rgba(15,23,42,0.08);
   position: fixed; bottom: 0; left: 240px; right: 0;
-  box-shadow: 0 -4px 24px rgba(15,23,42,0.08);
+  box-shadow: 0 -4px 20px rgba(15,23,42,0.07);
   z-index: 200;
+  animation: prSlideUp 0.2s ease;
+}
+@keyframes prSlideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
 }
 
 .pr-card-pending {

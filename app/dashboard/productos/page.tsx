@@ -248,9 +248,6 @@ export default function ProductosPage() {
       <div className="pr-form-header">
         <button className="pr-back-btn" onClick={() => setMode('list')}>{t('prod.back')}</button>
         <h2 className="pr-form-title">{editing ? t('prod.edit.title') : t('prod.new.title')}</h2>
-        <button className="pr-save-btn" onClick={handleSave} disabled={saving || imgUploading} style={{ marginLeft: 'auto' }}>
-          {saving ? t('prod.saving') : 'Guardar producto'}
-        </button>
       </div>
 
       {/* Main card: image + fields */}
@@ -501,6 +498,16 @@ export default function ProductosPage() {
       </div>
 
       {error && <div className="pr-error" style={{ maxWidth: 720 }}>{error}</div>}
+
+      {/* Barra fija abajo — aparece cuando hay cambios */}
+      {isDirty && (
+        <div className="pr-bottom-save">
+          <button className="pr-cancel-btn" onClick={() => setMode('list')}>{t('prod.cancel')}</button>
+          <button className="pr-save-btn pr-save-btn-lg" onClick={handleSave} disabled={saving || imgUploading}>
+            {saving ? t('prod.saving') : 'Guardar producto'}
+          </button>
+        </div>
+      )}
     </div>
   )
 

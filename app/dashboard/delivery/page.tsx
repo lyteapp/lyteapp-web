@@ -5,18 +5,25 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import './delivery.css'
 
-type Status = 'ready' | 'picked_up' | 'delivered' | 'cancelled'
+type DeliveryStatus = 'ready' | 'picked_up' | 'delivered' | 'cancelled'
 
 type Driver = {
   id: string; name: string; phone: string | null
-  is_active: boolean; notes: string | null; created_at: string
+  is_active: boolean; created_at: string
+}
+
+type Order = {
+  id: string; customer_name: string; customer_phone: string
+  customer_notes: string | null; payment_method: string | null
+  total: number; status: string; created_at: string
 }
 
 type Delivery = {
-  id: string; store_id: string; order_ref: string | null
-  driver_id: string | null; customer_name: string
-  customer_phone: string; delivery_address: string
-  status: Status; driver_fee: number; fee_paid: boolean
+  id: string; store_id: string
+  order_id: string | null; driver_id: string | null
+  customer_name: string; customer_phone: string
+  delivery_address: string; status: DeliveryStatus
+  driver_fee: number; fee_paid: boolean
   notes: string | null; picked_up_at: string | null
   delivered_at: string | null; created_at: string
   driver?: Driver | null
@@ -43,43 +50,41 @@ function timeAgo(iso: string) {
 
 export default function DeliveryPage() {
   const { user } = useAuth()
-  const [loading, setLoading]   = useState(true)
-  const [storeId, setStoreId]   = useState<string | null>(null)
-  const [tab, setTab]           = useState<'deliveries' | 'drivers' | 'payments'>('deliveries')
+  const [loading, setLoading]     = useState(true)
+  const [storeId, setStoreId]     = useState<string | null>(null)
+  const [tab, setTab]             = useState<'deliveries' | 'drivers' | 'payments'>('deliveries')
   const [deliveries, setDeliveries] = useState<Delivery[]>([])
-  const [drivers, setDrivers]   = useState<Driver[]>([])
-  const [filter, setFilter]     = useState<'active' | 'all' | Status>('active')
+  const [drivers, setDrivers]     = useState<Driver[]>([])
+  const [readyOrders, setReadyOrders] = useState<Order[]>([])
 
-  // new delivery form
-  const [showForm, setShowForm] = useState(false)
-  const [fCustomer, setFCustomer] = useState('')
-  const [fPhone, setFPhone]       = useState('')
-  const [fAddress, setFAddress]   = useState('')
-  const [fDriverId, setFDriverId] = useState('')
-  const [fFee, setFFee]           = useState('')
-  const [fNotes, setFNotes]       = useState('')
-  const [fRef, setFRef]           = useState('')
-  const [fSaving, setFSaving]     = useState(false)
+  // Dispatch form (per order)
+  const [dispatchingOrder, setDispatchingOrder] = useState<Order | null>(null)
+  const [dAddress, setDAddress] = useState('')
+  const [dDriverId, setDDriverId] = useState('')
+  const [dFee, setDFee]         = useState('')
+  const [dNotes, setDNotes]     = useState('')
+  const [dSaving, setDSaving]   = useState(false)
 
-  // driver form
-  const [showDriverForm, setShowDriverForm] = useState(false)
-  const [editDriver, setEditDriver]         = useState<Driver | null>(null)
-  const [dName, setDName]   = useState('')
-  const [dPhone, setDPhone] = useState('')
-  const [dSaving, setDSaving] = useState(false)
+  // Driver form
+  const [showDriverForm, setShowDriverForm]   = useState(false)
+  const [editDriver, setEditDriver]           = useState<Driver | null>(null)
+  const [drName, setDrName]   = useState('')
+  const [drPhone, setDrPhone] = useState('')
+  const [drSaving, setDrSaving] = useState(false)
 
   // QR modal
   const [qrDel, setQrDel]   = useState<Delivery | null>(null)
   const [copied, setCopied] = useState(false)
 
-  // action state
+  // Action state
   const [updatingId, setUpdatingId]   = useState<string | null>(null)
   const [assigningId, setAssigningId] = useState<string | null>(null)
+  const [filter, setFilter]           = useState<'active' | 'all' | DeliveryStatus>('active')
 
   const trackUrl = (id: string) => `${BASE_URL}/delivery/${id}`
 
   const loadData = useCallback(async (sid: string) => {
-    const [{ data: dels }, { data: drvs }] = await Promise.all([
+    const [{ data: dels }, { data: drvs }, { data: orders }, { data: dispatched }] = await Promise.all([
       supabase
         .from('deliveries')
         .select('*, driver:driver_id(id,name,phone,is_active)')
@@ -91,9 +96,22 @@ export default function DeliveryPage() {
         .select('*')
         .eq('store_id', sid)
         .order('name'),
+      supabase
+        .from('orders')
+        .select('id,customer_name,customer_phone,customer_notes,payment_method,total,status,created_at')
+        .eq('store_id', sid)
+        .eq('status', 'ready')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('deliveries')
+        .select('order_id')
+        .eq('store_id', sid)
+        .not('order_id', 'is', null),
     ])
+    const dispatchedIds = new Set((dispatched ?? []).map(d => d.order_id))
     setDeliveries((dels as Delivery[]) ?? [])
     setDrivers(drvs ?? [])
+    setReadyOrders((orders ?? []).filter(o => !dispatchedIds.has(o.id)))
   }, [])
 
   useEffect(() => {
@@ -108,34 +126,36 @@ export default function DeliveryPage() {
     if (!storeId) return
     const ch = supabase.channel(`delivery-${storeId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'deliveries', filter: `store_id=eq.${storeId}` }, () => loadData(storeId))
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `store_id=eq.${storeId}` }, () => loadData(storeId))
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, [storeId, loadData])
 
-  function resetForm() {
-    setFCustomer(''); setFPhone(''); setFAddress('')
-    setFDriverId(''); setFFee(''); setFNotes(''); setFRef('')
+  function openDispatch(order: Order) {
+    setDispatchingOrder(order)
+    setDAddress(''); setDDriverId(''); setDFee(''); setDNotes('')
   }
 
   async function createDelivery() {
-    if (!storeId || !fCustomer.trim() || !fAddress.trim()) return
-    setFSaving(true)
+    if (!storeId || !dispatchingOrder) return
+    setDSaving(true)
     await supabase.from('deliveries').insert({
       store_id: storeId,
-      customer_name: fCustomer.trim(),
-      customer_phone: fPhone.trim(),
-      delivery_address: fAddress.trim(),
-      driver_id: fDriverId || null,
-      driver_fee: parseFloat(fFee) || 0,
-      notes: fNotes.trim() || null,
-      order_ref: fRef.trim() || null,
+      order_id: dispatchingOrder.id,
+      customer_name: dispatchingOrder.customer_name,
+      customer_phone: dispatchingOrder.customer_phone,
+      delivery_address: dAddress.trim(),
+      driver_id: dDriverId || null,
+      driver_fee: parseFloat(dFee) || 0,
+      notes: dNotes.trim() || null,
       status: 'ready',
     })
-    resetForm(); setShowForm(false); setFSaving(false)
+    setDispatchingOrder(null)
+    setDSaving(false)
     await loadData(storeId)
   }
 
-  async function updateStatus(del: Delivery, status: Status) {
+  async function updateStatus(del: Delivery, status: DeliveryStatus) {
     setUpdatingId(del.id)
     const patch: Record<string, unknown> = { status }
     if (status === 'picked_up') patch.picked_up_at = new Date().toISOString()
@@ -153,14 +173,14 @@ export default function DeliveryPage() {
   }
 
   async function saveDriver() {
-    if (!storeId || !dName.trim()) return
-    setDSaving(true)
+    if (!storeId || !drName.trim()) return
+    setDrSaving(true)
     if (editDriver) {
-      await supabase.from('delivery_drivers').update({ name: dName.trim(), phone: dPhone.trim() || null }).eq('id', editDriver.id)
+      await supabase.from('delivery_drivers').update({ name: drName.trim(), phone: drPhone.trim() || null }).eq('id', editDriver.id)
     } else {
-      await supabase.from('delivery_drivers').insert({ store_id: storeId, name: dName.trim(), phone: dPhone.trim() || null })
+      await supabase.from('delivery_drivers').insert({ store_id: storeId, name: drName.trim(), phone: drPhone.trim() || null })
     }
-    setDName(''); setDPhone(''); setEditDriver(null); setShowDriverForm(false); setDSaving(false)
+    setDrName(''); setDrPhone(''); setEditDriver(null); setShowDriverForm(false); setDrSaving(false)
     await loadData(storeId)
   }
 
@@ -226,12 +246,9 @@ export default function DeliveryPage() {
           <h1 className="dl-title">Delivery</h1>
           <div className="dl-sub">
             {activeCount > 0 ? `${activeCount} activa${activeCount !== 1 ? 's' : ''}` : 'Sin entregas activas'}
-            {deliveries.filter(d => d.status === 'delivered').length > 0 && ` · ${deliveries.filter(d => d.status === 'delivered').length} entregadas`}
+            {readyOrders.length > 0 && ` · ${readyOrders.length} pedido${readyOrders.length !== 1 ? 's' : ''} listo${readyOrders.length !== 1 ? 's' : ''} para despachar`}
           </div>
         </div>
-        <button className="dl-btn-primary" onClick={() => { resetForm(); setShowForm(true) }}>
-          + Nueva entrega
-        </button>
       </div>
 
       {/* Tabs */}
@@ -252,6 +269,80 @@ export default function DeliveryPage() {
       {/* ── ENTREGAS ── */}
       {tab === 'deliveries' && (
         <div>
+          {/* Ready orders to dispatch */}
+          {readyOrders.length > 0 && (
+            <div className="dl-queue-section">
+              <div className="dl-queue-label">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+                </svg>
+                Pedidos listos para despachar
+              </div>
+              <div className="dl-queue-list">
+                {readyOrders.map(order => (
+                  <div key={order.id}>
+                    {dispatchingOrder?.id === order.id ? (
+                      /* Inline dispatch form */
+                      <div className="dl-dispatch-form">
+                        <div className="dl-dispatch-form-top">
+                          <div className="dl-dispatch-order-name">{order.customer_name}</div>
+                          <div className="dl-dispatch-order-meta">{order.customer_phone} · ${Number(order.total).toFixed(2)}</div>
+                        </div>
+                        <div className="dl-form-field">
+                          <label className="dl-form-label">Direccion de entrega</label>
+                          <input className="dl-input" value={dAddress} onChange={e => setDAddress(e.target.value)} placeholder="Urb. Las Mercedes, Apt 3B..." autoFocus />
+                        </div>
+                        <div className="dl-form-row2">
+                          <div className="dl-form-field">
+                            <label className="dl-form-label">Motorista</label>
+                            <select className="dl-select" value={dDriverId} onChange={e => setDDriverId(e.target.value)}>
+                              <option value="">Sin asignar</option>
+                              {drivers.filter(d => d.is_active).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                            </select>
+                          </div>
+                          <div className="dl-form-field">
+                            <label className="dl-form-label">Fee del motorista ($)</label>
+                            <input className="dl-input" value={dFee} onChange={e => setDFee(e.target.value)} type="number" min="0" step="0.50" placeholder="0.00" />
+                          </div>
+                        </div>
+                        {order.customer_notes && (
+                          <div className="dl-dispatch-notes">Notas del cliente: {order.customer_notes}</div>
+                        )}
+                        <div className="dl-form-actions">
+                          <button className="dl-btn-ghost" onClick={() => setDispatchingOrder(null)}>Cancelar</button>
+                          <button className="dl-btn-dispatch" onClick={createDelivery} disabled={dSaving}>
+                            {dSaving ? 'Despachando...' : 'Despachar pedido'}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Order card */
+                      <div className="dl-queue-card">
+                        <div className="dl-queue-card-info">
+                          <div className="dl-queue-card-name">{order.customer_name}</div>
+                          <div className="dl-queue-card-meta">
+                            {order.customer_phone && <span>{order.customer_phone}</span>}
+                            <span>${Number(order.total).toFixed(2)}</span>
+                            <span className="dl-queue-card-time">{timeAgo(order.created_at)}</span>
+                          </div>
+                          {order.customer_notes && <div className="dl-queue-card-notes">{order.customer_notes}</div>}
+                        </div>
+                        <button className="dl-btn-dispatch" onClick={() => openDispatch(order)}>
+                          <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+                            <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
+                            <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z"/>
+                          </svg>
+                          Despachar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Active deliveries */}
           <div className="dl-filters">
             {(['active', 'ready', 'picked_up', 'delivered', 'all'] as const).map(f => (
               <button key={f} className={`dl-filter${filter === f ? ' active' : ''}`} onClick={() => setFilter(f)}>
@@ -261,7 +352,7 @@ export default function DeliveryPage() {
             ))}
           </div>
 
-          {filtered.length === 0 ? (
+          {filtered.length === 0 && readyOrders.length === 0 ? (
             <div className="dl-empty">
               <div className="dl-empty-icon">
                 <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -269,24 +360,18 @@ export default function DeliveryPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M20 32l8 8 16-16" />
                 </svg>
               </div>
-              <div className="dl-empty-title">No hay entregas {filter === 'active' ? 'activas' : ''}</div>
-              <div className="dl-empty-sub">Crea una nueva entrega para empezar</div>
-              <button className="dl-btn-primary" onClick={() => { resetForm(); setShowForm(true) }}>
-                + Nueva entrega
-              </button>
+              <div className="dl-empty-title">No hay entregas activas</div>
+              <div className="dl-empty-sub">Las entregas apareceran aqui cuando un pedido este listo en Pedidos</div>
             </div>
-          ) : (
+          ) : filtered.length === 0 ? null : (
             <div className="dl-list">
               {filtered.map(del => (
                 <div key={del.id} className={`dl-card dl-card-${del.status}`}>
-                  {/* Left: status + time */}
                   <div className="dl-card-left">
                     <span className={`dl-badge ${STATUS_CLS[del.status]}`}>{STATUS_LABEL[del.status]}</span>
                     <div className="dl-card-time">{timeAgo(del.created_at)}</div>
-                    {del.order_ref && <div className="dl-card-ref">{del.order_ref}</div>}
                   </div>
 
-                  {/* Center: customer info */}
                   <div className="dl-card-center">
                     <div className="dl-card-customer">{del.customer_name}</div>
                     {del.customer_phone && (
@@ -303,7 +388,6 @@ export default function DeliveryPage() {
                     {del.notes && <div className="dl-card-notes">{del.notes}</div>}
                   </div>
 
-                  {/* Right: driver + actions */}
                   <div className="dl-card-right">
                     <div className="dl-card-driver-info">
                       {del.driver ? (
@@ -362,9 +446,7 @@ export default function DeliveryPage() {
                         <button className="dl-btn-pay" onClick={() => markPaid(del.id, true)}>Pagar fee</button>
                       )}
                       {(del.status === 'ready' || del.status === 'picked_up') && (
-                        <button className="dl-btn-x" onClick={() => updateStatus(del, 'cancelled')} disabled={updatingId === del.id} title="Cancelar">
-                          ✕
-                        </button>
+                        <button className="dl-btn-x" onClick={() => updateStatus(del, 'cancelled')} disabled={updatingId === del.id} title="Cancelar">✕</button>
                       )}
                     </div>
                   </div>
@@ -383,7 +465,7 @@ export default function DeliveryPage() {
               <div className="dl-section-title">Motoristas</div>
               <div className="dl-section-sub">{drivers.filter(d => d.is_active).length} activos</div>
             </div>
-            <button className="dl-btn-primary" onClick={() => { setDName(''); setDPhone(''); setEditDriver(null); setShowDriverForm(true) }}>
+            <button className="dl-btn-primary" onClick={() => { setDrName(''); setDrPhone(''); setEditDriver(null); setShowDriverForm(true) }}>
               + Agregar motorista
             </button>
           </div>
@@ -394,17 +476,17 @@ export default function DeliveryPage() {
               <div className="dl-form-row2">
                 <div className="dl-form-field">
                   <label className="dl-form-label">Nombre *</label>
-                  <input className="dl-input" value={dName} onChange={e => setDName(e.target.value)} placeholder="Nombre completo" />
+                  <input className="dl-input" value={drName} onChange={e => setDrName(e.target.value)} placeholder="Nombre completo" />
                 </div>
                 <div className="dl-form-field">
                   <label className="dl-form-label">Telefono</label>
-                  <input className="dl-input" value={dPhone} onChange={e => setDPhone(e.target.value)} placeholder="+58 412 000 0000" type="tel" />
+                  <input className="dl-input" value={drPhone} onChange={e => setDrPhone(e.target.value)} placeholder="+58 412 000 0000" type="tel" />
                 </div>
               </div>
               <div className="dl-form-actions">
                 <button className="dl-btn-ghost" onClick={() => setShowDriverForm(false)}>Cancelar</button>
-                <button className="dl-btn-primary" onClick={saveDriver} disabled={dSaving || !dName.trim()}>
-                  {dSaving ? 'Guardando...' : editDriver ? 'Guardar cambios' : 'Agregar motorista'}
+                <button className="dl-btn-primary" onClick={saveDriver} disabled={drSaving || !drName.trim()}>
+                  {drSaving ? 'Guardando...' : editDriver ? 'Guardar cambios' : 'Agregar motorista'}
                 </button>
               </div>
             </div>
@@ -413,7 +495,7 @@ export default function DeliveryPage() {
           {drivers.length === 0 ? (
             <div className="dl-empty">
               <div className="dl-empty-title">No hay motoristas registrados</div>
-              <div className="dl-empty-sub">Agrega tu equipo de delivery para asignar entregas</div>
+              <div className="dl-empty-sub">Agrega tu equipo para asignar entregas</div>
             </div>
           ) : (
             <div className="dl-driver-list">
@@ -432,10 +514,10 @@ export default function DeliveryPage() {
                       </div>
                     </div>
                     <div className="dl-driver-actions">
-                      <div className={`dl-toggle${drv.is_active ? ' on' : ''}`} onClick={() => toggleDriver(drv)} title={drv.is_active ? 'Activo' : 'Inactivo'}>
+                      <div className={`dl-toggle${drv.is_active ? ' on' : ''}`} onClick={() => toggleDriver(drv)}>
                         <div className="dl-toggle-knob" />
                       </div>
-                      <button className="dl-btn-edit" onClick={() => { setEditDriver(drv); setDName(drv.name); setDPhone(drv.phone ?? ''); setShowDriverForm(true) }}>
+                      <button className="dl-btn-edit" onClick={() => { setEditDriver(drv); setDrName(drv.name); setDrPhone(drv.phone ?? ''); setShowDriverForm(true) }}>
                         Editar
                       </button>
                       <button className="dl-btn-x" onClick={() => deleteDriver(drv.id)}>✕</button>
@@ -461,7 +543,7 @@ export default function DeliveryPage() {
           {paymentByDriver.length === 0 ? (
             <div className="dl-empty">
               <div className="dl-empty-title">Sin datos de pagos</div>
-              <div className="dl-empty-sub">Asigna motoristas a tus entregas para ver los fees aqui</div>
+              <div className="dl-empty-sub">Los fees apareceran aqui cuando asignes motoristas a entregas</div>
             </div>
           ) : (
             <div className="dl-payment-list">
@@ -474,7 +556,7 @@ export default function DeliveryPage() {
                     </div>
                     <div className="dl-payment-stats">
                       <div className="dl-pstat">
-                        <div className="dl-pstat-label">Total acumulado</div>
+                        <div className="dl-pstat-label">Total</div>
                         <div className="dl-pstat-val">${total.toFixed(2)}</div>
                       </div>
                       <div className="dl-pstat">
@@ -494,7 +576,6 @@ export default function DeliveryPage() {
                       </button>
                     )}
                   </div>
-
                   <div className="dl-payment-rows">
                     {dDels.filter(d => d.driver_fee > 0).map(d => (
                       <div key={d.id} className="dl-payment-row">
@@ -513,59 +594,6 @@ export default function DeliveryPage() {
               ))}
             </div>
           )}
-        </div>
-      )}
-
-      {/* ── PANEL: Nueva entrega ── */}
-      {showForm && (
-        <div className="dl-overlay" onClick={() => setShowForm(false)}>
-          <div className="dl-panel" onClick={e => e.stopPropagation()}>
-            <div className="dl-panel-head">
-              <h3 className="dl-panel-title">Nueva entrega</h3>
-              <button className="dl-close-btn" onClick={() => setShowForm(false)}>✕</button>
-            </div>
-            <div className="dl-panel-body">
-              <div className="dl-form-field">
-                <label className="dl-form-label">Cliente *</label>
-                <input className="dl-input" value={fCustomer} onChange={e => setFCustomer(e.target.value)} placeholder="Nombre del cliente" />
-              </div>
-              <div className="dl-form-field">
-                <label className="dl-form-label">Telefono (WhatsApp)</label>
-                <input className="dl-input" value={fPhone} onChange={e => setFPhone(e.target.value)} placeholder="+58 412 000 0000" type="tel" />
-              </div>
-              <div className="dl-form-field">
-                <label className="dl-form-label">Direccion de entrega *</label>
-                <textarea className="dl-textarea" value={fAddress} onChange={e => setFAddress(e.target.value)} placeholder="Urb. Las Mercedes, Torre A, Apt 3B..." rows={2} />
-              </div>
-              <div className="dl-form-row2">
-                <div className="dl-form-field">
-                  <label className="dl-form-label">Motorista</label>
-                  <select className="dl-select" value={fDriverId} onChange={e => setFDriverId(e.target.value)}>
-                    <option value="">Sin asignar</option>
-                    {drivers.filter(d => d.is_active).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                  </select>
-                </div>
-                <div className="dl-form-field">
-                  <label className="dl-form-label">Fee del motorista ($)</label>
-                  <input className="dl-input" value={fFee} onChange={e => setFFee(e.target.value)} type="number" min="0" step="0.50" placeholder="0.00" />
-                </div>
-              </div>
-              <div className="dl-form-field">
-                <label className="dl-form-label">Referencia de pedido</label>
-                <input className="dl-input" value={fRef} onChange={e => setFRef(e.target.value)} placeholder="#001, pedido WA..." />
-              </div>
-              <div className="dl-form-field">
-                <label className="dl-form-label">Notas</label>
-                <textarea className="dl-textarea" value={fNotes} onChange={e => setFNotes(e.target.value)} placeholder="Instrucciones especiales para el motorista..." rows={2} />
-              </div>
-            </div>
-            <div className="dl-panel-foot">
-              <button className="dl-btn-ghost" onClick={() => setShowForm(false)}>Cancelar</button>
-              <button className="dl-btn-primary" onClick={createDelivery} disabled={fSaving || !fCustomer.trim() || !fAddress.trim()}>
-                {fSaving ? 'Creando...' : 'Crear entrega'}
-              </button>
-            </div>
-          </div>
         </div>
       )}
 

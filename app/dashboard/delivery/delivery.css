@@ -379,6 +379,52 @@
 }
 .dl-btn-wa-lg:hover { background: #16A34A; }
 
+/* ── Queue section (ready orders to dispatch) */
+.dl-queue-section { margin-bottom: 24px; }
+.dl-queue-label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 700; color: #059669;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  margin-bottom: 10px;
+}
+.dl-queue-list { display: flex; flex-direction: column; gap: 8px; }
+
+.dl-queue-card {
+  display: flex; align-items: center; gap: 16px;
+  background: #ECFDF5; border: 1px solid rgba(16,185,129,0.25);
+  border-radius: 14px; padding: 14px 16px;
+  transition: box-shadow 0.15s;
+}
+.dl-queue-card:hover { box-shadow: 0 2px 12px rgba(16,185,129,0.15); }
+.dl-queue-card-info { flex: 1; min-width: 0; }
+.dl-queue-card-name { font-size: 15px; font-weight: 700; color: #065F46; margin-bottom: 3px; }
+.dl-queue-card-meta { display: flex; gap: 10px; font-size: 12px; color: #047857; flex-wrap: wrap; }
+.dl-queue-card-time { color: #94A3B8; }
+.dl-queue-card-notes { font-size: 12px; color: #047857; font-style: italic; margin-top: 3px; }
+
+.dl-btn-dispatch {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 13px; font-weight: 700; padding: 9px 16px; border-radius: 9px;
+  background: #10B981; color: white; border: none; cursor: pointer;
+  font-family: var(--font-geist-sans), sans-serif; white-space: nowrap;
+  transition: all 0.15s; flex-shrink: 0;
+}
+.dl-btn-dispatch:hover:not(:disabled) { background: #059669; transform: translateY(-1px); }
+.dl-btn-dispatch:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.dl-dispatch-form {
+  background: white; border: 1px solid rgba(16,185,129,0.3);
+  border-radius: 14px; padding: 18px 20px;
+  animation: dlFadeIn 0.2s ease;
+}
+.dl-dispatch-form-top { margin-bottom: 14px; }
+.dl-dispatch-order-name { font-size: 16px; font-weight: 700; color: #0F172A; }
+.dl-dispatch-order-meta { font-size: 13px; color: #64748B; margin-top: 2px; }
+.dl-dispatch-notes {
+  font-size: 12px; color: #64748B; font-style: italic;
+  background: #F8F7F4; border-radius: 8px; padding: 8px 12px; margin-bottom: 4px;
+}
+
 /* ── Responsive */
 @media (max-width: 700px) {
   .dl-card { grid-template-columns: 1fr; gap: 12px; }

@@ -568,6 +568,21 @@ html, body { overflow-x: hidden; }
 }
 .sf-modal-img-zoom { cursor: zoom-in; }
 
+/* ── SLIDE DOTS ── */
+.sf-slide-dots {
+  position: absolute; bottom: 7px; left: 0; right: 0;
+  display: flex; justify-content: center; gap: 5px;
+  pointer-events: none;
+}
+.sf-slide-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: rgba(255,255,255,0.5);
+  transition: background 0.2s, transform 0.2s;
+}
+.sf-slide-dot.on { background: white; transform: scale(1.25); }
+
+.sf-card-img, .sf-esc-img, .sf-cat-img { transition: opacity 0.15s ease; }
+
 /* ── LIGHTBOX ── */
 .sf-lightbox {
   position: fixed; inset: 0; z-index: 500;

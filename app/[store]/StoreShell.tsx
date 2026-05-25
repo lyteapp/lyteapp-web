@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -121,6 +121,8 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const [modalNotes, setModalNotes]           = useState('')
   const [modalQty, setModalQty]               = useState(1)
   const [lightboxImg, setLightboxImg]         = useState<string | null>(null)
+  const touchStartX = useRef<number>(0)
+  const swipedRef   = useRef<boolean>(false)
 
   useEffect(() => {
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !(window.navigator as Navigator & { standalone?: boolean }).standalone
@@ -619,20 +621,40 @@ export default function StoreShell({ store, products, categories = [] }: { store
   )
 
   const renderCard = (product: Product) => {
-    const qty      = getProdQty(product.id)
-    const variants = product.options?.colorVariants
-    const selIdx   = selectedVariants[product.id]
-    const displayImg = variants?.length && selIdx !== undefined
-      ? (variants[selIdx]?.imageUrl || product.image_url)
+    const qty        = getProdQty(product.id)
+    const variants   = product.options?.colorVariants
+    const selIdx     = selectedVariants[product.id] ?? (variants?.length ? 0 : undefined)
+    const displayImg = variants?.length
+      ? (variants[selIdx ?? 0]?.imageUrl || product.image_url)
       : product.image_url
     return (
       <div key={product.id} className="sf-card" onClick={() => openProductModal(product)}>
-        <div className="sf-card-img-wrap">
+        <div
+          className="sf-card-img-wrap"
+          onTouchStart={variants?.length ? e => { touchStartX.current = e.touches[0].clientX; swipedRef.current = false } : undefined}
+          onTouchEnd={variants?.length ? e => {
+            const dx = e.changedTouches[0].clientX - touchStartX.current
+            if (Math.abs(dx) > 35) {
+              swipedRef.current = true
+              const cur = selIdx ?? 0
+              const next = dx < 0 ? Math.min(variants.length - 1, cur + 1) : Math.max(0, cur - 1)
+              setSelectedVariants(p => ({ ...p, [product.id]: next }))
+            }
+          } : undefined}
+          onClick={e => { if (swipedRef.current) { e.stopPropagation(); swipedRef.current = false } }}
+        >
           {displayImg
             ? <img src={displayImg} alt={product.name} className="sf-card-img" />
             : <div className="sf-card-img-empty">{PLACEHOLDER}</div>
           }
           {qty > 0 && <div className="sf-card-badge">{qty}</div>}
+          {(variants?.length ?? 0) > 1 && (
+            <div className="sf-slide-dots">
+              {variants!.map((_, i) => (
+                <div key={i} className={`sf-slide-dot${(selIdx ?? 0) === i ? ' on' : ''}`} />
+              ))}
+            </div>
+          )}
         </div>
         <div className="sf-card-body">
           <div className="sf-card-name">{product.name}</div>
@@ -640,7 +662,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
           {variants?.length ? (
             <div className="sf-card-swatches" onClick={e => e.stopPropagation()}>
               {variants.map((v, i) => (
-                <button key={i} className={`sf-color-swatch${selIdx === i ? ' selected' : ''}`}
+                <button key={i} className={`sf-color-swatch${(selIdx ?? 0) === i ? ' selected' : ''}`}
                   style={{ background: v.color }} title={v.label}
                   onClick={() => setSelectedVariants(p => ({ ...p, [product.id]: i }))} />
               ))}
@@ -655,25 +677,45 @@ export default function StoreShell({ store, products, categories = [] }: { store
   }
 
   const renderEscRow = (product: Product) => {
-    const variants = product.options?.colorVariants
-    const selIdx   = selectedVariants[product.id]
-    const displayImg = variants?.length && selIdx !== undefined
-      ? (variants[selIdx]?.imageUrl || product.image_url)
+    const variants   = product.options?.colorVariants
+    const selIdx     = selectedVariants[product.id] ?? (variants?.length ? 0 : undefined)
+    const displayImg = variants?.length
+      ? (variants[selIdx ?? 0]?.imageUrl || product.image_url)
       : product.image_url
     return (
       <div key={product.id} className="sf-esc-row" onClick={() => openProductModal(product)}>
-        <div className="sf-esc-img-wrap">
+        <div
+          className="sf-esc-img-wrap"
+          onTouchStart={variants?.length ? e => { touchStartX.current = e.touches[0].clientX; swipedRef.current = false } : undefined}
+          onTouchEnd={variants?.length ? e => {
+            const dx = e.changedTouches[0].clientX - touchStartX.current
+            if (Math.abs(dx) > 35) {
+              swipedRef.current = true
+              const cur = selIdx ?? 0
+              const next = dx < 0 ? Math.min(variants.length - 1, cur + 1) : Math.max(0, cur - 1)
+              setSelectedVariants(p => ({ ...p, [product.id]: next }))
+            }
+          } : undefined}
+          onClick={e => { if (swipedRef.current) { e.stopPropagation(); swipedRef.current = false } }}
+        >
           {displayImg
             ? <img src={displayImg} alt={product.name} className="sf-esc-img" />
             : <div className="sf-esc-img sf-esc-img-empty">{PLACEHOLDER}</div>}
           {getProdQty(product.id) > 0 && <div className="sf-card-badge">{getProdQty(product.id)}</div>}
+          {(variants?.length ?? 0) > 1 && (
+            <div className="sf-slide-dots">
+              {variants!.map((_, i) => (
+                <div key={i} className={`sf-slide-dot${(selIdx ?? 0) === i ? ' on' : ''}`} />
+              ))}
+            </div>
+          )}
         </div>
         <div className="sf-esc-info">
           <div className="sf-esc-name">{product.name}</div>
           {variants?.length ? (
             <div className="sf-esc-swatches" onClick={e => e.stopPropagation()}>
               {variants.map((v, i) => (
-                <button key={i} className={`sf-color-swatch${selIdx === i ? ' selected' : ''}`}
+                <button key={i} className={`sf-color-swatch${(selIdx ?? 0) === i ? ' selected' : ''}`}
                   style={{ background: v.color }} title={v.label}
                   onClick={() => setSelectedVariants(p => ({ ...p, [product.id]: i }))} />
               ))}
@@ -686,18 +728,38 @@ export default function StoreShell({ store, products, categories = [] }: { store
   }
 
   const renderCatRow = (product: Product) => {
-    const variants = product.options?.colorVariants
-    const selIdx   = selectedVariants[product.id]
-    const displayImg = variants?.length && selIdx !== undefined
-      ? (variants[selIdx]?.imageUrl || product.image_url)
+    const variants   = product.options?.colorVariants
+    const selIdx     = selectedVariants[product.id] ?? (variants?.length ? 0 : undefined)
+    const displayImg = variants?.length
+      ? (variants[selIdx ?? 0]?.imageUrl || product.image_url)
       : product.image_url
     return (
       <div key={product.id} className="sf-cat-card" onClick={() => openProductModal(product)}>
-        <div className="sf-cat-img-wrap">
+        <div
+          className="sf-cat-img-wrap"
+          onTouchStart={variants?.length ? e => { touchStartX.current = e.touches[0].clientX; swipedRef.current = false } : undefined}
+          onTouchEnd={variants?.length ? e => {
+            const dx = e.changedTouches[0].clientX - touchStartX.current
+            if (Math.abs(dx) > 35) {
+              swipedRef.current = true
+              const cur = selIdx ?? 0
+              const next = dx < 0 ? Math.min(variants.length - 1, cur + 1) : Math.max(0, cur - 1)
+              setSelectedVariants(p => ({ ...p, [product.id]: next }))
+            }
+          } : undefined}
+          onClick={e => { if (swipedRef.current) { e.stopPropagation(); swipedRef.current = false } }}
+        >
           {displayImg
             ? <img src={displayImg} alt={product.name} className="sf-cat-img" />
             : <div className="sf-cat-img sf-cat-img-empty">{PLACEHOLDER}</div>}
           {getProdQty(product.id) > 0 && <div className="sf-card-badge">{getProdQty(product.id)}</div>}
+          {(variants?.length ?? 0) > 1 && (
+            <div className="sf-slide-dots">
+              {variants!.map((_, i) => (
+                <div key={i} className={`sf-slide-dot${(selIdx ?? 0) === i ? ' on' : ''}`} />
+              ))}
+            </div>
+          )}
         </div>
         <div className="sf-cat-info">
           <div className="sf-cat-name">{product.name}</div>
@@ -705,7 +767,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
           {variants?.length ? (
             <div className="sf-cat-swatches" onClick={e => e.stopPropagation()}>
               {variants.map((v, i) => (
-                <button key={i} className={`sf-color-swatch${selIdx === i ? ' selected' : ''}`}
+                <button key={i} className={`sf-color-swatch${(selIdx ?? 0) === i ? ' selected' : ''}`}
                   style={{ background: v.color }} title={v.label}
                   onClick={() => setSelectedVariants(p => ({ ...p, [product.id]: i }))} />
               ))}

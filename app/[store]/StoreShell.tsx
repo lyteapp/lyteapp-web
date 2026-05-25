@@ -120,6 +120,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const [modalAdditionals, setModalAdditionals] = useState<Set<number>>(new Set())
   const [modalNotes, setModalNotes]           = useState('')
   const [modalQty, setModalQty]               = useState(1)
+  const [lightboxImg, setLightboxImg]         = useState<string | null>(null)
 
   useEffect(() => {
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !(window.navigator as Navigator & { standalone?: boolean }).standalone
@@ -464,7 +465,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
 
             <div className="sf-modal-product-head">
               {modalDisplayImage && (
-                <img src={modalDisplayImage} alt={modalProduct.name} className="sf-modal-img" />
+                <img src={modalDisplayImage} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" onClick={() => setLightboxImg(modalDisplayImage)} />
               )}
               <div className="sf-modal-product-info">
                 <div className="sf-modal-name">{modalProduct.name}</div>
@@ -573,6 +574,13 @@ export default function StoreShell({ store, products, categories = [] }: { store
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {lightboxImg && (
+        <div className="sf-lightbox" onClick={() => setLightboxImg(null)}>
+          <button className="sf-lightbox-close" onClick={() => setLightboxImg(null)}>×</button>
+          <img src={lightboxImg} alt="" className="sf-lightbox-img" onClick={e => e.stopPropagation()} />
         </div>
       )}
     </div>
@@ -916,7 +924,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
 
             <div className="sf-modal-product-head">
               {modalDisplayImage && (
-                <img src={modalDisplayImage} alt={modalProduct.name} className="sf-modal-img" />
+                <img src={modalDisplayImage} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" onClick={() => setLightboxImg(modalDisplayImage)} />
               )}
               <div className="sf-modal-product-info">
                 <div className="sf-modal-name">{modalProduct.name}</div>
@@ -1025,6 +1033,13 @@ export default function StoreShell({ store, products, categories = [] }: { store
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {lightboxImg && (
+        <div className="sf-lightbox" onClick={() => setLightboxImg(null)}>
+          <button className="sf-lightbox-close" onClick={() => setLightboxImg(null)}>×</button>
+          <img src={lightboxImg} alt="" className="sf-lightbox-img" onClick={e => e.stopPropagation()} />
         </div>
       )}
     </div>

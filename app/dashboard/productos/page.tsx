@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { useT } from '../../lib/LocaleProvider'
@@ -62,8 +63,10 @@ export default function ProductosPage() {
   const [optColorVariants, setOptColorVariants]       = useState<ColorVariant[]>([])
   const [variantImgUploadIdx, setVariantImgUploadIdx] = useState<number | null>(null)
   const [variantImgUploading, setVariantImgUploading] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const imgRef = useRef<HTMLInputElement>(null)
   const variantImgRef = useRef<HTMLInputElement>(null)
+  useEffect(() => { setMounted(true) }, [])
   useEffect(() => { if (user) loadData() }, [user])
 
   async function loadData() {
@@ -499,14 +502,14 @@ export default function ProductosPage() {
 
       {error && <div className="pr-error" style={{ maxWidth: 720 }}>{error}</div>}
 
-      {/* Barra fija abajo — aparece cuando hay cambios */}
-      {isDirty && (
+      {mounted && isDirty && createPortal(
         <div className="pr-bottom-save">
           <button className="pr-cancel-btn" onClick={() => setMode('list')}>{t('prod.cancel')}</button>
           <button className="pr-save-btn pr-save-btn-lg" onClick={handleSave} disabled={saving || imgUploading}>
             {saving ? t('prod.saving') : 'Guardar producto'}
           </button>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

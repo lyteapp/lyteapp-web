@@ -339,7 +339,31 @@ export default function EditorPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageBg, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceSize])
 
-  // ── Save to DB ─────────────────────────────────────────
+  // ── Auto-save template (reloads iframe immediately) ───
+  async function handleTemplateSelect(t: string) {
+    setTemplate(t)
+    if (!storeId) return
+    await supabase.from('stores').update({ template: t }).eq('id', storeId)
+    setIframeKey(k => k + 1)
+  }
+
+  // ── Auto-save category shape (reloads iframe immediately) ─
+  async function handleCategoryShape(catId: string, shape: string | null) {
+    const next = { ...categoryShapes }
+    if (shape) next[catId] = shape
+    else delete next[catId]
+    setCategoryShapes(next)
+    if (!storeId) return
+    const newConfig = {
+      ...baseConfig,
+      categoryPhotoShapes: Object.keys(next).length > 0 ? next : undefined,
+    }
+    await supabase.from('stores').update({ template_config: newConfig }).eq('id', storeId)
+    setBaseConfig(newConfig)
+    setIframeKey(k => k + 1)
+  }
+
+  // ── Save all other settings to DB ─────────────────────
   async function saveSettings() {
     if (!storeId || saving) return
     setSaving(true)
@@ -689,7 +713,7 @@ export default function EditorPage() {
                         <button
                           type="button"
                           className={`ed-cat-pill${!categoryShapes[cat.id] ? ' ed-cat-pill-active' : ''}`}
-                          onClick={() => setCategoryShapes(p => { const n = { ...p }; delete n[cat.id]; return n })}
+                          onClick={() => handleCategoryShape(cat.id, null)}
                         >
                           Global
                         </button>
@@ -698,7 +722,7 @@ export default function EditorPage() {
                             key={s.id}
                             type="button"
                             className={`ed-cat-pill${categoryShapes[cat.id] === s.id ? ' ed-cat-pill-active' : ''}`}
-                            onClick={() => setCategoryShapes(p => ({ ...p, [cat.id]: s.id }))}
+                            onClick={() => handleCategoryShape(cat.id, s.id)}
                           >
                             {s.name}
                           </button>
@@ -724,7 +748,7 @@ export default function EditorPage() {
                 <button
                   key={t.id}
                   className={`ed-template-card${template === t.id ? ' ed-template-card-active' : ''}`}
-                  onClick={() => setTemplate(t.id)}
+                  onClick={() => handleTemplateSelect(t.id)}
                 >
                   <div className="ed-template-preview">{t.preview}</div>
                   <div className="ed-template-foot">

@@ -94,6 +94,7 @@ html, body { overflow-x: hidden; }
   background: white; border: 1px solid rgba(15,23,42,0.07);
   border-radius: 18px; overflow: hidden;
   transition: box-shadow 0.2s, transform 0.2s;
+  display: flex; flex-direction: column;
 }
 .sf-card:hover { box-shadow: 0 8px 28px rgba(15,23,42,0.09); transform: translateY(-2px); }
 
@@ -113,13 +114,13 @@ html, body { overflow-x: hidden; }
   width: 24px; height: 24px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
 }
-.sf-card-body { padding: 14px; }
+.sf-card-body { padding: 14px; flex: 1; display: flex; flex-direction: column; }
 .sf-card-name { font-size: 0.93em; font-weight: 700; color: #0F172A; margin-bottom: 4px; line-height: 1.3; }
 .sf-card-desc {
   font-size: 0.8em; color: #94A3B8; line-height: 1.4; margin-bottom: 12px;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.sf-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sf-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; padding-top: 8px; }
 .sf-card-price { font-size: 1.07em; font-weight: 700; color: #0F172A; font-family: var(--font-geist-mono), monospace; }
 
 .sf-add-btn {

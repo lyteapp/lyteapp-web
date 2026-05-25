@@ -119,10 +119,20 @@ export default function EditorPage() {
       `
     } else if (photoShape === 'circle') {
       shapeCSS = `
-        .sf-card-img-wrap { border-radius: 50% !important; }
+        .sf-card { background: transparent !important; border-color: transparent !important; box-shadow: none !important; padding: 0 4px 12px !important; }
+        .sf-card:hover { box-shadow: none !important; border-color: transparent !important; }
+        .sf-card-img-wrap { border-radius: 50% !important; overflow: visible !important; }
         .sf-card-img { border-radius: 50% !important; }
+        .sf-card-img-empty { border-radius: 50% !important; overflow: hidden !important; }
+        .sf-card-badge { top: 12% !important; right: 12% !important; }
+        .sf-card-body { padding: 10px 4px 0 !important; text-align: center !important; }
+        .sf-card-footer { justify-content: center !important; }
+        .sf-esc-row { background: transparent !important; border-color: transparent !important; box-shadow: none !important; }
         .sf-esc-img { border-radius: 50% !important; }
+        .sf-esc-img-wrap .sf-card-badge { top: -4px !important; right: -4px !important; }
+        .sf-cat-card { background: transparent !important; border-color: transparent !important; box-shadow: none !important; }
         .sf-cat-img { border-radius: 50% !important; }
+        .sf-cat-img-wrap .sf-card-badge { top: -4px !important; right: -4px !important; }
       `
     } else {
       shapeCSS = `

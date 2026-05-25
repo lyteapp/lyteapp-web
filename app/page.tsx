@@ -1,6 +1,10 @@
+'use client'
+
 import Image from 'next/image'
 import Link from 'next/link'
 import PricingToggle from './components/PricingToggle'
+import NavMobile from './components/NavMobile'
+import { useT } from './lib/LocaleProvider'
 import './landing.css'
 
 const CheckIcon = () => (
@@ -10,6 +14,8 @@ const CheckIcon = () => (
 )
 
 export default function Home() {
+  const t = useT()
+
   return (
     <>
       {/* NAV */}
@@ -23,30 +29,29 @@ export default function Home() {
           </span>
         </Link>
         <ul className="nav-links">
-          <li><a href="#features">Funcionalidades</a></li>
-          <li><a href="#how">Cómo funciona</a></li>
-          <li><a href="#pricing">Precios</a></li>
-          <li><a href="#testimonials">Historias</a></li>
-          <li><Link href="/registro" className="cta-nav">Crear mi tienda →</Link></li>
+          <li><a href="#features">{t('landing.nav.features')}</a></li>
+          <li><a href="#how">{t('landing.nav.how')}</a></li>
+          <li><a href="#pricing">{t('landing.nav.pricing')}</a></li>
+          <li><a href="#testimonials">{t('landing.nav.stories')}</a></li>
+          <li><Link href="/login" className="cta-nav">{t('landing.nav.login')}</Link></li>
         </ul>
+        <NavMobile />
       </nav>
 
       {/* HERO */}
       <section className="hero">
         <div className="hero-label">
-          <span className="badge">Nuevo</span>
-          Hecho para emprendedores LATAM 🌎
+          <span className="badge">{t('landing.hero.badge')}</span>
+          {t('landing.hero.label')}
         </div>
         <h1>
-          Tu negocio.<br />
-          <span className="accent">Más liviano. Más rápido.</span>
+          {t('landing.hero.title1')}<br />
+          <span className="accent">{t('landing.hero.title2')}</span>
         </h1>
-        <p className="hero-subtitle">
-          La plataforma todo-en-uno para vender, cobrar y entregar sin fricción. Más simple que Shopify. Más completa que un link de WhatsApp.
-        </p>
+        <p className="hero-subtitle">{t('landing.hero.sub')}</p>
         <div className="hero-cta">
-          <Link href="/registro" className="btn-primary">Empezar gratis →</Link>
-          <a href="#features" className="btn-secondary">Ver funcionalidades ▸</a>
+          <Link href="/registro" className="btn-primary">{t('landing.hero.cta1')}</Link>
+          <a href="#features" className="btn-secondary">{t('landing.hero.cta2')}</a>
         </div>
 
         <div className="hero-visual">
@@ -131,7 +136,7 @@ export default function Home() {
 
       {/* TRUST BAR */}
       <section className="trust">
-        <div className="trust-label">Construido con tecnología de</div>
+        <div className="trust-label">{t('landing.trust.label')}</div>
         <div className="trust-logos">
           <span>STRIPE</span>
           <span className="lux">Supabase</span>
@@ -145,20 +150,20 @@ export default function Home() {
       <section className="stats-section">
         <div className="stats-grid">
           <div className="stat-block">
-            <div className="stat-num">3<span className="unit">min</span></div>
-            <div className="stat-desc">Tu tienda en línea</div>
+            <div className="stat-num">{t('landing.stats.0.num')}<span className="unit">{t('landing.stats.0.unit')}</span></div>
+            <div className="stat-desc">{t('landing.stats.0.desc')}</div>
           </div>
           <div className="stat-block">
-            <div className="stat-num">0<span className="unit">%</span></div>
-            <div className="stat-desc">Comisión por venta</div>
+            <div className="stat-num">{t('landing.stats.1.num')}<span className="unit">{t('landing.stats.1.unit')}</span></div>
+            <div className="stat-desc">{t('landing.stats.1.desc')}</div>
           </div>
           <div className="stat-block">
-            <div className="stat-num">12<span className="unit">+</span></div>
-            <div className="stat-desc">Métodos de pago locales</div>
+            <div className="stat-num">{t('landing.stats.2.num')}<span className="unit">{t('landing.stats.2.unit')}</span></div>
+            <div className="stat-desc">{t('landing.stats.2.desc')}</div>
           </div>
           <div className="stat-block">
-            <div className="stat-num">24<span className="serif-i">/7</span></div>
-            <div className="stat-desc">Soporte en español</div>
+            <div className="stat-num">{t('landing.stats.3.num')}<span className="serif-i">{t('landing.stats.3.unit')}</span></div>
+            <div className="stat-desc">{t('landing.stats.3.desc')}</div>
           </div>
         </div>
       </section>
@@ -166,22 +171,22 @@ export default function Home() {
       {/* FEATURES */}
       <section className="section" id="features">
         <div className="section-header">
-          <span className="eyebrow">Todo lo que necesitas</span>
-          <h2 className="section-title">Una plataforma. <span className="serif">Todo el negocio.</span></h2>
-          <p className="section-subtitle">Catálogo, pedidos, cocina, repartidores, pagos y métricas. Cosido en una sola herramienta que un emprendedor puede configurar en una tarde.</p>
+          <span className="eyebrow">{t('landing.features.eyebrow')}</span>
+          <h2 className="section-title">{t('landing.features.title')} <span className="serif">{t('landing.features.titleAccent')}</span></h2>
+          <p className="section-subtitle">{t('landing.features.sub')}</p>
         </div>
 
         <div className="features-grid">
 
-          {/* Doble moneda */}
+          {/* Dual currency */}
           <div className="fcard span-8 violet">
             <div className="fc-icon">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <circle cx="12" cy="12" r="10" /><path d="M12 6v12M9 9h4.5a2.5 2.5 0 010 5H9m0 0l6 5" />
               </svg>
             </div>
-            <h3 className="fc-title">Doble moneda. Cero dolor de cabeza.</h3>
-            <p className="fc-desc">Precios en bolívares y dólares al mismo tiempo, con tasa BCV actualizada automáticamente. El pedido guarda la tasa del momento — si mañana cambia, el pedido de ayer no.</p>
+            <h3 className="fc-title">{t('landing.features.currency.title')}</h3>
+            <p className="fc-desc">{t('landing.features.currency.desc')}</p>
             <div className="fc-visual">
               <div className="currency-mock">
                 <div className="currency-row">
@@ -207,8 +212,8 @@ export default function Home() {
                 <path d="M12 2C6.5 2 2 6.5 2 12c0 1.7.4 3.3 1.2 4.7L2 22l5.4-1.2C8.8 21.6 10.4 22 12 22c5.5 0 10-4.5 10-10S17.5 2 12 2zm5 14.3c-.2.6-1.2 1.1-1.7 1.2-.4 0-1 .1-1.5-.1-.4-.1-.9-.3-1.6-.6-2.7-1.2-4.5-3.9-4.6-4.1-.1-.2-1.1-1.4-1.1-2.7 0-1.3.7-1.9 1-2.2.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.4.2.5.7 1.7.8 1.9.1.1.1.3 0 .5l-.3.4-.4.5c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.4 2.5 1.5.3.1.5.1.6-.1l.8-.9c.2-.2.4-.2.6-.1l1.7.8c.2.1.4.2.4.3.1.2.1.7-.1 1.3z" />
               </svg>
             </div>
-            <h3 className="fc-title">WhatsApp, donde ya están.</h3>
-            <p className="fc-desc">Pedidos pre-formateados llegan a tu chat. Cliente sin cuenta, solo nombre y número.</p>
+            <h3 className="fc-title">{t('landing.features.wa.title')}</h3>
+            <p className="fc-desc">{t('landing.features.wa.desc')}</p>
             <div className="fc-visual">
               <div className="wa-mock">
                 <div className="wa-bubble">
@@ -229,8 +234,8 @@ export default function Home() {
                 <rect x="3" y="3" width="18" height="14" rx="2" /><path d="M3 10h18M9 17v4M15 17v4M7 21h10" />
               </svg>
             </div>
-            <h3 className="fc-title">Cocina conectada. Sin papeles.</h3>
-            <p className="fc-desc">El KDS vive en un tablet sin login, con columnas grandes y sonido. El pedido entra cuando se confirma el pago. El cocinero solo da clic.</p>
+            <h3 className="fc-title">{t('landing.features.kds.title')}</h3>
+            <p className="fc-desc">{t('landing.features.kds.desc')}</p>
             <div className="fc-visual">
               <div className="kds-mock">
                 <div className="kds-col">
@@ -258,8 +263,8 @@ export default function Home() {
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
               </svg>
             </div>
-            <h3 className="fc-title">Tu repartidor. Tu control.</h3>
-            <p className="fc-desc">App PWA para tus motorizados con GPS en vivo. Tú ves dónde están, tu cliente ve cuánto falta. Sin pagar comisiones a Yummy o PedidosYa.</p>
+            <h3 className="fc-title">{t('landing.features.delivery.title')}</h3>
+            <p className="fc-desc">{t('landing.features.delivery.desc')}</p>
             <div className="fc-visual">
               <div className="gps-mock">
                 <svg className="gps-route" viewBox="0 0 400 140" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
@@ -280,7 +285,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Verificación pagos */}
+          {/* Payment verification */}
           <div className="fcard span-12 dark">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '60px', alignItems: 'center' }}>
               <div>
@@ -289,8 +294,8 @@ export default function Home() {
                     <path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
                   </svg>
                 </div>
-                <h3 className="fc-title">Verificación de pagos. <span className="serif" style={{ color: 'var(--violet-soft)' }}>Sin tú revisar nada.</span></h3>
-                <p className="fc-desc">El cliente sube la captura de Pago Móvil o Zelle, nuestro OCR extrae monto y referencia, hace match con el pedido y confirma. Si todo cuadra, va directo a cocina sin que tú toques nada.</p>
+                <h3 className="fc-title">{t('landing.features.ocr.title')} <span className="serif" style={{ color: 'var(--violet-soft)' }}>{t('landing.features.ocr.titleAccent')}</span></h3>
+                <p className="fc-desc">{t('landing.features.ocr.desc')}</p>
               </div>
               <div>
                 <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '24px' }}>
@@ -314,13 +319,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* PAGOS VENEZUELA */}
+      {/* PAGOS */}
       <section className="pagos-section" id="pagos">
         <div className="pagos-inner">
           <div className="section-header center">
-            <span className="eyebrow">Pagos locales</span>
-            <h2 className="section-title" style={{ color: 'white' }}>Cobra como vendes. <span className="serif" style={{ color: 'var(--violet-soft)' }}>En tu moneda.</span></h2>
-            <p className="section-subtitle" style={{ color: 'rgba(255,255,255,0.65)' }}>Soportamos los métodos que tus clientes usan de verdad. Sin Stripe, sin tarjetas gringas, sin comisiones del 3% extra.</p>
+            <span className="eyebrow">{t('landing.pagos.eyebrow')}</span>
+            <h2 className="section-title" style={{ color: 'white' }}>{t('landing.pagos.title')} <span className="serif" style={{ color: 'var(--violet-soft)' }}>{t('landing.pagos.titleAccent')}</span></h2>
+            <p className="section-subtitle" style={{ color: 'rgba(255,255,255,0.65)' }}>{t('landing.pagos.sub')}</p>
           </div>
           <div className="pagos-grid">
             {[
@@ -346,25 +351,25 @@ export default function Home() {
       <section className="how-section" id="how">
         <div className="how-inner">
           <div className="section-header">
-            <span className="eyebrow">Cómo funciona</span>
-            <h2 className="section-title">En tres pasos <span className="serif">estás vendiendo.</span></h2>
-            <p className="section-subtitle">Sin desarrolladores, sin instalaciones, sin tarjeta de crédito. Solo tu negocio y un café al lado.</p>
+            <span className="eyebrow">{t('landing.how.eyebrow')}</span>
+            <h2 className="section-title">{t('landing.how.title')} <span className="serif">{t('landing.how.titleAccent')}</span></h2>
+            <p className="section-subtitle">{t('landing.how.sub')}</p>
           </div>
           <div className="steps">
             <div className="step">
               <span className="step-num">01</span>
-              <h3 className="step-title">Crea tu tienda</h3>
-              <p className="step-desc">Registro con email, eliges nombre, subes logo. Tu URL personalizada en menos de tres minutos. Sin RIF, sin papeleo.</p>
+              <h3 className="step-title">{t('landing.how.step1.title')}</h3>
+              <p className="step-desc">{t('landing.how.step1.desc')}</p>
             </div>
             <div className="step">
               <span className="step-num">02</span>
-              <h3 className="step-title">Configura productos y pagos</h3>
-              <p className="step-desc">Agrega tu catálogo con fotos y variantes. Activa los métodos de pago que usas. Define zonas de delivery.</p>
+              <h3 className="step-title">{t('landing.how.step2.title')}</h3>
+              <p className="step-desc">{t('landing.how.step2.desc')}</p>
             </div>
             <div className="step">
               <span className="step-num">03</span>
-              <h3 className="step-title">Comparte y cobra</h3>
-              <p className="step-desc">Comparte tu link en Instagram, WhatsApp, TikTok. Los pedidos llegan, los pagos se verifican, la cocina prepara, el motorizado entrega. Tú lees el dashboard.</p>
+              <h3 className="step-title">{t('landing.how.step3.title')}</h3>
+              <p className="step-desc">{t('landing.how.step3.desc')}</p>
             </div>
           </div>
         </div>
@@ -373,56 +378,56 @@ export default function Home() {
       {/* PRICING */}
       <section className="pricing-section" id="pricing">
         <div className="section-header center">
-          <span className="eyebrow">Precios honestos</span>
-          <h2 className="section-title">Empieza gratis. <span className="serif">Crece sin sorpresas.</span></h2>
-          <p className="section-subtitle">Sin comisión por venta. Sin contratos anuales. Cancela cuando quieras.</p>
+          <span className="eyebrow">{t('landing.pricing.eyebrow')}</span>
+          <h2 className="section-title">{t('landing.pricing.title')} <span className="serif">{t('landing.pricing.titleAccent')}</span></h2>
+          <p className="section-subtitle">{t('landing.pricing.sub')}</p>
         </div>
 
         <PricingToggle />
 
         <div className="pricing-grid">
           <div className="price-card">
-            <div className="price-name">Free</div>
+            <div className="price-name">{t('landing.pricing.free.name')}</div>
             <div className="price-amount"><span className="usd">$</span>0</div>
-            <div className="price-period">Para siempre. En serio.</div>
-            <Link href="/registro" className="price-cta">Empezar gratis</Link>
+            <div className="price-period">{t('landing.pricing.free.period')}</div>
+            <Link href="/registro" className="price-cta">{t('landing.pricing.free.cta')}</Link>
             <ul className="price-features">
-              <li><CheckIcon /> Hasta 50 pedidos al mes</li>
-              <li><CheckIcon /> 1 repartidor activo</li>
-              <li><CheckIcon /> Pagos locales (Pago Móvil, Zelle, USDT)</li>
-              <li><CheckIcon /> Subdominio mitienda.lyte-app.com</li>
-              <li><CheckIcon /> Sin comisión por venta</li>
+              <li><CheckIcon /> {t('landing.pricing.free.f1')}</li>
+              <li><CheckIcon /> {t('landing.pricing.free.f2')}</li>
+              <li><CheckIcon /> {t('landing.pricing.free.f3')}</li>
+              <li><CheckIcon /> {t('landing.pricing.free.f4')}</li>
+              <li><CheckIcon /> {t('landing.pricing.free.f5')}</li>
             </ul>
           </div>
 
           <div className="price-card featured">
-            <span className="price-tag">Más popular</span>
-            <div className="price-name">Pro</div>
+            <span className="price-tag">{t('landing.pricing.pro.tag')}</span>
+            <div className="price-name">{t('landing.pricing.pro.name')}</div>
             <div className="price-amount"><span className="usd">$</span>15</div>
-            <div className="price-period">USD / mes · facturación anual</div>
-            <Link href="/registro" className="price-cta">Probar 14 días</Link>
+            <div className="price-period">{t('landing.pricing.pro.period')}</div>
+            <Link href="/registro" className="price-cta">{t('landing.pricing.pro.cta')}</Link>
             <ul className="price-features">
-              <li><CheckIcon /> Pedidos ilimitados</li>
-              <li><CheckIcon /> Hasta 5 repartidores con GPS</li>
-              <li><CheckIcon /> KDS (pantalla de cocina)</li>
-              <li><CheckIcon /> Dominio propio</li>
-              <li><CheckIcon /> Reportes avanzados + exportable</li>
-              <li><CheckIcon /> Sin marca Lyteapp</li>
+              <li><CheckIcon /> {t('landing.pricing.pro.f1')}</li>
+              <li><CheckIcon /> {t('landing.pricing.pro.f2')}</li>
+              <li><CheckIcon /> {t('landing.pricing.pro.f3')}</li>
+              <li><CheckIcon /> {t('landing.pricing.pro.f4')}</li>
+              <li><CheckIcon /> {t('landing.pricing.pro.f5')}</li>
+              <li><CheckIcon /> {t('landing.pricing.pro.f6')}</li>
             </ul>
           </div>
 
           <div className="price-card">
-            <div className="price-name">Premium</div>
+            <div className="price-name">{t('landing.pricing.premium.name')}</div>
             <div className="price-amount"><span className="usd">$</span>35</div>
-            <div className="price-period">USD / mes · facturación anual</div>
-            <Link href="/registro" className="price-cta">Hablar con ventas</Link>
+            <div className="price-period">{t('landing.pricing.premium.period')}</div>
+            <Link href="/registro" className="price-cta">{t('landing.pricing.premium.cta')}</Link>
             <ul className="price-features">
-              <li><CheckIcon /> Todo del plan Pro</li>
-              <li><CheckIcon /> Verificación auto Pago Móvil (SMS)</li>
-              <li><CheckIcon /> Zelle vía Gmail OAuth</li>
-              <li><CheckIcon /> WhatsApp Business API</li>
-              <li><CheckIcon /> Repartidores ilimitados</li>
-              <li><CheckIcon /> Soporte prioritario en español</li>
+              <li><CheckIcon /> {t('landing.pricing.premium.f1')}</li>
+              <li><CheckIcon /> {t('landing.pricing.premium.f2')}</li>
+              <li><CheckIcon /> {t('landing.pricing.premium.f3')}</li>
+              <li><CheckIcon /> {t('landing.pricing.premium.f4')}</li>
+              <li><CheckIcon /> {t('landing.pricing.premium.f5')}</li>
+              <li><CheckIcon /> {t('landing.pricing.premium.f6')}</li>
             </ul>
           </div>
         </div>
@@ -431,29 +436,29 @@ export default function Home() {
       {/* TESTIMONIALS */}
       <section className="testimonials" id="testimonials">
         <div className="section-header center">
-          <span className="eyebrow">Historias reales</span>
-          <h2 className="section-title">Negocios que ya <span className="serif">se hicieron livianos.</span></h2>
+          <span className="eyebrow">{t('landing.test.eyebrow')}</span>
+          <h2 className="section-title">{t('landing.test.title')} <span className="serif">{t('landing.test.titleAccent')}</span></h2>
         </div>
         <div className="test-grid">
           <div className="test-card">
-            <p className="test-quote">&ldquo;Pasé de revisar capturas de Pago Móvil a las 11 PM a no tocar mi teléfono. La verificación automática me devolvió las noches.&rdquo;</p>
+            <p className="test-quote">{t('landing.test.0.quote')}</p>
             <div className="test-author">
               <div className="test-avatar">MF</div>
-              <div className="test-info"><h4>María Fernanda Rojas</h4><p>Dulcería Mafer · Valencia, VE</p></div>
+              <div className="test-info"><h4>{t('landing.test.0.name')}</h4><p>{t('landing.test.0.biz')}</p></div>
             </div>
           </div>
           <div className="test-card">
-            <p className="test-quote">&ldquo;Mostrar precios en bolívares y dólares al mismo tiempo cambió todo. Mis clientes en Miami me pagan por Zelle y no tengo que calcular nada manual.&rdquo;</p>
+            <p className="test-quote">{t('landing.test.1.quote')}</p>
             <div className="test-author">
               <div className="test-avatar">JR</div>
-              <div className="test-info"><h4>Jesús Ramírez</h4><p>Streetwear JR · Caracas, VE</p></div>
+              <div className="test-info"><h4>{t('landing.test.1.name')}</h4><p>{t('landing.test.1.biz')}</p></div>
             </div>
           </div>
           <div className="test-card">
-            <p className="test-quote">&ldquo;Empecé en el plan free, llegué a 50 pedidos en dos semanas, me pasé a Pro sin pensarlo. El KDS solo ya vale los $15.&rdquo;</p>
+            <p className="test-quote">{t('landing.test.2.quote')}</p>
             <div className="test-author">
               <div className="test-avatar">AG</div>
-              <div className="test-info"><h4>Andrea Guerra</h4><p>Bowls de Andrea · Mérida, VE</p></div>
+              <div className="test-info"><h4>{t('landing.test.2.name')}</h4><p>{t('landing.test.2.biz')}</p></div>
             </div>
           </div>
         </div>
@@ -462,30 +467,30 @@ export default function Home() {
       {/* COMPARISON */}
       <section className="comparison">
         <div className="section-header">
-          <span className="eyebrow">Por qué Lyteapp</span>
-          <h2 className="section-title">Más liviano que la competencia. <span className="serif">Punto.</span></h2>
+          <span className="eyebrow">{t('landing.compare.eyebrow')}</span>
+          <h2 className="section-title">{t('landing.compare.title')} <span className="serif">{t('landing.compare.titleAccent')}</span></h2>
         </div>
         <div className="compare-grid">
           <div className="compare-card others">
-            <h3 className="compare-title">Otras plataformas</h3>
+            <h3 className="compare-title">{t('landing.compare.others.title')}</h3>
             <ul className="compare-list">
-              <li><span className="icon">✕</span> Comisión del 20-30% por venta</li>
-              <li><span className="icon">✕</span> No aceptan Pago Móvil ni Zelle</li>
-              <li><span className="icon">✕</span> Te exigen RIF y registro fiscal</li>
-              <li><span className="icon">✕</span> Cocina y delivery son addons que pagas aparte</li>
-              <li><span className="icon">✕</span> Soporte en inglés o portugués</li>
-              <li><span className="icon">✕</span> Diseño plantilla, idéntico a otras tiendas</li>
+              <li><span className="icon">✕</span> {t('landing.compare.others.0')}</li>
+              <li><span className="icon">✕</span> {t('landing.compare.others.1')}</li>
+              <li><span className="icon">✕</span> {t('landing.compare.others.2')}</li>
+              <li><span className="icon">✕</span> {t('landing.compare.others.3')}</li>
+              <li><span className="icon">✕</span> {t('landing.compare.others.4')}</li>
+              <li><span className="icon">✕</span> {t('landing.compare.others.5')}</li>
             </ul>
           </div>
           <div className="compare-card us">
             <h3 className="compare-title"><span style={{ color: 'var(--violet-soft)' }}>Lyteapp</span></h3>
             <ul className="compare-list">
-              <li><span className="icon">✓</span> 0% comisión por venta. Para siempre.</li>
-              <li><span className="icon">✓</span> 12+ métodos de pago locales con verificación auto</li>
-              <li><span className="icon">✓</span> Empiezas hoy sin RIF, como vendes ya</li>
-              <li><span className="icon">✓</span> Catálogo, cocina, repartidores y pagos en uno</li>
-              <li><span className="icon">✓</span> Soporte 100% en español, con paisanos</li>
-              <li><span className="icon">✓</span> Diseño moderno, tu marca al frente</li>
+              <li><span className="icon">✓</span> {t('landing.compare.us.0')}</li>
+              <li><span className="icon">✓</span> {t('landing.compare.us.1')}</li>
+              <li><span className="icon">✓</span> {t('landing.compare.us.2')}</li>
+              <li><span className="icon">✓</span> {t('landing.compare.us.3')}</li>
+              <li><span className="icon">✓</span> {t('landing.compare.us.4')}</li>
+              <li><span className="icon">✓</span> {t('landing.compare.us.5')}</li>
             </ul>
           </div>
         </div>
@@ -494,10 +499,10 @@ export default function Home() {
       {/* CTA FINAL */}
       <section className="cta-section">
         <div className="cta-inner">
-          <h2 className="cta-title">Tu negocio merece <span className="em">crecer ligero.</span></h2>
-          <p className="cta-sub">Crea tu tienda en Lyteapp gratis. Sin tarjeta de crédito. Sin letra pequeña. Tres minutos y estás vendiendo.</p>
+          <h2 className="cta-title">{t('landing.cta.title')} <span className="em">{t('landing.cta.titleAccent')}</span></h2>
+          <p className="cta-sub">{t('landing.cta.sub')}</p>
           <Link href="/registro" className="btn-primary" style={{ padding: '20px 44px', fontSize: '16px' }}>
-            Crear mi tienda ahora →
+            {t('landing.cta.btn')}
           </Link>
         </div>
       </section>
@@ -508,36 +513,36 @@ export default function Home() {
           <div className="footer-top">
             <div className="footer-brand">
               <h3>Lyte<span className="app">app</span></h3>
-              <p>Your business. Lighter. Faster. La plataforma todo-en-uno hecha para emprendedores latinoamericanos.</p>
+              <p>{t('landing.footer.tagline')}</p>
             </div>
             <div className="footer-col">
-              <h4>Producto</h4>
+              <h4>{t('landing.footer.product')}</h4>
               <ul>
-                <li><a href="#features">Funcionalidades</a></li>
-                <li><a href="#pricing">Precios</a></li>
-                <li><a href="#how">Cómo funciona</a></li>
+                <li><a href="#features">{t('landing.footer.features')}</a></li>
+                <li><a href="#pricing">{t('landing.footer.pricing')}</a></li>
+                <li><a href="#how">{t('landing.footer.how')}</a></li>
               </ul>
             </div>
             <div className="footer-col">
-              <h4>Recursos</h4>
+              <h4>{t('landing.footer.resources')}</h4>
               <ul>
-                <li><a href="#">Blog</a></li>
-                <li><a href="#">Guías</a></li>
-                <li><a href="#">Centro de ayuda</a></li>
+                <li><a href="#">{t('landing.footer.blog')}</a></li>
+                <li><a href="#">{t('landing.footer.guides')}</a></li>
+                <li><a href="#">{t('landing.footer.help')}</a></li>
               </ul>
             </div>
             <div className="footer-col">
-              <h4>Empresa</h4>
+              <h4>{t('landing.footer.company')}</h4>
               <ul>
-                <li><a href="#">Sobre nosotros</a></li>
-                <li><a href="#">Contacto</a></li>
-                <li><a href="#">Términos</a></li>
-                <li><a href="#">Privacidad</a></li>
+                <li><a href="#">{t('landing.footer.about')}</a></li>
+                <li><a href="#">{t('landing.footer.contact')}</a></li>
+                <li><a href="#">{t('landing.footer.terms')}</a></li>
+                <li><a href="#">{t('landing.footer.privacy')}</a></li>
               </ul>
             </div>
           </div>
           <div className="footer-bottom">
-            <div>© 2026 Lyteapp. Hecho con cuidado para LATAM.</div>
+            <div>{t('landing.footer.copy')}</div>
             <div>hola@lyte-app.com</div>
           </div>
         </div>

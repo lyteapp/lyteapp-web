@@ -1,0 +1,494 @@
+'use client'
+
+import { useEffect, useState, useCallback, useRef } from 'react'
+import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../lib/auth'
+import { useT } from '../../lib/LocaleProvider'
+import type { TranslationKey } from '../../lib/i18n'
+import './pedidos.css'
+
+type OrderStatus = 'pending' | 'confirmed' | 'ready' | 'delivered' | 'cancelled'
+
+interface OrderItem {
+  id: string
+  product_name: string
+  product_price: number
+  quantity: number
+  subtotal: number
+}
+
+interface Order {
+  id: string
+  customer_name: string
+  customer_phone: string
+  customer_notes: string | null
+  payment_method: string | null
+  status: OrderStatus
+  total: number
+  created_at: string
+  items?: OrderItem[]
+}
+
+interface DisplayOrder {
+  id: string
+  created_at: string
+  customer_name: string
+  customer_phone: string
+  customer_notes: string | null
+  payment_method: string | null
+  total: number
+  status: string
+  order_items: { product_name: string; quantity: number; subtotal: number }[]
+}
+
+const DISPLAY_STATUS: Record<string, string> = {
+  pending: 'Pendiente', confirmed: 'Confirmado', processing: 'En proceso',
+  ready: 'Listo', completed: 'Completado',
+}
+
+const STATUS_KEYS: Record<OrderStatus, TranslationKey> = {
+  pending:   'orders.status.pending',
+  confirmed: 'orders.status.confirmed',
+  ready:     'orders.status.ready',
+  delivered: 'orders.status.delivered',
+  cancelled: 'orders.status.cancelled',
+}
+
+const FILTER_KEYS: { key: 'all' | OrderStatus; tKey: TranslationKey }[] = [
+  { key: 'all',       tKey: 'orders.filter.all' },
+  { key: 'pending',   tKey: 'orders.filter.pending' },
+  { key: 'confirmed', tKey: 'orders.filter.confirmed' },
+  { key: 'ready',     tKey: 'orders.filter.ready' },
+  { key: 'delivered', tKey: 'orders.filter.delivered' },
+  { key: 'cancelled', tKey: 'orders.filter.cancelled' },
+]
+
+const NEXT_STATUS: Partial<Record<OrderStatus, { status: OrderStatus; tKey: TranslationKey; cls: string }>> = {
+  pending:   { status: 'confirmed', tKey: 'orders.action.confirm',  cls: 'confirm' },
+  confirmed: { status: 'ready',     tKey: 'orders.action.ready',    cls: 'ready'   },
+  ready:     { status: 'delivered', tKey: 'orders.action.deliver',  cls: 'deliver' },
+}
+
+function fmt(n: number) {
+  return '$' + n.toFixed(2)
+}
+
+export default function PedidosPage() {
+  const { user } = useAuth()
+  const t = useT()
+  const [loading, setLoading] = useState(true)
+  const [storeId, setStoreId] = useState<string | null>(null)
+  const [whatsapp, setWhatsapp] = useState<string>('')
+  const [orders, setOrders] = useState<Order[]>([])
+  const [filter, setFilter] = useState<'all' | OrderStatus>('all')
+  const [expanded, setExpanded] = useState<string | null>(null)
+  const [updating, setUpdating] = useState<string | null>(null)
+  const [displayMode, setDisplayMode] = useState(false)
+  const [displayOrders, setDisplayOrders] = useState<DisplayOrder[]>([])
+  const [displayLoading, setDisplayLoading] = useState(false)
+  const displayModeRef = useRef(false)
+
+  const loadOrders = useCallback(async (sid: string) => {
+    const { data } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('store_id', sid)
+      .order('created_at', { ascending: false })
+    setOrders(data ?? [])
+  }, [])
+
+  useEffect(() => {
+    if (!user) return
+    async function init() {
+      const { data: store } = await supabase
+        .from('stores')
+        .select('id, whatsapp')
+        .eq('owner_id', user!.id)
+        .maybeSingle()
+      if (store) {
+        setStoreId(store.id)
+        setWhatsapp(store.whatsapp ?? '')
+        await loadOrders(store.id)
+      }
+      setLoading(false)
+    }
+    init()
+  }, [user, loadOrders])
+
+  useEffect(() => { displayModeRef.current = displayMode }, [displayMode])
+
+  useEffect(() => {
+    if (!storeId) return
+    const channel = supabase
+      .channel(`pedidos-live-${storeId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'orders', filter: `store_id=eq.${storeId}` },
+        async (payload) => {
+          const newOrder = payload.new as Order
+          setOrders(prev => [newOrder, ...prev])
+          if (displayModeRef.current) {
+            await new Promise(r => setTimeout(r, 700))
+            const { data: items } = await supabase
+              .from('order_items')
+              .select('product_name, quantity, subtotal')
+              .eq('order_id', newOrder.id)
+            setDisplayOrders(prev => [
+              { ...newOrder, order_items: items ?? [] } as DisplayOrder,
+              ...prev,
+            ])
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'orders', filter: `store_id=eq.${storeId}` },
+        (payload) => {
+          const updated = payload.new as Order
+          setOrders(prev =>
+            prev.map(o => o.id === updated.id ? { ...o, status: updated.status } : o)
+          )
+          if (['delivered', 'cancelled', 'completed'].includes(updated.status)) {
+            setDisplayOrders(prev => prev.filter(o => o.id !== updated.id))
+          } else {
+            setDisplayOrders(prev =>
+              prev.map(o => o.id === updated.id ? { ...o, status: updated.status } : o)
+            )
+          }
+        }
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [storeId])
+
+  async function loadItems(orderId: string) {
+    const { data } = await supabase
+      .from('order_items')
+      .select('*')
+      .eq('order_id', orderId)
+    setOrders(prev =>
+      prev.map(o => o.id === orderId ? { ...o, items: data ?? [] } : o)
+    )
+  }
+
+  async function toggleExpand(orderId: string) {
+    if (expanded === orderId) { setExpanded(null); return }
+    setExpanded(orderId)
+    const order = orders.find(o => o.id === orderId)
+    if (!order?.items) await loadItems(orderId)
+  }
+
+  async function updateStatus(orderId: string, status: OrderStatus) {
+    setUpdating(orderId)
+    await supabase.from('orders').update({ status }).eq('id', orderId)
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o))
+    setUpdating(null)
+  }
+
+  async function openDisplay() {
+    if (!storeId) return
+    setDisplayMode(true)
+    setDisplayLoading(true)
+    const { data } = await supabase
+      .from('orders')
+      .select('id, created_at, customer_name, customer_phone, customer_notes, payment_method, total, status, order_items(product_name, quantity, subtotal)')
+      .eq('store_id', storeId)
+      .not('status', 'in', '(delivered,cancelled,completed)')
+      .order('created_at', { ascending: true })
+    setDisplayOrders((data ?? []) as DisplayOrder[])
+    setDisplayLoading(false)
+  }
+
+  async function updateDisplayStatus(orderId: string, status: string) {
+    await supabase.from('orders').update({ status }).eq('id', orderId)
+    if (['completed', 'cancelled', 'delivered'].includes(status)) {
+      setDisplayOrders(prev => prev.filter(o => o.id !== orderId))
+    } else {
+      setDisplayOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o))
+    }
+  }
+
+  function sendComanda(order: DisplayOrder) {
+    const date = new Date(order.created_at)
+    const dateStr = date.toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' })
+    const timeStr = date.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })
+    const lines = [
+      `*Comanda #${order.id.slice(0, 8).toUpperCase()}*`,
+      `${dateStr}, ${timeStr}`, '',
+      `*Nombre:* ${order.customer_name}`,
+      `*Telefono:* ${order.customer_phone}`,
+      ...(order.payment_method ? [`*Pago:* ${order.payment_method}`] : []),
+      '', '*Productos:*',
+      ...order.order_items.map(i => `  - ${i.quantity}x ${i.product_name}  $${Number(i.subtotal).toFixed(2)}`),
+      '', `*Total: $${Number(order.total).toFixed(2)}*`,
+      ...(order.customer_notes ? ['', `*Notas:* ${order.customer_notes}`] : []),
+    ]
+    const num = whatsapp.replace(/\D/g, '')
+    const url = num
+      ? `https://wa.me/${num}?text=${encodeURIComponent(lines.join('\n'))}`
+      : `https://wa.me/?text=${encodeURIComponent(lines.join('\n'))}`
+    window.open(url, '_blank')
+  }
+
+  function openWhatsApp(order: Order) {
+    const phone = (order.customer_phone ?? '').replace(/\D/g, '')
+    const items = order.items?.map(i => `  • ${i.quantity}x ${i.product_name} — ${fmt(i.subtotal)}`).join('\n') ?? ''
+    const msg = [
+      `Hola ${order.customer_name},`,
+      `Te escribimos sobre tu pedido *#${order.id.slice(0, 8).toUpperCase()}*`,
+      '',
+      items,
+      '',
+      `*Total: ${fmt(order.total)}*`,
+      order.payment_method ? `Pago: ${order.payment_method}` : '',
+    ].filter(Boolean).join('\n')
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank')
+  }
+
+  function timeAgo(iso: string): string {
+    const diff = Date.now() - new Date(iso).getTime()
+    const m = Math.floor(diff / 60000)
+    if (m < 1) return t('orders.time.now')
+    if (m < 60) return t('orders.time.min', { n: String(m) })
+    const h = Math.floor(m / 60)
+    if (h < 24) return t('orders.time.hour', { n: String(h) })
+    const d = Math.floor(h / 24)
+    return t('orders.time.day', { n: String(d) })
+  }
+
+  const filtered = filter === 'all' ? orders : orders.filter(o => o.status === filter)
+
+  if (loading) {
+    return (
+      <div className="pd-spinner-wrap">
+        <div className="pd-spinner" />
+      </div>
+    )
+  }
+
+  if (!storeId) {
+    return (
+      <div className="pd-empty">
+        <div className="pd-empty-icon"></div>
+        <div className="pd-empty-title">{t('orders.noStore.title')}</div>
+        <div className="pd-empty-sub">{t('orders.noStore.sub')}</div>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <div className="pd-header">
+        <div className="pd-header-left">
+          <div className="pd-count">{filtered.length} {filtered.length === 1 ? t('orders.status.pending').toLowerCase() : t('orders.filter.all').toLowerCase()}</div>
+          <div className="pd-hint">{t('orders.hint')}</div>
+        </div>
+        <div className="pd-filters">
+          {FILTER_KEYS.map(f => (
+            <button
+              key={f.key}
+              className={`pd-filter-btn${filter === f.key ? ' active' : ''}`}
+              onClick={() => setFilter(f.key)}
+            >
+              {t(f.tKey)}
+            </button>
+          ))}
+        </div>
+        <button className="pd-display-btn" onClick={openDisplay}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
+            <rect x="2" y="3" width="20" height="14" rx="2"/>
+            <path d="M8 21h8M12 17v4"/>
+          </svg>
+          Display
+        </button>
+      </div>
+
+      {displayMode && (
+        <div className="pd-display">
+          <div className="pd-display-header">
+            <div className="pd-display-title">
+              Comandas
+              {displayOrders.length > 0 && <span className="pd-display-count">{displayOrders.length}</span>}
+            </div>
+            <button className="pd-display-close" onClick={() => setDisplayMode(false)}>Cerrar</button>
+          </div>
+          {displayLoading ? (
+            <div className="pd-display-loading"><div className="pd-spinner" /></div>
+          ) : displayOrders.length === 0 ? (
+            <div className="pd-display-empty">Sin comandas activas</div>
+          ) : (
+            <div className="pd-display-grid">
+              {displayOrders.map(order => {
+                const timeStr = new Date(order.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })
+                return (
+                  <div key={order.id} className={`pd-comanda pd-cs-${order.status}`}>
+                    <div className="pd-comanda-head">
+                      <div className="pd-comanda-id">#{order.id.slice(0, 8).toUpperCase()}</div>
+                      <div className="pd-comanda-time">{timeStr}</div>
+                      <span className="pd-comanda-badge">{DISPLAY_STATUS[order.status] ?? order.status}</span>
+                    </div>
+                    <div className="pd-comanda-customer">
+                      <div className="pd-comanda-name">{order.customer_name}</div>
+                      <div className="pd-comanda-phone">{order.customer_phone}</div>
+                    </div>
+                    <div className="pd-comanda-items">
+                      {order.order_items.map((item, i) => (
+                        <div key={i} className="pd-comanda-item">
+                          <span className="pd-comanda-qty">{item.quantity}x</span>
+                          <span className="pd-comanda-pname">{item.product_name}</span>
+                          <span className="pd-comanda-price">${Number(item.subtotal).toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="pd-comanda-total">${Number(order.total).toFixed(2)}</div>
+                    {order.customer_notes && (
+                      <div className="pd-comanda-notes">{order.customer_notes}</div>
+                    )}
+                    <div className="pd-comanda-actions">
+                      {order.status === 'pending' && (
+                        <button className="pd-comanda-btn confirm" onClick={() => updateDisplayStatus(order.id, 'confirmed')}>Confirmar</button>
+                      )}
+                      {order.status === 'confirmed' && (
+                        <button className="pd-comanda-btn process" onClick={() => updateDisplayStatus(order.id, 'processing')}>En proceso</button>
+                      )}
+                      {order.status === 'processing' && (
+                        <button className="pd-comanda-btn ready" onClick={() => updateDisplayStatus(order.id, 'ready')}>Listo</button>
+                      )}
+                      {order.status === 'ready' && (
+                        <button className="pd-comanda-btn complete" onClick={() => updateDisplayStatus(order.id, 'completed')}>Completar</button>
+                      )}
+                      <button className="pd-comanda-btn wa" onClick={() => sendComanda(order)}>
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12">
+                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+                          <path d="M11.999 2C6.477 2 2 6.477 2 12c0 1.89.522 3.66 1.432 5.168L2 22l4.975-1.395A9.944 9.944 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z" />
+                        </svg>
+                        WhatsApp
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {filtered.length === 0 ? (
+        <div className="pd-empty">
+          <div className="pd-empty-icon"></div>
+          <div className="pd-empty-title">
+            {filter !== 'all' ? t('orders.empty.titleFiltered') : t('orders.empty.title')}
+          </div>
+          <div className="pd-empty-sub">
+            {filter === 'all' ? t('orders.empty.subAll') : t('orders.empty.subFiltered')}
+          </div>
+        </div>
+      ) : (
+        <div className="pd-list">
+          {filtered.map(order => {
+            const isExpanded = expanded === order.id
+            const advance = NEXT_STATUS[order.status]
+            const isBusy = updating === order.id
+
+            return (
+              <div key={order.id} className="pd-card">
+                <div className="pd-card-header" onClick={() => toggleExpand(order.id)}>
+                  <div className="pd-order-id">#{order.id.slice(0, 8).toUpperCase()}</div>
+                  <div className="pd-customer">
+                    <div className="pd-customer-name">{order.customer_name}</div>
+                    <div className="pd-customer-phone">{order.customer_phone}</div>
+                  </div>
+                  <div className="pd-total">{fmt(order.total)}</div>
+                  <div className={`pd-status ${order.status}`}>{t(STATUS_KEYS[order.status])}</div>
+                  <svg className={`pd-chevron${isExpanded ? ' open' : ''}`} viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </div>
+
+                {isExpanded && (
+                  <div className="pd-card-body">
+                    {order.items === undefined ? (
+                      <div className="pd-spinner-wrap" style={{ minHeight: 60 }}>
+                        <div className="pd-spinner" />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="pd-items-title">{t('orders.items')}</div>
+                        <div className="pd-items">
+                          {order.items.map(item => (
+                            <div key={item.id} className="pd-item">
+                              <div className="pd-item-qty">{item.quantity}</div>
+                              <div className="pd-item-name">{item.product_name}</div>
+                              <div className="pd-item-price">{fmt(item.subtotal)}</div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="pd-meta">
+                          {order.payment_method && (
+                            <div className="pd-meta-chip">
+                              <svg viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
+                                <path fillRule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clipRule="evenodd" />
+                              </svg>
+                              {order.payment_method}
+                            </div>
+                          )}
+                          {order.customer_notes && (
+                            <div className="pd-meta-chip notes">
+                              <svg viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M18 13V5a2 2 0 00-2-2H4a2 2 0 00-2 2v8a2 2 0 002 2h3l3 3 3-3h3a2 2 0 002-2zM5 7a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm1 3a1 1 0 100 2h3a1 1 0 100-2H6z" clipRule="evenodd" />
+                              </svg>
+                              {order.customer_notes}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="pd-actions">
+                          {advance && (
+                            <button
+                              className={`pd-action-btn ${advance.cls}`}
+                              disabled={isBusy}
+                              onClick={() => updateStatus(order.id, advance.status)}
+                            >
+                              {isBusy ? '...' : t(advance.tKey)}
+                            </button>
+                          )}
+                          {order.status !== 'cancelled' && order.status !== 'delivered' && (
+                            <button
+                              className="pd-action-btn cancel"
+                              disabled={isBusy}
+                              onClick={() => {
+                                if (confirm(t('orders.action.cancelConfirm'))) updateStatus(order.id, 'cancelled')
+                              }}
+                            >
+                              {t('orders.action.cancel')}
+                            </button>
+                          )}
+                          <button
+                            className="pd-action-btn wa"
+                            onClick={() => {
+                              if (!order.items) loadItems(order.id).then(() => openWhatsApp(order))
+                              else openWhatsApp(order)
+                            }}
+                          >
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+                              <path d="M11.999 2C6.477 2 2 6.477 2 12c0 1.89.522 3.66 1.432 5.168L2 22l4.975-1.395A9.944 9.944 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z" />
+                            </svg>
+                            WhatsApp
+                          </button>
+                          <span className="pd-date">{timeAgo(order.created_at)}</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}

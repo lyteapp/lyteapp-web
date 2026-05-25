@@ -472,9 +472,12 @@ export default function ProductosPage() {
                 <div className="pr-card-info">
                   <div className="pr-card-name">{p.name}</div>
                   {p.description && <div className="pr-card-desc">{p.description}</div>}
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                     <div className="pr-card-price">${Number(p.price).toFixed(2)}</div>
                     {hasOpts && <div className="pr-card-opts-badge">Con opciones</div>}
+                    {p.category_id && categories.find(c => c.id === p.category_id) && (
+                      <div className="pr-card-cat">{categories.find(c => c.id === p.category_id)!.name}</div>
+                    )}
                   </div>
                 </div>
                 <div className="pr-card-right" onClick={e => e.stopPropagation()}>

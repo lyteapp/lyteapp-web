@@ -22,7 +22,7 @@ export async function GET(
     .maybeSingle()
 
   const driverName = driver?.name ?? 'Despachador'
-  const storeName  = (driver?.stores as { name: string } | null)?.name ?? ''
+  const storeName  = (driver?.stores as unknown as { name: string } | null)?.name ?? ''
 
   const manifest = {
     name:             `${driverName} · Despachos`,

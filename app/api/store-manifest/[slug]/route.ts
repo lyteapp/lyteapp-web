@@ -29,9 +29,7 @@ export async function GET(
   const iconSrc = `/api/store-icon/${slug}`
 
   const icons = [
-    { src: iconSrc, sizes: '512x512', type: 'image/png', purpose: 'any' },
-    { src: iconSrc, sizes: '192x192', type: 'image/png', purpose: 'any' },
-    { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    { src: iconSrc, sizes: 'any', type: 'image/png', purpose: 'any' },
   ]
 
   const manifest = {

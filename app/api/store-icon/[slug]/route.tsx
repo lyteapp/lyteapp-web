@@ -1,8 +1,7 @@
 import { ImageResponse } from 'next/og'
 import { createClient } from '@supabase/supabase-js'
 
-export const runtime = 'edge'
-
+// Node.js runtime — required for Supabase client compatibility
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
@@ -24,33 +23,26 @@ export async function GET(
   const logoUrl = store?.logo_url ?? null
   const name    = store?.name ?? slug
 
+  // Proxy the logo directly from Supabase storage — same origin for Chrome
   if (logoUrl) {
-    return new ImageResponse(
-      (
-        <div
-          style={{
-            width: '100%',
-            height: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: '#FFFFFF',
-          }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={logoUrl}
-            width={512}
-            height={512}
-            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-          />
-        </div>
-      ),
-      { width: 512, height: 512 }
-    )
+    try {
+      const res = await fetch(logoUrl)
+      if (res.ok) {
+        const bytes = await res.arrayBuffer()
+        const ct    = res.headers.get('content-type') ?? 'image/png'
+        return new Response(bytes, {
+          headers: {
+            'Content-Type': ct,
+            'Cache-Control': 'public, max-age=86400',
+          },
+        })
+      }
+    } catch {
+      // fall through to initials fallback
+    }
   }
 
-  // Fallback: initials on brand color
+  // Fallback: render initials on brand color as a 512×512 PNG
   const initials = name.slice(0, 2).toUpperCase()
   return new ImageResponse(
     (

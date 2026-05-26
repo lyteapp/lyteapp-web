@@ -225,7 +225,7 @@ export default function Apariencia() {
                 </svg>
 
                 {/* Header gradient overlay */}
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '14px 14px 32px', background: 'linear-gradient(180deg, rgba(76,29,149,0.95) 0%, rgba(76,29,149,0.7) 60%, transparent 100%)', zIndex: 5 }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '14px 14px 32px', background: `linear-gradient(180deg, ${trConfig.accentColor}F2 0%, ${trConfig.accentColor}B3 60%, transparent 100%)`, zIndex: 5 }}>
                   <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.75)', fontWeight: 400, marginBottom: 2 }}>Tu pedido</div>
                   <div style={{ fontSize: 12, color: 'white', fontWeight: 600 }}>#0142 · La Cocina de Sofia</div>
                 </div>

@@ -217,6 +217,11 @@ export default function PedidosPage() {
     await supabase.from('orders').update({ status }).eq('id', orderId)
     if (deliveryStatus) syncDelivery(orderId, deliveryStatus).catch(() => {})
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o))
+    if (['delivered', 'cancelled', 'completed'].includes(status)) {
+      setDisplayOrders(prev => prev.filter(o => o.id !== orderId))
+    } else {
+      setDisplayOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o))
+    }
     setUpdating(null)
   }
 
@@ -292,6 +297,7 @@ export default function PedidosPage() {
       const deliveryStatus = DELIVERY_STATUS_MAP[status]
       await supabase.from('orders').update({ status }).eq('id', orderId)
       if (deliveryStatus) syncDelivery(orderId, deliveryStatus).catch(() => {})
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: status as OrderStatus } : o))
       if (['completed', 'cancelled', 'delivered'].includes(status)) {
         setDisplayOrders(prev => prev.filter(o => o.id !== orderId))
       } else {

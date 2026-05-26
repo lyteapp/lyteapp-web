@@ -2,13 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
-
-type ActiveDelivery = {
-  customer_name: string
-  delivery_address: string
-  status: string
-  notes: string | null
-}
+import type { AvailableOrder, ActiveDelivery } from './page'
 
 type Props = {
   driverId: string
@@ -16,217 +10,331 @@ type Props = {
   storeId: string
   storeName: string
   storeLogo: string | null
-  activeDelivery: ActiveDelivery | null
+  initialOrders: AvailableOrder[]
+  initialDelivery: ActiveDelivery | null
 }
 
-type Status = 'requesting' | 'sharing' | 'error' | 'stopped'
+type GpsStatus = 'requesting' | 'active' | 'error' | 'stopped'
 
-export default function DriverClient({ driverId, driverName, storeId, storeName, storeLogo, activeDelivery }: Props) {
-  const [status, setStatus]         = useState<Status>('requesting')
-  const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
-  const [accuracy, setAccuracy]     = useState<number | null>(null)
-  const [errorMsg, setErrorMsg]     = useState('')
+function timeAgo(iso: string) {
+  const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
+  if (m < 1) return 'Ahora mismo'
+  if (m < 60) return `Hace ${m} min`
+  return `Hace ${Math.floor(m / 60)}h`
+}
+
+export default function DriverClient({
+  driverId, driverName, storeId, storeName, storeLogo,
+  initialOrders, initialDelivery,
+}: Props) {
+  const [orders, setOrders]             = useState<AvailableOrder[]>(initialOrders)
+  const [delivery, setDelivery]         = useState<ActiveDelivery | null>(initialDelivery)
+  const [claiming, setClaiming]         = useState<string | null>(null)
+  const [completing, setCompleting]     = useState(false)
+  const [errorMsg, setErrorMsg]         = useState('')
+  const [gpsStatus, setGpsStatus]       = useState<GpsStatus>('requesting')
+  const [accuracy, setAccuracy]         = useState<number | null>(null)
+  const [lastUpdate, setLastUpdate]     = useState<Date | null>(null)
 
   const watchId  = useRef<number | null>(null)
   const wakeLock = useRef<WakeLockSentinel | null>(null)
 
+  // ── GPS ──────────────────────────────────────────────────────────
   const sendLocation = useCallback(async (lat: number, lng: number) => {
     await supabase.from('driver_locations').upsert({
-      driver_id:  driverId,
-      store_id:   storeId,
-      lat, lng,
-      is_sharing: true,
+      driver_id: driverId, store_id: storeId,
+      lat, lng, is_sharing: true,
       updated_at: new Date().toISOString(),
     })
     setLastUpdate(new Date())
   }, [driverId, storeId])
 
-  const startSharing = useCallback(async () => {
-    if (!navigator.geolocation) {
-      setErrorMsg('GPS no disponible en este dispositivo')
-      setStatus('error')
-      return
-    }
-
+  const startGps = useCallback(async () => {
+    if (!navigator.geolocation) { setGpsStatus('error'); return }
     try {
-      if ('wakeLock' in navigator) {
+      if ('wakeLock' in navigator)
         wakeLock.current = await (navigator as Navigator & { wakeLock: { request(t: string): Promise<WakeLockSentinel> } }).wakeLock.request('screen')
-      }
-    } catch { /* wake lock not critical */ }
+    } catch { /* not critical */ }
 
     watchId.current = navigator.geolocation.watchPosition(
       pos => {
         sendLocation(pos.coords.latitude, pos.coords.longitude)
         setAccuracy(Math.round(pos.coords.accuracy))
-        setStatus('sharing')
-        setErrorMsg('')
+        setGpsStatus('active')
       },
-      err => {
-        setErrorMsg(err.code === 1
-          ? 'Permiso de GPS denegado. Activa la ubicacion en los ajustes del navegador.'
-          : 'Error al obtener ubicacion GPS.')
-        setStatus('error')
-      },
+      () => setGpsStatus('error'),
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 4000 }
     )
   }, [sendLocation])
 
-  const stopSharing = useCallback(async () => {
-    if (watchId.current !== null) {
-      navigator.geolocation.clearWatch(watchId.current)
-      watchId.current = null
-    }
+  const stopGps = useCallback(async () => {
+    if (watchId.current !== null) { navigator.geolocation.clearWatch(watchId.current); watchId.current = null }
     try { await wakeLock.current?.release() } catch { /* ignore */ }
-    wakeLock.current = null
-
     await supabase.from('driver_locations').upsert({
-      driver_id:  driverId,
-      store_id:   storeId,
-      lat: 0, lng: 0,
-      is_sharing: false,
+      driver_id: driverId, store_id: storeId,
+      lat: 0, lng: 0, is_sharing: false,
       updated_at: new Date().toISOString(),
     })
-
-    setStatus('stopped')
-    setLastUpdate(null)
-    setAccuracy(null)
+    setGpsStatus('stopped')
   }, [driverId, storeId])
 
-  // Auto-start GPS when page loads (triggered by scanning QR)
-  useEffect(() => {
-    startSharing()
-  }, [startSharing])
+  // Auto-start GPS on mount
+  useEffect(() => { startGps() }, [startGps])
 
-  // Re-acquire wake lock if tab becomes visible again
+  // Re-acquire wake lock on tab focus
   useEffect(() => {
-    const onVisibility = async () => {
-      if (document.visibilityState === 'visible' && status === 'sharing') {
+    const onVisible = async () => {
+      if (document.visibilityState === 'visible' && gpsStatus === 'active') {
         try {
-          if ('wakeLock' in navigator && (!wakeLock.current || wakeLock.current.released)) {
+          if ('wakeLock' in navigator && (!wakeLock.current || wakeLock.current.released))
             wakeLock.current = await (navigator as Navigator & { wakeLock: { request(t: string): Promise<WakeLockSentinel> } }).wakeLock.request('screen')
-          }
         } catch { /* ignore */ }
       }
     }
-    document.addEventListener('visibilitychange', onVisibility)
-    return () => document.removeEventListener('visibilitychange', onVisibility)
-  }, [status])
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [gpsStatus])
 
-  useEffect(() => {
-    return () => {
-      if (watchId.current !== null) navigator.geolocation.clearWatch(watchId.current)
-      wakeLock.current?.release().catch(() => {})
-    }
+  useEffect(() => () => {
+    if (watchId.current !== null) navigator.geolocation.clearWatch(watchId.current)
+    wakeLock.current?.release().catch(() => {})
   }, [])
 
-  function fmtTime(d: Date) {
-    return d.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  // ── Load available orders ─────────────────────────────────────────
+  const loadOrders = useCallback(async () => {
+    const [{ data: ready }, { data: claimed }] = await Promise.all([
+      supabase.from('orders').select('id,customer_name,customer_phone,customer_notes,payment_method,total,created_at')
+        .eq('store_id', storeId).eq('status', 'ready').order('created_at', { ascending: true }),
+      supabase.from('deliveries').select('order_id')
+        .eq('store_id', storeId).not('order_id', 'is', null).not('status', 'eq', 'cancelled'),
+    ])
+    const claimedIds = new Set((claimed ?? []).map(d => d.order_id))
+    setOrders((ready ?? []).filter(o => !claimedIds.has(o.id)) as AvailableOrder[])
+  }, [storeId])
+
+  const loadDelivery = useCallback(async () => {
+    const { data } = await supabase.from('deliveries')
+      .select('id,customer_name,customer_phone,delivery_address,notes,status,picked_up_at,order_id')
+      .eq('driver_id', driverId).in('status', ['ready', 'picked_up'])
+      .order('created_at', { ascending: false }).limit(1).maybeSingle()
+    setDelivery(data as ActiveDelivery | null)
+  }, [driverId])
+
+  // ── Realtime subscriptions ────────────────────────────────────────
+  useEffect(() => {
+    const ch = supabase.channel(`dispatcher-${driverId}`)
+      // Any order change in this store → refresh available list
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `store_id=eq.${storeId}` },
+        () => loadOrders())
+      // Any delivery change in this store → refresh both (someone else may have claimed)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'deliveries', filter: `store_id=eq.${storeId}` },
+        () => { loadOrders(); loadDelivery() })
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
+  }, [storeId, driverId, loadOrders, loadDelivery])
+
+  // ── Claim an order ────────────────────────────────────────────────
+  async function claimOrder(order: AvailableOrder) {
+    if (delivery) return // already has one
+    setClaiming(order.id)
+    setErrorMsg('')
+
+    // Optimistic removal
+    setOrders(prev => prev.filter(o => o.id !== order.id))
+
+    const { data, error } = await supabase.from('deliveries').insert({
+      store_id: storeId,
+      order_id: order.id,
+      driver_id: driverId,
+      customer_name: order.customer_name,
+      customer_phone: order.customer_phone,
+      delivery_address: order.customer_notes ?? '',
+      status: 'picked_up',
+      picked_up_at: new Date().toISOString(),
+      driver_fee: 0,
+      fee_paid: false,
+    }).select('id,customer_name,customer_phone,delivery_address,notes,status,picked_up_at,order_id').single()
+
+    if (error) {
+      // Revert: put the order back
+      setOrders(prev => [order, ...prev])
+      setErrorMsg('Este pedido ya fue tomado. Actualiza la lista.')
+    } else {
+      setDelivery(data as ActiveDelivery)
+    }
+    setClaiming(null)
   }
 
-  const isSharing = status === 'sharing'
+  // ── Mark delivered ────────────────────────────────────────────────
+  async function completeDelivery() {
+    if (!delivery) return
+    setCompleting(true)
+    await supabase.from('deliveries')
+      .update({ status: 'delivered', delivered_at: new Date().toISOString() })
+      .eq('id', delivery.id)
+    setDelivery(null)
+    setCompleting(false)
+    await loadOrders()
+  }
+
+  // ── Mark picked up (from counter) ─────────────────────────────────
+  async function markPickedUp() {
+    if (!delivery || delivery.status !== 'ready') return
+    await supabase.from('deliveries')
+      .update({ status: 'picked_up', picked_up_at: new Date().toISOString() })
+      .eq('id', delivery.id)
+    setDelivery(d => d ? { ...d, status: 'picked_up', picked_up_at: new Date().toISOString() } : d)
+  }
+
+  const isActive = gpsStatus === 'active'
 
   return (
-    <div className="drc-root">
-      <div className="drc-header">
+    <div className="dsp-root">
+
+      {/* Header */}
+      <div className="dsp-header">
         {storeLogo
-          ? <img src={storeLogo} alt={storeName} className="drc-logo" />
-          : <div className="drc-logo-placeholder">{storeName[0]?.toUpperCase()}</div>
+          ? <img src={storeLogo} alt={storeName} className="dsp-logo" />
+          : <div className="dsp-logo-av">{storeName[0]?.toUpperCase()}</div>
         }
-        <span className="drc-store">{storeName}</span>
+        <div className="dsp-header-info">
+          <div className="dsp-store">{storeName}</div>
+          <div className="dsp-name">{driverName}</div>
+        </div>
+        {/* GPS pill */}
+        <div className={`dsp-gps-pill${isActive ? ' on' : gpsStatus === 'error' ? ' err' : ''}`}>
+          <span className="dsp-gps-dot" />
+          {gpsStatus === 'requesting' && 'GPS...'}
+          {gpsStatus === 'active'     && (accuracy ? `±${accuracy}m` : 'GPS activo')}
+          {gpsStatus === 'error'      && 'Sin GPS'}
+          {gpsStatus === 'stopped'    && 'GPS off'}
+        </div>
       </div>
 
-      <div className="drc-body">
-        <div className="drc-greeting">Hola, {driverName}</div>
-
-        {/* Animated GPS orb */}
-        <div className={`drc-orb${isSharing ? ' active' : ''}`}>
-          {isSharing && <div className="drc-pulse" />}
-          {isSharing && <div className="drc-pulse delay" />}
-          {status === 'requesting' && <div className="drc-spinner" />}
-          <svg viewBox="0 0 56 56" fill="none" width="52" height="52">
-            <path
-              d="M28 6C18.06 6 10 14.06 10 24c0 15.4 18 30 18 30s18-14.6 18-30C46 14.06 37.94 6 28 6z"
-              fill={isSharing ? '#fff' : '#94A3B8'}
-            />
-            <circle cx="28" cy="24" r="8"
-              fill={isSharing ? 'rgba(124,58,237,0.5)' : '#CBD5E1'}
-            />
-          </svg>
+      {/* GPS stop/start bar */}
+      {gpsStatus === 'stopped' && (
+        <button className="dsp-gps-restart" onClick={startGps}>
+          Reactivar GPS
+        </button>
+      )}
+      {gpsStatus === 'error' && (
+        <div className="dsp-gps-error">
+          Activa el GPS en tu navegador y recarga la pagina.
+          <button onClick={startGps}>Reintentar</button>
         </div>
+      )}
 
-        {/* Status row */}
-        <div className={`drc-status${isSharing ? ' on' : status === 'error' ? ' err' : ''}`}>
-          <span className="drc-dot" />
-          <span>
-            {status === 'requesting' && 'Solicitando acceso al GPS...'}
-            {status === 'sharing'    && 'Compartiendo ubicacion en tiempo real'}
-            {status === 'stopped'    && 'Rastreo detenido'}
-            {status === 'error'      && (errorMsg || 'Error de GPS')}
-          </span>
-        </div>
+      <div className="dsp-body">
 
-        {/* Stop / Retry button */}
-        {isSharing && (
-          <button className="drc-btn on" onClick={stopSharing}>
-            Detener rastreo
-          </button>
-        )}
-        {status === 'stopped' && (
-          <button className="drc-btn" onClick={startSharing}>
-            Reactivar rastreo
-          </button>
-        )}
-        {status === 'error' && (
-          <button className="drc-btn" onClick={startSharing}>
-            Reintentar
-          </button>
-        )}
-
-        {/* GPS accuracy / update info */}
-        {isSharing && (
-          <div className="drc-info">
-            {lastUpdate && (
-              <div className="drc-info-row">
-                <span>Ultima actualizacion</span>
-                <span>{fmtTime(lastUpdate)}</span>
-              </div>
-            )}
-            {accuracy !== null && (
-              <div className="drc-info-row">
-                <span>Precision GPS</span>
-                <span>±{accuracy}m</span>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Active delivery card */}
-        {activeDelivery && (
-          <div className="drc-delivery-card">
-            <div className="drc-delivery-label">
-              {activeDelivery.status === 'picked_up' ? 'Entrega en curso' : 'Entrega asignada'}
+        {/* ── ACTIVE DELIVERY ── */}
+        {delivery && (
+          <div className="dsp-section">
+            <div className="dsp-section-title">
+              <span className="dsp-pulse-dot" />
+              Tu pedido activo
             </div>
-            <div className="drc-delivery-name">{activeDelivery.customer_name}</div>
-            {activeDelivery.delivery_address && (
-              <div className="drc-delivery-address">
-                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="12" height="12" style={{ flexShrink: 0, marginTop: 1 }}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 1.5C5.515 1.5 3.5 3.515 3.5 6c0 3.938 4.5 8.5 4.5 8.5S12.5 9.938 12.5 6c0-2.485-2.015-4.5-4.5-4.5z"/>
-                  <circle cx="8" cy="6" r="1.5"/>
-                </svg>
-                {activeDelivery.delivery_address}
+            <div className="dsp-delivery-card">
+              <div className="dsp-delivery-customer">{delivery.customer_name}</div>
+              {delivery.delivery_address && (
+                <div className="dsp-delivery-address">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="13" height="13" style={{ flexShrink: 0 }}>
+                    <path strokeLinecap="round" d="M8 1.5C5.515 1.5 3.5 3.515 3.5 6c0 3.938 4.5 8.5 4.5 8.5S12.5 9.938 12.5 6c0-2.485-2.015-4.5-4.5-4.5z"/>
+                    <circle cx="8" cy="6" r="1.5"/>
+                  </svg>
+                  {delivery.delivery_address}
+                </div>
+              )}
+              {delivery.customer_phone && (
+                <a href={`tel:${delivery.customer_phone}`} className="dsp-delivery-phone">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="13" height="13" style={{ flexShrink: 0 }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.042 11.042 0 005.516 5.516l.773-1.548a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V13a1 1 0 01-1 1h-1C7.82 14 2 8.18 2 3z"/>
+                  </svg>
+                  {delivery.customer_phone}
+                </a>
+              )}
+              {delivery.notes && (
+                <div className="dsp-delivery-notes">{delivery.notes}</div>
+              )}
+              <div className="dsp-delivery-actions">
+                {delivery.status === 'ready' && (
+                  <button className="dsp-btn-pickup" onClick={markPickedUp}>
+                    Recogi el pedido
+                  </button>
+                )}
+                <button className="dsp-btn-done" onClick={completeDelivery} disabled={completing}>
+                  {completing ? 'Guardando...' : 'Entregado'}
+                </button>
               </div>
-            )}
-            {activeDelivery.notes && (
-              <div className="drc-delivery-notes">{activeDelivery.notes}</div>
-            )}
+            </div>
           </div>
         )}
 
-        {isSharing && (
-          <div className="drc-notice">
-            Manten esta pantalla abierta para continuar compartiendo tu ubicacion.
+        {/* ── AVAILABLE ORDERS ── */}
+        <div className="dsp-section">
+          <div className="dsp-section-title">
+            Pedidos disponibles
+            {orders.length > 0 && <span className="dsp-count">{orders.length}</span>}
+          </div>
+
+          {errorMsg && (
+            <div className="dsp-error-bar">
+              {errorMsg}
+              <button onClick={() => { setErrorMsg(''); loadOrders() }}>Actualizar</button>
+            </div>
+          )}
+
+          {orders.length === 0 ? (
+            <div className="dsp-empty">
+              <div className="dsp-empty-icon">
+                <svg viewBox="0 0 40 40" fill="none" stroke="#CBD5E1" strokeWidth="1.5" width="40" height="40">
+                  <circle cx="20" cy="20" r="16" strokeDasharray="4 3"/>
+                  <path strokeLinecap="round" d="M14 20h12M20 14v12"/>
+                </svg>
+              </div>
+              <div className="dsp-empty-text">Sin pedidos disponibles</div>
+              <div className="dsp-empty-sub">Apareceran aqui cuando cocina los marque como listos</div>
+            </div>
+          ) : (
+            <div className="dsp-order-list">
+              {orders.map(order => (
+                <div key={order.id} className="dsp-order-card">
+                  <div className="dsp-order-top">
+                    <div className="dsp-order-name">{order.customer_name}</div>
+                    <div className="dsp-order-time">{timeAgo(order.created_at)}</div>
+                  </div>
+                  {order.customer_notes && (
+                    <div className="dsp-order-notes">{order.customer_notes}</div>
+                  )}
+                  <div className="dsp-order-meta">
+                    {order.total > 0 && <span>${Number(order.total).toFixed(2)}</span>}
+                    {order.payment_method && <span>{order.payment_method}</span>}
+                    {order.customer_phone && <span>{order.customer_phone}</span>}
+                  </div>
+                  <button
+                    className="dsp-btn-claim"
+                    onClick={() => claimOrder(order)}
+                    disabled={claiming === order.id || !!delivery}
+                  >
+                    {claiming === order.id ? 'Tomando...' : delivery ? 'Ya tienes un pedido' : 'Tomar pedido'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* GPS toggle at bottom */}
+        {isActive && (
+          <div className="dsp-gps-bar">
+            <div className="dsp-gps-info">
+              <span className="dsp-gps-dot on" />
+              Compartiendo ubicacion
+              {lastUpdate && <span className="dsp-gps-time"> · {lastUpdate.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>}
+            </div>
+            <button className="dsp-gps-stop" onClick={stopGps}>Detener</button>
           </div>
         )}
+
       </div>
     </div>
   )

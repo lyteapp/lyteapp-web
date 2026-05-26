@@ -1,248 +1,464 @@
-/* ── Driver GPS page ── */
+/* ── Dispatcher Dashboard ──────────────────────────────────────── */
 
-.drc-root {
+.dsp-root {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  background: #FAFAF7;
+  background: #F1F5F9;
   font-family: var(--font-geist-sans, system-ui, sans-serif);
   -webkit-font-smoothing: antialiased;
+  color: #0F172A;
 }
 
-/* Header */
-.drc-header {
+/* ── Header ── */
+.dsp-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 16px 20px;
-  border-bottom: 1px solid #E2E8F0;
+  gap: 12px;
+  padding: 14px 18px;
   background: #fff;
+  border-bottom: 1px solid #E2E8F0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
-.drc-logo {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+.dsp-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   object-fit: cover;
-}
-
-.drc-logo-placeholder {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: #7C3AED;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.drc-store {
-  font-size: 14px;
-  font-weight: 600;
-  color: #0F172A;
-}
-
-/* Body */
-.drc-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 40px 24px 48px;
-  gap: 0;
-}
-
-.drc-greeting {
-  font-size: 22px;
-  font-weight: 700;
-  color: #0F172A;
-  margin-bottom: 36px;
-  letter-spacing: -0.3px;
-}
-
-/* GPS orb */
-.drc-orb {
-  position: relative;
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  background: #F1F5F9;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 36px;
-  transition: background 0.3s;
-}
-
-.drc-orb.active {
-  background: #7C3AED;
-}
-
-/* Pulse rings */
-.drc-pulse {
-  position: absolute;
-  inset: -12px;
-  border-radius: 50%;
-  border: 2px solid rgba(124, 58, 237, 0.35);
-  animation: drcPulse 2s ease-out infinite;
-}
-
-.drc-pulse.delay {
-  animation-delay: 1s;
-}
-
-@keyframes drcPulse {
-  0%   { transform: scale(1);   opacity: 1; }
-  100% { transform: scale(1.5); opacity: 0; }
-}
-
-/* Main button */
-.drc-btn {
-  width: 100%;
-  max-width: 320px;
-  padding: 18px 24px;
-  border-radius: 16px;
-  border: none;
-  font-size: 17px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.1s, background 0.2s;
-  background: #0F172A;
-  color: #fff;
-  letter-spacing: -0.2px;
-  margin-bottom: 20px;
-}
-
-.drc-btn.on {
-  background: #EF4444;
-}
-
-.drc-btn:active {
-  transform: scale(0.97);
-}
-
-/* Status row */
-.drc-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #94A3B8;
-  margin-bottom: 24px;
-  font-weight: 500;
-}
-
-.drc-status.on  { color: #1D9E75; }
-.drc-status.err { color: #EF4444; }
-
-.drc-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #CBD5E1;
   flex-shrink: 0;
 }
 
-.drc-status.on  .drc-dot { background: #1D9E75; animation: drcBlink 1.4s ease-in-out infinite; }
-.drc-status.err .drc-dot { background: #EF4444; }
-
-@keyframes drcBlink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.3; }
-}
-
-/* Info table */
-.drc-info {
-  width: 100%;
-  max-width: 320px;
-  background: #fff;
-  border: 1px solid #E2E8F0;
-  border-radius: 12px;
-  overflow: hidden;
-  margin-bottom: 20px;
-}
-
-.drc-info-row {
+.dsp-logo-av {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #7C3AED;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dsp-header-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.dsp-store {
   font-size: 13px;
-}
-
-.drc-info-row + .drc-info-row {
-  border-top: 1px solid #F1F5F9;
-}
-
-.drc-info-row span:first-child { color: #64748B; }
-.drc-info-row span:last-child  { color: #0F172A; font-weight: 600; font-variant-numeric: tabular-nums; }
-
-/* Notice */
-.drc-notice {
-  max-width: 300px;
-  text-align: center;
-  font-size: 12px;
-  color: #94A3B8;
-  line-height: 1.6;
-}
-
-/* Requesting spinner inside orb */
-.drc-spinner {
-  position: absolute;
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  border: 3px solid rgba(124,58,237,0.15);
-  border-top-color: #7C3AED;
-  animation: drcSpin 0.8s linear infinite;
-}
-@keyframes drcSpin { to { transform: rotate(360deg); } }
-
-/* Active delivery card */
-.drc-delivery-card {
-  width: 100%;
-  max-width: 320px;
-  background: #fff;
-  border: 1.5px solid #E2E8F0;
-  border-left: 4px solid #7C3AED;
-  border-radius: 12px;
-  padding: 14px 16px;
-  margin-bottom: 20px;
-}
-
-.drc-delivery-label {
-  font-size: 10px;
   font-weight: 600;
+  color: #0F172A;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dsp-name {
+  font-size: 11px;
+  color: #64748B;
+  margin-top: 1px;
+}
+
+/* GPS pill in header */
+.dsp-gps-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #F1F5F9;
+  color: #94A3B8;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.dsp-gps-pill.on  { background: #DCFCE7; color: #15803D; }
+.dsp-gps-pill.err { background: #FEE2E2; color: #DC2626; }
+
+.dsp-gps-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.dsp-gps-pill.on .dsp-gps-dot {
+  animation: dspBlink 1.4s ease-in-out infinite;
+}
+
+@keyframes dspBlink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.25; }
+}
+
+/* GPS error/restart banners */
+.dsp-gps-restart {
+  width: 100%;
+  padding: 11px;
+  background: #0F172A;
+  color: #fff;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.dsp-gps-error {
+  background: #FEF2F2;
+  border-bottom: 1px solid #FCA5A5;
+  padding: 10px 18px;
+  font-size: 12px;
+  color: #DC2626;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dsp-gps-error button {
+  background: none;
+  border: 1px solid #FCA5A5;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: #DC2626;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+/* ── Body ── */
+.dsp-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-bottom: 80px;
+}
+
+/* ── Section ── */
+.dsp-section {
+  padding: 18px 16px 0;
+}
+
+.dsp-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #7C3AED;
+  color: #64748B;
+  margin-bottom: 10px;
+}
+
+.dsp-count {
+  background: #7C3AED;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 100px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Blinking dot for active delivery */
+.dsp-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #7C3AED;
+  animation: dspBlink 1.4s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+/* ── Active delivery card ── */
+.dsp-delivery-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 18px;
+  border: 2px solid #7C3AED;
+  box-shadow: 0 4px 20px rgba(124,58,237,0.12);
   margin-bottom: 6px;
 }
 
-.drc-delivery-name {
+.dsp-delivery-customer {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0F172A;
+  margin-bottom: 10px;
+  letter-spacing: -0.3px;
+}
+
+.dsp-delivery-address {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 14px;
+  color: #334155;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.dsp-delivery-phone {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #7C3AED;
+  text-decoration: none;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.dsp-delivery-notes {
+  font-size: 13px;
+  color: #64748B;
+  font-style: italic;
+  background: #F8FAFC;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.dsp-delivery-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.dsp-btn-pickup {
+  flex: 1;
+  padding: 13px;
+  border-radius: 12px;
+  border: 1.5px solid #7C3AED;
+  background: #EEF2FF;
+  color: #4C1D95;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+
+.dsp-btn-pickup:hover { background: #DDD8FB; }
+
+.dsp-btn-done {
+  flex: 1;
+  padding: 13px;
+  border-radius: 12px;
+  border: none;
+  background: #7C3AED;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.dsp-btn-done:hover:not(:disabled) { background: #4C1D95; }
+.dsp-btn-done:active { transform: scale(0.97); }
+.dsp-btn-done:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Available orders ── */
+.dsp-order-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.dsp-order-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 16px;
+  border: 1px solid #E2E8F0;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.dsp-order-card:hover {
+  border-color: #C4B5FD;
+  box-shadow: 0 2px 12px rgba(124,58,237,0.08);
+}
+
+.dsp-order-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.dsp-order-name {
   font-size: 16px;
   font-weight: 700;
   color: #0F172A;
-  margin-bottom: 6px;
   letter-spacing: -0.2px;
 }
 
-.drc-delivery-address {
-  display: flex;
-  align-items: flex-start;
-  gap: 5px;
+.dsp-order-time {
+  font-size: 11px;
+  color: #94A3B8;
+  white-space: nowrap;
+  margin-top: 3px;
+}
+
+.dsp-order-notes {
   font-size: 13px;
   color: #475569;
+  margin-bottom: 6px;
   line-height: 1.4;
 }
 
-.drc-delivery-notes {
+.dsp-order-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: #64748B;
+  margin-bottom: 12px;
+}
+
+.dsp-order-meta span::before {
+  content: '·';
+  margin-right: 8px;
+  color: #CBD5E1;
+}
+
+.dsp-order-meta span:first-child::before { content: none; }
+
+.dsp-btn-claim {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  background: #0F172A;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, transform 0.1s;
+  letter-spacing: -0.2px;
+}
+
+.dsp-btn-claim:hover:not(:disabled) { background: #1E293B; }
+.dsp-btn-claim:active { transform: scale(0.98); }
+.dsp-btn-claim:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ── Empty state ── */
+.dsp-empty {
+  background: #fff;
+  border-radius: 14px;
+  padding: 40px 20px;
+  text-align: center;
+  border: 1px dashed #E2E8F0;
+}
+
+.dsp-empty-icon { margin-bottom: 12px; }
+
+.dsp-empty-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 4px;
+}
+
+.dsp-empty-sub {
   font-size: 12px;
   color: #94A3B8;
-  margin-top: 6px;
-  font-style: italic;
-  line-height: 1.4;
+  line-height: 1.5;
+  max-width: 240px;
+  margin: 0 auto;
 }
+
+/* ── Error bar ── */
+.dsp-error-bar {
+  background: #FEF2F2;
+  border: 1px solid #FCA5A5;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: #DC2626;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.dsp-error-bar button {
+  background: none;
+  border: 1px solid #FCA5A5;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: #DC2626;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+/* ── GPS bar (bottom) ── */
+.dsp-gps-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-top: 1px solid #E2E8F0;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  z-index: 20;
+}
+
+.dsp-gps-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #15803D;
+  font-weight: 500;
+}
+
+.dsp-gps-dot.on {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #15803D;
+  animation: dspBlink 1.4s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.dsp-gps-time { color: #94A3B8; font-weight: 400; }
+
+.dsp-gps-stop {
+  background: none;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 12px;
+  color: #64748B;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.dsp-gps-stop:hover { border-color: #EF4444; color: #EF4444; }

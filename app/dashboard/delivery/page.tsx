@@ -16,7 +16,7 @@ const MapView = dynamic(() => import('./MapView'), {
   ),
 })
 
-type Tab = 'tray' | 'live' | 'today' | 'couriers' | 'zones' | 'settlements'
+type Tab = 'live' | 'today' | 'couriers' | 'zones' | 'settlements'
 type DeliveryStatus = 'pending' | 'preparing' | 'ready' | 'picked_up' | 'delivered' | 'cancelled'
 type TodayFilter = 'all' | 'ongoing' | 'delivered' | 'cancelled'
 
@@ -69,7 +69,7 @@ export default function DeliveryPage() {
   const { user } = useAuth()
   const [loading, setLoading]       = useState(true)
   const [storeId, setStoreId]       = useState<string | null>(null)
-  const [tab, setTab]               = useState<Tab>('tray')
+  const [tab, setTab]               = useState<Tab>('live')
   const [deliveries, setDeliveries] = useState<Delivery[]>([])
   const [drivers, setDrivers]       = useState<Driver[]>([])
   const [readyOrders, setReadyOrders] = useState<Order[]>([])
@@ -276,12 +276,6 @@ export default function DeliveryPage() {
 
       {/* ── TABS ── */}
       <nav className="dv-tabs">
-        <button className={`dv-tab${tab === 'tray' ? ' active' : ''}`} onClick={() => setTab('tray')}>
-          Bandeja
-          {deliveries.filter(d => d.is_customer_order && ['pending','preparing','ready'].includes(d.status)).length > 0 && (
-            <span className="dv-tab-count">{deliveries.filter(d => d.is_customer_order && ['pending','preparing','ready'].includes(d.status)).length}</span>
-          )}
-        </button>
         <button className={`dv-tab${tab === 'live' ? ' active' : ''}`} onClick={() => setTab('live')}>
           En vivo
           {(inRoute.length + waiting.length) > 0 && (
@@ -301,140 +295,6 @@ export default function DeliveryPage() {
           Liquidaciones
         </button>
       </nav>
-
-      {/* ══════════════════════════════════════════════
-          VISTA: BANDEJA (pedidos del cliente con ubicacion)
-      ══════════════════════════════════════════════ */}
-      <div className={`dv-view${tab === 'tray' ? ' active' : ''}`}>
-        <div className="dv-tray-wrap">
-          <div className="dv-tray-header">
-            <div>
-              <h3>Bandeja de pedidos</h3>
-              <p>Pedidos entrantes con rastreo activado</p>
-            </div>
-            <span style={{ fontSize: 12, color: 'var(--dv-ink-muted)' }}>
-              {deliveries.filter(d => d.is_customer_order && ['pending','preparing','ready'].includes(d.status)).length} pendientes
-            </span>
-          </div>
-
-          {deliveries.filter(d => d.is_customer_order).length === 0 ? (
-            <div className="dv-tray-empty">
-              <svg viewBox="0 0 48 48" fill="none" stroke="#CBD5E1" strokeWidth="1.5" width="40" height="40">
-                <rect x="6" y="10" width="36" height="28" rx="6" />
-                <path strokeLinecap="round" d="M14 18h20M14 24h14M14 30h8" />
-              </svg>
-              <div style={{ fontWeight: 600, color: '#0F172A', fontSize: 14, marginTop: 12 }}>Sin pedidos en bandeja</div>
-              <div style={{ color: 'var(--dv-ink-muted)', fontSize: 12, marginTop: 4 }}>
-                Los pedidos con rastreo del cliente apareceran aqui
-              </div>
-            </div>
-          ) : (
-            <div className="dv-tray-grid">
-              {deliveries
-                .filter(d => d.is_customer_order)
-                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-                .map(del => {
-                  const mins = Math.floor((Date.now() - new Date(del.created_at).getTime()) / 60000)
-                  const timeStr = mins < 1 ? 'Ahora' : mins < 60 ? `${mins} min` : `${Math.floor(mins / 60)}h`
-                  const statusColor = del.status === 'delivered' ? '#1D9E75' : del.status === 'picked_up' ? '#3B82F6' : del.status === 'cancelled' ? '#94A3B8' : del.status === 'ready' ? '#7C3AED' : del.status === 'preparing' ? '#F59E0B' : '#94A3B8'
-                  const statusLabel = del.status === 'delivered' ? 'Entregado' : del.status === 'picked_up' ? 'En camino' : del.status === 'cancelled' ? 'Cancelado' : del.status === 'ready' ? 'Listo para salir' : del.status === 'preparing' ? 'En cocina' : 'Esperando cocina'
-                  const hasLocation = del.customer_lat !== null && del.customer_lng !== null
-                  const drv = del.driver as Driver | null
-
-                  return (
-                    <div
-                      key={del.id}
-                      className={`dv-tray-card${del.status === 'delivered' || del.status === 'cancelled' ? ' done' : ''}`}
-                      onClick={() => del.status === 'ready' ? setQrDel(del) : undefined}
-                      style={{ cursor: del.status === 'ready' ? 'pointer' : 'default' }}
-                    >
-                      <div className="dv-tray-card-top">
-                        <div className="dv-tray-avatar">{del.customer_name[0].toUpperCase()}</div>
-                        <div className="dv-tray-info">
-                          <div className="dv-tray-name">{del.customer_name}</div>
-                          <div className="dv-tray-meta">
-                            <span>{timeStr}</span>
-                            {del.customer_phone && <span> · {del.customer_phone}</span>}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                          <span style={{ fontSize: 10, fontWeight: 600, color: statusColor, background: statusColor + '18', borderRadius: 100, padding: '2px 8px', whiteSpace: 'nowrap' }}>
-                            {statusLabel}
-                          </span>
-                          {hasLocation && (
-                            <span style={{ fontSize: 10, color: '#7C3AED', display: 'flex', alignItems: 'center', gap: 3 }}>
-                              <svg viewBox="0 0 12 12" fill="#7C3AED" width="10" height="10">
-                                <path fillRule="evenodd" d="M3.03 2.53a4.2 4.2 0 115.94 5.94L6 11.34 3.03 8.47a4.2 4.2 0 010-5.94zM6 6.6a1.2 1.2 0 100-2.4 1.2 1.2 0 000 2.4z" clipRule="evenodd" />
-                              </svg>
-                              Con ubicacion
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {drv && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 0 0', borderTop: '1px solid #F1F5F9', marginTop: 10, fontSize: 12, color: 'var(--dv-ink-soft)' }}>
-                          <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#EDE9FE', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#7C3AED' }}>
-                            {drv.name[0]}
-                          </div>
-                          {drv.name}
-                        </div>
-                      )}
-
-                      {(del.status === 'pending' || del.status === 'preparing' || del.status === 'ready' || del.status === 'picked_up') && (
-                        <div className="dv-tray-card-footer">
-                          {del.status === 'pending' && (
-                            <span style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8' }}>Esperando que cocina reciba</span>
-                          )}
-                          {del.status === 'preparing' && (
-                            <button
-                              className="dv-tray-qr-btn"
-                              style={{ background: '#F59E0B' }}
-                              onClick={e => { e.stopPropagation(); updateStatus(del, 'ready') }}
-                            >
-                              <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
-                              </svg>
-                              Marcar listo
-                            </button>
-                          )}
-                          {del.status === 'ready' && (
-                            <button
-                              className="dv-tray-qr-btn"
-                              onClick={e => { e.stopPropagation(); setQrDel(del) }}
-                            >
-                              <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13">
-                                <path fillRule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 2V5h1v1H5zM3 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm2 2v-1h1v1H5zM13 3a1 1 0 00-1 1v3a1 1 0 001 1h3a1 1 0 001-1V4a1 1 0 00-1-1h-3zm1 2v1h1V5h-1z" clipRule="evenodd" />
-                                <path d="M11 4a1 1 0 10-2 0v1a1 1 0 002 0V4zM10 7a1 1 0 011 1v1h2a1 1 0 110 2h-3a1 1 0 01-1-1V8a1 1 0 011-1zM16 9a1 1 0 100 2 1 1 0 000-2zM9 13a1 1 0 011-1h1a1 1 0 110 2v2a1 1 0 11-2 0v-3zM7 11a1 1 0 100-2H4a1 1 0 100 2h3zM17 13a1 1 0 01-1 1h-2a1 1 0 110-2h2a1 1 0 011 1zM16 17a1 1 0 100-2h-3a1 1 0 100 2h3z" />
-                              </svg>
-                              QR para despachador
-                            </button>
-                          )}
-                          {del.status === 'picked_up' && (
-                            <span style={{ fontSize: 11, fontWeight: 600, color: '#3B82F6' }}>En camino</span>
-                          )}
-                          <a
-                            href={`/delivery/${del.id}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            onClick={e => e.stopPropagation()}
-                            style={{ fontSize: 11, color: 'var(--dv-ink-muted)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
-                          >
-                            <svg viewBox="0 0 16 16" fill="currentColor" width="11" height="11">
-                              <path fillRule="evenodd" d="M8.914 6.025a.75.75 0 011.06 0 3.5 3.5 0 010 4.95l-2 2a3.5 3.5 0 01-4.95-4.95l1.25-1.25a.75.75 0 011.06 1.06L4.085 9.08a2 2 0 102.83 2.83l2-2a2 2 0 000-2.83.75.75 0 010-1.06zM7.086 9.975a.75.75 0 01-1.06 0 3.5 3.5 0 010-4.95l2-2a3.5 3.5 0 014.95 4.95l-1.25 1.25a.75.75 0 11-1.06-1.06l1.249-1.25a2 2 0 10-2.83-2.83l-2 2a2 2 0 000 2.83.75.75 0 010 1.06z" clipRule="evenodd" />
-                            </svg>
-                            Link cliente
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })
-              }
-            </div>
-          )}
-        </div>
-      </div>
 
       {/* ══════════════════════════════════════════════
           VISTA: EN VIVO

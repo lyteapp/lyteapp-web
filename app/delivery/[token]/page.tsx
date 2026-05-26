@@ -173,20 +173,39 @@ export default function TrackingPage({ params }: { params: Promise<{ token: stri
   const { token } = use(params)
   const [delivery, setDelivery] = useState<Delivery | null | 'loading'>('loading')
 
+  async function fetchDelivery() {
+    const { data } = await supabase.from('deliveries').select('*').eq('id', token).maybeSingle()
+    setDelivery((data as Delivery) ?? null)
+  }
+
   useEffect(() => {
-    supabase.from('deliveries').select('*').eq('id', token).maybeSingle().then(({ data }) => {
-      setDelivery(data as Delivery ?? null)
-    })
+    fetchDelivery()
   }, [token])
 
   useEffect(() => {
     if (!token) return
+
+    // Realtime subscription for instant updates
     const ch = supabase.channel(`track-${token}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'deliveries', filter: `id=eq.${token}` }, payload => {
-        setDelivery(payload.new as Delivery)
+        // If replica identity full is set, payload.new has all columns
+        // Otherwise fall back to a fresh fetch to avoid partial state
+        const updated = payload.new as Delivery
+        if (updated.customer_name) {
+          setDelivery(updated)
+        } else {
+          fetchDelivery()
+        }
       })
       .subscribe()
-    return () => { supabase.removeChannel(ch) }
+
+    // Polling fallback: re-fetch every 10s in case realtime is unavailable
+    const poll = setInterval(fetchDelivery, 10000)
+
+    return () => {
+      supabase.removeChannel(ch)
+      clearInterval(poll)
+    }
   }, [token])
 
   if (delivery === 'loading') return (

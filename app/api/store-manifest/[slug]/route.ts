@@ -24,16 +24,15 @@ export async function GET(
 
   const themeColor = store.brand_color ?? '#7C3AED'
 
-  const icons = store.logo_url
-    ? [
-        { src: store.logo_url, sizes: 'any', type: 'image/png', purpose: 'any' },
-        { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-        { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-      ]
-    : [
-        { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
-        { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
-      ]
+  // Always proxy the icon through our own server so Chrome accepts it as a PWA icon.
+  // External URLs (Supabase storage) are blocked by Chrome when building the home screen shortcut.
+  const iconSrc = `/api/store-icon/${slug}`
+
+  const icons = [
+    { src: iconSrc, sizes: '512x512', type: 'image/png', purpose: 'any' },
+    { src: iconSrc, sizes: '192x192', type: 'image/png', purpose: 'any' },
+    { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+  ]
 
   const manifest = {
     name: store.name,

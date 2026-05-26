@@ -63,10 +63,10 @@ const FILTER_KEYS: { key: 'all' | OrderStatus; tKey: TranslationKey }[] = [
   { key: 'cancelled', tKey: 'orders.filter.cancelled' },
 ]
 
-const NEXT_STATUS: Partial<Record<OrderStatus, { status: OrderStatus; tKey: TranslationKey; cls: string }>> = {
-  pending:   { status: 'confirmed', tKey: 'orders.action.confirm',  cls: 'confirm' },
-  confirmed: { status: 'ready',     tKey: 'orders.action.ready',    cls: 'ready'   },
-  ready:     { status: 'delivered', tKey: 'orders.action.deliver',  cls: 'deliver' },
+const NEXT_STATUS: Partial<Record<OrderStatus, { status: OrderStatus; tKey?: TranslationKey; label?: string; cls: string }>> = {
+  pending:   { status: 'confirmed', label: 'Recibido',               cls: 'confirm' },
+  confirmed: { status: 'ready',     label: 'Listo',                  cls: 'ready'   },
+  ready:     { status: 'delivered', tKey: 'orders.action.deliver',   cls: 'deliver' },
 }
 
 function fmt(n: number) {
@@ -178,10 +178,30 @@ export default function PedidosPage() {
     if (!order?.items) await loadItems(orderId)
   }
 
+  async function syncDelivery(phone: string, fromStatus: string, toStatus: string) {
+    if (!storeId || !phone) return
+    const { data: del } = await supabase
+      .from('deliveries')
+      .select('id')
+      .eq('store_id', storeId)
+      .eq('customer_phone', phone)
+      .eq('is_customer_order', true)
+      .eq('status', fromStatus)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (del) await supabase.from('deliveries').update({ status: toStatus }).eq('id', del.id)
+  }
+
   async function updateStatus(orderId: string, status: OrderStatus) {
     setUpdating(orderId)
+    const order = orders.find(o => o.id === orderId)
     await supabase.from('orders').update({ status }).eq('id', orderId)
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o))
+    if (order) {
+      if (status === 'confirmed') await syncDelivery(order.customer_phone, 'pending', 'preparing')
+      if (status === 'ready')     await syncDelivery(order.customer_phone, 'preparing', 'ready')
+    }
     setUpdating(null)
   }
 
@@ -200,7 +220,12 @@ export default function PedidosPage() {
   }
 
   async function updateDisplayStatus(orderId: string, status: string) {
+    const order = displayOrders.find(o => o.id === orderId)
     await supabase.from('orders').update({ status }).eq('id', orderId)
+    if (order) {
+      if (status === 'confirmed') await syncDelivery(order.customer_phone, 'pending', 'preparing')
+      if (status === 'ready')     await syncDelivery(order.customer_phone, 'preparing', 'ready')
+    }
     if (['completed', 'cancelled', 'delivered'].includes(status)) {
       setDisplayOrders(prev => prev.filter(o => o.id !== orderId))
     } else {
@@ -346,7 +371,7 @@ export default function PedidosPage() {
                     )}
                     <div className="pd-comanda-actions">
                       {order.status === 'pending' && (
-                        <button className="pd-comanda-btn confirm" onClick={() => updateDisplayStatus(order.id, 'confirmed')}>Confirmar</button>
+                        <button className="pd-comanda-btn confirm" onClick={() => updateDisplayStatus(order.id, 'confirmed')}>Recibido</button>
                       )}
                       {order.status === 'confirmed' && (
                         <button className="pd-comanda-btn process" onClick={() => updateDisplayStatus(order.id, 'processing')}>En proceso</button>
@@ -451,7 +476,7 @@ export default function PedidosPage() {
                               disabled={isBusy}
                               onClick={() => updateStatus(order.id, advance.status)}
                             >
-                              {isBusy ? '...' : t(advance.tKey)}
+                              {isBusy ? '...' : (advance.label ?? t(advance.tKey!))}
                             </button>
                           )}
                           {order.status !== 'cancelled' && order.status !== 'delivered' && (

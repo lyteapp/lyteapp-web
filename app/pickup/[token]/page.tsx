@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useEffect, useState } from 'react'
+import { use, useEffect, useRef, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import './pickup.css'
 
@@ -16,6 +16,34 @@ export default function PickupPage({ params }: { params: Promise<{ token: string
   const [status, setStatus] = useState<PageStatus>('loading')
   const [customerName, setCustomerName] = useState('')
   const [delivering, setDelivering] = useState(false)
+  const watchIdRef = useRef<number | null>(null)
+  const lastGpsRef = useRef<number>(0)
+
+  useEffect(() => {
+    if (status !== 'confirmed' && status !== 'already_picked') return
+    if (!navigator.geolocation) return
+
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      async (pos) => {
+        const now = Date.now()
+        if (now - lastGpsRef.current < 8000) return
+        lastGpsRef.current = now
+        await supabase
+          .from('deliveries')
+          .update({ driver_lat: pos.coords.latitude, driver_lng: pos.coords.longitude })
+          .eq('id', token)
+      },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
+    )
+
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current)
+        watchIdRef.current = null
+      }
+    }
+  }, [status, token])
 
   useEffect(() => {
     async function confirmPickup() {

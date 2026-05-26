@@ -17,7 +17,7 @@ const MapView = dynamic(() => import('./MapView'), {
 })
 
 type Tab = 'tray' | 'live' | 'today' | 'couriers' | 'zones' | 'settlements'
-type DeliveryStatus = 'preparing' | 'ready' | 'picked_up' | 'delivered' | 'cancelled'
+type DeliveryStatus = 'pending' | 'preparing' | 'ready' | 'picked_up' | 'delivered' | 'cancelled'
 type TodayFilter = 'all' | 'ongoing' | 'delivered' | 'cancelled'
 
 type Driver = { id: string; name: string; phone: string | null; is_active: boolean; created_at: string }
@@ -278,8 +278,8 @@ export default function DeliveryPage() {
       <nav className="dv-tabs">
         <button className={`dv-tab${tab === 'tray' ? ' active' : ''}`} onClick={() => setTab('tray')}>
           Bandeja
-          {deliveries.filter(d => d.is_customer_order && d.status === 'ready').length > 0 && (
-            <span className="dv-tab-count">{deliveries.filter(d => d.is_customer_order && d.status === 'ready').length}</span>
+          {deliveries.filter(d => d.is_customer_order && ['pending','preparing','ready'].includes(d.status)).length > 0 && (
+            <span className="dv-tab-count">{deliveries.filter(d => d.is_customer_order && ['pending','preparing','ready'].includes(d.status)).length}</span>
           )}
         </button>
         <button className={`dv-tab${tab === 'live' ? ' active' : ''}`} onClick={() => setTab('live')}>
@@ -313,7 +313,7 @@ export default function DeliveryPage() {
               <p>Pedidos entrantes con rastreo activado</p>
             </div>
             <span style={{ fontSize: 12, color: 'var(--dv-ink-muted)' }}>
-              {deliveries.filter(d => d.is_customer_order && d.status === 'ready').length} pendientes
+              {deliveries.filter(d => d.is_customer_order && ['pending','preparing','ready'].includes(d.status)).length} pendientes
             </span>
           </div>
 
@@ -336,8 +336,8 @@ export default function DeliveryPage() {
                 .map(del => {
                   const mins = Math.floor((Date.now() - new Date(del.created_at).getTime()) / 60000)
                   const timeStr = mins < 1 ? 'Ahora' : mins < 60 ? `${mins} min` : `${Math.floor(mins / 60)}h`
-                  const statusColor = del.status === 'delivered' ? '#1D9E75' : del.status === 'picked_up' ? '#3B82F6' : del.status === 'cancelled' ? '#94A3B8' : del.status === 'ready' ? '#7C3AED' : '#F59E0B'
-                  const statusLabel = del.status === 'delivered' ? 'Entregado' : del.status === 'picked_up' ? 'En camino' : del.status === 'cancelled' ? 'Cancelado' : del.status === 'ready' ? 'Listo para salir' : 'En cocina'
+                  const statusColor = del.status === 'delivered' ? '#1D9E75' : del.status === 'picked_up' ? '#3B82F6' : del.status === 'cancelled' ? '#94A3B8' : del.status === 'ready' ? '#7C3AED' : del.status === 'preparing' ? '#F59E0B' : '#94A3B8'
+                  const statusLabel = del.status === 'delivered' ? 'Entregado' : del.status === 'picked_up' ? 'En camino' : del.status === 'cancelled' ? 'Cancelado' : del.status === 'ready' ? 'Listo para salir' : del.status === 'preparing' ? 'En cocina' : 'Esperando cocina'
                   const hasLocation = del.customer_lat !== null && del.customer_lng !== null
                   const drv = del.driver as Driver | null
 
@@ -381,8 +381,11 @@ export default function DeliveryPage() {
                         </div>
                       )}
 
-                      {(del.status === 'preparing' || del.status === 'ready' || del.status === 'picked_up') && (
+                      {(del.status === 'pending' || del.status === 'preparing' || del.status === 'ready' || del.status === 'picked_up') && (
                         <div className="dv-tray-card-footer">
+                          {del.status === 'pending' && (
+                            <span style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8' }}>Esperando que cocina reciba</span>
+                          )}
                           {del.status === 'preparing' && (
                             <button
                               className="dv-tray-qr-btn"

@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       customer_name,
       customer_phone: customer_phone ?? '',
       delivery_address: '',
-      status: 'preparing',
+      status: 'pending',
       driver_fee: 0,
       fee_paid: false,
       customer_lat: customer_lat ?? null,

@@ -1,20 +1,25 @@
 'use client'
 
 import { use, useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { createClient } from '@supabase/supabase-js'
 import './tracking.css'
+
+const TrackingMap = dynamic(() => import('./TrackingMap'), { ssr: false })
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
 )
 
-type Status = 'preparing' | 'ready' | 'picked_up' | 'delivered' | 'cancelled'
+type Status = 'pending' | 'preparing' | 'ready' | 'picked_up' | 'delivered' | 'cancelled'
 
 interface Delivery {
   id: string; customer_name: string; customer_phone: string
   delivery_address: string; status: Status; notes: string | null
   picked_up_at: string | null; delivered_at: string | null; created_at: string
+  driver_lat: number | null; driver_lng: number | null
+  customer_lat: number | null; customer_lng: number | null
 }
 
 type Step = {
@@ -25,6 +30,16 @@ type Step = {
 }
 
 const STEPS: Step[] = [
+  {
+    key: 'pending',
+    label: 'Pedido recibido',
+    desc: 'Tu pedido fue registrado. La cocina lo tiene y comenzara a prepararlo pronto.',
+    icon: (active) => (
+      <svg viewBox="0 0 24 24" fill="none" stroke={active ? '#7C3AED' : '#94A3B8'} strokeWidth="2" width="32" height="32">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" />
+      </svg>
+    ),
+  },
   {
     key: 'preparing',
     label: 'En preparacion',
@@ -68,9 +83,14 @@ const STEPS: Step[] = [
   },
 ]
 
-const STATUS_ORDER: Record<string, number> = { preparing: 0, ready: 1, picked_up: 2, delivered: 3 }
+const STATUS_ORDER: Record<string, number> = { pending: 0, preparing: 1, ready: 2, picked_up: 3, delivered: 4 }
 
 const HERO: Record<string, { title: string; sub: string; cls: string }> = {
+  pending: {
+    title: 'Pedido recibido',
+    sub: 'Tu pedido fue registrado. La cocina lo tiene y comenzara a prepararlo pronto.',
+    cls: 'preparing',
+  },
   preparing: {
     title: 'En preparacion en cocina',
     sub: 'Estamos preparando tu pedido con mucho cuidado. Te avisamos cuando salga.',
@@ -104,6 +124,13 @@ function fmtTime(iso: string) {
 
 function HeroIcon({ status }: { status: Status }) {
   const isPulse = status !== 'delivered' && status !== 'cancelled'
+  if (status === 'pending') return (
+    <div className={`tr-hero-icon preparing${isPulse ? ' tr-hero-pulse' : ''}`}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="2" width="36" height="36">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" />
+      </svg>
+    </div>
+  )
   if (status === 'preparing') return (
     <div className={`tr-hero-icon preparing${isPulse ? ' tr-hero-pulse' : ''}`}>
       <svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" width="36" height="36">
@@ -220,6 +247,18 @@ export default function TrackingPage({ params }: { params: Promise<{ token: stri
             </div>
           )}
           {delivery.notes && <div className="tr-info-note">"{delivery.notes}"</div>}
+        </div>
+      )}
+
+      {/* Live GPS map when in transit */}
+      {delivery.status === 'picked_up' && (
+        <div className="tr-map-card">
+          <TrackingMap
+            driverLat={delivery.driver_lat}
+            driverLng={delivery.driver_lng}
+            customerLat={delivery.customer_lat}
+            customerLng={delivery.customer_lng}
+          />
         </div>
       )}
 

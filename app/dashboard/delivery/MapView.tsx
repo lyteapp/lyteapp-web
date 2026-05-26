@@ -76,14 +76,24 @@ type InRouteDelivery = {
   id: string
   customer_name: string
   driver_name: string | null
+  driver_id: string | null
   picked_up_at: string | null
+}
+
+type DriverLocation = {
+  driver_id: string
+  lat: number
+  lng: number
+  is_sharing: boolean
+  updated_at: string
 }
 
 type Props = {
   inRoute: InRouteDelivery[]
+  driverLocations: DriverLocation[]
 }
 
-export default function MapView({ inRoute }: Props) {
+export default function MapView({ inRoute, driverLocations }: Props) {
   const [pos, setPos]     = useState<[number, number] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const watchId = useRef<number | null>(null)
@@ -164,21 +174,34 @@ export default function MapView({ inRoute }: Props) {
         pathOptions={{ color: '#7C3AED', fillColor: '#7C3AED', fillOpacity: 0.08, weight: 1 }}
       />
 
-      {/* In-route deliveries — positioned near store since we don't have driver GPS */}
+      {/* In-route deliveries — use real GPS if driver is sharing, else fake offset */}
       {inRoute.map((del, i) => {
         const mins = del.picked_up_at
           ? Math.floor((Date.now() - new Date(del.picked_up_at).getTime()) / 60000)
           : null
         const late = mins !== null && mins > 30
-        const angle = (i / Math.max(inRoute.length, 1)) * 2 * Math.PI
-        const offsetLat = pos[0] + Math.cos(angle) * 0.006
-        const offsetLng = pos[1] + Math.sin(angle) * 0.008
         const drv = del.driver_name ?? '?'
         const initials = drv.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+
+        const gps = del.driver_id
+          ? driverLocations.find(d =>
+              d.driver_id === del.driver_id &&
+              d.is_sharing &&
+              (Date.now() - new Date(d.updated_at).getTime()) < 300_000
+            )
+          : null
+
+        const position: [number, number] = gps
+          ? [gps.lat, gps.lng]
+          : (() => {
+              const angle = (i / Math.max(inRoute.length, 1)) * 2 * Math.PI
+              return [pos[0] + Math.cos(angle) * 0.006, pos[1] + Math.sin(angle) * 0.008]
+            })()
+
         return (
           <Marker
             key={del.id}
-            position={[offsetLat, offsetLng]}
+            position={position}
             icon={makeDriverIcon(initials, late)}
           >
             <Popup>
@@ -190,6 +213,9 @@ export default function MapView({ inRoute }: Props) {
                     {mins} min en ruta{late ? ' · ATRASADO' : ''}
                   </div>
                 )}
+                <div style={{ color: '#9CA3AF', marginTop: 4, fontSize: 11 }}>
+                  {gps ? 'GPS en tiempo real' : 'Posicion estimada'}
+                </div>
               </div>
             </Popup>
           </Marker>

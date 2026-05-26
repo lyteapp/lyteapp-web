@@ -21,6 +21,7 @@ type DeliveryStatus = 'pending' | 'preparing' | 'ready' | 'picked_up' | 'deliver
 type TodayFilter = 'all' | 'ongoing' | 'delivered' | 'cancelled'
 
 type Driver = { id: string; name: string; phone: string | null; is_active: boolean; created_at: string }
+type DriverLocation = { driver_id: string; lat: number; lng: number; is_sharing: boolean; updated_at: string }
 type Order = { id: string; customer_name: string; customer_phone: string; customer_notes: string | null; payment_method: string | null; total: number; status: string; created_at: string }
 type Delivery = {
   id: string; store_id: string; order_id: string | null; driver_id: string | null
@@ -70,9 +71,10 @@ export default function DeliveryPage() {
   const [loading, setLoading]       = useState(true)
   const [storeId, setStoreId]       = useState<string | null>(null)
   const [tab, setTab]               = useState<Tab>('live')
-  const [deliveries, setDeliveries] = useState<Delivery[]>([])
-  const [drivers, setDrivers]       = useState<Driver[]>([])
-  const [readyOrders, setReadyOrders] = useState<Order[]>([])
+  const [deliveries, setDeliveries]         = useState<Delivery[]>([])
+  const [drivers, setDrivers]               = useState<Driver[]>([])
+  const [readyOrders, setReadyOrders]       = useState<Order[]>([])
+  const [driverLocations, setDriverLocations] = useState<DriverLocation[]>([])
 
   // Live tab
   const [selectedOrderId, setSelectedOrderId]     = useState<string | null>(null)
@@ -114,16 +116,18 @@ export default function DeliveryPage() {
   }
 
   const loadData = useCallback(async (sid: string) => {
-    const [{ data: dels }, { data: drvs }, { data: orders }, { data: dispatched }] = await Promise.all([
+    const [{ data: dels }, { data: drvs }, { data: orders }, { data: dispatched }, { data: locs }] = await Promise.all([
       supabase.from('deliveries').select('*, driver:driver_id(id,name,phone,is_active)').eq('store_id', sid).order('created_at', { ascending: false }).limit(300),
       supabase.from('delivery_drivers').select('*').eq('store_id', sid).order('name'),
       supabase.from('orders').select('id,customer_name,customer_phone,customer_notes,payment_method,total,status,created_at').eq('store_id', sid).eq('status', 'ready').order('created_at', { ascending: false }),
       supabase.from('deliveries').select('order_id').eq('store_id', sid).not('order_id', 'is', null),
+      supabase.from('driver_locations').select('*').eq('store_id', sid),
     ])
     const dispatchedIds = new Set((dispatched ?? []).map((d: { order_id: string }) => d.order_id))
     setDeliveries((dels as Delivery[]) ?? [])
     setDrivers(drvs ?? [])
     setReadyOrders((orders ?? []).filter((o: Order) => !dispatchedIds.has(o.id)))
+    setDriverLocations((locs as DriverLocation[]) ?? [])
   }, [])
 
   useEffect(() => {
@@ -139,6 +143,18 @@ export default function DeliveryPage() {
     const ch = supabase.channel(`delivery-${storeId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'deliveries', filter: `store_id=eq.${storeId}` }, () => loadData(storeId))
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `store_id=eq.${storeId}` }, () => loadData(storeId))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'driver_locations', filter: `store_id=eq.${storeId}` }, (payload) => {
+        // Optimistic update: patch only the changed driver location instead of full reload
+        const row = payload.new as DriverLocation
+        if (row?.driver_id) {
+          setDriverLocations(prev => {
+            const exists = prev.find(d => d.driver_id === row.driver_id)
+            return exists
+              ? prev.map(d => d.driver_id === row.driver_id ? row : d)
+              : [...prev, row]
+          })
+        }
+      })
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, [storeId, loadData])
@@ -517,8 +533,10 @@ export default function DeliveryPage() {
                 id: del.id,
                 customer_name: del.customer_name,
                 driver_name: (del.driver as Driver | null)?.name ?? null,
+                driver_id: del.driver_id,
                 picked_up_at: del.picked_up_at,
               }))}
+              driverLocations={driverLocations}
             />
           </div>
 
@@ -782,6 +800,8 @@ export default function DeliveryPage() {
                 const todayDrv = dDels.filter(d => isToday(d.created_at) && d.status === 'delivered')
                 const earnings = todayDrv.reduce((s, d) => s + Number(d.driver_fee), 0)
                 const busy = inRoute.find(d => d.driver_id === drv.id)
+                const loc = driverLocations.find(d => d.driver_id === drv.id)
+                const gpsActive = loc?.is_sharing && (Date.now() - new Date(loc.updated_at).getTime()) < 300_000
                 return (
                   <div key={drv.id} className={`dv-courier-card${!drv.is_active ? ' inactive' : ''}`}>
                     <div className="dv-courier-card-head">
@@ -790,12 +810,18 @@ export default function DeliveryPage() {
                         <h4>{drv.name}</h4>
                         <p>{drv.phone || 'Sin telefono'}</p>
                       </div>
-                      {drv.is_active
+                      {gpsActive && (
+                        <span style={{ background: '#DCFCE7', color: '#15803D', padding: '2px 8px', borderRadius: 100, fontSize: 10, fontWeight: 600, marginLeft: 'auto', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#15803D', display: 'inline-block', animation: 'dbBlink 1.4s ease-in-out infinite' }} />
+                          GPS activo
+                        </span>
+                      )}
+                      {!gpsActive && (drv.is_active
                         ? busy
                           ? <span style={{ background: '#DBEAFE', color: '#1E40AF', padding: '2px 8px', borderRadius: 100, fontSize: 10, fontWeight: 500, marginLeft: 'auto', whiteSpace: 'nowrap' }}>en ruta</span>
                           : <span className="dv-badge-online" style={{ marginLeft: 'auto' }}>en linea</span>
                         : <span className="dv-badge-offline">offline</span>
-                      }
+                      )}
                     </div>
                     <div className="dv-courier-stats">
                       <div className="dv-courier-stat">
@@ -817,6 +843,9 @@ export default function DeliveryPage() {
                       </button>
                       <button onClick={() => toggleDriver(drv)}>
                         {drv.is_active ? 'Pausar' : 'Activar'}
+                      </button>
+                      <button onClick={() => { copyLink(`${BASE_URL}/driver/${drv.id}`); showToast('Link GPS copiado') }}>
+                        Link GPS
                       </button>
                       <button className="danger" onClick={() => deleteDriver(drv.id)}>
                         Eliminar

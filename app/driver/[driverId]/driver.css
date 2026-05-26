@@ -1,0 +1,190 @@
+/* ── Driver GPS page ── */
+
+.drc-root {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: #FAFAF7;
+  font-family: var(--font-geist-sans, system-ui, sans-serif);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Header */
+.drc-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #E2E8F0;
+  background: #fff;
+}
+
+.drc-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.drc-logo-placeholder {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #7C3AED;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.drc-store {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0F172A;
+}
+
+/* Body */
+.drc-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 24px 48px;
+  gap: 0;
+}
+
+.drc-greeting {
+  font-size: 22px;
+  font-weight: 700;
+  color: #0F172A;
+  margin-bottom: 36px;
+  letter-spacing: -0.3px;
+}
+
+/* GPS orb */
+.drc-orb {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: #F1F5F9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 36px;
+  transition: background 0.3s;
+}
+
+.drc-orb.active {
+  background: #7C3AED;
+}
+
+/* Pulse rings */
+.drc-pulse {
+  position: absolute;
+  inset: -12px;
+  border-radius: 50%;
+  border: 2px solid rgba(124, 58, 237, 0.35);
+  animation: drcPulse 2s ease-out infinite;
+}
+
+.drc-pulse.delay {
+  animation-delay: 1s;
+}
+
+@keyframes drcPulse {
+  0%   { transform: scale(1);   opacity: 1; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+/* Main button */
+.drc-btn {
+  width: 100%;
+  max-width: 320px;
+  padding: 18px 24px;
+  border-radius: 16px;
+  border: none;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.1s, background 0.2s;
+  background: #0F172A;
+  color: #fff;
+  letter-spacing: -0.2px;
+  margin-bottom: 20px;
+}
+
+.drc-btn.on {
+  background: #EF4444;
+}
+
+.drc-btn:active {
+  transform: scale(0.97);
+}
+
+/* Status row */
+.drc-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #94A3B8;
+  margin-bottom: 24px;
+  font-weight: 500;
+}
+
+.drc-status.on  { color: #1D9E75; }
+.drc-status.err { color: #EF4444; }
+
+.drc-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #CBD5E1;
+  flex-shrink: 0;
+}
+
+.drc-status.on  .drc-dot { background: #1D9E75; animation: drcBlink 1.4s ease-in-out infinite; }
+.drc-status.err .drc-dot { background: #EF4444; }
+
+@keyframes drcBlink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+/* Info table */
+.drc-info {
+  width: 100%;
+  max-width: 320px;
+  background: #fff;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.drc-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  font-size: 13px;
+}
+
+.drc-info-row + .drc-info-row {
+  border-top: 1px solid #F1F5F9;
+}
+
+.drc-info-row span:first-child { color: #64748B; }
+.drc-info-row span:last-child  { color: #0F172A; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Notice */
+.drc-notice {
+  max-width: 300px;
+  text-align: center;
+  font-size: 12px;
+  color: #94A3B8;
+  line-height: 1.6;
+}

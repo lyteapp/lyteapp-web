@@ -18,6 +18,7 @@ interface Delivery {
   id: string; customer_name: string; customer_phone: string
   delivery_address: string; status: Status; notes: string | null
   picked_up_at: string | null; delivered_at: string | null; created_at: string
+  driver_id: string | null
   driver_lat: number | null; driver_lng: number | null
   customer_lat: number | null; customer_lng: number | null
 }
@@ -147,6 +148,38 @@ export default function TrackingClient({
   trackingConfig?: TrackingConfig | null
 }) {
   const [delivery, setDelivery] = useState<Delivery | null>(initialDelivery)
+  const [driverLoc, setDriverLoc] = useState<{ lat: number; lng: number } | null>(null)
+
+  // Subscribe to live driver GPS from driver_locations
+  useEffect(() => {
+    const driverId = delivery?.driver_id
+    if (!driverId) return
+
+    // Fetch initial location
+    supabase.from('driver_locations')
+      .select('lat,lng,is_sharing,updated_at')
+      .eq('driver_id', driverId)
+      .eq('is_sharing', true)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data && (Date.now() - new Date(data.updated_at).getTime()) < 600_000) {
+          setDriverLoc({ lat: data.lat, lng: data.lng })
+        }
+      })
+
+    const ch = supabase.channel(`driver-loc-${driverId}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'driver_locations',
+        filter: `driver_id=eq.${driverId}`,
+      }, (payload) => {
+        const row = payload.new as { lat: number; lng: number; is_sharing: boolean }
+        if (row?.is_sharing) setDriverLoc({ lat: row.lat, lng: row.lng })
+        else setDriverLoc(null)
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(ch) }
+  }, [delivery?.driver_id])
 
   useEffect(() => {
     const fontName = trackingConfig?.fontFamily
@@ -232,7 +265,7 @@ export default function TrackingClient({
       { label: 'En camino',  idx: 3 },
       { label: 'Entregado',  idx: 4 },
     ]
-    const hasGps = delivery.driver_lat != null && delivery.driver_lng != null
+    const hasGps = driverLoc != null || (delivery.driver_lat != null && delivery.driver_lng != null)
     const statusDot = isCancelled ? '#EF4444' : isDone ? '#10B981' : '#1D9E75'
     const statusLabel = isCancelled ? 'cancelado' : isDone ? 'entregado' : 'en camino'
     const font = FONT_STACKS[trackingConfig.fontFamily ?? 'system'] ?? FONT_STACKS.system
@@ -244,8 +277,8 @@ export default function TrackingClient({
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '56%' }}>
           {hasGps ? (
             <TrackingMap
-              driverLat={delivery.driver_lat}
-              driverLng={delivery.driver_lng}
+              driverLat={driverLoc?.lat ?? delivery.driver_lat}
+              driverLng={driverLoc?.lng ?? delivery.driver_lng}
               customerLat={delivery.customer_lat}
               customerLng={delivery.customer_lng}
             />
@@ -393,8 +426,8 @@ export default function TrackingClient({
       {delivery.status === 'picked_up' && (
         <div className="tr-map-card">
           <TrackingMap
-            driverLat={delivery.driver_lat}
-            driverLng={delivery.driver_lng}
+            driverLat={driverLoc?.lat ?? delivery.driver_lat}
+            driverLng={driverLoc?.lng ?? delivery.driver_lng}
             customerLat={delivery.customer_lat}
             customerLng={delivery.customer_lng}
           />

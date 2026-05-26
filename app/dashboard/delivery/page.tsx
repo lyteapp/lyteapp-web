@@ -659,6 +659,8 @@ export default function DeliveryPage() {
                       ) : (
                         activeDrivers.map((drv, i) => {
                           const busyWithDelivery = inRoute.find(d => d.driver_id === drv.id)
+                          const loc = driverLocations.find(d => d.driver_id === drv.id)
+                          const gpsOn = loc?.is_sharing && (Date.now() - new Date(loc.updated_at).getTime()) < 300_000
                           return (
                             <div
                               key={drv.id}
@@ -668,7 +670,15 @@ export default function DeliveryPage() {
                             >
                               <div className="dv-driver-row-av">{drv.name[0]}</div>
                               <div className="dv-driver-row-info">
-                                <div className="dv-driver-row-name">{drv.name}</div>
+                                <div className="dv-driver-row-name">
+                                  {drv.name}
+                                  {gpsOn && (
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginLeft: 6, background: '#DCFCE7', color: '#15803D', fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 100 }}>
+                                      <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#15803D', display: 'inline-block' }} />
+                                      GPS
+                                    </span>
+                                  )}
+                                </div>
                                 <div className="dv-driver-row-meta">{busyWithDelivery ? 'en ruta' : 'disponible'}{drv.phone ? ` · ${drv.phone}` : ''}</div>
                               </div>
                               <button

@@ -73,7 +73,7 @@ const NEXT_STATUS: Partial<Record<OrderStatus, { status: OrderStatus; tKey?: Tra
 
 const DELIVERY_STATUS_MAP: Partial<Record<string, string>> = {
   confirmed: 'preparing', processing: 'preparing',
-  ready: 'ready', delivered: 'delivered', cancelled: 'cancelled',
+  ready: 'ready', delivered: 'picked_up', cancelled: 'cancelled',
 }
 
 function fmt(n: number) {

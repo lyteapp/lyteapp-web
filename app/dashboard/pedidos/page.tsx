@@ -93,6 +93,7 @@ export default function PedidosPage() {
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set())
   const [displayMode, setDisplayMode] = useState(false)
   const [displayOrders, setDisplayOrders] = useState<DisplayOrder[]>([])
+  const [displayUpdating, setDisplayUpdating] = useState<string | null>(null)
   const [displayLoading, setDisplayLoading] = useState(false)
   const displayModeRef = useRef(false)
   const bcChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
@@ -279,11 +280,16 @@ export default function PedidosPage() {
   }
 
   async function updateDisplayStatus(orderId: string, status: string) {
+    setDisplayUpdating(orderId)
     const deliveryStatus = DELIVERY_STATUS_MAP[status]
-    await Promise.all([
-      supabase.from('orders').update({ status }).eq('id', orderId),
-      deliveryStatus ? syncDelivery(orderId, deliveryStatus) : Promise.resolve(),
+    const [{ data, error }] = await Promise.all([
+      supabase.from('orders').update({ status }).eq('id', orderId).select('id'),
+      deliveryStatus
+        ? syncDelivery(orderId, deliveryStatus).catch(() => {})
+        : Promise.resolve(),
     ])
+    setDisplayUpdating(null)
+    if (error || !data?.length) return
     if (['completed', 'cancelled', 'delivered'].includes(status)) {
       setDisplayOrders(prev => prev.filter(o => o.id !== orderId))
     } else {
@@ -429,16 +435,24 @@ export default function PedidosPage() {
                     )}
                     <div className="pd-comanda-actions">
                       {order.status === 'pending' && (
-                        <button className="pd-comanda-btn confirm" onClick={() => updateDisplayStatus(order.id, 'confirmed')}>Recibido</button>
+                        <button className="pd-comanda-btn confirm" disabled={displayUpdating === order.id} onClick={() => updateDisplayStatus(order.id, 'confirmed')}>
+                          {displayUpdating === order.id ? '...' : 'Recibido'}
+                        </button>
                       )}
                       {order.status === 'confirmed' && (
-                        <button className="pd-comanda-btn process" onClick={() => updateDisplayStatus(order.id, 'processing')}>En proceso</button>
+                        <button className="pd-comanda-btn process" disabled={displayUpdating === order.id} onClick={() => updateDisplayStatus(order.id, 'processing')}>
+                          {displayUpdating === order.id ? '...' : 'En proceso'}
+                        </button>
                       )}
                       {order.status === 'processing' && (
-                        <button className="pd-comanda-btn ready" onClick={() => updateDisplayStatus(order.id, 'ready')}>Listo</button>
+                        <button className="pd-comanda-btn ready" disabled={displayUpdating === order.id} onClick={() => updateDisplayStatus(order.id, 'ready')}>
+                          {displayUpdating === order.id ? '...' : 'Listo'}
+                        </button>
                       )}
                       {order.status === 'ready' && (
-                        <button className="pd-comanda-btn complete" onClick={() => updateDisplayStatus(order.id, 'completed')}>Completar</button>
+                        <button className="pd-comanda-btn complete" disabled={displayUpdating === order.id} onClick={() => updateDisplayStatus(order.id, 'completed')}>
+                          {displayUpdating === order.id ? '...' : 'Completar'}
+                        </button>
                       )}
                       <button className="pd-comanda-btn wa" onClick={() => sendComanda(order)}>
                         <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12">

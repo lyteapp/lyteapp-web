@@ -94,6 +94,7 @@ export default function DeliveryPage() {
   const [drName, setDrName]   = useState('')
   const [drPhone, setDrPhone] = useState('')
   const [drSaving, setDrSaving] = useState(false)
+  const [drError, setDrError]   = useState('')
 
   // QR modal
   const [qrDel, setQrDel]       = useState<Delivery | null>(null)
@@ -236,14 +237,15 @@ export default function DeliveryPage() {
   async function saveDriver() {
     if (!storeId || !drName.trim()) return
     setDrSaving(true)
+    setDrError('')
     if (editDriver) {
       const { error } = await supabase.from('delivery_drivers').update({ name: drName.trim(), phone: drPhone.trim() || null }).eq('id', editDriver.id)
-      if (error) { showToast('Error al guardar: ' + error.message); setDrSaving(false); return }
+      if (error) { setDrError(error.message); setDrSaving(false); return }
     } else {
       const { error } = await supabase.from('delivery_drivers').insert({ store_id: storeId, name: drName.trim(), phone: drPhone.trim() || null, is_active: true })
-      if (error) { showToast('Error al guardar: ' + error.message); setDrSaving(false); return }
+      if (error) { setDrError(error.message); setDrSaving(false); return }
     }
-    setDrName(''); setDrPhone(''); setEditDriver(null); setShowDriverForm(false); setDrSaving(false)
+    setDrName(''); setDrPhone(''); setEditDriver(null); setShowDriverForm(false); setDrSaving(false); setDrError('')
     showToast(editDriver ? 'Despachador actualizado' : 'Despachador agregado')
     await loadData(storeId)
   }
@@ -330,7 +332,7 @@ export default function DeliveryPage() {
           Hoy
         </button>
         <button className={`dv-tab${tab === 'couriers' ? ' active' : ''}`} onClick={() => setTab('couriers')}>
-          Motorizados
+          Despachadores
         </button>
         <button className={`dv-tab${tab === 'zones' ? ' active' : ''}`} onClick={() => setTab('zones')}>
           Zonas
@@ -779,8 +781,13 @@ export default function DeliveryPage() {
                   <input className="dv-input" value={drPhone} onChange={e => setDrPhone(e.target.value)} placeholder="+58 412 000 0000" type="tel" />
                 </div>
               </div>
+              {drError && (
+                <div style={{ marginTop: 8, padding: '8px 10px', background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 8, fontSize: 12, color: '#DC2626', lineHeight: 1.4 }}>
+                  {drError}
+                </div>
+              )}
               <div className="dv-driver-form-actions">
-                <button className="dv-btn-ghost-sm" onClick={() => setShowDriverForm(false)}>Cancelar</button>
+                <button className="dv-btn-ghost-sm" onClick={() => { setShowDriverForm(false); setDrError('') }}>Cancelar</button>
                 <button className="dv-btn-primary-sm" onClick={saveDriver} disabled={drSaving || !drName.trim()}>
                   {drSaving ? 'Guardando...' : editDriver ? 'Guardar cambios' : 'Agregar'}
                 </button>

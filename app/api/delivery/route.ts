@@ -10,7 +10,7 @@ const admin = createClient(
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { store_id, order_id, customer_name, customer_phone, customer_lat, customer_lng } = body
+    const { id, store_id, order_id, customer_name, customer_phone, customer_lat, customer_lng } = body
 
     if (!store_id || !customer_name) {
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { data, error } = await admin.from('deliveries').insert({
+      ...(id ? { id } : {}),
       store_id,
       order_id: order_id ?? null,
       customer_name,

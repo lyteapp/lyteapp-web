@@ -314,26 +314,11 @@ export default function StoreShell({ store, products, categories = [] }: { store
         }))
       )
 
-      // Auto-create delivery record via API (server-side, bypasses RLS)
-      let newDeliveryId = ''
-      try {
-        const res = await fetch('/api/delivery', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            store_id: store.id,
-            order_id: newOrderId,
-            customer_name: customerName.trim(),
-            customer_phone: customerPhone.trim(),
-            customer_lat: customerLat,
-            customer_lng: customerLng,
-          }),
-        })
-        const json = await res.json()
-        if (json.id) { newDeliveryId = json.id; setDeliveryTrackId(json.id) }
-      } catch { /* delivery creation is non-blocking */ }
+      // Generate delivery ID upfront so tracking link is always available
+      const newDeliveryId = crypto.randomUUID()
+      setDeliveryTrackId(newDeliveryId)
 
-      // Comanda lines
+      // Comanda lines (tracking link always included)
       const lines: string[] = [
         `*Comanda #${newOrderId.slice(0, 8).toUpperCase()}*`,
         new Date().toLocaleString('es-VE', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
@@ -352,8 +337,23 @@ export default function StoreShell({ store, products, categories = [] }: { store
         }),
         '', `*Total: $${cartTotal.toFixed(2)}*`,
         ...(customerNotes ? ['', `*Notas:* ${customerNotes}`] : []),
-        ...(newDeliveryId ? ['', `Rastrea tu pedido: https://lyte-app.com/delivery/${newDeliveryId}`] : []),
+        '', `Rastrea tu pedido en tiempo real: https://lyte-app.com/delivery/${newDeliveryId}`,
       ]
+
+      // Fire-and-forget: create delivery record with pre-generated ID
+      fetch('/api/delivery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: newDeliveryId,
+          store_id: store.id,
+          order_id: newOrderId,
+          customer_name: customerName.trim(),
+          customer_phone: customerPhone.trim(),
+          customer_lat: customerLat,
+          customer_lng: customerLng,
+        }),
+      }).catch(() => {})
 
       const shortId = newOrderId.slice(0, 8).toUpperCase()
       setOrderId(shortId); setCart({})

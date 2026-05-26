@@ -606,6 +606,7 @@ export default function DeliveryPage() {
                 picked_up_at: del.picked_up_at,
               }))}
               driverLocations={driverLocations}
+              drivers={drivers.map(d => ({ id: d.id, name: d.name }))}
             />
           </div>
 

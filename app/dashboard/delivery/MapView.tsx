@@ -5,7 +5,6 @@ import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-le
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
-// Fix leaflet default icon paths broken by webpack
 const iconFix = () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   delete (L.Icon.Default.prototype as any)._getIconUrl
@@ -34,19 +33,32 @@ const storeIcon = L.divIcon({
   popupAnchor:[0, -20],
 })
 
-function makeDriverIcon(initials: string, late: boolean) {
-  const color = late ? '#BA7517' : '#7C3AED'
+function makeDriverIcon(initials: string, status: 'available' | 'in_route' | 'late') {
+  const colors = {
+    available: { border: '#15803D', text: '#15803D', bg: 'white', pulse: '#DCFCE7' },
+    in_route:  { border: '#7C3AED', text: '#7C3AED', bg: 'white', pulse: '#EDE9FE' },
+    late:      { border: '#B45309', text: '#B45309', bg: '#FFFBEB', pulse: '#FEF3C7' },
+  }
+  const c = colors[status]
+  const dot = `<span style="
+    position:absolute;top:0;right:0;
+    width:9px;height:9px;border-radius:50%;
+    background:${c.border};border:1.5px solid white;
+  "></span>`
   return L.divIcon({
     className: '',
-    html: `<div style="
-      width:34px;height:34px;border-radius:50%;
-      background:white;border:2.5px solid ${color};
-      display:flex;align-items:center;justify-content:center;
-      font-family:system-ui;font-size:11px;font-weight:700;
-      color:${color};box-shadow:0 2px 8px rgba(0,0,0,0.2);
-    ">${initials}</div>`,
-    iconSize:   [34, 34],
-    iconAnchor: [17, 17],
+    html: `<div style="position:relative;width:36px;height:36px;">
+      <div style="
+        width:36px;height:36px;border-radius:50%;
+        background:${c.bg};border:2.5px solid ${c.border};
+        display:flex;align-items:center;justify-content:center;
+        font-family:system-ui;font-size:11px;font-weight:700;
+        color:${c.text};box-shadow:0 2px 10px rgba(0,0,0,0.18);
+      ">${initials}</div>
+      ${dot}
+    </div>`,
+    iconSize:   [36, 36],
+    iconAnchor: [18, 18],
     popupAnchor:[0, -20],
   })
 }
@@ -88,12 +100,18 @@ type DriverLocation = {
   updated_at: string
 }
 
+type Driver = {
+  id: string
+  name: string
+}
+
 type Props = {
   inRoute: InRouteDelivery[]
   driverLocations: DriverLocation[]
+  drivers: Driver[]
 }
 
-export default function MapView({ inRoute, driverLocations }: Props) {
+export default function MapView({ inRoute, driverLocations, drivers }: Props) {
   const [pos, setPos]     = useState<[number, number] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const watchId = useRef<number | null>(null)
@@ -106,31 +124,19 @@ export default function MapView({ inRoute, driverLocations }: Props) {
       return
     }
 
-    const onSuccess = (p: GeolocationPosition) => {
-      setPos([p.coords.latitude, p.coords.longitude])
-    }
-    const onError = () => {
-      setError('Permiso de ubicacion denegado. Activa la ubicacion en tu navegador.')
-    }
+    const onSuccess = (p: GeolocationPosition) => setPos([p.coords.latitude, p.coords.longitude])
+    const onError   = () => setError('Permiso de ubicacion denegado. Activa la ubicacion en tu navegador.')
 
     navigator.geolocation.getCurrentPosition(onSuccess, onError, { enableHighAccuracy: true })
     watchId.current = navigator.geolocation.watchPosition(onSuccess, onError, {
-      enableHighAccuracy: true,
-      maximumAge: 10000,
-      timeout: 15000,
+      enableHighAccuracy: true, maximumAge: 10000, timeout: 15000,
     })
 
-    return () => {
-      if (watchId.current !== null) navigator.geolocation.clearWatch(watchId.current)
-    }
+    return () => { if (watchId.current !== null) navigator.geolocation.clearWatch(watchId.current) }
   }, [])
 
   if (error) return (
-    <div style={{
-      flex: 1, display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center',
-      background: '#E8EEF4', padding: 24, textAlign: 'center',
-    }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#E8EEF4', padding: 24, textAlign: 'center' }}>
       <svg viewBox="0 0 20 20" fill="#9CA3AF" width="32" height="32" style={{ marginBottom: 12 }}>
         <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/>
       </svg>
@@ -139,22 +145,22 @@ export default function MapView({ inRoute, driverLocations }: Props) {
   )
 
   if (!pos) return (
-    <div style={{
-      flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: '#E8EEF4', flexDirection: 'column', gap: 10,
-    }}>
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#E8EEF4', flexDirection: 'column', gap: 10 }}>
       <div style={{ width: 24, height: 24, borderRadius: '50%', border: '3px solid rgba(124,58,237,0.15)', borderTopColor: '#7C3AED', animation: 'dbSpin 0.8s linear infinite' }} />
       <span style={{ fontSize: 12, color: '#9CA3AF' }}>Obteniendo ubicacion...</span>
     </div>
   )
 
+  // Active GPS: sharing + updated within 5 min
+  const activeGps = driverLocations.filter(
+    d => d.is_sharing && (Date.now() - new Date(d.updated_at).getTime()) < 300_000
+  )
+
+  // Map driver_id → active delivery
+  const inRouteByDriver = new Map(inRoute.map(d => [d.driver_id, d]))
+
   return (
-    <MapContainer
-      center={pos}
-      zoom={14}
-      style={{ width: '100%', height: '100%' }}
-      zoomControl={false}
-    >
+    <MapContainer center={pos} zoom={14} style={{ width: '100%', height: '100%' }} zoomControl={false}>
       <TileLayer
         attribution='&copy; <a href="https://carto.com/attributions">CARTO</a>'
         url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
@@ -162,67 +168,83 @@ export default function MapView({ inRoute, driverLocations }: Props) {
         maxZoom={20}
       />
 
-      {/* Store location */}
+      {/* Store marker */}
       <Marker position={pos} icon={storeIcon}>
-        <Popup>
-          <strong style={{ color: '#4C1D95' }}>Tu tienda</strong>
-        </Popup>
+        <Popup><strong style={{ color: '#4C1D95' }}>Tu tienda</strong></Popup>
       </Marker>
+      <Circle center={pos} radius={80} pathOptions={{ color: '#7C3AED', fillColor: '#7C3AED', fillOpacity: 0.08, weight: 1 }} />
 
-      {/* Accuracy circle */}
-      <Circle
-        center={pos}
-        radius={80}
-        pathOptions={{ color: '#7C3AED', fillColor: '#7C3AED', fillOpacity: 0.08, weight: 1 }}
-      />
+      {/* All dispatchers with active GPS */}
+      {activeGps.map(loc => {
+        const driver = drivers.find(d => d.id === loc.driver_id)
+        const name = driver?.name ?? 'Despachador'
+        const initials = name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
 
-      {/* In-route deliveries — use real GPS if driver is sharing, else fake offset */}
-      {inRoute.map((del, i) => {
-        const mins = del.picked_up_at
-          ? Math.floor((Date.now() - new Date(del.picked_up_at).getTime()) / 60000)
+        const delivery = inRouteByDriver.get(loc.driver_id)
+        const mins = delivery?.picked_up_at
+          ? Math.floor((Date.now() - new Date(delivery.picked_up_at).getTime()) / 60000)
           : null
         const late = mins !== null && mins > 30
-        const drv = del.driver_name ?? '?'
-        const initials = drv.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 
-        const gps = del.driver_id
-          ? driverLocations.find(d =>
-              d.driver_id === del.driver_id &&
-              d.is_sharing &&
-              (Date.now() - new Date(d.updated_at).getTime()) < 300_000
-            )
-          : null
+        const status: 'available' | 'in_route' | 'late' =
+          !delivery ? 'available' : late ? 'late' : 'in_route'
 
-        const position: [number, number] = gps
-          ? [gps.lat, gps.lng]
-          : (() => {
-              const angle = (i / Math.max(inRoute.length, 1)) * 2 * Math.PI
-              return [pos[0] + Math.cos(angle) * 0.006, pos[1] + Math.sin(angle) * 0.008]
-            })()
+        const secsAgo = Math.floor((Date.now() - new Date(loc.updated_at).getTime()) / 1000)
+        const freshLabel = secsAgo < 60 ? `Hace ${secsAgo}s` : `Hace ${Math.floor(secsAgo / 60)} min`
 
         return (
-          <Marker
-            key={del.id}
-            position={position}
-            icon={makeDriverIcon(initials, late)}
-          >
+          <Marker key={loc.driver_id} position={[loc.lat, loc.lng]} icon={makeDriverIcon(initials, status)}>
             <Popup>
-              <div style={{ fontSize: 12, minWidth: 140 }}>
-                <div style={{ fontWeight: 600, marginBottom: 4 }}>{drv}</div>
-                <div style={{ color: '#6B7280' }}>Cliente: {del.customer_name}</div>
-                {mins !== null && (
-                  <div style={{ color: late ? '#BA7517' : '#1D9E75', marginTop: 4 }}>
-                    {mins} min en ruta{late ? ' · ATRASADO' : ''}
-                  </div>
+              <div style={{ fontSize: 12, minWidth: 150 }}>
+                <div style={{ fontWeight: 700, marginBottom: 4 }}>{name}</div>
+                {delivery ? (
+                  <>
+                    <div style={{ color: '#6B7280' }}>Cliente: {delivery.customer_name}</div>
+                    <div style={{ color: late ? '#B45309' : '#7C3AED', marginTop: 3, fontWeight: 500 }}>
+                      {mins} min en ruta{late ? ' · ATRASADO' : ''}
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ color: '#15803D', fontWeight: 500 }}>Disponible</div>
                 )}
-                <div style={{ color: '#9CA3AF', marginTop: 4, fontSize: 11 }}>
-                  {gps ? 'GPS en tiempo real' : 'Posicion estimada'}
-                </div>
+                <div style={{ color: '#9CA3AF', marginTop: 4, fontSize: 11 }}>GPS · {freshLabel}</div>
               </div>
             </Popup>
           </Marker>
         )
       })}
+
+      {/* Drivers without GPS but in route: show estimated position near store */}
+      {inRoute
+        .filter(del => del.driver_id && !activeGps.find(g => g.driver_id === del.driver_id))
+        .map((del, i) => {
+          const mins = del.picked_up_at
+            ? Math.floor((Date.now() - new Date(del.picked_up_at).getTime()) / 60000)
+            : null
+          const late = mins !== null && mins > 30
+          const name = del.driver_name ?? '?'
+          const initials = name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
+          const angle = (i / Math.max(inRoute.length, 1)) * 2 * Math.PI
+          const approxPos: [number, number] = [pos[0] + Math.cos(angle) * 0.006, pos[1] + Math.sin(angle) * 0.008]
+
+          return (
+            <Marker key={del.id} position={approxPos} icon={makeDriverIcon(initials, late ? 'late' : 'in_route')}>
+              <Popup>
+                <div style={{ fontSize: 12, minWidth: 150 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 4 }}>{name}</div>
+                  <div style={{ color: '#6B7280' }}>Cliente: {del.customer_name}</div>
+                  {mins !== null && (
+                    <div style={{ color: late ? '#B45309' : '#7C3AED', marginTop: 3, fontWeight: 500 }}>
+                      {mins} min en ruta{late ? ' · ATRASADO' : ''}
+                    </div>
+                  )}
+                  <div style={{ color: '#9CA3AF', marginTop: 4, fontSize: 11 }}>Sin GPS · posicion estimada</div>
+                </div>
+              </Popup>
+            </Marker>
+          )
+        })
+      }
 
       <RecenterButton pos={pos} />
     </MapContainer>

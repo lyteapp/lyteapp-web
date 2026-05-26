@@ -30,18 +30,32 @@ interface TrackingConfig {
 }
 
 const FONT_STACKS: Record<string, string> = {
-  system:   'system-ui, -apple-system, sans-serif',
-  Inter:    "'Inter', system-ui, sans-serif",
-  Poppins:  "'Poppins', system-ui, sans-serif",
-  'DM Sans':"'DM Sans', system-ui, sans-serif",
-  Nunito:   "'Nunito', system-ui, sans-serif",
+  system:           'system-ui, -apple-system, sans-serif',
+  Inter:            "'Inter', system-ui, sans-serif",
+  Roboto:           "'Roboto', system-ui, sans-serif",
+  Poppins:          "'Poppins', system-ui, sans-serif",
+  Montserrat:       "'Montserrat', system-ui, sans-serif",
+  Lato:             "'Lato', system-ui, sans-serif",
+  'DM Sans':        "'DM Sans', system-ui, sans-serif",
+  Nunito:           "'Nunito', system-ui, sans-serif",
+  Raleway:          "'Raleway', system-ui, sans-serif",
+  Oswald:           "'Oswald', system-ui, sans-serif",
+  'Playfair Display':"'Playfair Display', Georgia, serif",
+  Ubuntu:           "'Ubuntu', system-ui, sans-serif",
 }
 
 const GOOGLE_FONT_URLS: Record<string, string> = {
-  Inter:    'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap',
-  Poppins:  'https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap',
-  'DM Sans':'https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300..900&display=swap',
-  Nunito:   'https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap',
+  Inter:            'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap',
+  Roboto:           'https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap',
+  Poppins:          'https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap',
+  Montserrat:       'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap',
+  Lato:             'https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap',
+  'DM Sans':        'https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300..900&display=swap',
+  Nunito:           'https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap',
+  Raleway:          'https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700;800&display=swap',
+  Oswald:           'https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&display=swap',
+  'Playfair Display':'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;800&display=swap',
+  Ubuntu:           'https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;700&display=swap',
 }
 
 const FONT_SCALES: Record<string, string> = { sm: '0.875', md: '1', lg: '1.125' }

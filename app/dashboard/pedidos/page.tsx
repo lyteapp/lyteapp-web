@@ -214,13 +214,9 @@ export default function PedidosPage() {
   async function updateStatus(orderId: string, status: OrderStatus) {
     setUpdating(orderId)
     const deliveryStatus = DELIVERY_STATUS_MAP[status]
-    const [{ error }] = await Promise.all([
-      supabase.from('orders').update({ status }).eq('id', orderId).select('id'),
-      deliveryStatus ? syncDelivery(orderId, deliveryStatus).catch(() => {}) : Promise.resolve(),
-    ])
-    if (!error) {
-      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o))
-    }
+    await supabase.from('orders').update({ status }).eq('id', orderId)
+    if (deliveryStatus) syncDelivery(orderId, deliveryStatus).catch(() => {})
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o))
     setUpdating(null)
   }
 
@@ -293,12 +289,8 @@ export default function PedidosPage() {
   async function updateDisplayStatus(orderId: string, status: string) {
     setDisplayUpdating(orderId)
     const deliveryStatus = DELIVERY_STATUS_MAP[status]
-    const [{ data, error }] = await Promise.all([
-      supabase.from('orders').update({ status }).eq('id', orderId).select('id'),
-      deliveryStatus
-        ? syncDelivery(orderId, deliveryStatus).catch(() => {})
-        : Promise.resolve(),
-    ])
+    const { error } = await supabase.from('orders').update({ status }).eq('id', orderId)
+    if (deliveryStatus) syncDelivery(orderId, deliveryStatus).catch(() => {})
     setDisplayUpdating(null)
     if (error) return
     if (['completed', 'cancelled', 'delivered'].includes(status)) {

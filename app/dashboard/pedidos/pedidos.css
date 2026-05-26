@@ -383,3 +383,91 @@
   .pd-filters { flex-wrap: wrap; }
   .pd-filter-btn { padding: 5px 12px; font-size: 11px; }
 }
+
+/* ── CHECKBOX ── */
+.pd-checkbox {
+  width: 18px; height: 18px;
+  border: 2px solid rgba(15,23,42,0.2);
+  border-radius: 5px;
+  flex-shrink: 0;
+  cursor: pointer;
+  background: white;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.pd-checkbox:hover { border-color: #7C3AED; }
+.pd-checkbox.checked {
+  background: #7C3AED;
+  border-color: #7C3AED;
+}
+.pd-checkbox.checked::after {
+  content: '';
+  width: 4px; height: 7px;
+  border: 2px solid white;
+  border-top: none; border-left: none;
+  transform: rotate(45deg) translateY(-1px);
+  display: block;
+}
+
+/* ── SELECTED CARD ── */
+.pd-card.selected {
+  border-color: rgba(124,58,237,0.35);
+  box-shadow: 0 0 0 3px rgba(124,58,237,0.08);
+}
+
+/* ── DELETE BUTTON ── */
+.pd-action-btn.delete {
+  border-color: rgba(220,38,38,0.25);
+  color: #DC2626;
+  background: #FEF2F2;
+}
+.pd-action-btn.delete:hover { background: #FEE2E2; }
+
+/* ── BULK ACTION BAR ── */
+.pd-bulk-bar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #0F172A;
+  border-radius: 14px;
+  padding: 10px 14px 10px 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  z-index: 100;
+  white-space: nowrap;
+}
+.pd-bulk-count {
+  font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.75);
+  margin-right: 2px;
+}
+.pd-bulk-actions { display: flex; gap: 6px; }
+.pd-bulk-btn {
+  font-size: 12px; font-weight: 600;
+  padding: 6px 14px; border-radius: 8px;
+  border: none; cursor: pointer;
+  font-family: var(--font-geist-sans), sans-serif;
+  transition: all 0.15s;
+}
+.pd-bulk-btn.cancel {
+  background: rgba(220,38,38,0.15);
+  color: #FCA5A5;
+}
+.pd-bulk-btn.cancel:hover { background: rgba(220,38,38,0.25); }
+.pd-bulk-btn.delete {
+  background: #DC2626;
+  color: white;
+}
+.pd-bulk-btn.delete:hover { background: #B91C1C; }
+.pd-bulk-clear {
+  background: transparent; border: none;
+  color: rgba(255,255,255,0.4);
+  cursor: pointer;
+  padding: 4px;
+  display: flex; align-items: center;
+  transition: color 0.15s;
+  margin-left: 2px;
+}
+.pd-bulk-clear:hover { color: white; }

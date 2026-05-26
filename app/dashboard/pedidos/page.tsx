@@ -90,6 +90,7 @@ export default function PedidosPage() {
   const [filter, setFilter] = useState<'all' | OrderStatus>('all')
   const [expanded, setExpanded] = useState<string | null>(null)
   const [updating, setUpdating] = useState<string | null>(null)
+  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set())
   const [displayMode, setDisplayMode] = useState(false)
   const [displayOrders, setDisplayOrders] = useState<DisplayOrder[]>([])
   const [displayLoading, setDisplayLoading] = useState(false)
@@ -218,6 +219,49 @@ export default function PedidosPage() {
     ])
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o))
     setUpdating(null)
+  }
+
+  function toggleSelect(id: string, e: React.MouseEvent) {
+    e.stopPropagation()
+    setSelectedOrders(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  async function deleteOrders(ids: string[]) {
+    if (!ids.length) return
+    const label = ids.length === 1 ? 'este pedido' : `estos ${ids.length} pedidos`
+    if (!confirm(`Eliminar ${label}?`)) return
+    await supabase.from('order_items').delete().in('order_id', ids)
+    await supabase.from('deliveries').delete().in('order_id', ids)
+    await supabase.from('orders').delete().in('id', ids)
+    setOrders(prev => prev.filter(o => !ids.includes(o.id)))
+    setSelectedOrders(prev => {
+      const next = new Set(prev)
+      ids.forEach(id => next.delete(id))
+      return next
+    })
+  }
+
+  async function bulkCancel(ids: string[]) {
+    if (!ids.length) return
+    const label = ids.length === 1 ? 'este pedido' : `estos ${ids.length} pedidos`
+    if (!confirm(`Cancelar ${label}?`)) return
+    await Promise.all(
+      ids.map(id =>
+        Promise.all([
+          supabase.from('orders').update({ status: 'cancelled' }).eq('id', id),
+          syncDelivery(id, 'cancelled'),
+        ])
+      )
+    )
+    setOrders(prev =>
+      prev.map(o => ids.includes(o.id) ? { ...o, status: 'cancelled' as OrderStatus } : o)
+    )
+    setSelectedOrders(new Set())
   }
 
   async function openDisplay() {
@@ -412,6 +456,25 @@ export default function PedidosPage() {
         </div>
       )}
 
+      {selectedOrders.size > 0 && (
+        <div className="pd-bulk-bar">
+          <span className="pd-bulk-count">{selectedOrders.size} seleccionado{selectedOrders.size !== 1 ? 's' : ''}</span>
+          <div className="pd-bulk-actions">
+            <button className="pd-bulk-btn cancel" onClick={() => bulkCancel(Array.from(selectedOrders))}>
+              Cancelar
+            </button>
+            <button className="pd-bulk-btn delete" onClick={() => deleteOrders(Array.from(selectedOrders))}>
+              Eliminar
+            </button>
+          </div>
+          <button className="pd-bulk-clear" onClick={() => setSelectedOrders(new Set())}>
+            <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       {filtered.length === 0 ? (
         <div className="pd-empty">
           <div className="pd-empty-icon"></div>
@@ -430,8 +493,14 @@ export default function PedidosPage() {
             const isBusy = updating === order.id
 
             return (
-              <div key={order.id} className="pd-card">
+              <div key={order.id} className={`pd-card${selectedOrders.has(order.id) ? ' selected' : ''}`}>
                 <div className="pd-card-header" onClick={() => toggleExpand(order.id)}>
+                  <div
+                    className={`pd-checkbox${selectedOrders.has(order.id) ? ' checked' : ''}`}
+                    onClick={e => toggleSelect(order.id, e)}
+                    role="checkbox"
+                    aria-checked={selectedOrders.has(order.id)}
+                  />
                   <div className="pd-order-id">#{order.id.slice(0, 8).toUpperCase()}</div>
                   <div className="pd-customer">
                     <div className="pd-customer-name">{order.customer_name}</div>
@@ -516,6 +585,13 @@ export default function PedidosPage() {
                               <path d="M11.999 2C6.477 2 2 6.477 2 12c0 1.89.522 3.66 1.432 5.168L2 22l4.975-1.395A9.944 9.944 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z" />
                             </svg>
                             WhatsApp
+                          </button>
+                          <button
+                            className="pd-action-btn delete"
+                            disabled={isBusy}
+                            onClick={() => deleteOrders([order.id])}
+                          >
+                            Eliminar
                           </button>
                           <span className="pd-date">{timeAgo(order.created_at)}</span>
                         </div>

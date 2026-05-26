@@ -122,8 +122,9 @@ export default function DeliveryPage() {
   const [drSaving, setDrSaving] = useState(false)
   const [drError, setDrError]   = useState('')
 
-  // QR modal
+  // QR modals
   const [qrDel, setQrDel]       = useState<Delivery | null>(null)
+  const [qrDriver, setQrDriver] = useState<Driver | null>(null)
   const [qrSeconds, setQrSeconds] = useState(272)
   const qrTimer = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -917,8 +918,8 @@ export default function DeliveryPage() {
                       <button onClick={() => toggleDriver(drv)}>
                         {drv.is_active ? 'Pausar' : 'Activar'}
                       </button>
-                      <button onClick={() => { copyLink(`${BASE_URL}/driver/${drv.id}`); showToast('Link GPS copiado') }}>
-                        Link GPS
+                      <button onClick={() => setQrDriver(drv)}>
+                        Ver QR
                       </button>
                       <button className="danger" onClick={() => deleteDriver(drv.id)}>
                         Eliminar
@@ -1175,6 +1176,49 @@ export default function DeliveryPage() {
           )}
         </div>
       </div>
+
+      {/* ── DRIVER QR CARD MODAL ── */}
+      {qrDriver && (
+        <div className="dv-qr-overlay" onClick={() => setQrDriver(null)}>
+          <div className="dv-qr-modal" onClick={e => e.stopPropagation()}>
+            <div className="dv-qr-header">
+              <div>
+                <h3>{qrDriver.name}</h3>
+                <div style={{ fontSize: 11, color: 'var(--dv-ink-muted)', marginTop: 2 }}>Tarjeta de despachador</div>
+              </div>
+              <button className="dv-close-btn" onClick={() => setQrDriver(null)}>✕</button>
+            </div>
+            <div className="dv-qr-body">
+              <div className="dv-qr-display" style={{ padding: 16 }}>
+                <div style={{ textAlign: 'center', marginBottom: 10, fontSize: 11, fontWeight: 600, color: 'var(--dv-ink-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  Escanear para activar GPS
+                </div>
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(`${BASE_URL}/driver/${qrDriver.id}`)}&margin=10&color=0F172A&bgcolor=FFFFFF`}
+                  alt="QR Code"
+                  style={{ display: 'block', margin: '0 auto' }}
+                />
+                <div style={{ textAlign: 'center', marginTop: 12, fontSize: 16, fontWeight: 700, color: 'var(--dv-ink)', letterSpacing: '-0.3px' }}>
+                  {qrDriver.name}
+                </div>
+              </div>
+              <p className="dv-qr-hint">
+                El despachador escanea este codigo con su telefono para activar el rastreo GPS en tiempo real. El cliente vera su ubicacion en el link de seguimiento.
+              </p>
+              <div className="dv-qr-url">{`${BASE_URL}/driver/${qrDriver.id}`}</div>
+            </div>
+            <div className="dv-qr-actions">
+              <button className="dv-qr-copy-btn" onClick={() => { copyLink(`${BASE_URL}/driver/${qrDriver.id}`); showToast('Link copiado') }}>
+                {copied ? 'Copiado!' : 'Copiar link'}
+              </button>
+            </div>
+            <div className="dv-qr-footer">
+              <span>QR permanente · unico por despachador</span>
+              <button className="dv-btn-primary-sm" onClick={() => setQrDriver(null)}>Listo</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── QR MODAL ── */}
       {qrDel && (

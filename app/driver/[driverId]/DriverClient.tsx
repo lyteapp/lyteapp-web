@@ -3,22 +3,29 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 
+type ActiveDelivery = {
+  customer_name: string
+  delivery_address: string
+  status: string
+  notes: string | null
+}
+
 type Props = {
   driverId: string
   driverName: string
   storeId: string
   storeName: string
   storeLogo: string | null
+  activeDelivery: ActiveDelivery | null
 }
 
-type Status = 'idle' | 'sharing' | 'error'
+type Status = 'requesting' | 'sharing' | 'error' | 'stopped'
 
-export default function DriverClient({ driverId, driverName, storeId, storeName, storeLogo }: Props) {
-  const [isSharing, setIsSharing]     = useState(false)
-  const [status, setStatus]           = useState<Status>('idle')
-  const [lastUpdate, setLastUpdate]   = useState<Date | null>(null)
-  const [accuracy, setAccuracy]       = useState<number | null>(null)
-  const [errorMsg, setErrorMsg]       = useState('')
+export default function DriverClient({ driverId, driverName, storeId, storeName, storeLogo, activeDelivery }: Props) {
+  const [status, setStatus]         = useState<Status>('requesting')
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
+  const [accuracy, setAccuracy]     = useState<number | null>(null)
+  const [errorMsg, setErrorMsg]     = useState('')
 
   const watchId  = useRef<number | null>(null)
   const wakeLock = useRef<WakeLockSentinel | null>(null)
@@ -34,7 +41,7 @@ export default function DriverClient({ driverId, driverName, storeId, storeName,
     setLastUpdate(new Date())
   }, [driverId, storeId])
 
-  const startSharing = async () => {
+  const startSharing = useCallback(async () => {
     if (!navigator.geolocation) {
       setErrorMsg('GPS no disponible en este dispositivo')
       setStatus('error')
@@ -47,8 +54,6 @@ export default function DriverClient({ driverId, driverName, storeId, storeName,
       }
     } catch { /* wake lock not critical */ }
 
-    setIsSharing(true)
-
     watchId.current = navigator.geolocation.watchPosition(
       pos => {
         sendLocation(pos.coords.latitude, pos.coords.longitude)
@@ -57,13 +62,14 @@ export default function DriverClient({ driverId, driverName, storeId, storeName,
         setErrorMsg('')
       },
       err => {
-        setErrorMsg(err.code === 1 ? 'Permiso de GPS denegado. Activa la ubicacion en ajustes.' : 'Error al obtener ubicacion GPS.')
+        setErrorMsg(err.code === 1
+          ? 'Permiso de GPS denegado. Activa la ubicacion en los ajustes del navegador.'
+          : 'Error al obtener ubicacion GPS.')
         setStatus('error')
-        setIsSharing(false)
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 4000 }
     )
-  }
+  }, [sendLocation])
 
   const stopSharing = useCallback(async () => {
     if (watchId.current !== null) {
@@ -81,16 +87,20 @@ export default function DriverClient({ driverId, driverName, storeId, storeName,
       updated_at: new Date().toISOString(),
     })
 
-    setIsSharing(false)
-    setStatus('idle')
+    setStatus('stopped')
     setLastUpdate(null)
     setAccuracy(null)
   }, [driverId, storeId])
 
+  // Auto-start GPS when page loads (triggered by scanning QR)
+  useEffect(() => {
+    startSharing()
+  }, [startSharing])
+
   // Re-acquire wake lock if tab becomes visible again
   useEffect(() => {
     const onVisibility = async () => {
-      if (document.visibilityState === 'visible' && isSharing) {
+      if (document.visibilityState === 'visible' && status === 'sharing') {
         try {
           if ('wakeLock' in navigator && (!wakeLock.current || wakeLock.current.released)) {
             wakeLock.current = await (navigator as Navigator & { wakeLock: { request(t: string): Promise<WakeLockSentinel> } }).wakeLock.request('screen')
@@ -100,7 +110,7 @@ export default function DriverClient({ driverId, driverName, storeId, storeName,
     }
     document.addEventListener('visibilitychange', onVisibility)
     return () => document.removeEventListener('visibilitychange', onVisibility)
-  }, [isSharing])
+  }, [status])
 
   useEffect(() => {
     return () => {
@@ -112,6 +122,8 @@ export default function DriverClient({ driverId, driverName, storeId, storeName,
   function fmtTime(d: Date) {
     return d.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   }
+
+  const isSharing = status === 'sharing'
 
   return (
     <div className="drc-root">
@@ -130,6 +142,7 @@ export default function DriverClient({ driverId, driverName, storeId, storeName,
         <div className={`drc-orb${isSharing ? ' active' : ''}`}>
           {isSharing && <div className="drc-pulse" />}
           {isSharing && <div className="drc-pulse delay" />}
+          {status === 'requesting' && <div className="drc-spinner" />}
           <svg viewBox="0 0 56 56" fill="none" width="52" height="52">
             <path
               d="M28 6C18.06 6 10 14.06 10 24c0 15.4 18 30 18 30s18-14.6 18-30C46 14.06 37.94 6 28 6z"
@@ -141,23 +154,36 @@ export default function DriverClient({ driverId, driverName, storeId, storeName,
           </svg>
         </div>
 
-        <button
-          className={`drc-btn${isSharing ? ' on' : ''}`}
-          onClick={isSharing ? stopSharing : startSharing}
-        >
-          {isSharing ? 'Detener rastreo' : 'Activar rastreo'}
-        </button>
-
-        <div className={`drc-status${status === 'sharing' ? ' on' : status === 'error' ? ' err' : ''}`}>
+        {/* Status row */}
+        <div className={`drc-status${isSharing ? ' on' : status === 'error' ? ' err' : ''}`}>
           <span className="drc-dot" />
           <span>
-            {status === 'idle'    && 'Rastreo desactivado'}
-            {status === 'sharing' && 'Compartiendo ubicacion en tiempo real'}
-            {status === 'error'   && (errorMsg || 'Error de GPS')}
+            {status === 'requesting' && 'Solicitando acceso al GPS...'}
+            {status === 'sharing'    && 'Compartiendo ubicacion en tiempo real'}
+            {status === 'stopped'    && 'Rastreo detenido'}
+            {status === 'error'      && (errorMsg || 'Error de GPS')}
           </span>
         </div>
 
-        {status === 'sharing' && (
+        {/* Stop / Retry button */}
+        {isSharing && (
+          <button className="drc-btn on" onClick={stopSharing}>
+            Detener rastreo
+          </button>
+        )}
+        {status === 'stopped' && (
+          <button className="drc-btn" onClick={startSharing}>
+            Reactivar rastreo
+          </button>
+        )}
+        {status === 'error' && (
+          <button className="drc-btn" onClick={startSharing}>
+            Reintentar
+          </button>
+        )}
+
+        {/* GPS accuracy / update info */}
+        {isSharing && (
           <div className="drc-info">
             {lastUpdate && (
               <div className="drc-info-row">
@@ -174,9 +200,31 @@ export default function DriverClient({ driverId, driverName, storeId, storeName,
           </div>
         )}
 
+        {/* Active delivery card */}
+        {activeDelivery && (
+          <div className="drc-delivery-card">
+            <div className="drc-delivery-label">
+              {activeDelivery.status === 'picked_up' ? 'Entrega en curso' : 'Entrega asignada'}
+            </div>
+            <div className="drc-delivery-name">{activeDelivery.customer_name}</div>
+            {activeDelivery.delivery_address && (
+              <div className="drc-delivery-address">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="12" height="12" style={{ flexShrink: 0, marginTop: 1 }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 1.5C5.515 1.5 3.5 3.515 3.5 6c0 3.938 4.5 8.5 4.5 8.5S12.5 9.938 12.5 6c0-2.485-2.015-4.5-4.5-4.5z"/>
+                  <circle cx="8" cy="6" r="1.5"/>
+                </svg>
+                {activeDelivery.delivery_address}
+              </div>
+            )}
+            {activeDelivery.notes && (
+              <div className="drc-delivery-notes">{activeDelivery.notes}</div>
+            )}
+          </div>
+        )}
+
         {isSharing && (
           <div className="drc-notice">
-            Mantén esta pantalla abierta para continuar compartiendo tu ubicacion con el negocio.
+            Manten esta pantalla abierta para continuar compartiendo tu ubicacion.
           </div>
         )}
       </div>

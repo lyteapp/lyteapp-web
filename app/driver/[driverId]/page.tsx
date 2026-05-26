@@ -30,11 +30,21 @@ export default async function DriverPage(
 ) {
   const { driverId } = await params
 
-  const { data: driver } = await supabase
-    .from('delivery_drivers')
-    .select('id, name, store_id, is_active, stores(name, logo_url)')
-    .eq('id', driverId)
-    .maybeSingle()
+  const [{ data: driver }, { data: activeDelivery }] = await Promise.all([
+    supabase
+      .from('delivery_drivers')
+      .select('id, name, store_id, is_active, stores(name, logo_url)')
+      .eq('id', driverId)
+      .maybeSingle(),
+    supabase
+      .from('deliveries')
+      .select('customer_name, delivery_address, status, notes')
+      .eq('driver_id', driverId)
+      .in('status', ['ready', 'picked_up'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ])
 
   if (!driver) notFound()
 
@@ -45,6 +55,7 @@ export default async function DriverPage(
       storeId={driver.store_id}
       storeName={(driver.stores as unknown as { name: string; logo_url: string | null } | null)?.name ?? ''}
       storeLogo={(driver.stores as unknown as { name: string; logo_url: string | null } | null)?.logo_url ?? null}
+      activeDelivery={activeDelivery as { customer_name: string; delivery_address: string; status: string; notes: string | null } | null}
     />
   )
 }

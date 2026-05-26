@@ -317,36 +317,62 @@ export default function Apariencia() {
           </div>
           <div className="cn-section-body">
 
-            {/* Mini preview */}
-            <div style={{ background: trConfig.bgColor, borderRadius: 12, padding: 12, marginBottom: 24, display: 'flex', flexDirection: 'column', gap: 8, border: '1px solid rgba(0,0,0,0.06)' }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.04em', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span>Lyte<span style={{ color: trConfig.accentColor }}>app</span></span>
-                <span style={{ fontSize: 9, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Rastreo de pedido</span>
-              </div>
-              <div style={{ background: 'white', borderRadius: 8, padding: '10px 12px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-                <div style={{ width: 28, height: 28, borderRadius: '50%', background: trConfig.accentColor + '22', margin: '0 auto 6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: trConfig.accentColor }} />
-                </div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#0F172A' }}>En preparacion en cocina</div>
-                <div style={{ fontSize: 8, color: '#64748B', marginTop: 2 }}>Preparando tu pedido</div>
-              </div>
-              <div style={{ background: 'white', borderRadius: 8, padding: '8px 12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {[
-                  { label: 'Pedido recibido',  state: 'done'    },
-                  { label: 'En preparacion',   state: 'current' },
-                  { label: 'Siendo empacado',  state: 'future'  },
-                ].map(({ label, state }) => (
-                  <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <div style={{
-                      width: 14, height: 14, borderRadius: '50%', flexShrink: 0,
-                      background: state === 'done' ? '#10B981' : state === 'current' ? trConfig.accentColor : '#F8FAFC',
-                      border: `2px solid ${state === 'done' ? '#10B981' : state === 'current' ? trConfig.accentColor : '#E2E8F0'}`,
-                    }} />
-                    <div style={{ fontSize: 8, fontWeight: state === 'current' ? 700 : 400, color: state === 'done' ? '#0F172A' : state === 'current' ? trConfig.accentColor : '#CBD5E1' }}>
-                      {label}
-                    </div>
+            {/* Phone preview */}
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28 }}>
+              <div style={{ background: '#1C1C1E', borderRadius: 36, padding: '14px 8px', boxShadow: '0 24px 64px rgba(0,0,0,0.28)', width: 220, position: 'relative' }}>
+                {/* notch */}
+                <div style={{ width: 60, height: 6, background: '#3A3A3C', borderRadius: 3, margin: '0 auto 10px' }} />
+                {/* screen */}
+                <div style={{ background: trConfig.bgColor, borderRadius: 24, overflow: 'hidden', padding: '14px 10px 14px', display: 'flex', flexDirection: 'column', gap: 7 }}>
+                  {/* brand bar */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.04em' }}>
+                      Lyte<span style={{ color: trConfig.accentColor }}>app</span>
+                    </span>
+                    <span style={{ fontSize: 7, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>Rastreo</span>
                   </div>
-                ))}
+                  {/* hero */}
+                  <div style={{ background: 'white', borderRadius: 14, padding: '12px 10px', textAlign: 'center' as const, boxShadow: '0 2px 10px rgba(15,23,42,0.08)' }}>
+                    <div style={{ width: 34, height: 34, borderRadius: '50%', background: trConfig.accentColor + '20', margin: '0 auto 8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ width: 13, height: 13, borderRadius: '50%', background: trConfig.accentColor }} />
+                    </div>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: '#0F172A', marginBottom: 3 }}>En preparacion en cocina</div>
+                    <div style={{ fontSize: 8, color: '#64748B', lineHeight: 1.4 }}>Preparando tu pedido con mucho cuidado.</div>
+                  </div>
+                  {/* info */}
+                  <div style={{ background: 'white', borderRadius: 10, padding: '8px 10px', boxShadow: '0 2px 6px rgba(15,23,42,0.05)' }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#0F172A', marginBottom: 2 }}>Maria Garcia</div>
+                    <div style={{ fontSize: 7, color: '#64748B' }}>Av. Libertador 1234, Caracas</div>
+                  </div>
+                  {/* steps */}
+                  <div style={{ background: 'white', borderRadius: 10, padding: '10px 10px 8px', boxShadow: '0 2px 6px rgba(15,23,42,0.05)' }}>
+                    <div style={{ fontSize: 7, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 8 }}>Progreso</div>
+                    {[
+                      { label: 'Pedido recibido', state: 'done'    },
+                      { label: 'En preparacion',  state: 'current' },
+                      { label: 'Siendo empacado', state: 'future'  },
+                      { label: 'Tu pedido sale',  state: 'future'  },
+                    ].map(({ label, state }, i, arr) => (
+                      <div key={label} style={{ display: 'flex', gap: 7, alignItems: 'flex-start' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 14, flexShrink: 0 }}>
+                          <div style={{
+                            width: 14, height: 14, borderRadius: '50%', flexShrink: 0,
+                            background: state === 'done' ? '#10B981' : state === 'current' ? trConfig.accentColor : '#F8FAFC',
+                            border: `2px solid ${state === 'done' ? '#10B981' : state === 'current' ? trConfig.accentColor : '#E2E8F0'}`,
+                          }} />
+                          {i < arr.length - 1 && <div style={{ width: 2, height: 10, background: state === 'done' ? '#10B981' : '#E2E8F0', margin: '2px 0' }} />}
+                        </div>
+                        <div style={{ paddingBottom: i < arr.length - 1 ? 10 : 0 }}>
+                          <div style={{ fontSize: 8, fontWeight: state === 'current' ? 700 : 400, color: state === 'done' ? '#0F172A' : state === 'current' ? trConfig.accentColor : '#CBD5E1', lineHeight: '14px' }}>
+                            {label}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {/* home bar */}
+                <div style={{ width: 52, height: 4, background: '#3A3A3C', borderRadius: 2, margin: '10px auto 0' }} />
               </div>
             </div>
 

@@ -247,21 +247,22 @@ export default function PedidosPage() {
     })
   }
 
-  async function bulkCancel(ids: string[]) {
+  async function bulkSetStatus(status: OrderStatus) {
+    const ids = Array.from(selectedOrders)
     if (!ids.length) return
+    const statusLabel = t(STATUS_KEYS[status])
     const label = ids.length === 1 ? 'este pedido' : `estos ${ids.length} pedidos`
-    if (!confirm(`Cancelar ${label}?`)) return
+    if (!confirm(`Cambiar ${label} a "${statusLabel}"?`)) return
+    const deliveryStatus = DELIVERY_STATUS_MAP[status]
     await Promise.all(
       ids.map(id =>
         Promise.all([
-          supabase.from('orders').update({ status: 'cancelled' }).eq('id', id),
-          syncDelivery(id, 'cancelled'),
+          supabase.from('orders').update({ status }).eq('id', id),
+          deliveryStatus ? syncDelivery(id, deliveryStatus).catch(() => {}) : Promise.resolve(),
         ])
       )
     )
-    setOrders(prev =>
-      prev.map(o => ids.includes(o.id) ? { ...o, status: 'cancelled' as OrderStatus } : o)
-    )
+    setOrders(prev => prev.map(o => ids.includes(o.id) ? { ...o, status } : o))
     setSelectedOrders(new Set())
   }
 
@@ -473,14 +474,24 @@ export default function PedidosPage() {
       {selectedOrders.size > 0 && (
         <div className="pd-bulk-bar">
           <span className="pd-bulk-count">{selectedOrders.size} seleccionado{selectedOrders.size !== 1 ? 's' : ''}</span>
-          <div className="pd-bulk-actions">
-            <button className="pd-bulk-btn cancel" onClick={() => bulkCancel(Array.from(selectedOrders))}>
-              Cancelar
-            </button>
-            <button className="pd-bulk-btn delete" onClick={() => deleteOrders(Array.from(selectedOrders))}>
-              Eliminar
-            </button>
-          </div>
+          <select
+            className="pd-bulk-select"
+            defaultValue=""
+            onChange={e => {
+              const val = e.target.value as OrderStatus
+              if (val) { bulkSetStatus(val); e.target.value = '' }
+            }}
+          >
+            <option value="" disabled>Cambiar estado...</option>
+            <option value="confirmed">Recibido</option>
+            <option value="processing">En proceso</option>
+            <option value="ready">Listo</option>
+            <option value="delivered">Entregado</option>
+            <option value="cancelled">Cancelar</option>
+          </select>
+          <button className="pd-bulk-btn delete" onClick={() => deleteOrders(Array.from(selectedOrders))}>
+            Eliminar
+          </button>
           <button className="pd-bulk-clear" onClick={() => setSelectedOrders(new Set())}>
             <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />

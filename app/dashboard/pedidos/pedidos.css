@@ -443,7 +443,21 @@
   font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.75);
   margin-right: 2px;
 }
-.pd-bulk-actions { display: flex; gap: 6px; }
+.pd-bulk-select {
+  font-size: 12px; font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.1);
+  color: white;
+  cursor: pointer;
+  font-family: var(--font-geist-sans), sans-serif;
+  transition: background 0.15s;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.pd-bulk-select:hover { background: rgba(255,255,255,0.15); }
+.pd-bulk-select option { background: #1E293B; color: white; }
 .pd-bulk-btn {
   font-size: 12px; font-weight: 600;
   padding: 6px 14px; border-radius: 8px;
@@ -451,11 +465,7 @@
   font-family: var(--font-geist-sans), sans-serif;
   transition: all 0.15s;
 }
-.pd-bulk-btn.cancel {
-  background: rgba(220,38,38,0.15);
-  color: #FCA5A5;
-}
-.pd-bulk-btn.cancel:hover { background: rgba(220,38,38,0.25); }
+
 .pd-bulk-btn.delete {
   background: #DC2626;
   color: white;

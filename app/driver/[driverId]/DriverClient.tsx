@@ -14,7 +14,11 @@ type Props = {
   initialDelivery: ActiveDelivery | null
 }
 
-type GpsStatus = 'requesting' | 'active' | 'error' | 'stopped'
+type GpsStatus  = 'requesting' | 'active' | 'error' | 'stopped'
+type InstallState = 'hidden' | 'ios' | 'android' | 'installed'
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type BeforeInstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> }
 
 function timeAgo(iso: string) {
   const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
@@ -35,6 +39,9 @@ export default function DriverClient({
   const [gpsStatus, setGpsStatus]       = useState<GpsStatus>('requesting')
   const [accuracy, setAccuracy]         = useState<number | null>(null)
   const [lastUpdate, setLastUpdate]     = useState<Date | null>(null)
+  const [installState, setInstallState] = useState<InstallState>('hidden')
+  const [showIosHint, setShowIosHint]   = useState(false)
+  const installPrompt = useRef<BeforeInstallPromptEvent | null>(null)
 
   const watchId  = useRef<number | null>(null)
   const wakeLock = useRef<WakeLockSentinel | null>(null)
@@ -77,6 +84,43 @@ export default function DriverClient({
     })
     setGpsStatus('stopped')
   }, [driverId, storeId])
+
+  // ── Install detection ────────────────────────────────────────────
+  useEffect(() => {
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (navigator as Navigator & { standalone?: boolean }).standalone === true
+    if (isStandalone) { setInstallState('installed'); return }
+
+    const dismissed = localStorage.getItem('dsp-install-dismissed')
+    if (dismissed) return
+
+    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent)
+    if (isIos) { setInstallState('ios'); return }
+
+    const handler = (e: Event) => {
+      e.preventDefault()
+      installPrompt.current = e as BeforeInstallPromptEvent
+      setInstallState('android')
+    }
+    window.addEventListener('beforeinstallprompt', handler)
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
+
+  async function triggerInstall() {
+    if (installPrompt.current) {
+      await installPrompt.current.prompt()
+      const { outcome } = await installPrompt.current.userChoice
+      if (outcome === 'accepted') setInstallState('installed')
+      installPrompt.current = null
+    }
+  }
+
+  function dismissInstall() {
+    localStorage.setItem('dsp-install-dismissed', '1')
+    setInstallState('hidden')
+    setShowIosHint(false)
+  }
 
   // Auto-start GPS on mount
   useEffect(() => { startGps() }, [startGps])
@@ -210,6 +254,51 @@ export default function DriverClient({
           {gpsStatus === 'stopped'    && 'GPS off'}
         </div>
       </div>
+
+      {/* ── INSTALL BANNER ── */}
+      {installState === 'android' && (
+        <div className="dsp-install-bar">
+          <div className="dsp-install-text">
+            <strong>Instalar como app</strong>
+            <span>Acceso rapido desde tu pantalla de inicio</span>
+          </div>
+          <div className="dsp-install-actions">
+            <button className="dsp-install-btn" onClick={triggerInstall}>Instalar</button>
+            <button className="dsp-install-dismiss" onClick={dismissInstall}>✕</button>
+          </div>
+        </div>
+      )}
+
+      {installState === 'ios' && !showIosHint && (
+        <div className="dsp-install-bar">
+          <div className="dsp-install-text">
+            <strong>Instalar como app</strong>
+            <span>Guarda el acceso en tu pantalla de inicio</span>
+          </div>
+          <div className="dsp-install-actions">
+            <button className="dsp-install-btn" onClick={() => setShowIosHint(true)}>Como?</button>
+            <button className="dsp-install-dismiss" onClick={dismissInstall}>✕</button>
+          </div>
+        </div>
+      )}
+
+      {installState === 'ios' && showIosHint && (
+        <div className="dsp-install-hint">
+          <div className="dsp-install-hint-step">
+            <span className="dsp-install-hint-num">1</span>
+            Toca el boton <strong>Compartir</strong>
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" style={{ flexShrink: 0 }}>
+              <path d="M13 4.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v11a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-11ZM6 8.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5ZM9.5 4a.5.5 0 0 0-1 0v6.793L7.354 9.646a.5.5 0 1 0-.708.708l2 2a.5.5 0 0 0 .708 0l2-2a.5.5 0 0 0-.708-.708L9.5 10.793V4Z"/>
+            </svg>
+            en Safari
+          </div>
+          <div className="dsp-install-hint-step">
+            <span className="dsp-install-hint-num">2</span>
+            Selecciona <strong>"Agregar a pantalla de inicio"</strong>
+          </div>
+          <button className="dsp-install-dismiss-full" onClick={dismissInstall}>Entendido</button>
+        </div>
+      )}
 
       {/* GPS stop/start bar */}
       {gpsStatus === 'stopped' && (

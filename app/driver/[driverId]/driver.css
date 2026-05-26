@@ -137,6 +137,102 @@
   white-space: nowrap;
 }
 
+/* ── Install banner ── */
+.dsp-install-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 18px;
+  background: #EEF2FF;
+  border-bottom: 1px solid #C7D2FE;
+}
+
+.dsp-install-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 13px;
+  color: #3730A3;
+  min-width: 0;
+}
+
+.dsp-install-text strong { font-weight: 700; }
+.dsp-install-text span   { font-size: 11px; color: #6366F1; }
+
+.dsp-install-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.dsp-install-btn {
+  background: #7C3AED;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.dsp-install-dismiss {
+  background: none;
+  border: none;
+  color: #6366F1;
+  font-size: 15px;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+
+.dsp-install-hint {
+  background: #EEF2FF;
+  border-bottom: 1px solid #C7D2FE;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dsp-install-hint-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #3730A3;
+}
+
+.dsp-install-hint-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #7C3AED;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dsp-install-dismiss-full {
+  background: #7C3AED;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  margin-top: 2px;
+}
+
 /* ── Body ── */
 .dsp-body {
   flex: 1;

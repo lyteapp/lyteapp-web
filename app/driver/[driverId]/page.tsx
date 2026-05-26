@@ -23,7 +23,27 @@ export async function generateMetadata(
     .maybeSingle()
   if (!data) return { title: 'Despachador' }
   const store = (data.stores as unknown as { name: string } | null)?.name ?? ''
-  return { title: `${data.name} · ${store}` }
+  const title = `${data.name} · Despachos`
+  return {
+    title,
+    manifest: `/api/driver-manifest/${driverId}`,
+    themeColor: '#7C3AED',
+    appleWebApp: {
+      capable: true,
+      title: data.name,
+      statusBarStyle: 'default',
+    },
+    icons: {
+      apple: '/api/driver-icon?size=192',
+      other: { rel: 'icon', url: '/api/driver-icon?size=192' },
+    },
+    other: {
+      'mobile-web-app-capable': 'yes',
+      'application-name': data.name,
+      'msapplication-TileColor': '#7C3AED',
+      'store-name': store,
+    },
+  }
 }
 
 export default async function DriverPage(

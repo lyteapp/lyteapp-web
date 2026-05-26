@@ -18,5 +18,16 @@ export default async function TrackingPage({
     .eq('id', token)
     .maybeSingle()
 
-  return <TrackingClient initialDelivery={delivery} token={token} />
+  let trackingConfig: Record<string, string> | null = null
+  if (delivery?.store_id) {
+    const { data: store } = await supabase
+      .from('stores')
+      .select('template_config')
+      .eq('id', delivery.store_id)
+      .maybeSingle()
+    const cfg = store?.template_config as Record<string, unknown> | null
+    if (cfg?.trackingConfig) trackingConfig = cfg.trackingConfig as Record<string, string>
+  }
+
+  return <TrackingClient initialDelivery={delivery} token={token} trackingConfig={trackingConfig} />
 }

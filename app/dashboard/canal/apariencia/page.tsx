@@ -91,6 +91,41 @@ const PHOTO_SHAPES = [
   { id: 'circle', name: 'Circular'   },
 ]
 
+const TR_ACCENT_PRESETS = ['#7C3AED', '#2563EB', '#DC2626', '#D97706', '#059669', '#DB2777', '#0F172A', '#64748B']
+const TR_BG_PRESETS = [
+  { color: '#F1EFE9', label: 'Cálido'   },
+  { color: '#FFFFFF', label: 'Blanco'   },
+  { color: '#F8FAFC', label: 'Gris'     },
+  { color: '#FFF7ED', label: 'Naranja'  },
+  { color: '#F0FDF4', label: 'Menta'    },
+]
+const TR_FONTS = [
+  { id: 'system',   name: 'Sistema' },
+  { id: 'Inter',    name: 'Inter'   },
+  { id: 'Poppins',  name: 'Poppins' },
+  { id: 'DM Sans',  name: 'DM Sans' },
+  { id: 'Nunito',   name: 'Nunito'  },
+]
+const TR_SIZES = [
+  { id: 'sm', name: 'Pequeña' },
+  { id: 'md', name: 'Normal'  },
+  { id: 'lg', name: 'Grande'  },
+]
+
+interface TrackingConfig {
+  accentColor: string
+  bgColor: string
+  fontFamily: string
+  fontSize: string
+}
+
+const DEFAULT_TR_CONFIG: TrackingConfig = {
+  accentColor: '#7C3AED',
+  bgColor: '#F1EFE9',
+  fontFamily: 'system',
+  fontSize: 'md',
+}
+
 export default function Apariencia() {
   const { user } = useAuth()
   const [template, setTemplate]             = useState('clasico')
@@ -98,10 +133,12 @@ export default function Apariencia() {
   const [baseConfig, setBaseConfig]         = useState<Record<string, unknown>>({})
   const [categories, setCategories]         = useState<Category[]>([])
   const [categoryShapes, setCategoryShapes] = useState<Record<string, string>>({})
+  const [trConfig, setTrConfig]             = useState<TrackingConfig>(DEFAULT_TR_CONFIG)
   const [saving, setSaving]                 = useState(false)
   const [success, setSuccess]               = useState(false)
   const [error, setError]                   = useState('')
-  const colorInputRef = useRef<HTMLInputElement>(null)
+  const colorInputRef  = useRef<HTMLInputElement>(null)
+  const trAccentRef    = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!user) return
@@ -117,6 +154,7 @@ export default function Apariencia() {
         const cfg = (data.template_config ?? {}) as Record<string, unknown>
         setBaseConfig(cfg)
         if (cfg.categoryPhotoShapes) setCategoryShapes(cfg.categoryPhotoShapes as Record<string, string>)
+        if (cfg.trackingConfig) setTrConfig({ ...DEFAULT_TR_CONFIG, ...(cfg.trackingConfig as Partial<TrackingConfig>) })
         const { data: cats } = await supabase
           .from('categories').select('id,name')
           .eq('store_id', data.id).order('position', { ascending: true })
@@ -131,7 +169,8 @@ export default function Apariencia() {
 
     const template_config = {
       ...baseConfig,
-      ...(Object.keys(categoryShapes).length > 0 ? { categoryPhotoShapes: categoryShapes } : { categoryPhotoShapes: undefined }),
+      categoryPhotoShapes: Object.keys(categoryShapes).length > 0 ? categoryShapes : undefined,
+      trackingConfig: trConfig,
     }
 
     const { data: existing } = await supabase.from('stores').select('id').eq('owner_id', user.id).maybeSingle()
@@ -262,6 +301,138 @@ export default function Apariencia() {
             </div>
           </div>
         )}
+
+        {/* Rastreo de pedido */}
+        <div className="cn-section">
+          <div className="cn-section-head">
+            <div className="cn-section-icon">
+              <svg viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div>
+              <div className="cn-section-title">Rastreo de pedido</div>
+              <div className="cn-section-sub">Personaliza la pagina de seguimiento del cliente</div>
+            </div>
+          </div>
+          <div className="cn-section-body">
+
+            {/* Mini preview */}
+            <div style={{ background: trConfig.bgColor, borderRadius: 12, padding: 12, marginBottom: 24, display: 'flex', flexDirection: 'column', gap: 8, border: '1px solid rgba(0,0,0,0.06)' }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.04em', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>Lyte<span style={{ color: trConfig.accentColor }}>app</span></span>
+                <span style={{ fontSize: 9, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Rastreo de pedido</span>
+              </div>
+              <div style={{ background: 'white', borderRadius: 8, padding: '10px 12px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+                <div style={{ width: 28, height: 28, borderRadius: '50%', background: trConfig.accentColor + '22', margin: '0 auto 6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: trConfig.accentColor }} />
+                </div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#0F172A' }}>En preparacion en cocina</div>
+                <div style={{ fontSize: 8, color: '#64748B', marginTop: 2 }}>Preparando tu pedido</div>
+              </div>
+              <div style={{ background: 'white', borderRadius: 8, padding: '8px 12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {[
+                  { label: 'Pedido recibido',  state: 'done'    },
+                  { label: 'En preparacion',   state: 'current' },
+                  { label: 'Siendo empacado',  state: 'future'  },
+                ].map(({ label, state }) => (
+                  <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{
+                      width: 14, height: 14, borderRadius: '50%', flexShrink: 0,
+                      background: state === 'done' ? '#10B981' : state === 'current' ? trConfig.accentColor : '#F8FAFC',
+                      border: `2px solid ${state === 'done' ? '#10B981' : state === 'current' ? trConfig.accentColor : '#E2E8F0'}`,
+                    }} />
+                    <div style={{ fontSize: 8, fontWeight: state === 'current' ? 700 : 400, color: state === 'done' ? '#0F172A' : state === 'current' ? trConfig.accentColor : '#CBD5E1' }}>
+                      {label}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Accent color */}
+            <div className="cn-field">
+              <div className="cn-label">Color de acento</div>
+              <div className="cn-colors">
+                {TR_ACCENT_PRESETS.map(c => (
+                  <div
+                    key={c}
+                    className={`cn-color-swatch${trConfig.accentColor === c ? ' selected' : ''}`}
+                    style={{ background: c }}
+                    onClick={() => setTrConfig(p => ({ ...p, accentColor: c }))}
+                  />
+                ))}
+                <div
+                  className="cn-color-custom"
+                  style={{ background: TR_ACCENT_PRESETS.includes(trConfig.accentColor) ? undefined : trConfig.accentColor }}
+                  onClick={() => trAccentRef.current?.click()}
+                >
+                  {TR_ACCENT_PRESETS.includes(trConfig.accentColor) ? '+' : null}
+                  <input
+                    ref={trAccentRef}
+                    type="color"
+                    value={trConfig.accentColor}
+                    onChange={e => setTrConfig(p => ({ ...p, accentColor: e.target.value }))}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Background color */}
+            <div className="cn-field">
+              <div className="cn-label">Color de fondo</div>
+              <div className="cn-pill-row" style={{ flexWrap: 'wrap' }}>
+                {TR_BG_PRESETS.map(({ color, label }) => (
+                  <button
+                    key={color}
+                    type="button"
+                    className={`cn-pill-btn${trConfig.bgColor === color ? ' selected' : ''}`}
+                    onClick={() => setTrConfig(p => ({ ...p, bgColor: color }))}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                  >
+                    <div style={{ width: 12, height: 12, borderRadius: 3, background: color, border: '1px solid rgba(0,0,0,0.1)', flexShrink: 0 }} />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Font family */}
+            <div className="cn-field">
+              <div className="cn-label">Fuente</div>
+              <div className="cn-pill-row" style={{ flexWrap: 'wrap' }}>
+                {TR_FONTS.map(f => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    className={`cn-pill-btn${trConfig.fontFamily === f.id ? ' selected' : ''}`}
+                    onClick={() => setTrConfig(p => ({ ...p, fontFamily: f.id }))}
+                  >
+                    {f.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Font size */}
+            <div className="cn-field">
+              <div className="cn-label">Tamaño de texto</div>
+              <div className="cn-pill-row">
+                {TR_SIZES.map(s => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    className={`cn-pill-btn${trConfig.fontSize === s.id ? ' selected' : ''}`}
+                    onClick={() => setTrConfig(p => ({ ...p, fontSize: s.id }))}
+                  >
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </div>
 
         {error && <div className="cn-error">{error}</div>}
         {success && <div className="cn-success">Apariencia guardada correctamente.</div>}

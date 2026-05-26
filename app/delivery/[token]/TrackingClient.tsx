@@ -22,6 +22,30 @@ interface Delivery {
   customer_lat: number | null; customer_lng: number | null
 }
 
+interface TrackingConfig {
+  accentColor?: string
+  bgColor?: string
+  fontFamily?: string
+  fontSize?: string
+}
+
+const FONT_STACKS: Record<string, string> = {
+  system:   'system-ui, -apple-system, sans-serif',
+  Inter:    "'Inter', system-ui, sans-serif",
+  Poppins:  "'Poppins', system-ui, sans-serif",
+  'DM Sans':"'DM Sans', system-ui, sans-serif",
+  Nunito:   "'Nunito', system-ui, sans-serif",
+}
+
+const GOOGLE_FONT_URLS: Record<string, string> = {
+  Inter:    'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap',
+  Poppins:  'https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap',
+  'DM Sans':'https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300..900&display=swap',
+  Nunito:   'https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap',
+}
+
+const FONT_SCALES: Record<string, string> = { sm: '0.875', md: '1', lg: '1.125' }
+
 type Step = {
   key: Status
   label: string
@@ -101,11 +125,31 @@ function HeroIcon({ status }: { status: Status }) {
 export default function TrackingClient({
   initialDelivery,
   token,
+  trackingConfig,
 }: {
   initialDelivery: Delivery | null
   token: string
+  trackingConfig?: TrackingConfig | null
 }) {
   const [delivery, setDelivery] = useState<Delivery | null>(initialDelivery)
+
+  useEffect(() => {
+    const fontName = trackingConfig?.fontFamily
+    if (!fontName || fontName === 'system' || !GOOGLE_FONT_URLS[fontName]) return
+    const url = GOOGLE_FONT_URLS[fontName]
+    if (document.querySelector(`link[href="${url}"]`)) return
+    const link = document.createElement('link')
+    link.rel = 'stylesheet'
+    link.href = url
+    document.head.appendChild(link)
+  }, [trackingConfig?.fontFamily])
+
+  const cssVars = {
+    '--tr-accent': trackingConfig?.accentColor ?? '#7C3AED',
+    '--tr-bg':     trackingConfig?.bgColor     ?? '#F1EFE9',
+    '--tr-font':   FONT_STACKS[trackingConfig?.fontFamily ?? 'system'] ?? FONT_STACKS.system,
+    '--tr-scale':  FONT_SCALES[trackingConfig?.fontSize   ?? 'md']     ?? '1',
+  } as React.CSSProperties
 
   const fetchDelivery = useCallback(async () => {
     const { data, error } = await supabase
@@ -147,7 +191,7 @@ export default function TrackingClient({
   }, [token, fetchDelivery])
 
   if (!delivery) return (
-    <div className="tr-wrap">
+    <div className="tr-wrap" style={cssVars}>
       <div className="tr-brand-bar">
         <span className="tr-brand">Lyte<span>app</span></span>
       </div>
@@ -165,7 +209,7 @@ export default function TrackingClient({
   const isDone = delivery.status === 'delivered'
 
   return (
-    <div className="tr-wrap">
+    <div className="tr-wrap" style={cssVars}>
       <div className="tr-brand-bar">
         <a className="tr-brand" href="https://lyte-app.com" target="_blank" rel="noreferrer">
           Lyte<span>app</span>

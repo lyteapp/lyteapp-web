@@ -7,7 +7,7 @@ import { useT } from '../../lib/LocaleProvider'
 import type { TranslationKey } from '../../lib/i18n'
 import './pedidos.css'
 
-type OrderStatus = 'pending' | 'confirmed' | 'ready' | 'delivered' | 'cancelled'
+type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'ready' | 'delivered' | 'cancelled'
 
 interface OrderItem {
   id: string
@@ -47,11 +47,12 @@ const DISPLAY_STATUS: Record<string, string> = {
 }
 
 const STATUS_KEYS: Record<OrderStatus, TranslationKey> = {
-  pending:   'orders.status.pending',
-  confirmed: 'orders.status.confirmed',
-  ready:     'orders.status.ready',
-  delivered: 'orders.status.delivered',
-  cancelled: 'orders.status.cancelled',
+  pending:    'orders.status.pending',
+  confirmed:  'orders.status.confirmed',
+  processing: 'orders.status.processing',
+  ready:      'orders.status.ready',
+  delivered:  'orders.status.delivered',
+  cancelled:  'orders.status.cancelled',
 }
 
 const FILTER_KEYS: { key: 'all' | OrderStatus; tKey: TranslationKey }[] = [
@@ -64,9 +65,10 @@ const FILTER_KEYS: { key: 'all' | OrderStatus; tKey: TranslationKey }[] = [
 ]
 
 const NEXT_STATUS: Partial<Record<OrderStatus, { status: OrderStatus; tKey?: TranslationKey; label?: string; cls: string }>> = {
-  pending:   { status: 'confirmed', label: 'Recibido',               cls: 'confirm' },
-  confirmed: { status: 'ready',     label: 'Listo',                  cls: 'ready'   },
-  ready:     { status: 'delivered', tKey: 'orders.action.deliver',   cls: 'deliver' },
+  pending:    { status: 'confirmed',  label: 'Recibido',   cls: 'confirm' },
+  confirmed:  { status: 'processing', label: 'En proceso', cls: 'process' },
+  processing: { status: 'ready',      label: 'Listo',      cls: 'ready'   },
+  ready:      { status: 'delivered',  tKey: 'orders.action.deliver', cls: 'deliver' },
 }
 
 function fmt(n: number) {

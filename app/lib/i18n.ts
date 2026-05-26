@@ -292,6 +292,7 @@ const en = {
   // ── Orders page ──────────────────────────────────────────────
   'orders.status.pending': 'Pending',
   'orders.status.confirmed': 'Confirmed',
+  'orders.status.processing': 'In Progress',
   'orders.status.ready': 'Ready',
   'orders.status.delivered': 'Delivered',
   'orders.status.cancelled': 'Cancelled',
@@ -641,6 +642,7 @@ const es: Record<Key, string> = {
   // ── Orders page ──────────────────────────────────────────────
   'orders.status.pending': 'Pendiente',
   'orders.status.confirmed': 'Confirmado',
+  'orders.status.processing': 'En proceso',
   'orders.status.ready': 'Listo',
   'orders.status.delivered': 'Entregado',
   'orders.status.cancelled': 'Cancelado',

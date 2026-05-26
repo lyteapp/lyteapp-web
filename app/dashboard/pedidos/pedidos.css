@@ -90,11 +90,12 @@
   padding: 4px 10px; border-radius: 100px;
   flex-shrink: 0;
 }
-.pd-status.pending   { background: #FEF9C3; color: #CA8A04; }
-.pd-status.confirmed { background: #DBEAFE; color: #2563EB; }
-.pd-status.ready     { background: #F3E8FF; color: #7C3AED; }
-.pd-status.delivered { background: #DCFCE7; color: #16A34A; }
-.pd-status.cancelled { background: #FEE2E2; color: #DC2626; }
+.pd-status.pending    { background: #FEF9C3; color: #CA8A04; }
+.pd-status.confirmed  { background: #DBEAFE; color: #2563EB; }
+.pd-status.processing { background: #FEF3C7; color: #B45309; }
+.pd-status.ready      { background: #F3E8FF; color: #7C3AED; }
+.pd-status.delivered  { background: #DCFCE7; color: #16A34A; }
+.pd-status.cancelled  { background: #FEE2E2; color: #DC2626; }
 
 .pd-chevron {
   width: 16px; height: 16px; color: #CBD5E1;
@@ -166,6 +167,8 @@
 
 .pd-action-btn.confirm  { border-color: rgba(37,99,235,0.3); color: #2563EB; background: #EFF6FF; }
 .pd-action-btn.confirm:hover  { background: #DBEAFE; }
+.pd-action-btn.process  { border-color: rgba(245,158,11,0.3); color: #B45309; background: #FFFBEB; }
+.pd-action-btn.process:hover  { background: #FEF3C7; }
 .pd-action-btn.ready    { border-color: rgba(124,58,237,0.3); color: #7C3AED; background: #F5F3FF; }
 .pd-action-btn.ready:hover    { background: #EDE9FE; }
 .pd-action-btn.deliver  { border-color: rgba(22,163,74,0.3); color: #16A34A; background: #F0FDF4; }

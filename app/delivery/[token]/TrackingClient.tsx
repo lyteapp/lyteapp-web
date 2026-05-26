@@ -133,7 +133,7 @@ export default function TrackingClient({
         }
       )
       .subscribe()
-    const poll = setInterval(fetchDelivery, 10000)
+    const poll = setInterval(fetchDelivery, 3000)
     return () => { supabase.removeChannel(ch); clearInterval(poll) }
   }, [token, fetchDelivery])
 

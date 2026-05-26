@@ -50,6 +50,21 @@ const STEPS_PREVIEW = [
   { label: 'Entregado',       state: 'future'  },
 ]
 
+const FONT_STACKS: Record<string, string> = {
+  system:   'system-ui, -apple-system, sans-serif',
+  Inter:    "'Inter', system-ui, sans-serif",
+  Poppins:  "'Poppins', system-ui, sans-serif",
+  'DM Sans':"'DM Sans', system-ui, sans-serif",
+  Nunito:   "'Nunito', system-ui, sans-serif",
+}
+const GOOGLE_FONT_URLS: Record<string, string> = {
+  Inter:    'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap',
+  Poppins:  'https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap',
+  'DM Sans':'https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300..900&display=swap',
+  Nunito:   'https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap',
+}
+const FONT_SCALE_NUM: Record<string, number> = { sm: 0.875, md: 1, lg: 1.125 }
+
 export default function Apariencia() {
   const { user } = useAuth()
   const [template, setTemplate]             = useState('clasico')
@@ -84,6 +99,21 @@ export default function Apariencia() {
         if (cats) setCategories(cats)
       })
   }, [user])
+
+  useEffect(() => {
+    const fontName = trConfig.fontFamily
+    if (!fontName || fontName === 'system' || !GOOGLE_FONT_URLS[fontName]) return
+    const url = GOOGLE_FONT_URLS[fontName]
+    if (document.querySelector(`link[href="${url}"]`)) return
+    const link = document.createElement('link')
+    link.rel = 'stylesheet'
+    link.href = url
+    document.head.appendChild(link)
+  }, [trConfig.fontFamily])
+
+  const previewFont  = FONT_STACKS[trConfig.fontFamily] ?? FONT_STACKS.system
+  const previewScale = FONT_SCALE_NUM[trConfig.fontSize] ?? 1
+  const fs = (n: number) => Math.round(n * previewScale)
 
   async function save(e: { preventDefault(): void }) {
     e.preventDefault()
@@ -151,14 +181,15 @@ export default function Apariencia() {
             flexDirection: 'column',
             gap: 9,
             scrollbarWidth: 'none',
+            fontFamily: previewFont,
           }}>
 
             {/* brand bar */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-              <span style={{ fontSize: 15, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.04em' }}>
+              <span style={{ fontSize: fs(15), fontWeight: 800, color: '#0F172A', letterSpacing: '-0.04em' }}>
                 Lyte<span style={{ color: trConfig.accentColor }}>app</span>
               </span>
-              <span style={{ fontSize: 8, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              <span style={{ fontSize: fs(8), fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 Rastreo de pedido
               </span>
             </div>
@@ -168,18 +199,18 @@ export default function Apariencia() {
               <div style={{ width: 52, height: 52, borderRadius: '50%', background: trConfig.accentColor + '1A', margin: '0 auto 12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ width: 20, height: 20, borderRadius: '50%', background: trConfig.accentColor }} />
               </div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: '#0F172A', marginBottom: 6, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+              <div style={{ fontSize: fs(14), fontWeight: 800, color: '#0F172A', marginBottom: 6, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
                 En preparacion en cocina
               </div>
-              <div style={{ fontSize: 11, color: '#64748B', lineHeight: 1.5 }}>
+              <div style={{ fontSize: fs(11), color: '#64748B', lineHeight: 1.5 }}>
                 Estamos preparando tu pedido con mucho cuidado. Te avisamos cuando salga.
               </div>
             </div>
 
             {/* info card */}
             <div style={{ background: 'white', borderRadius: 14, padding: '10px 14px', boxShadow: '0 2px 10px rgba(15,23,42,0.05)' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#0F172A', marginBottom: 4 }}>Maria Garcia</div>
-              <div style={{ fontSize: 10, color: '#64748B', display: 'flex', alignItems: 'flex-start', gap: 5 }}>
+              <div style={{ fontSize: fs(12), fontWeight: 700, color: '#0F172A', marginBottom: 4 }}>Maria Garcia</div>
+              <div style={{ fontSize: fs(10), color: '#64748B', display: 'flex', alignItems: 'flex-start', gap: 5 }}>
                 <svg viewBox="0 0 20 20" fill="currentColor" width="11" height="11" style={{ flexShrink: 0, marginTop: 1, color: '#94A3B8' }}>
                   <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                 </svg>
@@ -189,7 +220,7 @@ export default function Apariencia() {
 
             {/* steps card */}
             <div style={{ background: 'white', borderRadius: 14, padding: '14px 14px 10px', boxShadow: '0 2px 10px rgba(15,23,42,0.05)' }}>
-              <div style={{ fontSize: 9, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 14 }}>
+              <div style={{ fontSize: fs(9), fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 14 }}>
                 Progreso de tu pedido
               </div>
               {STEPS_PREVIEW.map(({ label, state }, i, arr) => (
@@ -214,13 +245,13 @@ export default function Apariencia() {
                   </div>
                   <div style={{ paddingBottom: i < arr.length - 1 ? 18 : 0 }}>
                     <div style={{
-                      fontSize: 11, fontWeight: state === 'current' ? 700 : 400, lineHeight: '18px',
+                      fontSize: fs(11), fontWeight: state === 'current' ? 700 : 400, lineHeight: '18px',
                       color: state === 'done' ? '#0F172A' : state === 'current' ? trConfig.accentColor : '#CBD5E1',
                     }}>
                       {label}
                     </div>
                     {state === 'current' && (
-                      <div style={{ fontSize: 9, color: '#64748B', marginTop: 2, lineHeight: 1.4 }}>
+                      <div style={{ fontSize: fs(9), color: '#64748B', marginTop: 2, lineHeight: 1.4 }}>
                         Tu pedido esta en cocina, lo estan preparando.
                       </div>
                     )}
@@ -230,7 +261,7 @@ export default function Apariencia() {
             </div>
 
             {/* footer */}
-            <div style={{ textAlign: 'center', fontSize: 9, color: '#94A3B8', marginTop: 4 }}>
+            <div style={{ textAlign: 'center', fontSize: fs(9), color: '#94A3B8', marginTop: 4 }}>
               Powered by <strong style={{ color: '#64748B' }}>LyteApp</strong>
             </div>
           </div>

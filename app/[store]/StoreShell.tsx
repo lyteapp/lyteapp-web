@@ -337,7 +337,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
         }),
         '', `*Total: $${cartTotal.toFixed(2)}*`,
         ...(customerNotes ? ['', `*Notas:* ${customerNotes}`] : []),
-        '', `Rastrea tu pedido en tiempo real: https://lyte-app.com/delivery/${newDeliveryId}`,
+        '', 'Rastrea tu pedido en tiempo real:', `https://lyte-app.com/delivery/${newDeliveryId}`,
       ]
 
       // Create delivery BEFORE navigating — fire-and-forget cancels on mobile

@@ -1,6 +1,7 @@
 'use client'
 
-import { use, useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { useParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { createClient } from '@supabase/supabase-js'
 import './tracking.css'
@@ -85,37 +86,13 @@ const STEPS: Step[] = [
 
 const STATUS_ORDER: Record<string, number> = { pending: 0, preparing: 1, ready: 2, picked_up: 3, delivered: 4 }
 
-const HERO: Record<string, { title: string; sub: string; cls: string }> = {
-  pending: {
-    title: 'Pedido recibido',
-    sub: 'Tu pedido fue registrado. La cocina lo tiene y comenzara a prepararlo pronto.',
-    cls: 'preparing',
-  },
-  preparing: {
-    title: 'En preparacion en cocina',
-    sub: 'Estamos preparando tu pedido con mucho cuidado. Te avisamos cuando salga.',
-    cls: 'preparing',
-  },
-  ready: {
-    title: 'Siendo empacado',
-    sub: 'Tu pedido ya esta listo y lo estan empacando. El despachador viene pronto.',
-    cls: 'ready',
-  },
-  picked_up: {
-    title: 'Tu pedido esta saliendo',
-    sub: 'El despachador ya tiene tu pedido y va en camino hacia ti.',
-    cls: 'picked_up',
-  },
-  delivered: {
-    title: 'Tu pedido fue entregado',
-    sub: 'Que lo disfrutes. Gracias por tu compra.',
-    cls: 'delivered',
-  },
-  cancelled: {
-    title: 'Entrega cancelada',
-    sub: 'Esta entrega fue cancelada. Contacta a la tienda para mas informacion.',
-    cls: 'cancelled',
-  },
+const HERO: Record<string, { title: string; sub: string }> = {
+  pending:   { title: 'Pedido recibido',        sub: 'Tu pedido fue registrado. La cocina lo tiene y comenzara a prepararlo pronto.' },
+  preparing: { title: 'En preparacion en cocina', sub: 'Estamos preparando tu pedido con mucho cuidado. Te avisamos cuando salga.' },
+  ready:     { title: 'Siendo empacado',         sub: 'Tu pedido ya esta listo y lo estan empacando. El despachador viene pronto.' },
+  picked_up: { title: 'Tu pedido esta saliendo', sub: 'El despachador ya tiene tu pedido y va en camino hacia ti.' },
+  delivered: { title: 'Tu pedido fue entregado', sub: 'Que lo disfrutes. Gracias por tu compra.' },
+  cancelled: { title: 'Entrega cancelada',       sub: 'Esta entrega fue cancelada. Contacta a la tienda para mas informacion.' },
 }
 
 function fmtTime(iso: string) {
@@ -169,44 +146,51 @@ function HeroIcon({ status }: { status: Status }) {
   )
 }
 
-export default function TrackingPage({ params }: { params: Promise<{ token: string }> }) {
-  const { token } = use(params)
+export default function TrackingPage() {
+  const params = useParams()
+  const token = params.token as string
+
   const [delivery, setDelivery] = useState<Delivery | null | 'loading'>('loading')
 
-  async function fetchDelivery() {
-    const { data } = await supabase.from('deliveries').select('*').eq('id', token).maybeSingle()
+  const fetchDelivery = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('deliveries')
+      .select('*')
+      .eq('id', token)
+      .maybeSingle()
+    if (error) { setDelivery(null); return }
     setDelivery((data as Delivery) ?? null)
-  }
+  }, [token])
 
   useEffect(() => {
-    fetchDelivery()
-  }, [token])
+    if (token) fetchDelivery()
+  }, [token, fetchDelivery])
 
   useEffect(() => {
     if (!token) return
 
-    // Realtime subscription for instant updates
     const ch = supabase.channel(`track-${token}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'deliveries', filter: `id=eq.${token}` }, payload => {
-        // If replica identity full is set, payload.new has all columns
-        // Otherwise fall back to a fresh fetch to avoid partial state
-        const updated = payload.new as Delivery
-        if (updated.customer_name) {
-          setDelivery(updated)
-        } else {
-          fetchDelivery()
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'deliveries', filter: `id=eq.${token}` },
+        (payload) => {
+          const updated = payload.new as Delivery
+          if (updated.customer_name) {
+            setDelivery(updated)
+          } else {
+            fetchDelivery()
+          }
         }
-      })
+      )
       .subscribe()
 
-    // Polling fallback: re-fetch every 10s in case realtime is unavailable
     const poll = setInterval(fetchDelivery, 10000)
 
     return () => {
       supabase.removeChannel(ch)
       clearInterval(poll)
     }
-  }, [token])
+  }, [token, fetchDelivery])
 
   if (delivery === 'loading') return (
     <div className="tr-full-center"><div className="tr-spinner" /></div>
@@ -232,7 +216,6 @@ export default function TrackingPage({ params }: { params: Promise<{ token: stri
 
   return (
     <div className="tr-wrap">
-      {/* Brand bar */}
       <div className="tr-brand-bar">
         <a className="tr-brand" href="https://lyte-app.com" target="_blank" rel="noreferrer">
           Lyte<span>app</span>
@@ -240,7 +223,6 @@ export default function TrackingPage({ params }: { params: Promise<{ token: stri
         <div className="tr-brand-label">Rastreo de pedido</div>
       </div>
 
-      {/* Hero */}
       <div className={`tr-hero${isDone ? ' done' : delivery.status === 'picked_up' ? ' route' : ''}`}>
         <HeroIcon status={delivery.status} />
         <div className="tr-hero-status">{hero.title}</div>
@@ -253,7 +235,6 @@ export default function TrackingPage({ params }: { params: Promise<{ token: stri
         )}
       </div>
 
-      {/* Customer info */}
       {(delivery.delivery_address || delivery.notes) && (
         <div className="tr-info-card">
           <div className="tr-info-name">{delivery.customer_name}</div>
@@ -269,7 +250,6 @@ export default function TrackingPage({ params }: { params: Promise<{ token: stri
         </div>
       )}
 
-      {/* Live GPS map when in transit */}
       {delivery.status === 'picked_up' && (
         <div className="tr-map-card">
           <TrackingMap
@@ -281,7 +261,6 @@ export default function TrackingPage({ params }: { params: Promise<{ token: stri
         </div>
       )}
 
-      {/* Cancelled */}
       {isCancelled && (
         <div className="tr-cancelled-card">
           <svg viewBox="0 0 20 20" fill="#DC2626" width="20" height="20" style={{ flexShrink: 0 }}>
@@ -291,14 +270,12 @@ export default function TrackingPage({ params }: { params: Promise<{ token: stri
         </div>
       )}
 
-      {/* 4-step progress */}
       {!isCancelled && (
         <div className="tr-steps-card">
           <div className="tr-steps-title">Progreso de tu pedido</div>
           {STEPS.map((step, i) => {
             const done    = i < currentIdx
             const current = i === currentIdx
-            const future  = i > currentIdx
             return (
               <div key={step.key} className={`tr-step${done ? ' done' : current ? ' current' : ' future'}`}>
                 <div className="tr-step-left">
@@ -309,7 +286,7 @@ export default function TrackingPage({ params }: { params: Promise<{ token: stri
                       </svg>
                     )}
                     {current && <div className="tr-dot-pulse-ring" />}
-                    {future  && <span className="tr-dot-num">{i + 1}</span>}
+                    {!done && !current && <span className="tr-dot-num">{i + 1}</span>}
                   </div>
                   {i < STEPS.length - 1 && (
                     <div className={`tr-connector${done ? ' done' : ''}`} />

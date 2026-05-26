@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, Suspense } from 'react'
+import { Suspense } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import '../store.css'
@@ -18,12 +18,6 @@ function PedidoContent() {
   const waParam = searchParams.get('wa')
   const orderId = searchParams.get('id')
   const deliveryId = searchParams.get('delivery')
-
-  useEffect(() => {
-    if (waParam) {
-      window.location.href = waParam
-    }
-  }, [waParam])
 
   return (
     <div className="sf-confirm-screen">

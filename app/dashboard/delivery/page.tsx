@@ -17,7 +17,7 @@ const MapView = dynamic(() => import('./MapView'), {
 })
 
 type Tab = 'tray' | 'live' | 'today' | 'couriers' | 'zones' | 'settlements'
-type DeliveryStatus = 'ready' | 'picked_up' | 'delivered' | 'cancelled'
+type DeliveryStatus = 'preparing' | 'ready' | 'picked_up' | 'delivered' | 'cancelled'
 type TodayFilter = 'all' | 'ongoing' | 'delivered' | 'cancelled'
 
 type Driver = { id: string; name: string; phone: string | null; is_active: boolean; created_at: string }
@@ -336,8 +336,8 @@ export default function DeliveryPage() {
                 .map(del => {
                   const mins = Math.floor((Date.now() - new Date(del.created_at).getTime()) / 60000)
                   const timeStr = mins < 1 ? 'Ahora' : mins < 60 ? `${mins} min` : `${Math.floor(mins / 60)}h`
-                  const statusColor = del.status === 'delivered' ? '#1D9E75' : del.status === 'picked_up' ? '#3B82F6' : del.status === 'cancelled' ? '#94A3B8' : '#BA7517'
-                  const statusLabel = del.status === 'delivered' ? 'Entregado' : del.status === 'picked_up' ? 'En camino' : del.status === 'cancelled' ? 'Cancelado' : 'Esperando'
+                  const statusColor = del.status === 'delivered' ? '#1D9E75' : del.status === 'picked_up' ? '#3B82F6' : del.status === 'cancelled' ? '#94A3B8' : del.status === 'ready' ? '#7C3AED' : '#F59E0B'
+                  const statusLabel = del.status === 'delivered' ? 'Entregado' : del.status === 'picked_up' ? 'En camino' : del.status === 'cancelled' ? 'Cancelado' : del.status === 'ready' ? 'Listo para salir' : 'En cocina'
                   const hasLocation = del.customer_lat !== null && del.customer_lng !== null
                   const drv = del.driver as Driver | null
 
@@ -345,8 +345,8 @@ export default function DeliveryPage() {
                     <div
                       key={del.id}
                       className={`dv-tray-card${del.status === 'delivered' || del.status === 'cancelled' ? ' done' : ''}`}
-                      onClick={() => del.status === 'ready' || del.status === 'picked_up' ? setQrDel(del) : undefined}
-                      style={{ cursor: del.status === 'ready' || del.status === 'picked_up' ? 'pointer' : 'default' }}
+                      onClick={() => del.status === 'ready' ? setQrDel(del) : undefined}
+                      style={{ cursor: del.status === 'ready' ? 'pointer' : 'default' }}
                     >
                       <div className="dv-tray-card-top">
                         <div className="dv-tray-avatar">{del.customer_name[0].toUpperCase()}</div>
@@ -381,18 +381,35 @@ export default function DeliveryPage() {
                         </div>
                       )}
 
-                      {(del.status === 'ready' || del.status === 'picked_up') && (
+                      {(del.status === 'preparing' || del.status === 'ready' || del.status === 'picked_up') && (
                         <div className="dv-tray-card-footer">
-                          <button
-                            className="dv-tray-qr-btn"
-                            onClick={e => { e.stopPropagation(); setQrDel(del) }}
-                          >
-                            <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13">
-                              <path fillRule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 2V5h1v1H5zM3 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm2 2v-1h1v1H5zM13 3a1 1 0 00-1 1v3a1 1 0 001 1h3a1 1 0 001-1V4a1 1 0 00-1-1h-3zm1 2v1h1V5h-1z" clipRule="evenodd" />
-                              <path d="M11 4a1 1 0 10-2 0v1a1 1 0 002 0V4zM10 7a1 1 0 011 1v1h2a1 1 0 110 2h-3a1 1 0 01-1-1V8a1 1 0 011-1zM16 9a1 1 0 100 2 1 1 0 000-2zM9 13a1 1 0 011-1h1a1 1 0 110 2v2a1 1 0 11-2 0v-3zM7 11a1 1 0 100-2H4a1 1 0 100 2h3zM17 13a1 1 0 01-1 1h-2a1 1 0 110-2h2a1 1 0 011 1zM16 17a1 1 0 100-2h-3a1 1 0 100 2h3z" />
-                            </svg>
-                            Ver QR
-                          </button>
+                          {del.status === 'preparing' && (
+                            <button
+                              className="dv-tray-qr-btn"
+                              style={{ background: '#F59E0B' }}
+                              onClick={e => { e.stopPropagation(); updateStatus(del, 'ready') }}
+                            >
+                              <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+                              </svg>
+                              Marcar listo
+                            </button>
+                          )}
+                          {del.status === 'ready' && (
+                            <button
+                              className="dv-tray-qr-btn"
+                              onClick={e => { e.stopPropagation(); setQrDel(del) }}
+                            >
+                              <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13">
+                                <path fillRule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 2V5h1v1H5zM3 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm2 2v-1h1v1H5zM13 3a1 1 0 00-1 1v3a1 1 0 001 1h3a1 1 0 001-1V4a1 1 0 00-1-1h-3zm1 2v1h1V5h-1z" clipRule="evenodd" />
+                                <path d="M11 4a1 1 0 10-2 0v1a1 1 0 002 0V4zM10 7a1 1 0 011 1v1h2a1 1 0 110 2h-3a1 1 0 01-1-1V8a1 1 0 011-1zM16 9a1 1 0 100 2 1 1 0 000-2zM9 13a1 1 0 011-1h1a1 1 0 110 2v2a1 1 0 11-2 0v-3zM7 11a1 1 0 100-2H4a1 1 0 100 2h3zM17 13a1 1 0 01-1 1h-2a1 1 0 110-2h2a1 1 0 011 1zM16 17a1 1 0 100-2h-3a1 1 0 100 2h3z" />
+                              </svg>
+                              QR para despachador
+                            </button>
+                          )}
+                          {del.status === 'picked_up' && (
+                            <span style={{ fontSize: 11, fontWeight: 600, color: '#3B82F6' }}>En camino</span>
+                          )}
                           <a
                             href={`/delivery/${del.id}`}
                             target="_blank"

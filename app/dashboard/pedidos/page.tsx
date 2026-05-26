@@ -247,6 +247,14 @@ export default function PedidosPage() {
     })
   }
 
+  function toggleSelectAll() {
+    if (selectedOrders.size === filtered.length && filtered.length > 0) {
+      setSelectedOrders(new Set())
+    } else {
+      setSelectedOrders(new Set(filtered.map(o => o.id)))
+    }
+  }
+
   async function bulkSetStatus(status: OrderStatus) {
     const ids = Array.from(selectedOrders)
     if (!ids.length) return
@@ -367,7 +375,7 @@ export default function PedidosPage() {
   }
 
   return (
-    <div>
+    <div style={{ paddingBottom: 80 }}>
       <div className="pd-header">
         <div className="pd-header-left">
           <div className="pd-count">{filtered.length} {filtered.length === 1 ? t('orders.status.pending').toLowerCase() : t('orders.filter.all').toLowerCase()}</div>
@@ -471,34 +479,42 @@ export default function PedidosPage() {
         </div>
       )}
 
-      {selectedOrders.size > 0 && (
-        <div className="pd-bulk-bar">
-          <span className="pd-bulk-count">{selectedOrders.size} seleccionado{selectedOrders.size !== 1 ? 's' : ''}</span>
-          <select
-            className="pd-bulk-select"
-            defaultValue=""
-            onChange={e => {
-              const val = e.target.value as OrderStatus
-              if (val) { bulkSetStatus(val); e.target.value = '' }
-            }}
-          >
-            <option value="" disabled>Cambiar estado...</option>
-            <option value="confirmed">Recibido</option>
-            <option value="processing">En proceso</option>
-            <option value="ready">Listo</option>
-            <option value="delivered">Entregado</option>
-            <option value="cancelled">Cancelar</option>
-          </select>
-          <button className="pd-bulk-btn delete" onClick={() => deleteOrders(Array.from(selectedOrders))}>
-            Eliminar
-          </button>
-          <button className="pd-bulk-clear" onClick={() => setSelectedOrders(new Set())}>
-            <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
-              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
-          </button>
-        </div>
-      )}
+      <div className="pd-bulk-bar">
+        <button
+          className={`pd-bulk-select-all${selectedOrders.size > 0 && selectedOrders.size === filtered.length ? ' active' : ''}`}
+          onClick={toggleSelectAll}
+        >
+          {selectedOrders.size > 0 && selectedOrders.size === filtered.length ? 'Deseleccionar' : 'Seleccionar todos'}
+        </button>
+        {selectedOrders.size > 0 && (
+          <>
+            <span className="pd-bulk-count">{selectedOrders.size} seleccionado{selectedOrders.size !== 1 ? 's' : ''}</span>
+            <select
+              className="pd-bulk-select"
+              defaultValue=""
+              onChange={e => {
+                const val = e.target.value as OrderStatus
+                if (val) { bulkSetStatus(val); e.target.value = '' }
+              }}
+            >
+              <option value="" disabled>Cambiar estado...</option>
+              <option value="confirmed">Recibido</option>
+              <option value="processing">En proceso</option>
+              <option value="ready">Listo</option>
+              <option value="delivered">Entregado</option>
+              <option value="cancelled">Cancelar</option>
+            </select>
+            <button className="pd-bulk-btn delete" onClick={() => deleteOrders(Array.from(selectedOrders))}>
+              Eliminar
+            </button>
+            <button className="pd-bulk-clear" onClick={() => setSelectedOrders(new Set())}>
+              <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </>
+        )}
+      </div>
 
       {filtered.length === 0 ? (
         <div className="pd-empty">

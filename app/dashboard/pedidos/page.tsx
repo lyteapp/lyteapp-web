@@ -71,6 +71,11 @@ const NEXT_STATUS: Partial<Record<OrderStatus, { status: OrderStatus; tKey?: Tra
   ready:      { status: 'delivered',  tKey: 'orders.action.deliver', cls: 'deliver' },
 }
 
+const DELIVERY_STATUS_MAP: Partial<Record<string, string>> = {
+  confirmed: 'preparing', processing: 'preparing',
+  ready: 'ready', delivered: 'delivered', cancelled: 'cancelled',
+}
+
 function fmt(n: number) {
   return '$' + n.toFixed(2)
 }
@@ -89,6 +94,7 @@ export default function PedidosPage() {
   const [displayOrders, setDisplayOrders] = useState<DisplayOrder[]>([])
   const [displayLoading, setDisplayLoading] = useState(false)
   const displayModeRef = useRef(false)
+  const bcChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
 
   const loadOrders = useCallback(async (sid: string) => {
     const { data } = await supabase
@@ -118,6 +124,13 @@ export default function PedidosPage() {
   }, [user, loadOrders])
 
   useEffect(() => { displayModeRef.current = displayMode }, [displayMode])
+
+  useEffect(() => {
+    const ch = supabase.channel('kitchen-updates')
+    ch.subscribe()
+    bcChannelRef.current = ch
+    return () => { supabase.removeChannel(ch); bcChannelRef.current = null }
+  }, [])
 
   useEffect(() => {
     if (!storeId) return
@@ -187,15 +200,23 @@ export default function PedidosPage() {
       .eq('order_id', orderId)
       .eq('is_customer_order', true)
       .maybeSingle()
-    if (del) await supabase.from('deliveries').update({ status: toStatus }).eq('id', del.id)
+    if (!del) return
+    await supabase.from('deliveries').update({ status: toStatus }).eq('id', del.id)
+    bcChannelRef.current?.send({
+      type: 'broadcast',
+      event: 'delivery-status',
+      payload: { deliveryId: del.id, status: toStatus },
+    })
   }
 
   async function updateStatus(orderId: string, status: OrderStatus) {
     setUpdating(orderId)
-    await supabase.from('orders').update({ status }).eq('id', orderId)
+    const deliveryStatus = DELIVERY_STATUS_MAP[status]
+    await Promise.all([
+      supabase.from('orders').update({ status }).eq('id', orderId),
+      deliveryStatus ? syncDelivery(orderId, deliveryStatus) : Promise.resolve(),
+    ])
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o))
-    if (status === 'confirmed') await syncDelivery(orderId, 'preparing')
-    if (status === 'ready')     await syncDelivery(orderId, 'ready')
     setUpdating(null)
   }
 
@@ -214,9 +235,11 @@ export default function PedidosPage() {
   }
 
   async function updateDisplayStatus(orderId: string, status: string) {
-    await supabase.from('orders').update({ status }).eq('id', orderId)
-    if (status === 'confirmed') await syncDelivery(orderId, 'preparing')
-    if (status === 'ready')     await syncDelivery(orderId, 'ready')
+    const deliveryStatus = DELIVERY_STATUS_MAP[status]
+    await Promise.all([
+      supabase.from('orders').update({ status }).eq('id', orderId),
+      deliveryStatus ? syncDelivery(orderId, deliveryStatus) : Promise.resolve(),
+    ])
     if (['completed', 'cancelled', 'delivered'].includes(status)) {
       setDisplayOrders(prev => prev.filter(o => o.id !== orderId))
     } else {

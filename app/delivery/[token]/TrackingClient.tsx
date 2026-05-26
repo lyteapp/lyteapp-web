@@ -119,22 +119,31 @@ export default function TrackingClient({
 
   useEffect(() => {
     if (!token) return
+
     const ch = supabase.channel(`track-${token}`)
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'deliveries', filter: `id=eq.${token}` },
         (payload) => {
           const updated = payload.new as Delivery
-          if (updated.customer_name) {
-            setDelivery(updated)
-          } else {
-            fetchDelivery()
-          }
+          if (updated.customer_name) setDelivery(updated)
+          else fetchDelivery()
         }
       )
       .subscribe()
+
+    const bcCh = supabase.channel('kitchen-updates')
+      .on('broadcast', { event: 'delivery-status' }, ({ payload }) => {
+        if (payload?.deliveryId === token) fetchDelivery()
+      })
+      .subscribe()
+
     const poll = setInterval(fetchDelivery, 3000)
-    return () => { supabase.removeChannel(ch); clearInterval(poll) }
+    return () => {
+      supabase.removeChannel(ch)
+      supabase.removeChannel(bcCh)
+      clearInterval(poll)
+    }
   }, [token, fetchDelivery])
 
   if (!delivery) return (

@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const admin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { persistSession: false } }
-)
-
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -16,12 +10,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
     }
 
-    const { data: store } = await admin.from('stores').select('id').eq('id', store_id).maybeSingle()
-    if (!store) {
-      return NextResponse.json({ error: 'Tienda no encontrada' }, { status: 404 })
-    }
+    // Use anon key — RLS policy deliveries_customer_insert allows this insert
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+      { auth: { persistSession: false } }
+    )
 
-    const { data, error } = await admin.from('deliveries').insert({
+    const { data, error } = await supabase.from('deliveries').insert({
       ...(id ? { id } : {}),
       store_id,
       order_id: order_id ?? null,
@@ -41,7 +37,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ id: data.id })
-  } catch {
-    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+  } catch (err) {
+    return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 }

@@ -36,6 +36,7 @@ const TR_SIZES = [
 ]
 
 interface TrackingConfig {
+  mode: 'status' | 'location'
   accentColor: string
   bgColor: string
   fontFamily: string
@@ -43,6 +44,7 @@ interface TrackingConfig {
 }
 
 const DEFAULT_TR_CONFIG: TrackingConfig = {
+  mode: 'status',
   accentColor: '#7C3AED',
   bgColor: '#F1EFE9',
   fontFamily: 'system',
@@ -205,7 +207,7 @@ export default function Apariencia() {
             fontFamily: previewFont,
           }}>
 
-            {/* brand bar */}
+            {/* brand bar — shared */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
               <span style={{ fontSize: fs(15), fontWeight: 800, color: '#0F172A', letterSpacing: '-0.04em' }}>
                 Lyte<span style={{ color: trConfig.accentColor }}>app</span>
@@ -214,6 +216,49 @@ export default function Apariencia() {
                 Rastreo de pedido
               </span>
             </div>
+
+            {/* ── Location mode preview ── */}
+            {trConfig.mode === 'location' && (<>
+              <div style={{ flex: 1, borderRadius: 14, overflow: 'hidden', position: 'relative', minHeight: 320, background: '#DCE8F5' }}>
+                {/* map grid */}
+                <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(180,200,230,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(180,200,230,0.5) 1px, transparent 1px)', backgroundSize: '22px 22px' }} />
+                {/* road H */}
+                <div style={{ position: 'absolute', top: '42%', left: 0, right: 0, height: 9, background: 'rgba(255,255,255,0.75)' }} />
+                {/* road V */}
+                <div style={{ position: 'absolute', left: '38%', top: 0, bottom: 0, width: 9, background: 'rgba(255,255,255,0.75)' }} />
+                {/* driver pin */}
+                <div style={{ position: 'absolute', top: '40%', left: '37%', transform: 'translate(-50%, -50%)' }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: trConfig.accentColor, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 0 6px ${trConfig.accentColor}33` }}>
+                    <svg viewBox="0 0 20 20" fill="white" width="14" height="14">
+                      <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+                      <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3z" />
+                    </svg>
+                  </div>
+                </div>
+                {/* destination pin */}
+                <div style={{ position: 'absolute', top: '66%', left: '62%', transform: 'translate(-50%, -100%)' }}>
+                  <div style={{ width: 18, height: 18, borderRadius: '50% 50% 50% 0', background: '#10B981', transform: 'rotate(-45deg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'white', transform: 'rotate(45deg)' }} />
+                  </div>
+                </div>
+                {/* coming soon overlay */}
+                <div style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.45)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  <div style={{ background: 'white', borderRadius: 100, padding: '6px 16px', fontSize: 11, fontWeight: 700, color: '#0F172A', letterSpacing: '-0.01em' }}>
+                    Proximamente
+                  </div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.8)', textAlign: 'center', maxWidth: 160, lineHeight: 1.4 }}>
+                    Rastreo GPS en tiempo real
+                  </div>
+                </div>
+              </div>
+              <div style={{ background: 'white', borderRadius: 14, padding: '12px 14px', boxShadow: '0 2px 10px rgba(15,23,42,0.05)' }}>
+                <div style={{ fontSize: fs(12), fontWeight: 700, color: '#0F172A', marginBottom: 3 }}>Tu pedido esta en camino</div>
+                <div style={{ fontSize: fs(10), color: '#64748B' }}>El despachador va hacia tu ubicacion</div>
+              </div>
+            </>)}
+
+            {/* ── Status mode preview ── */}
+            {trConfig.mode === 'status' && (<>
 
             {/* hero card */}
             <div style={{ background: 'white', borderRadius: 18, padding: '18px 14px', textAlign: 'center', boxShadow: '0 4px 20px rgba(15,23,42,0.08)' }}>
@@ -285,6 +330,8 @@ export default function Apariencia() {
             <div style={{ textAlign: 'center', fontSize: fs(9), color: '#94A3B8', marginTop: 4 }}>
               Powered by <strong style={{ color: '#64748B' }}>LyteApp</strong>
             </div>
+
+            </>)}
           </div>
 
           {/* home bar */}
@@ -309,6 +356,44 @@ export default function Apariencia() {
         <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid rgba(15,23,42,0.07)', flexShrink: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: '#0F172A', letterSpacing: '-0.02em' }}>Rastreo de pedido</div>
           <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 3 }}>Personaliza la pagina de seguimiento del cliente</div>
+        </div>
+
+        {/* mode switch */}
+        <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(15,23,42,0.07)', flexShrink: 0 }}>
+          <div className="cn-label" style={{ marginBottom: 8 }}>Estilo de rastreo</div>
+          <div style={{ display: 'flex', background: '#F1F5F9', borderRadius: 10, padding: 3, gap: 2 }}>
+            {([
+              { id: 'status',   label: 'Estatus', icon: (
+                <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13">
+                  <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 6a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2zm0 6a1 1 0 011-1h6a1 1 0 010 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                </svg>
+              )},
+              { id: 'location', label: 'Ubicacion', icon: (
+                <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13">
+                  <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                </svg>
+              )},
+            ] as const).map(opt => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setTrConfig(p => ({ ...p, mode: opt.id }))}
+                style={{
+                  flex: 1, padding: '8px 0', borderRadius: 8, border: 'none', cursor: 'pointer',
+                  background: trConfig.mode === opt.id ? 'white' : 'transparent',
+                  boxShadow: trConfig.mode === opt.id ? '0 1px 4px rgba(15,23,42,0.1)' : 'none',
+                  fontSize: 12, fontWeight: 600,
+                  color: trConfig.mode === opt.id ? '#0F172A' : '#94A3B8',
+                  fontFamily: 'var(--font-geist-sans), sans-serif',
+                  transition: 'all 0.15s',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                }}
+              >
+                {opt.icon}
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* scrollable tools */}

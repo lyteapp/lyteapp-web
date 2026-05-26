@@ -23,6 +23,7 @@ interface Delivery {
 }
 
 interface TrackingConfig {
+  mode?: 'status' | 'location'
   accentColor?: string
   bgColor?: string
   fontFamily?: string
@@ -221,6 +222,137 @@ export default function TrackingClient({
   const isCancelled = delivery.status === 'cancelled'
   const hero = HERO[delivery.status] ?? HERO.preparing
   const isDone = delivery.status === 'delivered'
+  const accent = trackingConfig?.accentColor ?? '#7C3AED'
+
+  if (trackingConfig?.mode === 'location') {
+    const tlSteps = [
+      { label: 'Recibido',   idx: 0 },
+      { label: 'Preparando', idx: 1 },
+      { label: 'Listo',      idx: 2 },
+      { label: 'En camino',  idx: 3 },
+      { label: 'Entregado',  idx: 4 },
+    ]
+    const hasGps = delivery.driver_lat != null && delivery.driver_lng != null
+    const statusDot = isCancelled ? '#EF4444' : isDone ? '#10B981' : '#1D9E75'
+    const statusLabel = isCancelled ? 'cancelado' : isDone ? 'entregado' : 'en camino'
+    const font = FONT_STACKS[trackingConfig.fontFamily ?? 'system'] ?? FONT_STACKS.system
+
+    return (
+      <div style={{ ...cssVars, position: 'relative', height: '100dvh', overflow: 'hidden', background: '#E4EAF1', fontFamily: font }}>
+
+        {/* Map area */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '56%' }}>
+          {hasGps ? (
+            <TrackingMap
+              driverLat={delivery.driver_lat}
+              driverLng={delivery.driver_lng}
+              customerLat={delivery.customer_lat}
+              customerLng={delivery.customer_lng}
+            />
+          ) : (
+            <svg viewBox="0 0 480 320" preserveAspectRatio="xMidYMid slice" style={{ width: '100%', height: '100%' }}>
+              <rect width="480" height="320" fill="#E4EAF1"/>
+              <polygon points="0,120 120,100 200,180 80,220" fill="#D9E8C8" opacity="0.5"/>
+              <polygon points="320,20 480,0 480,140 360,120" fill="#D9E8C8" opacity="0.5"/>
+              <path d="M -20 80 L 100 70 L 200 90 L 320 60 L 460 100" stroke="white" strokeWidth="32" fill="none" strokeLinecap="round"/>
+              <path d="M -20 200 L 90 190 L 220 220 L 360 200 L 480 230" stroke="#FFEBC2" strokeWidth="28" fill="none" strokeLinecap="round"/>
+              <path d="M 80 -20 L 95 80 L 110 200 L 125 320" stroke="white" strokeWidth="22" fill="none" strokeLinecap="round"/>
+              <path d="M 220 -20 L 230 80 L 240 200 L 250 320" stroke="#FFEBC2" strokeWidth="26" fill="none" strokeLinecap="round"/>
+              <path d="M 350 -20 L 360 60 L 370 200 L 380 320" stroke="white" strokeWidth="22" fill="none" strokeLinecap="round"/>
+              <rect x="40" y="100" width="50" height="40" rx="3" fill="#F1ECE0" opacity="0.7"/>
+              <rect x="140" y="110" width="60" height="50" rx="3" fill="#F1ECE0" opacity="0.6"/>
+              <rect x="270" y="100" width="50" height="40" rx="3" fill="#F1ECE0" opacity="0.7"/>
+              <path d="M 110 210 Q 180 225 235 245 Q 280 265 320 275 L 360 290" stroke={accent} strokeWidth="5" fill="none" strokeLinecap="round" strokeDasharray="10 6" opacity="0.85"/>
+              <circle cx="320" cy="270" r="9" fill={accent} stroke="white" strokeWidth="2.5"/>
+            </svg>
+          )}
+        </div>
+
+        {/* Header gradient */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '48px 20px 40px', background: `linear-gradient(180deg, ${accent}F2 0%, ${accent}B3 60%, transparent 100%)`, zIndex: 5 }}>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 400, marginBottom: 4 }}>Tu pedido</div>
+          <div style={{ fontSize: 18, color: 'white', fontWeight: 700 }}>{delivery.customer_name}</div>
+          {delivery.delivery_address && (
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>{delivery.delivery_address}</div>
+          )}
+        </div>
+
+        {/* GPS badge */}
+        {hasGps && (
+          <div style={{ position: 'absolute', top: 160, right: 16, zIndex: 6, background: 'white', padding: '6px 10px', borderRadius: 100, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 500, color: '#475569', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#1D9E75', flexShrink: 0 }} />
+            Ubicacion en vivo
+          </div>
+        )}
+
+        {/* Map bottom fade */}
+        <div style={{ position: 'absolute', top: 'calc(56% - 60px)', left: 0, right: 0, height: 70, background: 'linear-gradient(transparent, #F5F3EF)', zIndex: 4 }} />
+
+        {/* Bottom sheet */}
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '47%', background: '#F5F3EF', borderRadius: '24px 24px 0 0', zIndex: 10, overflowY: 'auto', scrollbarWidth: 'none' as const }}>
+          <div style={{ width: 36, height: 4, background: 'rgba(15,23,42,0.15)', borderRadius: 100, margin: '12px auto 0' }} />
+
+          {/* Status */}
+          <div style={{ padding: '14px 20px 10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: statusDot, flexShrink: 0 }} />
+              <span style={{ fontSize: 11, color: statusDot, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>{statusLabel}</span>
+            </div>
+            <div style={{ fontSize: 20, fontWeight: 600, color: '#0F172A', letterSpacing: '-0.5px', lineHeight: 1.2, marginBottom: 4 }}>{hero.title}</div>
+            <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.5 }}>{hero.sub}</div>
+          </div>
+
+          {/* Horizontal timeline */}
+          <div style={{ padding: '8px 20px 14px', display: 'flex', alignItems: 'flex-start' }}>
+            {tlSteps.map(({ label, idx }, i, arr) => {
+              const done   = idx < currentIdx
+              const active = idx === currentIdx
+              return (
+                <div key={label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div style={{ width: '100%', display: 'flex', alignItems: 'center' }}>
+                    {i > 0 && <div style={{ flex: 1, height: 2, background: done ? accent : 'rgba(148,163,184,0.3)' }} />}
+                    <div style={{ width: 9, height: 9, borderRadius: '50%', flexShrink: 0, background: (done || active) ? accent : '#CBD5E1', boxShadow: active ? `0 0 0 3px ${accent}33` : 'none' }} />
+                    {i < arr.length - 1 && <div style={{ flex: 1, height: 2, background: done ? accent : 'rgba(148,163,184,0.3)' }} />}
+                  </div>
+                  <span style={{ fontSize: 9, marginTop: 4, textAlign: 'center' as const, lineHeight: 1.2, color: active ? accent : done ? '#475569' : '#94A3B8', fontWeight: active ? 700 : 400 }}>{label}</span>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Address card */}
+          {delivery.delivery_address && (
+            <div style={{ margin: '0 16px 10px', background: 'white', borderRadius: 14, padding: '12px 16px', display: 'flex', alignItems: 'flex-start', gap: 10, border: '0.5px solid rgba(15,23,42,0.08)' }}>
+              <div style={{ width: 32, height: 32, borderRadius: 9, background: accent + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg viewBox="0 0 20 20" fill={accent} width="14" height="14">
+                  <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 2 }}>Direccion de entrega</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', lineHeight: 1.4 }}>{delivery.delivery_address}</div>
+              </div>
+            </div>
+          )}
+
+          {/* Notes */}
+          {delivery.notes && (
+            <div style={{ margin: '0 16px 10px', background: 'white', borderRadius: 14, padding: '12px 16px', border: '0.5px solid rgba(15,23,42,0.08)' }}>
+              <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 2 }}>Nota del pedido</div>
+              <div style={{ fontSize: 13, color: '#0F172A', lineHeight: 1.4 }}>"{delivery.notes}"</div>
+            </div>
+          )}
+
+          {/* Footer */}
+          <div style={{ textAlign: 'center', padding: '8px 0 24px', fontSize: 11, color: '#94A3B8' }}>
+            <a href="https://lyte-app.com" target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>
+              Powered by <strong style={{ color: '#64748B' }}>LyteApp</strong>
+            </a>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="tr-wrap" style={cssVars}>

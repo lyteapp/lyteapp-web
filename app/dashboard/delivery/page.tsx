@@ -1189,21 +1189,20 @@ export default function DeliveryPage() {
               <button className="dv-close-btn" onClick={() => setQrDriver(null)}>✕</button>
             </div>
             <div className="dv-qr-body">
-              <div className="dv-qr-display" style={{ padding: 16 }}>
-                <div style={{ textAlign: 'center', marginBottom: 10, fontSize: 11, fontWeight: 600, color: 'var(--dv-ink-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  Escanear para activar GPS
-                </div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--dv-ink-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
+                Escanear para activar GPS
+              </div>
+              <div className="dv-qr-display">
                 <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(`${BASE_URL}/driver/${qrDriver.id}`)}&margin=10&color=0F172A&bgcolor=FFFFFF`}
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(`${BASE_URL}/driver/${qrDriver.id}`)}&margin=10&color=0F172A&bgcolor=FFFFFF`}
                   alt="QR Code"
-                  style={{ display: 'block', margin: '0 auto' }}
                 />
-                <div style={{ textAlign: 'center', marginTop: 12, fontSize: 16, fontWeight: 700, color: 'var(--dv-ink)', letterSpacing: '-0.3px' }}>
-                  {qrDriver.name}
-                </div>
+              </div>
+              <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--dv-ink)', letterSpacing: '-0.3px', marginBottom: 10 }}>
+                {qrDriver.name}
               </div>
               <p className="dv-qr-hint">
-                El despachador escanea este codigo con su telefono para activar el rastreo GPS en tiempo real. El cliente vera su ubicacion en el link de seguimiento.
+                El despachador escanea este codigo con su telefono para activar el rastreo GPS en tiempo real. El cliente vera su ubicacion en vivo.
               </p>
               <div className="dv-qr-url">{`${BASE_URL}/driver/${qrDriver.id}`}</div>
             </div>

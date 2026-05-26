@@ -288,15 +288,17 @@ export default function PedidosPage() {
 
   async function updateDisplayStatus(orderId: string, status: string) {
     setDisplayUpdating(orderId)
-    const deliveryStatus = DELIVERY_STATUS_MAP[status]
-    const { error } = await supabase.from('orders').update({ status }).eq('id', orderId)
-    if (deliveryStatus) syncDelivery(orderId, deliveryStatus).catch(() => {})
-    setDisplayUpdating(null)
-    if (error) return
-    if (['completed', 'cancelled', 'delivered'].includes(status)) {
-      setDisplayOrders(prev => prev.filter(o => o.id !== orderId))
-    } else {
-      setDisplayOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o))
+    try {
+      const deliveryStatus = DELIVERY_STATUS_MAP[status]
+      await supabase.from('orders').update({ status }).eq('id', orderId)
+      if (deliveryStatus) syncDelivery(orderId, deliveryStatus).catch(() => {})
+      if (['completed', 'cancelled', 'delivered'].includes(status)) {
+        setDisplayOrders(prev => prev.filter(o => o.id !== orderId))
+      } else {
+        setDisplayOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o))
+      }
+    } finally {
+      setDisplayUpdating(null)
     }
   }
 

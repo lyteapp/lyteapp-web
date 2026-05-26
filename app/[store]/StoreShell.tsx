@@ -340,8 +340,9 @@ export default function StoreShell({ store, products, categories = [] }: { store
         '', `Rastrea tu pedido en tiempo real: https://lyte-app.com/delivery/${newDeliveryId}`,
       ]
 
-      // Fire-and-forget: create delivery record with pre-generated ID
-      fetch('/api/delivery', {
+      // Create delivery BEFORE navigating — fire-and-forget cancels on mobile
+      // when browser backgrounds after WhatsApp opens
+      await fetch('/api/delivery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

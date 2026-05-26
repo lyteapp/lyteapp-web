@@ -30,7 +30,7 @@ type Tab = 'live' | 'today' | 'couriers' | 'zones' | 'settlements'
 type DeliveryStatus = 'pending' | 'preparing' | 'ready' | 'picked_up' | 'delivered' | 'cancelled'
 type TodayFilter = 'all' | 'ongoing' | 'delivered' | 'cancelled'
 
-type Driver = { id: string; name: string; phone: string | null; is_active: boolean; created_at: string }
+type Driver = { id: string; name: string; phone: string | null; is_active: boolean; created_at: string; avatar_url: string | null }
 type DriverLocation = { driver_id: string; lat: number; lng: number; is_sharing: boolean; updated_at: string }
 type Order = { id: string; customer_name: string; customer_phone: string; customer_notes: string | null; payment_method: string | null; total: number; status: string; created_at: string }
 type Delivery = {
@@ -121,6 +121,8 @@ export default function DeliveryPage() {
   const [drPhone, setDrPhone] = useState('')
   const [drSaving, setDrSaving] = useState(false)
   const [drError, setDrError]   = useState('')
+  const [drAvatarFile, setDrAvatarFile] = useState<File | null>(null)
+  const [drAvatarPreview, setDrAvatarPreview] = useState<string | null>(null)
 
   // QR modals
   const [qrDel, setQrDel]       = useState<Delivery | null>(null)
@@ -267,14 +269,31 @@ export default function DeliveryPage() {
     if (!storeId || !drName.trim()) return
     setDrSaving(true)
     setDrError('')
+
+    let avatarUrl: string | null = editDriver?.avatar_url ?? null
+
+    if (drAvatarFile) {
+      const ext  = drAvatarFile.name.split('.').pop()
+      const path = `${storeId}/drivers/${editDriver?.id ?? Date.now()}/avatar.${ext}`
+      const { error: upErr } = await supabase.storage.from('store-assets').upload(path, drAvatarFile, { upsert: true })
+      if (upErr) { setDrError(upErr.message); setDrSaving(false); return }
+      const { data: urlData } = supabase.storage.from('store-assets').getPublicUrl(path)
+      avatarUrl = urlData.publicUrl
+    }
+
     if (editDriver) {
-      const { error } = await supabase.from('delivery_drivers').update({ name: drName.trim(), phone: drPhone.trim() || null }).eq('id', editDriver.id)
+      const { error } = await supabase.from('delivery_drivers')
+        .update({ name: drName.trim(), phone: drPhone.trim() || null, avatar_url: avatarUrl })
+        .eq('id', editDriver.id)
       if (error) { setDrError(error.message); setDrSaving(false); return }
     } else {
-      const { error } = await supabase.from('delivery_drivers').insert({ store_id: storeId, name: drName.trim(), phone: drPhone.trim() || null, is_active: true })
+      const { error } = await supabase.from('delivery_drivers')
+        .insert({ store_id: storeId, name: drName.trim(), phone: drPhone.trim() || null, is_active: true, avatar_url: avatarUrl })
       if (error) { setDrError(error.message); setDrSaving(false); return }
     }
-    setDrName(''); setDrPhone(''); setEditDriver(null); setShowDriverForm(false); setDrSaving(false); setDrError('')
+
+    setDrName(''); setDrPhone(''); setEditDriver(null); setShowDriverForm(false)
+    setDrSaving(false); setDrError(''); setDrAvatarFile(null); setDrAvatarPreview(null)
     showToast(editDriver ? 'Despachador actualizado' : 'Despachador agregado')
     await loadData(storeId)
   }
@@ -668,7 +687,10 @@ export default function DeliveryPage() {
                               onClick={() => setDDriverId(drv.id)}
                               style={{ outline: dDriverId === drv.id ? '2px solid #7C3AED' : undefined }}
                             >
-                              <div className="dv-driver-row-av">{drv.name[0]}</div>
+                              {drv.avatar_url
+                                ? <img src={drv.avatar_url} alt={drv.name} className="dv-driver-row-av" style={{ objectFit: 'cover' }} />
+                                : <div className="dv-driver-row-av">{drv.name[0]}</div>
+                              }
                               <div className="dv-driver-row-info">
                                 <div className="dv-driver-row-name">
                                   {drv.name}
@@ -841,7 +863,7 @@ export default function DeliveryPage() {
             <div style={{ fontSize: 13, color: 'var(--dv-ink-soft)' }}>
               {activeDrivers.length} activos · {drivers.length - activeDrivers.length} offline
             </div>
-            <button className="dv-btn-add" onClick={() => { setDrName(''); setDrPhone(''); setEditDriver(null); setShowDriverForm(true) }}>
+            <button className="dv-btn-add" onClick={() => { setDrName(''); setDrPhone(''); setEditDriver(null); setDrAvatarFile(null); setDrAvatarPreview(null); setShowDriverForm(true) }}>
               + Agregar despachador
             </button>
           </div>
@@ -849,6 +871,37 @@ export default function DeliveryPage() {
           {showDriverForm && (
             <div className="dv-driver-form-card">
               <div className="dv-driver-form-title">{editDriver ? 'Editar despachador' : 'Nuevo despachador'}</div>
+
+              {/* Avatar upload */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
+                <label htmlFor="dr-avatar-input" style={{ cursor: 'pointer', flexShrink: 0 }}>
+                  {drAvatarPreview
+                    ? <img src={drAvatarPreview} alt="" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: '2px solid #E2E8F0' }} />
+                    : <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#F1F5F9', border: '2px dashed #CBD5E1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg viewBox="0 0 20 20" fill="#94A3B8" width="20" height="20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"/></svg>
+                      </div>
+                  }
+                </label>
+                <input
+                  id="dr-avatar-input"
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={e => {
+                    const f = e.target.files?.[0]
+                    if (!f) return
+                    setDrAvatarFile(f)
+                    setDrAvatarPreview(URL.createObjectURL(f))
+                  }}
+                />
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dv-ink)', marginBottom: 2 }}>
+                    {drAvatarPreview ? 'Cambiar foto' : 'Agregar foto'}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--dv-ink-muted)' }}>Toca el circulo para subir</div>
+                </div>
+              </div>
+
               <div className="dv-driver-form-row">
                 <div className="dv-form-field">
                   <label className="dv-form-label">Nombre *</label>
@@ -865,7 +918,7 @@ export default function DeliveryPage() {
                 </div>
               )}
               <div className="dv-driver-form-actions">
-                <button className="dv-btn-ghost-sm" onClick={() => { setShowDriverForm(false); setDrError('') }}>Cancelar</button>
+                <button className="dv-btn-ghost-sm" onClick={() => { setShowDriverForm(false); setDrError(''); setDrAvatarFile(null); setDrAvatarPreview(null) }}>Cancelar</button>
                 <button className="dv-btn-primary-sm" onClick={saveDriver} disabled={drSaving || !drName.trim()}>
                   {drSaving ? 'Guardando...' : editDriver ? 'Guardar cambios' : 'Agregar'}
                 </button>
@@ -890,7 +943,10 @@ export default function DeliveryPage() {
                 return (
                   <div key={drv.id} className={`dv-courier-card${!drv.is_active ? ' inactive' : ''}`}>
                     <div className="dv-courier-card-head">
-                      <div className="dv-courier-card-av">{drv.name[0].toUpperCase()}</div>
+                      {drv.avatar_url
+                        ? <img src={drv.avatar_url} alt={drv.name} className="dv-courier-card-av" style={{ objectFit: 'cover' }} />
+                        : <div className="dv-courier-card-av">{drv.name[0].toUpperCase()}</div>
+                      }
                       <div className="dv-courier-card-info">
                         <h4>{drv.name}</h4>
                         <p>{drv.phone || 'Sin telefono'}</p>
@@ -923,7 +979,7 @@ export default function DeliveryPage() {
                       </div>
                     </div>
                     <div className="dv-courier-card-actions">
-                      <button onClick={() => { setEditDriver(drv); setDrName(drv.name); setDrPhone(drv.phone ?? ''); setShowDriverForm(true) }}>
+                      <button onClick={() => { setEditDriver(drv); setDrName(drv.name); setDrPhone(drv.phone ?? ''); setDrAvatarFile(null); setDrAvatarPreview(drv.avatar_url ?? null); setShowDriverForm(true) }}>
                         Editar
                       </button>
                       <button onClick={() => toggleDriver(drv)}>

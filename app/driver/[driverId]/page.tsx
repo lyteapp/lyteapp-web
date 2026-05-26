@@ -53,7 +53,7 @@ export default async function DriverPage(
 
   const { data: driver } = await supa
     .from('delivery_drivers')
-    .select('id, name, store_id, is_active, stores(name, logo_url)')
+    .select('id, name, store_id, is_active, avatar_url, stores(name, logo_url)')
     .eq('id', driverId)
     .maybeSingle()
 
@@ -98,6 +98,7 @@ export default async function DriverPage(
     <DriverClient
       driverId={driver.id}
       driverName={driver.name}
+      driverAvatar={(driver as unknown as { avatar_url: string | null }).avatar_url ?? null}
       storeId={storeId}
       storeName={(driver.stores as unknown as { name: string; logo_url: string | null } | null)?.name ?? ''}
       storeLogo={(driver.stores as unknown as { name: string; logo_url: string | null } | null)?.logo_url ?? null}

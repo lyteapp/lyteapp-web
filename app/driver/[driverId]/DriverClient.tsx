@@ -7,6 +7,7 @@ import type { AvailableOrder, ActiveDelivery } from './page'
 type Props = {
   driverId: string
   driverName: string
+  driverAvatar: string | null
   storeId: string
   storeName: string
   storeLogo: string | null
@@ -28,7 +29,7 @@ function timeAgo(iso: string) {
 }
 
 export default function DriverClient({
-  driverId, driverName, storeId, storeName, storeLogo,
+  driverId, driverName, driverAvatar, storeId, storeName, storeLogo,
   initialOrders, initialDelivery,
 }: Props) {
   const [orders, setOrders]             = useState<AvailableOrder[]>(initialOrders)
@@ -241,6 +242,9 @@ export default function DriverClient({
           ? <img src={storeLogo} alt={storeName} className="dsp-logo" />
           : <div className="dsp-logo-av">{storeName[0]?.toUpperCase()}</div>
         }
+        {driverAvatar && (
+          <img src={driverAvatar} alt={driverName} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '2px solid #E2E8F0' }} />
+        )}
         <div className="dsp-header-info">
           <div className="dsp-store">{storeName}</div>
           <div className="dsp-name">{driverName}</div>

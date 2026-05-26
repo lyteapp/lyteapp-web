@@ -21,7 +21,7 @@ export async function generateMetadata(
     .eq('id', driverId)
     .maybeSingle()
   if (!data) return { title: 'Despachador no encontrado' }
-  const store = (data.stores as { name: string } | null)?.name ?? ''
+  const store = (data.stores as unknown as { name: string } | null)?.name ?? ''
   return { title: `${data.name} · ${store}` }
 }
 
@@ -43,8 +43,8 @@ export default async function DriverPage(
       driverId={driver.id}
       driverName={driver.name}
       storeId={driver.store_id}
-      storeName={(driver.stores as { name: string; logo_url: string | null } | null)?.name ?? ''}
-      storeLogo={(driver.stores as { name: string; logo_url: string | null } | null)?.logo_url ?? null}
+      storeName={(driver.stores as unknown as { name: string; logo_url: string | null } | null)?.name ?? ''}
+      storeLogo={(driver.stores as unknown as { name: string; logo_url: string | null } | null)?.logo_url ?? null}
     />
   )
 }

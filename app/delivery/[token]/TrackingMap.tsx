@@ -72,8 +72,10 @@ export default function TrackingMap({ driverLat, driverLng, customerLat, custome
       scrollWheelZoom={false}
     >
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; <a href="https://carto.com/attributions">CARTO</a>'
+        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+        subdomains="abcd"
+        maxZoom={20}
       />
       <Marker position={[driverLat, driverLng]} icon={driverIcon}>
         <Popup>Tu pedido en camino</Popup>

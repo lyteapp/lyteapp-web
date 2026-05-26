@@ -16,6 +16,16 @@ const MapView = dynamic(() => import('./MapView'), {
   ),
 })
 
+const ZonesMap = dynamic(() => import('./ZonesMap'), {
+  ssr: false,
+  loading: () => (
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#E8EEF4', flexDirection: 'column', gap: 10 }}>
+      <div style={{ width: 24, height: 24, borderRadius: '50%', border: '3px solid rgba(124,58,237,0.15)', borderTopColor: '#7C3AED', animation: 'dbSpin 0.8s linear infinite' }} />
+      <span style={{ fontSize: 12, color: '#9CA3AF' }}>Cargando mapa...</span>
+    </div>
+  ),
+})
+
 type Tab = 'live' | 'today' | 'couriers' | 'zones' | 'settlements'
 type DeliveryStatus = 'pending' | 'preparing' | 'ready' | 'picked_up' | 'delivered' | 'cancelled'
 type TodayFilter = 'all' | 'ongoing' | 'delivered' | 'cancelled'
@@ -31,15 +41,18 @@ type Delivery = {
   customer_lat: number | null; customer_lng: number | null; is_customer_order: boolean | null
   driver?: Driver | null
 }
+type Zone = { id: string; name: string; fee: number; color: string; radius_m: number; center_lat: number; center_lng: number }
 
 const BASE_URL = 'https://lyte-app.com'
 const pickupUrl = (id: string) => `${BASE_URL}/pickup/${id}`
-const STATIC_ZONES = [
-  { id: 'z1', name: 'Las Mercedes', fee: 4.00, color: '#7C3AED', type: 'Tarifa plana' },
-  { id: 'z2', name: 'Chacao',       fee: 5.00, color: '#1D9E75', type: 'Tarifa plana' },
-  { id: 'z3', name: 'El Rosal',     fee: 4.50, color: '#EF9F27', type: 'Solo pick-up' },
-  { id: 'z4', name: 'El Hatillo',   fee: 5.50, color: '#D85A30', type: 'Por distancia' },
-  { id: 'z5', name: 'Altamira',     fee: 5.00, color: '#534AB7', type: 'Tarifa plana' },
+const ZONE_COLORS = ['#7C3AED', '#2563EB', '#059669', '#DC2626', '#D97706', '#DB2777', '#0F172A', '#64748B']
+const RADIUS_PRESETS = [
+  { label: '500m', value: 500 },
+  { label: '1 km', value: 1000 },
+  { label: '2 km', value: 2000 },
+  { label: '3 km', value: 3000 },
+  { label: '5 km', value: 5000 },
+  { label: '10 km', value: 10000 },
 ]
 
 function timeAgo(iso: string) {
@@ -88,6 +101,19 @@ export default function DeliveryPage() {
   // Today tab
   const [todayFilter, setTodayFilter] = useState<TodayFilter>('all')
 
+  // Zones tab
+  const [zones, setZones]               = useState<Zone[]>([])
+  const [showZoneForm, setShowZoneForm] = useState(false)
+  const [editZone, setEditZone]         = useState<Zone | null>(null)
+  const [zName, setZName]               = useState('')
+  const [zFee, setZFee]                 = useState('')
+  const [zColor, setZColor]             = useState('#7C3AED')
+  const [zRadius, setZRadius]           = useState(2000)
+  const [zCenter, setZCenter]           = useState<[number, number] | null>(null)
+  const [zUserPos, setZUserPos]         = useState<[number, number] | null>(null)
+  const [zSaving, setZSaving]           = useState(false)
+  const [zError, setZError]             = useState('')
+
   // Couriers tab
   const [showDriverForm, setShowDriverForm] = useState(false)
   const [editDriver, setEditDriver]         = useState<Driver | null>(null)
@@ -117,18 +143,20 @@ export default function DeliveryPage() {
   }
 
   const loadData = useCallback(async (sid: string) => {
-    const [{ data: dels }, { data: drvs }, { data: orders }, { data: dispatched }, { data: locs }] = await Promise.all([
+    const [{ data: dels }, { data: drvs }, { data: orders }, { data: dispatched }, { data: locs }, { data: zns }] = await Promise.all([
       supabase.from('deliveries').select('*, driver:driver_id(id,name,phone,is_active)').eq('store_id', sid).order('created_at', { ascending: false }).limit(300),
       supabase.from('delivery_drivers').select('*').eq('store_id', sid).order('name'),
       supabase.from('orders').select('id,customer_name,customer_phone,customer_notes,payment_method,total,status,created_at').eq('store_id', sid).eq('status', 'ready').order('created_at', { ascending: false }),
       supabase.from('deliveries').select('order_id').eq('store_id', sid).not('order_id', 'is', null),
       supabase.from('driver_locations').select('*').eq('store_id', sid),
+      supabase.from('delivery_zones').select('*').eq('store_id', sid).order('created_at'),
     ])
     const dispatchedIds = new Set((dispatched ?? []).map((d: { order_id: string }) => d.order_id))
     setDeliveries((dels as Delivery[]) ?? [])
     setDrivers(drvs ?? [])
     setReadyOrders((orders ?? []).filter((o: Order) => !dispatchedIds.has(o.id)))
     setDriverLocations((locs as DriverLocation[]) ?? [])
+    setZones((zns as Zone[]) ?? [])
   }, [])
 
   useEffect(() => {
@@ -259,6 +287,44 @@ export default function DeliveryPage() {
     if (!confirm('Eliminar despachador?')) return
     await supabase.from('delivery_drivers').delete().eq('id', id)
     setDrivers(p => p.filter(d => d.id !== id))
+  }
+
+  function openZoneForm(zone?: Zone) {
+    if (zone) {
+      setEditZone(zone); setZName(zone.name); setZFee(String(zone.fee))
+      setZColor(zone.color); setZRadius(zone.radius_m)
+      setZCenter([zone.center_lat, zone.center_lng])
+    } else {
+      setEditZone(null); setZName(''); setZFee(''); setZColor('#7C3AED')
+      setZRadius(2000); setZCenter(zUserPos)
+    }
+    setZError(''); setShowZoneForm(true)
+  }
+
+  async function saveZone() {
+    if (!storeId || !zName.trim()) return
+    const center = zCenter ?? zUserPos
+    if (!center) { setZError('Toca el mapa para colocar el centro de la zona'); return }
+    setZSaving(true); setZError('')
+    const payload = {
+      store_id: storeId, name: zName.trim(),
+      fee: parseFloat(zFee) || 0, color: zColor,
+      radius_m: zRadius, center_lat: center[0], center_lng: center[1],
+    }
+    const { error } = editZone
+      ? await supabase.from('delivery_zones').update(payload).eq('id', editZone.id)
+      : await supabase.from('delivery_zones').insert(payload)
+    if (error) { setZError(error.message); setZSaving(false); return }
+    setShowZoneForm(false); setEditZone(null); setZSaving(false)
+    showToast(editZone ? 'Zona actualizada' : 'Zona creada')
+    await loadData(storeId)
+  }
+
+  async function deleteZone(id: string) {
+    if (!confirm('Eliminar zona?')) return
+    await supabase.from('delivery_zones').delete().eq('id', id)
+    setZones(p => p.filter(z => z.id !== id))
+    showToast('Zona eliminada')
   }
 
   function sendWhatsApp(del: Delivery) {
@@ -871,62 +937,166 @@ export default function DeliveryPage() {
       ══════════════════════════════════════════════ */}
       <div className={`dv-view${tab === 'zones' ? ' active' : ''}`}>
         <div className="dv-zones-wrap">
+
+          {/* ── Left: zone list + form ── */}
           <div className="dv-zones-list">
             <div className="dv-zones-header">
-              <h3>Zonas de delivery</h3>
-              <button className="dv-btn-primary-sm" onClick={() => showToast('Proximamente: creacion de zonas')}>+ Nueva</button>
+              <div>
+                <h3>Zonas de delivery</h3>
+                <p style={{ fontSize: 11, color: 'var(--dv-ink-muted)', marginTop: 2 }}>{zones.length} {zones.length === 1 ? 'zona' : 'zonas'} configuradas</p>
+              </div>
+              {!showZoneForm && (
+                <button className="dv-btn-primary-sm" onClick={() => openZoneForm()}>+ Nueva zona</button>
+              )}
             </div>
-            {STATIC_ZONES.map(z => (
-              <div key={z.id} className="dv-zone-item">
-                <div className="dv-zone-item-head">
-                  <div className="dv-zone-name-row">
-                    <span className="dv-zone-color-dot" style={{ background: z.color }} />
-                    <h4>{z.name}</h4>
+
+            {/* Zone form */}
+            {showZoneForm && (
+              <div className="dv-driver-form-card" style={{ marginBottom: 14 }}>
+                <div className="dv-driver-form-title">{editZone ? 'Editar zona' : 'Nueva zona'}</div>
+
+                {/* Name + fee */}
+                <div className="dv-driver-form-row" style={{ marginBottom: 10 }}>
+                  <div className="dv-form-field">
+                    <label className="dv-form-label">Nombre *</label>
+                    <input className="dv-input" value={zName} onChange={e => setZName(e.target.value)} placeholder="Ej. Centro, Altamira..." />
+                  </div>
+                  <div className="dv-form-field">
+                    <label className="dv-form-label">Tarifa ($)</label>
+                    <input className="dv-input" value={zFee} onChange={e => setZFee(e.target.value)} type="number" min="0" step="0.50" placeholder="0.00" />
                   </div>
                 </div>
-                <div className="dv-zone-meta">
-                  <span>{z.type}</span>
-                  <span className="dv-zone-fee">${z.fee.toFixed(2)}</span>
+
+                {/* Radius */}
+                <div className="dv-form-field" style={{ marginBottom: 10 }}>
+                  <label className="dv-form-label">Radio de cobertura</label>
+                  <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                    {RADIUS_PRESETS.map(r => (
+                      <button
+                        key={r.value}
+                        type="button"
+                        onClick={() => setZRadius(r.value)}
+                        style={{
+                          padding: '5px 10px', borderRadius: 7, fontSize: 11, fontWeight: 500,
+                          border: `1px solid ${zRadius === r.value ? '#7C3AED' : 'rgba(15,23,42,0.1)'}`,
+                          background: zRadius === r.value ? '#EEF2FF' : 'white',
+                          color: zRadius === r.value ? '#4C1D95' : 'var(--dv-ink-soft)',
+                          cursor: 'pointer', fontFamily: 'inherit',
+                        }}
+                      >
+                        {r.label}
+                      </button>
+                    ))}
+                    <input
+                      type="number"
+                      min="100"
+                      step="100"
+                      value={zRadius}
+                      onChange={e => setZRadius(Number(e.target.value))}
+                      style={{ width: 70, padding: '5px 8px', borderRadius: 7, fontSize: 11, border: '1px solid rgba(15,23,42,0.1)', fontFamily: 'inherit' }}
+                      title="Radio en metros"
+                    />
+                    <span style={{ fontSize: 10, color: 'var(--dv-ink-muted)', alignSelf: 'center' }}>m</span>
+                  </div>
+                </div>
+
+                {/* Color */}
+                <div className="dv-form-field" style={{ marginBottom: 10 }}>
+                  <label className="dv-form-label">Color</label>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {ZONE_COLORS.map(c => (
+                      <div
+                        key={c}
+                        onClick={() => setZColor(c)}
+                        style={{
+                          width: 22, height: 22, borderRadius: 6, background: c, cursor: 'pointer',
+                          outline: zColor === c ? `3px solid ${c}` : 'none',
+                          outlineOffset: 2,
+                          boxShadow: zColor === c ? '0 0 0 2px white inset' : 'none',
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Center indicator */}
+                <div style={{ fontSize: 11, color: 'var(--dv-ink-muted)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  {zCenter ? (
+                    <>
+                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#1D9E75', flexShrink: 0 }} />
+                      Centro: {zCenter[0].toFixed(5)}, {zCenter[1].toFixed(5)}
+                      <button type="button" onClick={() => setZCenter(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#DC2626', fontSize: 11, padding: 0, marginLeft: 4 }}>quitar</button>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#EF9F27', flexShrink: 0 }} />
+                      Toca el mapa para colocar el centro
+                    </>
+                  )}
+                </div>
+
+                {zError && (
+                  <div style={{ marginBottom: 8, padding: '7px 10px', background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 7, fontSize: 12, color: '#DC2626' }}>
+                    {zError}
+                  </div>
+                )}
+
+                <div className="dv-driver-form-actions">
+                  <button className="dv-btn-ghost-sm" onClick={() => { setShowZoneForm(false); setZError('') }}>Cancelar</button>
+                  <button className="dv-btn-primary-sm" onClick={saveZone} disabled={zSaving || !zName.trim()}>
+                    {zSaving ? 'Guardando...' : editZone ? 'Guardar cambios' : 'Crear zona'}
+                  </button>
                 </div>
               </div>
-            ))}
+            )}
+
+            {/* Zone list */}
+            {zones.length === 0 && !showZoneForm ? (
+              <div className="dv-empty-wrap" style={{ flex: 'none', paddingTop: 40 }}>
+                <h4>Sin zonas configuradas</h4>
+                <p>Crea zonas con tarifas por radio para calcular el costo de delivery automaticamente.</p>
+              </div>
+            ) : (
+              zones.map(z => (
+                <div key={z.id} className="dv-zone-item" style={{ borderLeft: `3px solid ${z.color}` }}>
+                  <div className="dv-zone-item-head">
+                    <div className="dv-zone-name-row">
+                      <span className="dv-zone-color-dot" style={{ background: z.color }} />
+                      <h4>{z.name}</h4>
+                    </div>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      <button
+                        onClick={() => openZoneForm(z)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--dv-ink-muted)', padding: '2px 4px', borderRadius: 5, fontSize: 11 }}
+                      >Editar</button>
+                      <button
+                        onClick={() => deleteZone(z.id)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#DC2626', padding: '2px 4px', borderRadius: 5, fontSize: 11 }}
+                      >Eliminar</button>
+                    </div>
+                  </div>
+                  <div className="dv-zone-meta">
+                    <span>{(z.radius_m / 1000).toFixed(1)} km radio</span>
+                    <span className="dv-zone-fee">${z.fee.toFixed(2)}</span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
 
-          <div className="dv-zones-map">
-            <div className="dv-map-bg" />
-            <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice">
-              <path d="M 60 80 L 220 110 L 320 220 L 460 260 L 600 380 L 720 460" stroke="#9FAFC2" strokeWidth="8" fill="none" strokeLinecap="round" opacity="0.4"/>
-              <path d="M 40 320 L 200 340 L 320 420 L 480 440 L 640 480 L 760 520" stroke="#9FAFC2" strokeWidth="6" fill="none" strokeLinecap="round" opacity="0.35"/>
-              <path d="M 240 30 L 260 220 L 280 360 L 320 520" stroke="#9FAFC2" strokeWidth="5" fill="none" strokeLinecap="round" opacity="0.35"/>
-              <path d="M 480 30 L 500 220 L 520 360 L 540 540" stroke="#9FAFC2" strokeWidth="5" fill="none" strokeLinecap="round" opacity="0.35"/>
-              <polygon points="180,180 320,160 380,260 320,340 200,320" fill="#7C3AED" fillOpacity="0.18" stroke="#4C1D95" strokeWidth="2" strokeDasharray="6 4"/>
-              <text x="270" y="250" textAnchor="middle" fontFamily="system-ui" fontSize="14" fontWeight="600" fill="#4C1D95">Las Mercedes</text>
-              <text x="270" y="270" textAnchor="middle" fontFamily="system-ui" fontSize="11" fill="#4C1D95">$4</text>
-              <polygon points="420,140 560,160 600,260 540,320 440,300" fill="#1D9E75" fillOpacity="0.15" stroke="#0F6E56" strokeWidth="1" strokeDasharray="6 4"/>
-              <text x="510" y="230" textAnchor="middle" fontFamily="system-ui" fontSize="13" fontWeight="500" fill="#0F6E56">Chacao</text>
-              <text x="510" y="248" textAnchor="middle" fontFamily="system-ui" fontSize="10" fill="#0F6E56">$5</text>
-              <polygon points="200,360 360,380 400,460 320,500 220,480" fill="#EF9F27" fillOpacity="0.15" stroke="#BA7517" strokeWidth="1" strokeDasharray="6 4"/>
-              <text x="300" y="440" textAnchor="middle" fontFamily="system-ui" fontSize="13" fontWeight="500" fill="#854F0B">El Rosal</text>
-              <text x="300" y="458" textAnchor="middle" fontFamily="system-ui" fontSize="10" fill="#854F0B">$4,50</text>
-              <polygon points="560,360 700,380 740,480 660,520 580,480" fill="#D85A30" fillOpacity="0.12" stroke="#993C1D" strokeWidth="1" strokeDasharray="6 4"/>
-              <text x="650" y="440" textAnchor="middle" fontFamily="system-ui" fontSize="13" fontWeight="500" fill="#993C1D">El Hatillo</text>
-              <text x="650" y="458" textAnchor="middle" fontFamily="system-ui" fontSize="10" fill="#993C1D">$5,50</text>
-              <g>
-                <rect x="276" y="220" width="34" height="34" rx="9" fill="#4C1D95"/>
-                <polygon points="286,229 304,237 286,245" fill="white"/>
-              </g>
-            </svg>
-            <div className="dv-map-badge">
-              <svg viewBox="0 0 20 20" fill="#7C3AED" width="14" height="14"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/></svg>
-              <span>Zonas de cobertura</span>
-            </div>
-            <div className="dv-map-legend">
-              <div className="dv-legend-title">Tipo de zona</div>
-              <div className="dv-legend-row"><span className="dv-legend-dot" style={{ background: '#4C1D95' }}/><span>Tarifa plana</span></div>
-              <div className="dv-legend-row"><span className="dv-legend-dot" style={{ background: '#EF9F27' }}/><span>Solo pick-up</span></div>
-              <div className="dv-legend-row"><span className="dv-legend-dot" style={{ background: '#D85A30' }}/><span>Por distancia</span></div>
-            </div>
+          {/* ── Right: real map ── */}
+          <div className="dv-zones-map" style={{ position: 'relative', overflow: 'hidden' }}>
+            <ZonesMap
+              zones={zones}
+              placingZone={showZoneForm}
+              onMapClick={(lat, lng) => setZCenter([lat, lng])}
+              previewCenter={zCenter ?? undefined}
+              previewRadius={zRadius}
+              previewColor={zColor}
+              onUserPos={(lat, lng) => setZUserPos([lat, lng])}
+            />
           </div>
+
         </div>
       </div>
 

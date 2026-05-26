@@ -178,30 +178,22 @@ export default function PedidosPage() {
     if (!order?.items) await loadItems(orderId)
   }
 
-  async function syncDelivery(phone: string, fromStatus: string, toStatus: string) {
-    if (!storeId || !phone) return
+  async function syncDelivery(orderId: string, toStatus: string) {
     const { data: del } = await supabase
       .from('deliveries')
       .select('id')
-      .eq('store_id', storeId)
-      .eq('customer_phone', phone)
+      .eq('order_id', orderId)
       .eq('is_customer_order', true)
-      .eq('status', fromStatus)
-      .order('created_at', { ascending: false })
-      .limit(1)
       .maybeSingle()
     if (del) await supabase.from('deliveries').update({ status: toStatus }).eq('id', del.id)
   }
 
   async function updateStatus(orderId: string, status: OrderStatus) {
     setUpdating(orderId)
-    const order = orders.find(o => o.id === orderId)
     await supabase.from('orders').update({ status }).eq('id', orderId)
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o))
-    if (order) {
-      if (status === 'confirmed') await syncDelivery(order.customer_phone, 'pending', 'preparing')
-      if (status === 'ready')     await syncDelivery(order.customer_phone, 'preparing', 'ready')
-    }
+    if (status === 'confirmed') await syncDelivery(orderId, 'preparing')
+    if (status === 'ready')     await syncDelivery(orderId, 'ready')
     setUpdating(null)
   }
 
@@ -220,12 +212,9 @@ export default function PedidosPage() {
   }
 
   async function updateDisplayStatus(orderId: string, status: string) {
-    const order = displayOrders.find(o => o.id === orderId)
     await supabase.from('orders').update({ status }).eq('id', orderId)
-    if (order) {
-      if (status === 'confirmed') await syncDelivery(order.customer_phone, 'pending', 'preparing')
-      if (status === 'ready')     await syncDelivery(order.customer_phone, 'preparing', 'ready')
-    }
+    if (status === 'confirmed') await syncDelivery(orderId, 'preparing')
+    if (status === 'ready')     await syncDelivery(orderId, 'ready')
     if (['completed', 'cancelled', 'delivered'].includes(status)) {
       setDisplayOrders(prev => prev.filter(o => o.id !== orderId))
     } else {

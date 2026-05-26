@@ -361,7 +361,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
 
       if (store.whatsapp) {
         const num = store.whatsapp.replace(/\D/g, '')
-        router.push(`/${store.slug}/pedido?id=${shortId}&delivery=${newDeliveryId}&wa=${encodeURIComponent(`whatsapp://send?phone=${num}&text=${encodeURIComponent(lines.join('\n'))}`)}`)
+        router.push(`/${store.slug}/pedido?id=${shortId}&delivery=${newDeliveryId}&wa=${encodeURIComponent(`https://wa.me/${num}?text=${encodeURIComponent(lines.join('\n'))}`)}`)
       } else {
         setView('confirmed')
       }

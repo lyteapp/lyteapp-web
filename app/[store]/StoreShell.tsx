@@ -314,23 +314,24 @@ export default function StoreShell({ store, products, categories = [] }: { store
         }))
       )
 
-      // Auto-create delivery record for tracking
-      const newDeliveryId = crypto.randomUUID()
-      await supabase.from('deliveries').insert({
-        id: newDeliveryId,
-        store_id: store.id,
-        order_id: newOrderId,
-        customer_name: customerName.trim(),
-        customer_phone: customerPhone.trim(),
-        delivery_address: '',
-        status: 'ready',
-        driver_fee: 0,
-        fee_paid: false,
-        customer_lat: customerLat,
-        customer_lng: customerLng,
-        is_customer_order: true,
-      })
-      setDeliveryTrackId(newDeliveryId)
+      // Auto-create delivery record via API (server-side, bypasses RLS)
+      let newDeliveryId = ''
+      try {
+        const res = await fetch('/api/delivery', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            store_id: store.id,
+            order_id: newOrderId,
+            customer_name: customerName.trim(),
+            customer_phone: customerPhone.trim(),
+            customer_lat: customerLat,
+            customer_lng: customerLng,
+          }),
+        })
+        const json = await res.json()
+        if (json.id) { newDeliveryId = json.id; setDeliveryTrackId(json.id) }
+      } catch { /* delivery creation is non-blocking */ }
 
       // Comanda lines
       const lines: string[] = [

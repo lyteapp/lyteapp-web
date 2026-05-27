@@ -159,9 +159,10 @@ export default function EditorPage() {
 
   const [categoryNavStyle, setCategoryNavStyle] = useState('pills')
   const [showCatNav, setShowCatNav] = useState(true)
-  const [logoShape,      setLogoShape]      = useState('rounded')
-  const [logoSize,       setLogoSize]       = useState('medium')
-  const [headerLayout,   setHeaderLayout]   = useState('default')
+  const [logoShape,    setLogoShape]    = useState('rounded')
+  const [logoSize,     setLogoSize]     = useState('medium')
+  const [logoPosition, setLogoPosition] = useState<'left' | 'center' | 'right' | 'none'>('left')
+  const [namePosition, setNamePosition] = useState<'left' | 'center' | 'right' | 'none'>('left')
   const [showMenuButton, setShowMenuButton] = useState(false)
   const [contentBlocks, setContentBlocks]   = useState<ContentBlock[]>([])
   const [newBlockPos,  setNewBlockPos]      = useState('top')
@@ -204,9 +205,18 @@ export default function EditorPage() {
       if (cfg.categoryPhotoShapes) setCategoryShapes(cfg.categoryPhotoShapes as Record<string, string>)
       if (cfg.categoryNavStyle) setCategoryNavStyle(cfg.categoryNavStyle as string)
       if (cfg.showCatNav !== undefined) setShowCatNav(cfg.showCatNav as boolean)
-      if (cfg.logoShape)     setLogoShape(cfg.logoShape as string)
-      if (cfg.logoSize)      setLogoSize(cfg.logoSize as string)
-      if (cfg.headerLayout)  setHeaderLayout(cfg.headerLayout as string)
+      if (cfg.logoShape) setLogoShape(cfg.logoShape as string)
+      if (cfg.logoSize)  setLogoSize(cfg.logoSize as string)
+      if (cfg.logoPosition) {
+        setLogoPosition(cfg.logoPosition as 'left' | 'center' | 'right' | 'none')
+      } else if (cfg.headerLayout) {
+        setLogoPosition(cfg.headerLayout === 'solo-nombre' ? 'none' : cfg.headerLayout === 'centrado' ? 'center' : 'left')
+      }
+      if (cfg.namePosition) {
+        setNamePosition(cfg.namePosition as 'left' | 'center' | 'right' | 'none')
+      } else if (cfg.headerLayout) {
+        setNamePosition(cfg.headerLayout === 'solo-logo' ? 'none' : cfg.headerLayout === 'centrado' ? 'center' : 'left')
+      }
       if (cfg.showMenuButton !== undefined) setShowMenuButton(cfg.showMenuButton as boolean)
       if (cfg.contentBlocks) setContentBlocks(cfg.contentBlocks as ContentBlock[])
       const { data: cats } = await supabase
@@ -344,9 +354,6 @@ export default function EditorPage() {
         width:  ${logoSize === 'small' ? '26px' : logoSize === 'large' ? '46px' : '34px'} !important;
         height: ${logoSize === 'small' ? '26px' : logoSize === 'large' ? '46px' : '34px'} !important;
       }
-      ${headerLayout === 'solo-nombre' ? '.sf-nav-logo { display: none !important; }' : ''}
-      ${headerLayout === 'solo-logo'   ? '.sf-nav-name { display: none !important; }' : ''}
-      ${headerLayout === 'centrado'    ? '.sf-topbar-inner { justify-content: center !important; } .sf-topbar-brand { flex: 1; justify-content: center !important; flex-direction: column !important; align-items: center !important; gap: 2px !important; }' : ''}
     `
   }
 
@@ -366,7 +373,7 @@ export default function EditorPage() {
   useEffect(() => {
     applyPreview()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageBg, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceSize, priceFont, categoryNavStyle, logoShape, logoSize, headerLayout])
+  }, [pageBg, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceSize, priceFont, categoryNavStyle, logoShape, logoSize])
 
   // ── Auto-save template (reloads iframe immediately) ───
   async function handleTemplateSelect(t: string) {
@@ -392,6 +399,24 @@ export default function EditorPage() {
     setIframeKey(k => k + 1)
   }
 
+  // ── Auto-save logo/name position (reloads iframe) ────
+  async function handleLogoPosition(pos: 'left' | 'center' | 'right' | 'none') {
+    setLogoPosition(pos)
+    if (!storeId) return
+    const newConfig = { ...baseConfig, logoPosition: pos, headerLayout: undefined }
+    await supabase.from('stores').update({ template_config: newConfig }).eq('id', storeId)
+    setBaseConfig(newConfig)
+    setIframeKey(k => k + 1)
+  }
+  async function handleNamePosition(pos: 'left' | 'center' | 'right' | 'none') {
+    setNamePosition(pos)
+    if (!storeId) return
+    const newConfig = { ...baseConfig, namePosition: pos, headerLayout: undefined }
+    await supabase.from('stores').update({ template_config: newConfig }).eq('id', storeId)
+    setBaseConfig(newConfig)
+    setIframeKey(k => k + 1)
+  }
+
   // ── Save all other settings to DB ─────────────────────
   async function saveSettings() {
     if (!storeId || saving) return
@@ -402,7 +427,8 @@ export default function EditorPage() {
       photoShape, photoSize,
       priceColor: accentColor, priceFont: priceFont || pageFont, priceSize,
       categoryNavStyle, showCatNav,
-      logoShape, logoSize, headerLayout, showMenuButton,
+      logoShape, logoSize, logoPosition, namePosition, showMenuButton,
+      headerLayout: undefined,
       contentBlocks: contentBlocks.length > 0 ? contentBlocks : undefined,
       ...(Object.keys(categoryShapes).length > 0
         ? { categoryPhotoShapes: categoryShapes }
@@ -1010,56 +1036,48 @@ export default function EditorPage() {
           <div className="ed-tool-panel ed-tool-panel-lg">
             <div className="ed-tp-title">Encabezado</div>
 
-            <div className="ed-tp-subtitle">Disposicion</div>
-            <div className="ed-cat-style-grid">
+            <div className="ed-tp-subtitle">Posicion del logo</div>
+            <div style={{ display: 'flex', gap: 6 }}>
               {([
-                {
-                  id: 'default',
-                  name: 'Logo + nombre',
-                  preview: (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 12px' }}>
-                      <div style={{ width: 22, height: 22, borderRadius: 5, background: '#E2E8F0', flexShrink: 0 }} />
-                      <div style={{ width: 52, height: 8, borderRadius: 4, background: '#CBD5E1' }} />
-                    </div>
-                  ),
-                },
-                {
-                  id: 'solo-nombre',
-                  name: 'Solo nombre',
-                  preview: (
-                    <div style={{ display: 'flex', alignItems: 'center', padding: '10px 12px' }}>
-                      <div style={{ width: 60, height: 8, borderRadius: 4, background: '#CBD5E1' }} />
-                    </div>
-                  ),
-                },
-                {
-                  id: 'solo-logo',
-                  name: 'Solo logo',
-                  preview: (
-                    <div style={{ display: 'flex', alignItems: 'center', padding: '10px 12px' }}>
-                      <div style={{ width: 28, height: 28, borderRadius: 6, background: '#E2E8F0' }} />
-                    </div>
-                  ),
-                },
-                {
-                  id: 'centrado',
-                  name: 'Centrado',
-                  preview: (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 12px' }}>
-                      <div style={{ width: 22, height: 22, borderRadius: 5, background: '#E2E8F0' }} />
-                      <div style={{ width: 48, height: 7, borderRadius: 4, background: '#CBD5E1' }} />
-                    </div>
-                  ),
-                },
-              ]).map(s => (
+                { id: 'left' as const,   label: 'Izquierda' },
+                { id: 'center' as const, label: 'Centro'    },
+                { id: 'right' as const,  label: 'Derecha'   },
+                { id: 'none' as const,   label: 'Oculto'    },
+              ]).map(o => (
                 <button
-                  key={s.id}
-                  className={`ed-cat-style-card${headerLayout === s.id ? ' ed-cat-style-active' : ''}`}
-                  onClick={() => setHeaderLayout(s.id)}
+                  key={o.id}
+                  onClick={() => handleLogoPosition(o.id)}
+                  style={{
+                    flex: 1, padding: '8px 4px', borderRadius: 8, fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                    border: `2px solid ${logoPosition === o.id ? '#7C3AED' : '#E2E8F0'}`,
+                    background: logoPosition === o.id ? '#F5F3FF' : 'white',
+                    color: logoPosition === o.id ? '#7C3AED' : '#64748B',
+                  }}
                 >
-                  <div className="ed-cat-style-preview">{s.preview}</div>
-                  <div className="ed-cat-style-name">{s.name}</div>
-                  {headerLayout === s.id && <div className="ed-template-check">&#10003;</div>}
+                  {o.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Posicion del nombre</div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {([
+                { id: 'left' as const,   label: 'Izquierda' },
+                { id: 'center' as const, label: 'Centro'    },
+                { id: 'right' as const,  label: 'Derecha'   },
+                { id: 'none' as const,   label: 'Oculto'    },
+              ]).map(o => (
+                <button
+                  key={o.id}
+                  onClick={() => handleNamePosition(o.id)}
+                  style={{
+                    flex: 1, padding: '8px 4px', borderRadius: 8, fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                    border: `2px solid ${namePosition === o.id ? '#7C3AED' : '#E2E8F0'}`,
+                    background: namePosition === o.id ? '#F5F3FF' : 'white',
+                    color: namePosition === o.id ? '#7C3AED' : '#64748B',
+                  }}
+                >
+                  {o.label}
                 </button>
               ))}
             </div>

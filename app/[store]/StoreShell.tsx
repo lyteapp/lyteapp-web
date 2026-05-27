@@ -81,6 +81,8 @@ type TemplateConfig = {
   logoShape?: string
   logoSize?: string
   headerLayout?: string
+  logoPosition?: 'left' | 'center' | 'right' | 'none'
+  namePosition?: 'left' | 'center' | 'right' | 'none'
   contentBlocks?: ContentBlock[]
 }
 type Store = {
@@ -277,9 +279,18 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const cfgPriceSize       = cfg.priceSize ?? 'medium'
   const cfgCategoryShapes  = cfg.categoryPhotoShapes ?? {}
   const cfgCatNavStyle     = cfg.categoryNavStyle ?? 'pills'
-  const cfgLogoShape       = cfg.logoShape   ?? 'rounded'
-  const cfgLogoSize        = cfg.logoSize    ?? 'medium'
-  const cfgHeaderLayout    = cfg.headerLayout ?? 'default'
+  const cfgLogoShape    = cfg.logoShape ?? 'rounded'
+  const cfgLogoSize     = cfg.logoSize  ?? 'medium'
+  const cfgLogoPosition: 'left' | 'center' | 'right' | 'none' =
+    cfg.logoPosition ?? (
+      cfg.headerLayout === 'solo-nombre' ? 'none' :
+      cfg.headerLayout === 'centrado'    ? 'center' : 'left'
+    )
+  const cfgNamePosition: 'left' | 'center' | 'right' | 'none' =
+    cfg.namePosition ?? (
+      cfg.headerLayout === 'solo-logo' ? 'none' :
+      cfg.headerLayout === 'centrado'  ? 'center' : 'left'
+    )
   const pageStyle: React.CSSProperties = {
     ...(cfg.pageBg ? { background: cfg.pageBg } : {}),
     ...(cfgFontFamily ? { fontFamily: cfgFontFamily } : {}),
@@ -1340,18 +1351,36 @@ export default function StoreShell({ store, products, categories = [] }: { store
   return (
     <div className={`sf-page sf-tpl-${tpl} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize}`} style={pageStyle}>
       <div className="sf-topbar">
-        <div className={`sf-topbar-inner${cfgHeaderLayout === 'centrado' ? ' sf-topbar-inner-center' : ''}`}>
-          <div className={`sf-topbar-brand${cfgHeaderLayout === 'centrado' ? ' sf-topbar-brand-center' : ''}`}>
-            {store.logo_url && cfgHeaderLayout !== 'solo-nombre' && (
+        <div className="sf-topbar-inner sf-topbar-3col">
+          <div className="sf-topbar-slot-left">
+            {cfgLogoPosition === 'left' && store.logo_url && (
               <div className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape} sf-nav-logo-${cfgLogoSize}`}>
                 <img src={store.logo_url} alt={store.name} className="sf-nav-logo-img" />
               </div>
             )}
-            {cfgHeaderLayout !== 'solo-logo' && (
+            {cfgNamePosition === 'left' && (
               <span className="sf-nav-name">{store.name}</span>
             )}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="sf-topbar-slot-center">
+            {cfgLogoPosition === 'center' && store.logo_url && (
+              <div className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape} sf-nav-logo-${cfgLogoSize}`}>
+                <img src={store.logo_url} alt={store.name} className="sf-nav-logo-img" />
+              </div>
+            )}
+            {cfgNamePosition === 'center' && (
+              <span className="sf-nav-name">{store.name}</span>
+            )}
+          </div>
+          <div className="sf-topbar-slot-right">
+            {cfgLogoPosition === 'right' && store.logo_url && (
+              <div className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape} sf-nav-logo-${cfgLogoSize}`}>
+                <img src={store.logo_url} alt={store.name} className="sf-nav-logo-img" />
+              </div>
+            )}
+            {cfgNamePosition === 'right' && (
+              <span className="sf-nav-name">{store.name}</span>
+            )}
             {store.whatsapp && cfg.showWhatsapp !== false && (
               <a href={`https://wa.me/${store.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="sf-nav-wa">
                 {WA_ICON} {t('store.contact')}

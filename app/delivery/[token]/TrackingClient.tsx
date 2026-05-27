@@ -283,8 +283,7 @@ export default function TrackingClient({
   const isDone = delivery.status === 'delivered'
   const accent = trackingConfig?.accentColor ?? '#7C3AED'
 
-  const effectiveMode = trackingConfig?.mode ?? 'location'
-  if (effectiveMode === 'location') {
+  if (trackingConfig?.mode === 'location') {
     const tlSteps = [
       { label: 'Recibido',   idx: 0 },
       { label: 'Preparando', idx: 1 },
@@ -295,7 +294,7 @@ export default function TrackingClient({
     const hasGps = driverLoc != null || (delivery.driver_lat != null && delivery.driver_lng != null)
     const statusDot = isCancelled ? '#EF4444' : isDone ? '#10B981' : '#1D9E75'
     const statusLabel = isCancelled ? 'cancelado' : isDone ? 'entregado' : 'en camino'
-    const font = FONT_STACKS[trackingConfig?.fontFamily ?? 'system'] ?? FONT_STACKS.system
+    const font = FONT_STACKS[trackingConfig.fontFamily ?? 'system'] ?? FONT_STACKS.system
 
     return (
       <div style={{ ...cssVars, position: 'relative', height: '100dvh', overflow: 'hidden', background: '#E4EAF1', fontFamily: font }}>

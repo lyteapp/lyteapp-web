@@ -14,7 +14,7 @@ export default async function TrackingPage({
   const { token } = await params
   const { data: delivery } = await supabase
     .from('deliveries')
-    .select('*, driver:driver_id(*)')
+    .select('*, driver:driver_id(name, phone, vehicle, rating, avatar_url)')
     .eq('id', token)
     .maybeSingle()
 

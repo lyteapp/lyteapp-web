@@ -218,6 +218,9 @@ export default function TrackingClient({
   useEffect(() => {
     if (!token) return
 
+    // Fetch immediately in case SSR delivery was null (server error or cold start)
+    fetchDelivery()
+
     const ch = supabase.channel(`track-${token}`)
       .on(
         'postgres_changes',
@@ -281,33 +284,15 @@ export default function TrackingClient({
 
         {/* Map area */}
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '56%' }}>
-          {hasGps ? (
-            <TrackingMap
-              driverLat={driverLoc?.lat ?? delivery.driver_lat}
-              driverLng={driverLoc?.lng ?? delivery.driver_lng}
-              customerLat={delivery.customer_lat}
-              customerLng={delivery.customer_lng}
-              height="100%"
-              mapboxToken={mapboxToken}
-              mapStyle={trackingConfig?.mapStyle}
-            />
-          ) : (
-            <svg viewBox="0 0 480 320" preserveAspectRatio="xMidYMid slice" style={{ width: '100%', height: '100%' }}>
-              <rect width="480" height="320" fill="#E4EAF1"/>
-              <polygon points="0,120 120,100 200,180 80,220" fill="#D9E8C8" opacity="0.5"/>
-              <polygon points="320,20 480,0 480,140 360,120" fill="#D9E8C8" opacity="0.5"/>
-              <path d="M -20 80 L 100 70 L 200 90 L 320 60 L 460 100" stroke="white" strokeWidth="32" fill="none" strokeLinecap="round"/>
-              <path d="M -20 200 L 90 190 L 220 220 L 360 200 L 480 230" stroke="#FFEBC2" strokeWidth="28" fill="none" strokeLinecap="round"/>
-              <path d="M 80 -20 L 95 80 L 110 200 L 125 320" stroke="white" strokeWidth="22" fill="none" strokeLinecap="round"/>
-              <path d="M 220 -20 L 230 80 L 240 200 L 250 320" stroke="#FFEBC2" strokeWidth="26" fill="none" strokeLinecap="round"/>
-              <path d="M 350 -20 L 360 60 L 370 200 L 380 320" stroke="white" strokeWidth="22" fill="none" strokeLinecap="round"/>
-              <rect x="40" y="100" width="50" height="40" rx="3" fill="#F1ECE0" opacity="0.7"/>
-              <rect x="140" y="110" width="60" height="50" rx="3" fill="#F1ECE0" opacity="0.6"/>
-              <rect x="270" y="100" width="50" height="40" rx="3" fill="#F1ECE0" opacity="0.7"/>
-              <path d="M 110 210 Q 180 225 235 245 Q 280 265 320 275 L 360 290" stroke={accent} strokeWidth="5" fill="none" strokeLinecap="round" strokeDasharray="10 6" opacity="0.85"/>
-              <circle cx="320" cy="270" r="9" fill={accent} stroke="white" strokeWidth="2.5"/>
-            </svg>
-          )}
+          <TrackingMap
+            driverLat={driverLoc?.lat ?? delivery.driver_lat}
+            driverLng={driverLoc?.lng ?? delivery.driver_lng}
+            customerLat={delivery.customer_lat}
+            customerLng={delivery.customer_lng}
+            height="100%"
+            mapboxToken={mapboxToken}
+            mapStyle={trackingConfig?.mapStyle}
+          />
         </div>
 
         {/* Header gradient */}

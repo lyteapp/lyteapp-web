@@ -206,6 +206,7 @@ export default function Apariencia() {
       {/* ── Location mode preview ── */}
       {trConfig.mode === 'location' && (
         <div style={{ position: 'absolute', inset: 0 }}>
+          {/* Map SVG */}
           <svg viewBox="0 0 480 540" preserveAspectRatio="xMidYMid slice" style={{ position: 'absolute', inset: 0, width: '100%', height: '56%' }}>
             <rect width="480" height="540" fill={mapPreset.bg}/>
             <polygon points="0,200 120,180 200,260 80,300" fill={mapPreset.terrain} opacity="0.5"/>
@@ -223,56 +224,64 @@ export default function Apariencia() {
             <path d="M 110 295 Q 180 310 235 330 Q 280 350 320 360 L 360 380" stroke={trConfig.accentColor} strokeWidth="5" fill="none" strokeLinecap="round" strokeDasharray="10 6" opacity="0.85"/>
           </svg>
 
+          {/* Header gradient — accent color, customer name + address */}
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '14px 14px 32px', background: `linear-gradient(180deg, ${trConfig.accentColor}F2 0%, ${trConfig.accentColor}B3 60%, transparent 100%)`, zIndex: 5 }}>
-            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.75)', fontWeight: 400, marginBottom: 2 }}>Tu pedido</div>
-            <div style={{ fontSize: 12, color: 'white', fontWeight: 600 }}>#0142 · La Cocina de Sofia</div>
+            <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.75)', fontWeight: 400, marginBottom: 2 }}>Tu pedido</div>
+            <div style={{ fontSize: 12, color: 'white', fontWeight: 700 }}>Maria Garcia</div>
+            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.85)', marginTop: 1 }}>Av. Libertador 1234, Caracas</div>
           </div>
 
+          {/* Driver marker — accent circle with truck */}
           <div style={{ position: 'absolute', top: '38%', left: '38%', transform: 'translate(-50%, -50%)', zIndex: 6 }}>
-            <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'white', border: `2.5px solid #4C1D95`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(76,29,149,0.4)' }}>
-              <svg viewBox="0 0 20 20" fill="#4C1D95" width="18" height="18">
-                <path d="M11 3H8v2H6v2h2v2H6v2h2v2h3v-2h2v-2h-2V7h2V5h-2V3z"/>
-                <path fillRule="evenodd" d="M4 18a2 2 0 100-4 2 2 0 000 4zm12 0a2 2 0 100-4 2 2 0 000 4zM2 8h16v8H2V8z" clipRule="evenodd"/>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: trConfig.accentColor, border: '2.5px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 14px ${trConfig.accentColor}55` }}>
+              <svg viewBox="0 0 20 20" fill="white" width="16" height="16">
+                <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
+                <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1v-1h1a1 1 0 00.9-.561l2-4A1 1 0 0014 9h-3V5a1 1 0 00-1-1H3z"/>
               </svg>
             </div>
           </div>
 
-          <div style={{ position: 'absolute', top: '50%', left: '65%', transform: 'translate(-50%, -100%)', zIndex: 6 }}>
-            <div style={{ width: 24, height: 24, borderRadius: '50% 50% 50% 0', background: '#0F172A', transform: 'rotate(-45deg)', border: '2px solid white', boxShadow: '0 3px 8px rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg viewBox="0 0 20 20" fill="white" width="10" height="10" style={{ transform: 'rotate(45deg)' }}>
-                <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
+          {/* Customer marker — green circle with person icon */}
+          <div style={{ position: 'absolute', top: '50%', left: '65%', transform: 'translate(-50%, -50%)', zIndex: 6 }}>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#10B981', border: '2.5px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px rgba(16,185,129,0.45)' }}>
+              <svg viewBox="0 0 20 20" fill="white" width="12" height="12">
+                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"/>
               </svg>
             </div>
           </div>
 
+          {/* GPS badge */}
           <div style={{ position: 'absolute', top: 80, right: 10, zIndex: 6, background: 'white', padding: '4px 8px', borderRadius: 100, display: 'flex', alignItems: 'center', gap: 5, fontSize: 8, fontWeight: 500, color: '#475569', boxShadow: '0 2px 6px rgba(0,0,0,0.08)' }}>
             <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#1D9E75', flexShrink: 0 }} />
-            Actualizado hace 6s
+            Ubicacion en vivo
           </div>
 
+          {/* Map bottom fade */}
           <div style={{ position: 'absolute', top: 'calc(56% - 40px)', left: 0, right: 0, height: 50, background: 'linear-gradient(transparent, #F5F3EF)', zIndex: 4 }} />
 
+          {/* Bottom sheet */}
           <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '47%', background: '#F5F3EF', borderRadius: '20px 20px 0 0', zIndex: 10, overflowY: 'auto', scrollbarWidth: 'none' as const }}>
+            {/* Handle */}
             <div style={{ width: 28, height: 3, background: 'rgba(15,23,42,0.15)', borderRadius: 100, margin: '8px auto 0' }} />
-            <div style={{ padding: '10px 14px 6px' }}>
+
+            {/* Status section */}
+            <div style={{ padding: '10px 14px 8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
                 <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#1D9E75', flexShrink: 0 }} />
-                <span style={{ fontSize: 8, color: '#1D9E75', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>en camino</span>
+                <span style={{ fontSize: 8, color: '#1D9E75', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>en camino</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginBottom: 2 }}>
-                <span style={{ fontSize: 26, fontWeight: 500, letterSpacing: '-1px', lineHeight: 1, color: '#0F172A' }}>8</span>
-                <span style={{ fontSize: 13, color: '#475569' }}>min</span>
-                <span style={{ fontSize: 9, color: '#475569', marginLeft: 3 }}>· llega 2:55 PM</span>
-              </div>
-              <div style={{ fontSize: 9, color: '#475569' }}>Luis esta a 1.4 km de tu casa</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', letterSpacing: '-0.5px', lineHeight: 1.2, marginBottom: 3 }}>Tu pedido esta saliendo</div>
+              <div style={{ fontSize: 8, color: '#475569', lineHeight: 1.5 }}>El despachador ya tiene tu pedido y va en camino hacia ti.</div>
             </div>
+
+            {/* Horizontal timeline */}
             <div style={{ padding: '4px 14px 8px', display: 'flex', alignItems: 'flex-start' }}>
               {[
-                { label: 'Recibido', done: true, active: false },
-                { label: 'Preparando', done: true, active: false },
-                { label: 'Listo', done: true, active: false },
-                { label: 'En camino', done: false, active: true },
-                { label: 'Entregado', done: false, active: false },
+                { label: 'Recibido',    done: true,  active: false },
+                { label: 'Preparando',  done: true,  active: false },
+                { label: 'Listo',       done: true,  active: false },
+                { label: 'En camino',   done: false, active: true  },
+                { label: 'Entregado',   done: false, active: false },
               ].map(({ label, done, active }, i, arr) => (
                 <div key={label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <div style={{ width: '100%', display: 'flex', alignItems: 'center' }}>
@@ -284,27 +293,46 @@ export default function Apariencia() {
                 </div>
               ))}
             </div>
-            <div style={{ margin: '0 10px 7px', background: 'white', borderRadius: 12, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10, border: '0.5px solid rgba(15,23,42,0.08)' }}>
-              <div style={{ width: 34, height: 34, borderRadius: '50%', background: trConfig.accentColor + '22', color: trConfig.accentColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: 11, flexShrink: 0 }}>LR</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: '#0F172A', marginBottom: 1 }}>Luis Ramirez</div>
-                <div style={{ fontSize: 9, color: '#475569' }}>Moto AB12C · 4.9</div>
+
+            {/* Driver card */}
+            <div style={{ margin: '0 10px 7px', background: 'white', borderRadius: 12, padding: '9px 11px', border: '0.5px solid rgba(15,23,42,0.08)' }}>
+              <div style={{ fontSize: 8, color: '#94A3B8', marginBottom: 6 }}>Tu despachador</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                <div style={{ width: 32, height: 32, borderRadius: '50%', background: trConfig.accentColor + '22', color: trConfig.accentColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 11, flexShrink: 0 }}>LR</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#0F172A', lineHeight: 1.2 }}>Luis Ramirez</div>
+                  <div style={{ fontSize: 8, color: '#64748B', marginTop: 1 }}>Moto AB12C · 4.9 / 5</div>
+                </div>
+                <div style={{ display: 'flex', gap: 5 }}>
+                  <div style={{ width: 26, height: 26, borderRadius: '50%', background: trConfig.accentColor + '15', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg viewBox="0 0 20 20" fill={trConfig.accentColor} width="11" height="11">
+                      <path fillRule="evenodd" d="M2 3.5A1.5 1.5 0 013.5 2h1.148a1.5 1.5 0 011.465 1.175l.716 3.223a1.5 1.5 0 01-1.052 1.767l-.933.267c-.41.117-.643.555-.48.95a11.542 11.542 0 006.254 6.254c.395.163.833-.07.95-.48l.267-.933a1.5 1.5 0 011.767-1.052l3.223.716A1.5 1.5 0 0118 15.352V16.5a1.5 1.5 0 01-1.5 1.5H15c-1.149 0-2.263-.15-3.326-.43A13.022 13.022 0 012.43 8.326 13.019 13.019 0 012 5V3.5z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#25D36615', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg viewBox="0 0 24 24" fill="#25D366" width="13" height="13">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                    </svg>
+                  </div>
+                </div>
               </div>
             </div>
-            <div style={{ margin: '0 10px 7px', borderRadius: 12, padding: '12px 14px', background: `linear-gradient(135deg, #4C1D95, ${trConfig.accentColor})`, color: 'white', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative', zIndex: 1 }}>
-                <div style={{ width: 32, height: 32, borderRadius: 9, background: 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <svg viewBox="0 0 20 20" fill="white" width="15" height="15"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"/></svg>
-                </div>
-                <div>
-                  <div style={{ fontSize: 8, opacity: 0.8, textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 3 }}>PIN de entrega</div>
-                  <div style={{ fontSize: 17, fontWeight: 600, letterSpacing: 4, lineHeight: 1 }}>4 7 2 9</div>
-                  <div style={{ fontSize: 8, opacity: 0.85, marginTop: 3 }}>Dile este numero a Luis al llegar</div>
-                </div>
+
+            {/* Address card */}
+            <div style={{ margin: '0 10px 7px', background: 'white', borderRadius: 12, padding: '9px 11px', display: 'flex', alignItems: 'flex-start', gap: 8, border: '0.5px solid rgba(15,23,42,0.08)' }}>
+              <div style={{ width: 24, height: 24, borderRadius: 7, background: trConfig.accentColor + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg viewBox="0 0 20 20" fill={trConfig.accentColor} width="11" height="11">
+                  <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <div style={{ fontSize: 8, color: '#94A3B8', marginBottom: 1 }}>Direccion de entrega</div>
+                <div style={{ fontSize: 9, fontWeight: 600, color: '#0F172A', lineHeight: 1.4 }}>Av. Libertador 1234, Caracas</div>
               </div>
             </div>
-            <div style={{ textAlign: 'center', padding: '6px 0 14px', fontSize: 9, color: '#94A3B8' }}>
+
+            {/* Footer */}
+            <div style={{ textAlign: 'center', padding: '6px 0 16px', fontSize: 9, color: '#94A3B8' }}>
               Powered by <strong style={{ color: '#64748B' }}>LyteApp</strong>
             </div>
           </div>

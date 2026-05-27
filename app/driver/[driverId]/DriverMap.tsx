@@ -75,10 +75,16 @@ export default function DriverMap({ customerLat, customerLng, customerName, driv
       zoomControl={false}
       attributionControl={false}
     >
+      {/* Satellite imagery (Esri World Imagery) */}
       <TileLayer
-        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-        subdomains="abcd"
-        maxZoom={20}
+        url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+        maxZoom={19}
+      />
+      {/* Street/address labels on top */}
+      <TileLayer
+        url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
+        maxZoom={19}
+        opacity={0.85}
       />
 
       {/* Customer pin */}

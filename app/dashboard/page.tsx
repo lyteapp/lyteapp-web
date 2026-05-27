@@ -58,42 +58,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Setup card */}
-        <div className="dh-setup">
-          <div className="dh-setup-head">
-            <div>
-              <div className="dh-setup-title">{t('dash.setup.title')}</div>
-              <div className="dh-setup-desc">{t('dash.setup.desc')}</div>
-            </div>
-            <div className="dh-setup-progress">
-              <div>
-                <span className="dh-progress-num">1</span><span className="dh-progress-total">/4</span>
-              </div>
-              <div className="dh-progress-label">{t('dash.setup.completed')}</div>
-            </div>
-          </div>
-          <ul className="dh-steps">
-            <li className="dh-step done">
-              <span className="dh-step-icon">✓</span>
-              <span className="dh-step-text">{t('dash.step.account')}</span>
-            </li>
-            <Link href="/dashboard/canal/vitrina" className="dh-step next">
-              <span className="dh-step-icon">2</span>
-              <span className="dh-step-text">{t('dash.step.storefront')}</span>
-              <svg className="dh-step-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
-            </Link>
-            <Link href="/dashboard/productos" className={`dh-step ${productCount > 0 ? 'done' : 'todo'}`}>
-              <span className="dh-step-icon">{productCount > 0 ? '✓' : '3'}</span>
-              <span className="dh-step-text">{t('dash.step.addProducts')}</span>
-              {productCount === 0 && <svg className="dh-step-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>}
-            </Link>
-            <Link href="/dashboard/configuracion" className="dh-step todo">
-              <span className="dh-step-icon">4</span>
-              <span className="dh-step-text">{t('dash.step.configPayments')}</span>
-              <svg className="dh-step-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
-            </Link>
-          </ul>
-        </div>
       </section>
 
       {/* ── KPI STRIP ── */}

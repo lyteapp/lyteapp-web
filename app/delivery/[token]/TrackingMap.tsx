@@ -12,12 +12,14 @@ interface Props {
   customerLng: number | null
   height?: number | string
   mapboxToken: string
+  mapStyle?: string
 }
 
 export default function TrackingMap({
   driverLat, driverLng, customerLat, customerLng,
   height = 260,
   mapboxToken,
+  mapStyle = 'mapbox://styles/mapbox/standard',
 }: Props) {
   const mapRef = useRef<MapRef>(null)
   const [loaded, setLoaded] = useState(false)
@@ -69,7 +71,7 @@ export default function TrackingMap({
         ref={mapRef}
         initialViewState={{ longitude: center[0], latitude: center[1], zoom: 15 }}
         style={{ width: '100%', height: '100%' }}
-        mapStyle="mapbox://styles/mapbox/standard"
+        mapStyle={mapStyle}
         mapboxAccessToken={mapboxToken}
         scrollZoom={false}
         doubleClickZoom

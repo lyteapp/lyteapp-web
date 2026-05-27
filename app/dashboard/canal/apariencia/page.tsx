@@ -8,6 +8,14 @@ import '../canal.css'
 type Category = { id: string; name: string }
 
 const TR_ACCENT_PRESETS = ['#7C3AED', '#2563EB', '#DC2626', '#D97706', '#059669', '#DB2777', '#0F172A', '#64748B']
+
+const MAP_STYLE_PRESETS = [
+  { id: 'mapbox://styles/mapbox/standard',              label: 'Estandar', bg: '#E4EAF1', road1: '#ffffff', road2: '#FFEBC2', building: '#F1ECE0', terrain: '#D9E8C8', dark: false },
+  { id: 'mapbox://styles/mapbox/dark-v11',              label: 'Oscuro',   bg: '#1A1A2E', road1: '#3D3D5C', road2: '#2A2A42', building: '#252540', terrain: '#1E2E1E', dark: true  },
+  { id: 'mapbox://styles/mapbox/light-v11',             label: 'Minimal',  bg: '#F8F8F5', road1: '#FEFEFE', road2: '#F0F0E8', building: '#E8E8E2', terrain: '#E4EFD8', dark: false },
+  { id: 'mapbox://styles/mapbox/satellite-streets-v12', label: 'Satelite', bg: '#2C4A30', road1: '#C8D8B8', road2: '#8A9880', building: '#3A5A3C', terrain: '#223A24', dark: true  },
+  { id: 'mapbox://styles/mapbox/navigation-night-v1',   label: 'Nocturno', bg: '#0F1923', road1: '#1F3347', road2: '#172840', building: '#162136', terrain: '#0A1A0C', dark: true  },
+]
 const TR_BG_PRESETS = [
   { color: '#F1EFE9', label: 'Cálido'  },
   { color: '#FFFFFF', label: 'Blanco'  },
@@ -41,6 +49,7 @@ interface TrackingConfig {
   bgColor: string
   fontFamily: string
   fontSize: string
+  mapStyle: string
 }
 
 const DEFAULT_TR_CONFIG: TrackingConfig = {
@@ -49,6 +58,7 @@ const DEFAULT_TR_CONFIG: TrackingConfig = {
   bgColor: '#F1EFE9',
   fontFamily: 'system',
   fontSize: 'md',
+  mapStyle: 'mapbox://styles/mapbox/standard',
 }
 
 const STEPS_PREVIEW = [
@@ -137,6 +147,7 @@ export default function Apariencia() {
   const previewFont  = FONT_STACKS[trConfig.fontFamily] ?? FONT_STACKS.system
   const previewScale = FONT_SCALE_NUM[trConfig.fontSize] ?? 1
   const fs = (n: number) => Math.round(n * previewScale)
+  const mapPreset = MAP_STYLE_PRESETS.find(s => s.id === (trConfig.mapStyle ?? MAP_STYLE_PRESETS[0].id)) ?? MAP_STYLE_PRESETS[0]
 
   async function save(e: { preventDefault(): void }) {
     e.preventDefault()
@@ -199,7 +210,7 @@ export default function Apariencia() {
             height: 580,
             position: 'relative',
             fontFamily: previewFont,
-            background: trConfig.mode === 'location' ? '#E4EAF1' : trConfig.bgColor,
+            background: trConfig.mode === 'location' ? mapPreset.bg : trConfig.bgColor,
           }}>
 
             {/* ── Location mode preview ── */}
@@ -208,19 +219,19 @@ export default function Apariencia() {
 
                 {/* Map SVG */}
                 <svg viewBox="0 0 480 540" preserveAspectRatio="xMidYMid slice" style={{ position: 'absolute', inset: 0, width: '100%', height: '56%' }}>
-                  <rect width="480" height="540" fill="#E4EAF1"/>
-                  <polygon points="0,200 120,180 200,260 80,300" fill="#D9E8C8" opacity="0.5"/>
-                  <polygon points="320,80 480,60 480,200 360,180" fill="#D9E8C8" opacity="0.5"/>
-                  <path d="M -20 120 L 100 110 L 200 130 L 320 100 L 460 140" stroke="white" strokeWidth="32" fill="none" strokeLinecap="round"/>
-                  <path d="M -20 290 L 90 280 L 220 310 L 360 290 L 480 320" stroke="#FFEBC2" strokeWidth="28" fill="none" strokeLinecap="round"/>
-                  <path d="M 80 -20 L 95 130 L 110 290 L 125 440" stroke="white" strokeWidth="22" fill="none" strokeLinecap="round"/>
-                  <path d="M 220 -20 L 230 130 L 240 310 L 250 460" stroke="#FFEBC2" strokeWidth="26" fill="none" strokeLinecap="round"/>
-                  <path d="M 350 -20 L 360 100 L 370 290 L 380 440" stroke="white" strokeWidth="22" fill="none" strokeLinecap="round"/>
-                  <rect x="40" y="160" width="50" height="40" rx="3" fill="#F1ECE0" opacity="0.7"/>
-                  <rect x="140" y="170" width="60" height="50" rx="3" fill="#F1ECE0" opacity="0.6"/>
-                  <rect x="270" y="160" width="50" height="40" rx="3" fill="#F1ECE0" opacity="0.7"/>
-                  <rect x="50" y="330" width="40" height="60" rx="3" fill="#F1ECE0" opacity="0.7"/>
-                  <rect x="150" y="340" width="55" height="55" rx="3" fill="#F1ECE0" opacity="0.6"/>
+                  <rect width="480" height="540" fill={mapPreset.bg}/>
+                  <polygon points="0,200 120,180 200,260 80,300" fill={mapPreset.terrain} opacity="0.5"/>
+                  <polygon points="320,80 480,60 480,200 360,180" fill={mapPreset.terrain} opacity="0.5"/>
+                  <path d="M -20 120 L 100 110 L 200 130 L 320 100 L 460 140" stroke={mapPreset.road1} strokeWidth="32" fill="none" strokeLinecap="round"/>
+                  <path d="M -20 290 L 90 280 L 220 310 L 360 290 L 480 320" stroke={mapPreset.road2} strokeWidth="28" fill="none" strokeLinecap="round"/>
+                  <path d="M 80 -20 L 95 130 L 110 290 L 125 440" stroke={mapPreset.road1} strokeWidth="22" fill="none" strokeLinecap="round"/>
+                  <path d="M 220 -20 L 230 130 L 240 310 L 250 460" stroke={mapPreset.road2} strokeWidth="26" fill="none" strokeLinecap="round"/>
+                  <path d="M 350 -20 L 360 100 L 370 290 L 380 440" stroke={mapPreset.road1} strokeWidth="22" fill="none" strokeLinecap="round"/>
+                  <rect x="40" y="160" width="50" height="40" rx="3" fill={mapPreset.building} opacity="0.7"/>
+                  <rect x="140" y="170" width="60" height="50" rx="3" fill={mapPreset.building} opacity="0.6"/>
+                  <rect x="270" y="160" width="50" height="40" rx="3" fill={mapPreset.building} opacity="0.7"/>
+                  <rect x="50" y="330" width="40" height="60" rx="3" fill={mapPreset.building} opacity="0.7"/>
+                  <rect x="150" y="340" width="55" height="55" rx="3" fill={mapPreset.building} opacity="0.6"/>
                   <path d="M 110 295 Q 180 310 235 330 Q 280 350 320 360 L 360 380" stroke={trConfig.accentColor} strokeWidth="5" fill="none" strokeLinecap="round" strokeDasharray="10 6" opacity="0.85"/>
                 </svg>
 
@@ -491,6 +502,48 @@ export default function Apariencia() {
 
         {/* scrollable tools */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 0' }}>
+
+          {/* Map style */}
+          <div className="cn-field">
+            <div className="cn-label">Estilo del mapa</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6, marginTop: 6 }}>
+              {MAP_STYLE_PRESETS.map(s => {
+                const selected = (trConfig.mapStyle ?? MAP_STYLE_PRESETS[0].id) === s.id
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setTrConfig(p => ({ ...p, mapStyle: s.id }))}
+                    style={{
+                      border: `2px solid ${selected ? trConfig.accentColor : 'rgba(15,23,42,0.1)'}`,
+                      borderRadius: 10,
+                      padding: '5px 4px 4px',
+                      background: selected ? trConfig.accentColor + '10' : '#F8FAFC',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 4,
+                      transition: 'border-color 0.15s',
+                    }}
+                  >
+                    <svg viewBox="0 0 42 26" width="100%" style={{ borderRadius: 4, display: 'block' }}>
+                      <rect width="42" height="26" fill={s.bg} rx="3"/>
+                      <polygon points="0,14 14,12 22,17 42,14" fill={s.terrain} opacity="0.55"/>
+                      <path d="M -2 11 L 14 9 L 22 12 L 42 10" stroke={s.road1} strokeWidth="3.5" fill="none" strokeLinecap="round"/>
+                      <path d="M -2 18 L 10 17 L 25 20 L 42 18" stroke={s.road2} strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+                      <rect x="3" y="3" width="7" height="5" rx="1" fill={s.building} opacity="0.85"/>
+                      <rect x="13" y="2" width="9" height="6" rx="1" fill={s.building} opacity="0.75"/>
+                      <rect x="27" y="3" width="8" height="5" rx="1" fill={s.building} opacity="0.8"/>
+                    </svg>
+                    <span style={{ fontSize: 9, fontWeight: selected ? 700 : 500, color: selected ? trConfig.accentColor : '#475569', lineHeight: 1, whiteSpace: 'nowrap' }}>
+                      {s.label}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
 
           {/* Accent color */}
           <div className="cn-field">

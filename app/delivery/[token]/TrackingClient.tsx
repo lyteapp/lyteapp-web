@@ -29,6 +29,7 @@ interface TrackingConfig {
   bgColor?: string
   fontFamily?: string
   fontSize?: string
+  mapStyle?: string
 }
 
 const FONT_STACKS: Record<string, string> = {
@@ -288,6 +289,7 @@ export default function TrackingClient({
               customerLng={delivery.customer_lng}
               height="100%"
               mapboxToken={mapboxToken}
+              mapStyle={trackingConfig?.mapStyle}
             />
           ) : (
             <svg viewBox="0 0 480 320" preserveAspectRatio="xMidYMid slice" style={{ width: '100%', height: '100%' }}>
@@ -438,6 +440,7 @@ export default function TrackingClient({
             customerLat={delivery.customer_lat}
             customerLng={delivery.customer_lng}
             mapboxToken={mapboxToken}
+            mapStyle={trackingConfig?.mapStyle}
           />
         </div>
       )}

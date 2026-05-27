@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Fragment } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -57,6 +57,12 @@ function parsePaymentMethods(raw: unknown): PaymentMethod[] {
   return []
 }
 
+type ContentBlock = {
+  id: string
+  afterId: string
+  type: 'text' | 'image' | 'video'
+  content: string
+}
 type TemplateConfig = {
   pageBg?: string; pageFont?: string
   fontSize?: 'small' | 'medium' | 'large'
@@ -75,6 +81,7 @@ type TemplateConfig = {
   logoShape?: string
   logoSize?: string
   headerLayout?: string
+  contentBlocks?: ContentBlock[]
 }
 type Store = {
   id: string; name: string; slug: string
@@ -90,6 +97,14 @@ type Store = {
   } | null
 }
 
+
+function toEmbedUrl(url: string): string {
+  const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/)
+  if (yt) return `https://www.youtube.com/embed/${yt[1]}`
+  const vm = url.match(/vimeo\.com\/(\d+)/)
+  if (vm) return `https://player.vimeo.com/video/${vm[1]}`
+  return url
+}
 
 function buildCartKey(productId: string, color?: string, variables?: Record<string, string>): string {
   const parts = [productId]
@@ -272,6 +287,40 @@ export default function StoreShell({ store, products, categories = [] }: { store
     '--sf-price-color': cfgPriceColor,
     ...(cfgPriceFontFamily ? { '--sf-price-font': cfgPriceFontFamily } : {}),
   } as React.CSSProperties
+
+  function renderContentBlocks(afterId: string) {
+    const blocks = (cfg.contentBlocks ?? []) as ContentBlock[]
+    const matching = blocks.filter(b => b.afterId === afterId)
+    if (matching.length === 0) return null
+    return (
+      <>
+        {matching.map(block => (
+          <div key={block.id} className="sf-content-block">
+            {block.type === 'text' && (
+              <div className="sf-block-text">{block.content}</div>
+            )}
+            {block.type === 'image' && block.content && (
+              <img src={block.content} alt="" className="sf-block-img" />
+            )}
+            {block.type === 'video' && block.content && (
+              <div className="sf-block-video-wrap">
+                {block.content.includes('youtu') || block.content.includes('vimeo') ? (
+                  <iframe
+                    src={toEmbedUrl(block.content)}
+                    className="sf-block-iframe"
+                    allow="autoplay; fullscreen"
+                    allowFullScreen
+                  />
+                ) : (
+                  <video src={block.content} controls className="sf-block-video-el" />
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </>
+    )
+  }
 
   // ── Modal helpers ──
   function openProductModal(p: Product) {
@@ -1386,11 +1435,15 @@ export default function StoreShell({ store, products, categories = [] }: { store
           ) : tpl === 'vitrina' ? (
             hasCats ? (
               <>
+                {renderContentBlocks('top')}
                 {catGroups.map(({ cat, items }) => (
-                  <div key={cat.id} id={`cat-${cat.id}`} className={`sf-cat-section${cfgCategoryShapes[cat.id] ? ` sf-pshape-${cfgCategoryShapes[cat.id]}` : ''}`}>
-                    <h2 className="sf-section-title sf-cat-section-title">{cat.name}</h2>
-                    <div className="sf-grid">{items.map(renderCard)}</div>
-                  </div>
+                  <Fragment key={cat.id}>
+                    <div id={`cat-${cat.id}`} className={`sf-cat-section${cfgCategoryShapes[cat.id] ? ` sf-pshape-${cfgCategoryShapes[cat.id]}` : ''}`}>
+                      <h2 className="sf-section-title sf-cat-section-title">{cat.name}</h2>
+                      <div className="sf-grid">{items.map(renderCard)}</div>
+                    </div>
+                    {renderContentBlocks(cat.id)}
+                  </Fragment>
                 ))}
                 {uncategorized.length > 0 && (
                   <div id="cat-other" className="sf-cat-section">
@@ -1398,6 +1451,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
                     <div className="sf-grid">{uncategorized.map(renderCard)}</div>
                   </div>
                 )}
+                {renderContentBlocks('bottom')}
               </>
             ) : vitHero ? (
               <>
@@ -1426,11 +1480,15 @@ export default function StoreShell({ store, products, categories = [] }: { store
           ) : tpl === 'escaparate' ? (
             hasCats ? (
               <>
+                {renderContentBlocks('top')}
                 {catGroups.map(({ cat, items }) => (
-                  <div key={cat.id} id={`cat-${cat.id}`} className={`sf-cat-section${cfgCategoryShapes[cat.id] ? ` sf-pshape-${cfgCategoryShapes[cat.id]}` : ''}`}>
-                    <h2 className="sf-section-title sf-cat-section-title">{cat.name}</h2>
-                    <div className="sf-esc-list">{items.map(renderEscRow)}</div>
-                  </div>
+                  <Fragment key={cat.id}>
+                    <div id={`cat-${cat.id}`} className={`sf-cat-section${cfgCategoryShapes[cat.id] ? ` sf-pshape-${cfgCategoryShapes[cat.id]}` : ''}`}>
+                      <h2 className="sf-section-title sf-cat-section-title">{cat.name}</h2>
+                      <div className="sf-esc-list">{items.map(renderEscRow)}</div>
+                    </div>
+                    {renderContentBlocks(cat.id)}
+                  </Fragment>
                 ))}
                 {uncategorized.length > 0 && (
                   <div id="cat-other" className="sf-cat-section">
@@ -1438,6 +1496,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
                     <div className="sf-esc-list">{uncategorized.map(renderEscRow)}</div>
                   </div>
                 )}
+                {renderContentBlocks('bottom')}
               </>
             ) : (
               <>
@@ -1480,11 +1539,15 @@ export default function StoreShell({ store, products, categories = [] }: { store
             )
           ) : hasCats ? (
             <>
+              {renderContentBlocks('top')}
               {catGroups.map(({ cat, items }) => (
-                <div key={cat.id} id={`cat-${cat.id}`} className={`sf-cat-section${cfgCategoryShapes[cat.id] ? ` sf-pshape-${cfgCategoryShapes[cat.id]}` : ''}`}>
-                  <h2 className="sf-section-title sf-cat-section-title">{cat.name}</h2>
-                  <div className="sf-grid">{items.map(renderCard)}</div>
-                </div>
+                <Fragment key={cat.id}>
+                  <div id={`cat-${cat.id}`} className={`sf-cat-section${cfgCategoryShapes[cat.id] ? ` sf-pshape-${cfgCategoryShapes[cat.id]}` : ''}`}>
+                    <h2 className="sf-section-title sf-cat-section-title">{cat.name}</h2>
+                    <div className="sf-grid">{items.map(renderCard)}</div>
+                  </div>
+                  {renderContentBlocks(cat.id)}
+                </Fragment>
               ))}
               {uncategorized.length > 0 && (
                 <div id="cat-other" className="sf-cat-section">
@@ -1492,6 +1555,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
                   <div className="sf-grid">{uncategorized.map(renderCard)}</div>
                 </div>
               )}
+              {renderContentBlocks('bottom')}
             </>
           ) : (
             <>

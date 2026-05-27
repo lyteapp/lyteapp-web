@@ -1091,3 +1091,35 @@ html, body { overflow-x: hidden; }
 .sf-align-center .sf-header-inner       { flex-direction: column; align-items: center; }
 .sf-align-center .sf-esc-info           { text-align: center; }
 .sf-align-center .sf-cat-info           { text-align: center; }
+
+/* ── Content blocks ───────────────────────────────────── */
+.sf-content-block {
+  padding: 8px 0;
+}
+.sf-block-text {
+  padding: 0 16px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.sf-block-img {
+  width: 100%;
+  display: block;
+  object-fit: cover;
+}
+.sf-block-video-wrap {
+  position: relative;
+  padding-bottom: 56.25%;
+  height: 0;
+  overflow: hidden;
+}
+.sf-block-iframe {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  border: none;
+}
+.sf-block-video-el {
+  width: 100%;
+  display: block;
+}

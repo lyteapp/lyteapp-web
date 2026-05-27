@@ -2014,3 +2014,102 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
   color: #0F172A;
   padding: 6px 8px;
 }
+
+/* ── Content blocks panel ─────────────────────────────── */
+.ed-block-item {
+  background: #F8FAFC;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ed-block-item-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ed-block-item-type {
+  font-size: 10px;
+  font-weight: 700;
+  color: #7C3AED;
+  background: #EDE9FE;
+  padding: 2px 7px;
+  border-radius: 100px;
+  flex-shrink: 0;
+}
+.ed-block-item-pos {
+  font-size: 11px;
+  color: #64748B;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ed-block-delete {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #94A3B8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+}
+.ed-block-delete:hover {
+  background: #FEE2E2;
+  color: #DC2626;
+}
+.ed-block-delete svg {
+  width: 14px;
+  height: 14px;
+}
+.ed-block-item-preview {
+  font-size: 11px;
+  color: #94A3B8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ed-block-select {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1.5px solid #E2E8F0;
+  background: white;
+  font-size: 12px;
+  color: #0F172A;
+  outline: none;
+  cursor: pointer;
+}
+.ed-block-select:focus { border-color: #7C3AED; }
+.ed-block-textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1.5px solid #E2E8F0;
+  background: white;
+  font-size: 12px;
+  color: #0F172A;
+  outline: none;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.5;
+}
+.ed-block-textarea:focus { border-color: #7C3AED; }
+.ed-block-input {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1.5px solid #E2E8F0;
+  background: white;
+  font-size: 12px;
+  color: #0F172A;
+  outline: none;
+}
+.ed-block-input:focus { border-color: #7C3AED; }

@@ -133,6 +133,7 @@ const PHOTO_SHAPES_CAT = [
 ]
 
 type Category = { id: string; name: string }
+type ContentBlock = { id: string; afterId: string; type: 'text' | 'image' | 'video'; content: string }
 
 export default function EditorPage() {
   const router = useRouter()
@@ -162,7 +163,11 @@ export default function EditorPage() {
   const [logoSize,       setLogoSize]       = useState('medium')
   const [headerLayout,   setHeaderLayout]   = useState('default')
   const [showMenuButton, setShowMenuButton] = useState(false)
-  const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'template' | 'price' | 'categories' | 'brand' | null>(null)
+  const [contentBlocks, setContentBlocks]   = useState<ContentBlock[]>([])
+  const [newBlockPos,  setNewBlockPos]      = useState('top')
+  const [newBlockType, setNewBlockType]     = useState<'text' | 'image' | 'video'>('text')
+  const [newBlockContent, setNewBlockContent] = useState('')
+  const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'template' | 'price' | 'categories' | 'brand' | 'blocks' | null>(null)
   const [iframeKey, setIframeKey]   = useState(0)
   const [saving, setSaving]         = useState(false)
   const [toolSaved, setToolSaved]   = useState(false)
@@ -203,6 +208,7 @@ export default function EditorPage() {
       if (cfg.logoSize)      setLogoSize(cfg.logoSize as string)
       if (cfg.headerLayout)  setHeaderLayout(cfg.headerLayout as string)
       if (cfg.showMenuButton !== undefined) setShowMenuButton(cfg.showMenuButton as boolean)
+      if (cfg.contentBlocks) setContentBlocks(cfg.contentBlocks as ContentBlock[])
       const { data: cats } = await supabase
         .from('categories').select('id,name')
         .eq('store_id', store.id).order('position', { ascending: true })
@@ -397,6 +403,7 @@ export default function EditorPage() {
       priceColor: accentColor, priceFont: priceFont || pageFont, priceSize,
       categoryNavStyle, showCatNav,
       logoShape, logoSize, headerLayout, showMenuButton,
+      contentBlocks: contentBlocks.length > 0 ? contentBlocks : undefined,
       ...(Object.keys(categoryShapes).length > 0
         ? { categoryPhotoShapes: categoryShapes }
         : { categoryPhotoShapes: undefined }),
@@ -565,6 +572,19 @@ export default function EditorPage() {
             <rect x="14" y="3" width="7" height="7" rx="1.5"/>
             <rect x="3" y="14" width="7" height="7" rx="1.5"/>
             <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+          </svg>
+        </button>
+
+        {/* Bloques */}
+        <button
+          className={`ed-tool-btn${activeTool === 'blocks' ? ' ed-tool-active' : ''}`}
+          title="Bloques de contenido"
+          onClick={() => setActiveTool(p => p === 'blocks' ? null : 'blocks')}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="7" rx="1"/>
+            <path d="M12 13v5M9.5 15.5h5"/>
+            <rect x="3" y="14" width="18" height="7" rx="1"/>
           </svg>
         </button>
 
@@ -1114,6 +1134,113 @@ export default function EditorPage() {
                 </div>
               </div>
             </label>
+
+            <PanelSave />
+          </div>
+        )}
+
+        {/* Panel — Bloques de contenido */}
+        {activeTool === 'blocks' && (
+          <div className="ed-tool-panel ed-tool-panel-lg">
+            <div className="ed-tp-title">Bloques de contenido</div>
+
+            {contentBlocks.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+                {contentBlocks.map(b => (
+                  <div key={b.id} className="ed-block-item">
+                    <div className="ed-block-item-head">
+                      <span className="ed-block-item-type">{b.type === 'text' ? 'Texto' : b.type === 'image' ? 'Imagen' : 'Video'}</span>
+                      <span className="ed-block-item-pos">
+                        {b.afterId === 'top' ? 'Al inicio' : b.afterId === 'bottom' ? 'Al final' : (categories.find(c => c.id === b.afterId)?.name ?? b.afterId)}
+                      </span>
+                      <button
+                        className="ed-block-delete"
+                        onClick={() => setContentBlocks(prev => prev.filter(x => x.id !== b.id))}
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                          <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>
+                        </svg>
+                      </button>
+                    </div>
+                    <div className="ed-block-item-preview">
+                      {b.content ? b.content.slice(0, 55) + (b.content.length > 55 ? '...' : '') : '(sin contenido)'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="ed-tp-subtitle">Agregar bloque</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <select
+                value={newBlockPos}
+                onChange={e => setNewBlockPos(e.target.value)}
+                className="ed-block-select"
+              >
+                <option value="top">Al inicio (antes de todo)</option>
+                {categories.map(c => (
+                  <option key={c.id} value={c.id}>Despues de {c.name}</option>
+                ))}
+                <option value="bottom">Al final (despues de todo)</option>
+              </select>
+
+              <div style={{ display: 'flex', gap: 6 }}>
+                {(['text', 'image', 'video'] as const).map(tp => (
+                  <button
+                    key={tp}
+                    onClick={() => setNewBlockType(tp)}
+                    style={{
+                      flex: 1, padding: '8px 4px', borderRadius: 8,
+                      border: `2px solid ${newBlockType === tp ? '#7C3AED' : '#E2E8F0'}`,
+                      background: newBlockType === tp ? '#F5F3FF' : 'white',
+                      color: newBlockType === tp ? '#7C3AED' : '#64748B',
+                      fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                    }}
+                  >
+                    {tp === 'text' ? 'Texto' : tp === 'image' ? 'Imagen' : 'Video'}
+                  </button>
+                ))}
+              </div>
+
+              {newBlockType === 'text' ? (
+                <textarea
+                  value={newBlockContent}
+                  onChange={e => setNewBlockContent(e.target.value)}
+                  placeholder="Escribe tu texto aqui..."
+                  className="ed-block-textarea"
+                  rows={4}
+                />
+              ) : (
+                <input
+                  type="url"
+                  value={newBlockContent}
+                  onChange={e => setNewBlockContent(e.target.value)}
+                  placeholder={newBlockType === 'image' ? 'URL de la imagen' : 'URL del video (YouTube, Vimeo...)'}
+                  className="ed-block-input"
+                />
+              )}
+
+              <button
+                onClick={() => {
+                  if (!newBlockContent.trim()) return
+                  setContentBlocks(prev => [...prev, {
+                    id: crypto.randomUUID(),
+                    afterId: newBlockPos,
+                    type: newBlockType,
+                    content: newBlockContent.trim(),
+                  }])
+                  setNewBlockContent('')
+                }}
+                style={{
+                  padding: '9px 16px', borderRadius: 8,
+                  background: '#7C3AED', color: 'white',
+                  border: 'none', fontSize: 13, fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Agregar
+              </button>
+            </div>
 
             <PanelSave />
           </div>

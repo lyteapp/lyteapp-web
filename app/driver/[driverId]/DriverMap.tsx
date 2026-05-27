@@ -1,65 +1,35 @@
 'use client'
 
-import { useEffect } from 'react'
-import { MapContainer, TileLayer, Marker, useMap, Circle, Polyline } from 'react-leaflet'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
+import { useEffect, useRef, useState } from 'react'
+import Map, { Marker, Source, Layer, NavigationControl } from 'react-map-gl'
+import type { MapRef } from 'react-map-gl'
+import 'mapbox-gl/dist/mapbox-gl.css'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-delete (L.Icon.Default.prototype as any)._getIconUrl
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl:       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-})
-
-const customerIcon = L.divIcon({
-  className: '',
-  html: `<div style="
-    width:44px;height:44px;border-radius:50%;
-    background:#7C3AED;border:3px solid white;
-    display:flex;align-items:center;justify-content:center;
-    box-shadow:0 4px 16px rgba(124,58,237,0.5);
-  ">
-    <svg viewBox="0 0 20 20" fill="white" width="20" height="20">
-      <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/>
-    </svg>
-  </div>`,
-  iconSize:   [44, 44],
-  iconAnchor: [22, 44],
-})
-
-const driverIcon = L.divIcon({
-  className: '',
-  html: `<div style="
-    width:20px;height:20px;border-radius:50%;
-    background:#3B82F6;border:3px solid white;
-    box-shadow:0 2px 10px rgba(59,130,246,0.6);
-  "></div>`,
-  iconSize:   [20, 20],
-  iconAnchor: [10, 10],
-})
-
-function FitBounds({ customerPos, driverPos }: { customerPos: [number, number]; driverPos: [number, number] | null }) {
-  const map = useMap()
-  useEffect(() => {
-    if (driverPos) {
-      map.fitBounds(L.latLngBounds([customerPos, driverPos]), { padding: [50, 50], maxZoom: 16 })
-    } else {
-      map.setView(customerPos, 16)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [customerPos[0], customerPos[1], driverPos?.[0], driverPos?.[1]])
-  return null
+function calcBearing([lat1, lng1]: [number, number], [lat2, lng2]: [number, number]): number {
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const lat1R = lat1 * Math.PI / 180
+  const lat2R = lat2 * Math.PI / 180
+  const y = Math.sin(dLng) * Math.cos(lat2R)
+  const x = Math.cos(lat1R) * Math.sin(lat2R) - Math.sin(lat1R) * Math.cos(lat2R) * Math.cos(dLng)
+  return ((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360
 }
 
-function FollowDriver({ pos }: { pos: [number, number] }) {
-  const map = useMap()
-  useEffect(() => {
-    map.setView(pos, Math.max(map.getZoom(), 17), { animate: true, duration: 0.6 })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pos[0], pos[1]])
-  return null
+function haversine([lat1, lng1]: [number, number], [lat2, lng2]: [number, number]): number {
+  const R = 6371000
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+function routeBearing(driverPos: [number, number], coords: [number, number][]): number {
+  let minD = Infinity, idx = 0
+  for (let i = 0; i < coords.length; i++) {
+    const d = haversine(driverPos, coords[i])
+    if (d < minD) { minD = d; idx = i }
+  }
+  const next = Math.min(idx + 3, coords.length - 1)
+  return next === idx ? 0 : calcBearing(coords[idx], coords[next])
 }
 
 interface Props {
@@ -78,67 +48,128 @@ export default function DriverMap({
   driverLat, driverLng,
   routeCoords, followDriver, mapboxToken,
 }: Props) {
-  const customerPos: [number, number] = [customerLat, customerLng]
+  const mapRef = useRef<MapRef>(null)
+  const [loaded, setLoaded] = useState(false)
   const driverPos: [number, number] | null = driverLat && driverLng ? [driverLat, driverLng] : null
 
+  useEffect(() => {
+    if (!loaded || !mapRef.current) return
+    const map = mapRef.current
+
+    if (followDriver && driverPos) {
+      const bearing = routeCoords && routeCoords.length > 2
+        ? routeBearing(driverPos, routeCoords)
+        : 0
+      map.flyTo({
+        center: [driverPos[1], driverPos[0]],
+        zoom: 18,
+        pitch: 60,
+        bearing,
+        speed: 0.5,
+        curve: 1,
+        essential: true,
+      })
+    } else {
+      if (driverPos) {
+        map.fitBounds(
+          [
+            [Math.min(driverPos[1], customerLng) - 0.001, Math.min(driverPos[0], customerLat) - 0.001],
+            [Math.max(driverPos[1], customerLng) + 0.001, Math.max(driverPos[0], customerLat) + 0.001],
+          ],
+          { padding: 64, maxZoom: 16, pitch: 0, bearing: 0, duration: 800 }
+        )
+      } else {
+        map.flyTo({ center: [customerLng, customerLat], zoom: 16, pitch: 0, bearing: 0, duration: 800 })
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, followDriver, driverPos?.[0], driverPos?.[1]])
+
+  const geojsonRoute = routeCoords && routeCoords.length > 0
+    ? {
+        type: 'Feature' as const,
+        properties: {},
+        geometry: {
+          type: 'LineString' as const,
+          // routeCoords are [lat, lng]; GeoJSON needs [lng, lat]
+          coordinates: routeCoords.map(([lat, lng]) => [lng, lat]),
+        },
+      }
+    : null
+
   return (
-    <MapContainer
-      center={customerPos}
-      zoom={16}
+    <Map
+      ref={mapRef}
+      initialViewState={{ longitude: customerLng, latitude: customerLat, zoom: 16, pitch: 0, bearing: 0 }}
       style={{ width: '100%', height: '100%' }}
-      zoomControl={false}
+      mapStyle="mapbox://styles/mapbox/standard"
+      mapboxAccessToken={mapboxToken}
+      scrollZoom
+      doubleClickZoom
+      touchZoomRotate
+      dragRotate={false}
       attributionControl={false}
+      onLoad={() => setLoaded(true)}
     >
-      <TileLayer
-        url={`https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/256/{z}/{x}/{y}@2x?access_token=${mapboxToken}`}
-        maxZoom={22}
-      />
+      <NavigationControl position="top-right" showCompass={false} />
 
       {/* Route polyline */}
-      {routeCoords && routeCoords.length > 0 && (
-        <Polyline
-          positions={routeCoords}
-          pathOptions={{ color: '#7C3AED', weight: 6, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }}
-        />
+      {geojsonRoute && (
+        <Source id="route" type="geojson" data={geojsonRoute}>
+          <Layer
+            id="route-casing"
+            type="line"
+            paint={{ 'line-color': '#ffffff', 'line-width': 10, 'line-opacity': 0.6 }}
+            layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+          />
+          <Layer
+            id="route-line"
+            type="line"
+            paint={{ 'line-color': '#7C3AED', 'line-width': 6, 'line-opacity': 1 }}
+            layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+          />
+        </Source>
       )}
 
       {/* Customer pin */}
-      <Marker position={customerPos} icon={customerIcon} />
-      <Circle
-        center={customerPos}
-        radius={30}
-        pathOptions={{ color: '#7C3AED', fillColor: '#7C3AED', fillOpacity: 0.15, weight: 0 }}
-      />
+      <Marker longitude={customerLng} latitude={customerLat} anchor="bottom">
+        <div style={{
+          width: 44, height: 44, borderRadius: '50%',
+          background: '#7C3AED', border: '3px solid white',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 4px 16px rgba(124,58,237,0.5)',
+          cursor: 'default',
+        }}>
+          <svg viewBox="0 0 20 20" fill="white" width={20} height={20}>
+            <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/>
+          </svg>
+        </div>
+      </Marker>
 
       {/* Driver dot */}
       {driverPos && (
-        <>
-          <Marker position={driverPos} icon={driverIcon} />
-          <Circle
-            center={driverPos}
-            radius={15}
-            pathOptions={{ color: '#3B82F6', fillColor: '#3B82F6', fillOpacity: 0.2, weight: 0 }}
-          />
-        </>
+        <Marker longitude={driverPos[1]} latitude={driverPos[0]} anchor="center">
+          <div style={{
+            width: 22, height: 22, borderRadius: '50%',
+            background: '#3B82F6', border: '3px solid white',
+            boxShadow: '0 2px 12px rgba(59,130,246,0.7)',
+          }} />
+        </Marker>
       )}
 
-      {followDriver && driverPos
-        ? <FollowDriver pos={driverPos} />
-        : <FitBounds customerPos={customerPos} driverPos={driverPos} />
-      }
-
-      {/* Customer name chip — only when not navigating */}
+      {/* Customer name chip — only in overview mode */}
       {!followDriver && (
         <div style={{
-          position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)',
-          zIndex: 1000, background: 'white', padding: '5px 12px', borderRadius: 100,
+          position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 10, background: 'white', padding: '5px 14px', borderRadius: 100,
           fontSize: 12, fontWeight: 600, color: '#0F172A',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.15)', whiteSpace: 'nowrap',
-          maxWidth: '80%', overflow: 'hidden', textOverflow: 'ellipsis',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.18)', whiteSpace: 'nowrap',
+          maxWidth: '70%', overflow: 'hidden', textOverflow: 'ellipsis',
+          pointerEvents: 'none',
         }}>
           {customerName}
         </div>
       )}
-    </MapContainer>
+    </Map>
   )
 }

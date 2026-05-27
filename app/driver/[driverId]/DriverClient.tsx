@@ -20,6 +20,7 @@ type Props = {
   storeLogo: string | null
   initialOrders: AvailableOrder[]
   initialDelivery: ActiveDelivery | null
+  mapboxToken: string
 }
 
 type GpsStatus  = 'requesting' | 'active' | 'error' | 'stopped'
@@ -123,7 +124,7 @@ function timeAgo(iso: string) {
 
 export default function DriverClient({
   driverId, driverName, driverAvatar, storeId, storeName, storeLogo,
-  initialOrders, initialDelivery,
+  initialOrders, initialDelivery, mapboxToken,
 }: Props) {
   const [orders, setOrders]             = useState<AvailableOrder[]>(initialOrders)
   const [delivery, setDelivery]         = useState<ActiveDelivery | null>(initialDelivery)
@@ -585,6 +586,7 @@ export default function DriverClient({
                   driverLng={driverPos?.[1] ?? null}
                   routeCoords={routeCoords}
                   followDriver={navMode}
+                  mapboxToken={mapboxToken}
                 />
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 8, color: '#94A3B8' }}>

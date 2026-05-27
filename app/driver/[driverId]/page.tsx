@@ -104,6 +104,7 @@ export default async function DriverPage(
       storeLogo={(driver.stores as unknown as { name: string; logo_url: string | null } | null)?.logo_url ?? null}
       initialOrders={availableOrders as AvailableOrder[]}
       initialDelivery={activeDelivery as ActiveDelivery | null}
+      mapboxToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
     />
   )
 }

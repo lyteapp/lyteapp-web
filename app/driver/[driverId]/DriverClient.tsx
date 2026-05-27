@@ -28,6 +28,92 @@ type InstallState = 'hidden' | 'ios' | 'android' | 'installed'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type BeforeInstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> }
 
+type NavStep = {
+  instruction: string
+  distanceM: number
+  maneuverPos: [number, number]
+  modifier: string
+}
+
+function haversineDistance([lat1, lon1]: [number, number], [lat2, lon2]: [number, number]): number {
+  const R = 6371000
+  const φ1 = lat1 * Math.PI / 180, φ2 = lat2 * Math.PI / 180
+  const Δφ = (lat2 - lat1) * Math.PI / 180
+  const Δλ = (lon2 - lon1) * Math.PI / 180
+  const a = Math.sin(Δφ/2)**2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2)**2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+function fmtDist(m: number): string {
+  return m < 1000 ? `${Math.round(m / 10) * 10}m` : `${(m / 1000).toFixed(1)}km`
+}
+
+function buildInstruction(type: string, modifier: string, name: string): string {
+  const via = name ? ` en ${name}` : ''
+  if (type === 'depart')   return `Inicia la ruta${via}`
+  if (type === 'arrive')   return 'Llegaste al destino'
+  if (type === 'turn' || type === 'end of road') {
+    if (modifier === 'uturn')       return `Da vuelta en U${via}`
+    if (modifier === 'sharp left')  return `Gira fuerte a la izquierda${via}`
+    if (modifier === 'sharp right') return `Gira fuerte a la derecha${via}`
+    if (modifier === 'left')        return `Gira a la izquierda${via}`
+    if (modifier === 'right')       return `Gira a la derecha${via}`
+    if (modifier === 'slight left') return `Leve a la izquierda${via}`
+    if (modifier === 'slight right') return `Leve a la derecha${via}`
+    return `Continua${via}`
+  }
+  if (type === 'fork') {
+    if (modifier?.includes('left'))  return `Toma la izquierda en el cruce${via}`
+    if (modifier?.includes('right')) return `Toma la derecha en el cruce${via}`
+  }
+  if (type === 'merge')     return `Incorporese${via}`
+  if (type === 'on ramp')   return `Toma la rampa${via}`
+  if (type === 'off ramp')  return `Sal de la autopista${via}`
+  if (type === 'roundabout' || type === 'rotary') return `Toma la rotonda${via}`
+  return `Continua${via}`
+}
+
+function NavArrow({ modifier }: { modifier: string }) {
+  const style = { color: 'white', width: 28, height: 28 }
+  if (modifier === 'arrive') return (
+    <svg {...style} viewBox="0 0 24 24" fill="currentColor">
+      <path fillRule="evenodd" d="M11.54 22.351l.07.04.028.016a.76.76 0 00.723 0l.028-.015.07-.041a16.975 16.975 0 001.144-.742 19.58 19.58 0 002.683-2.282c1.944-1.99 3.963-4.98 3.963-8.827a8.25 8.25 0 00-16.5 0c0 3.846 2.02 6.837 3.963 8.827a19.58 19.58 0 002.682 2.282 16.975 16.975 0 001.145.742zM12 13.5a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd"/>
+    </svg>
+  )
+  if (modifier === 'uturn') return (
+    <svg {...style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 9h13a5 5 0 010 10H3"/>
+      <path d="M7 5L3 9l4 4"/>
+    </svg>
+  )
+  if (modifier === 'sharp left' || modifier === 'left') return (
+    <svg {...style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 19V9m0 0L5 13m4-4l4 4M15 5v5a5 5 0 005 5h-1"/>
+    </svg>
+  )
+  if (modifier === 'slight left') return (
+    <svg {...style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 19V8m0 0l-4 4m4-4l4 4M8 4v5a5 5 0 01-5 5h1"/>
+    </svg>
+  )
+  if (modifier === 'sharp right' || modifier === 'right') return (
+    <svg {...style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 19V9m0 0l4 4m-4-4l-4 4M9 5v5a5 5 0 01-5 5h1"/>
+    </svg>
+  )
+  if (modifier === 'slight right') return (
+    <svg {...style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 19V8m0 0l4 4m-4-4L8 12M16 4v5a5 5 0 005 5h-1"/>
+    </svg>
+  )
+  // straight / default
+  return (
+    <svg {...style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 19V5m0 0l-4 4m4-4l4 4"/>
+    </svg>
+  )
+}
+
 function timeAgo(iso: string) {
   const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
   if (m < 1) return 'Ahora mismo'
@@ -51,6 +137,14 @@ export default function DriverClient({
   const [installState, setInstallState] = useState<InstallState>('hidden')
   const [showIosHint, setShowIosHint]   = useState(false)
   const installPrompt = useRef<BeforeInstallPromptEvent | null>(null)
+
+  // ── Navigation ────────────────────────────────────────────────────
+  const [navMode, setNavMode]       = useState(false)
+  const [routeCoords, setRouteCoords] = useState<[number, number][]>([])
+  const [navSteps, setNavSteps]     = useState<NavStep[]>([])
+  const [navStepIdx, setNavStepIdx] = useState(0)
+  const [navLoading, setNavLoading] = useState(false)
+  const [totalDist, setTotalDist]   = useState(0)
 
   const watchId          = useRef<number | null>(null)
   const fallbackInterval = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -287,7 +381,7 @@ export default function DriverClient({
     await loadOrders()
   }
 
-  // ── Mark picked up (from counter) ─────────────────────────────────
+  // ── Mark picked up ────────────────────────────────────────────────
   async function markPickedUp() {
     if (!delivery || delivery.status !== 'ready') return
     await supabase.from('deliveries')
@@ -296,7 +390,63 @@ export default function DriverClient({
     setDelivery(d => d ? { ...d, status: 'picked_up', picked_up_at: new Date().toISOString() } : d)
   }
 
+  // ── Navigation ────────────────────────────────────────────────────
+  async function startNavigation() {
+    if (!driverPos || !delivery?.customer_lat || !delivery?.customer_lng) return
+    setNavLoading(true)
+    try {
+      const [dLat, dLng] = driverPos
+      const cLat = delivery.customer_lat
+      const cLng = delivery.customer_lng
+      const res = await fetch(
+        `https://router.project-osrm.org/route/v1/driving/${dLng},${dLat};${cLng},${cLat}?steps=true&overview=full&geometries=geojson`
+      )
+      const data = await res.json()
+      if (data.code !== 'Ok' || !data.routes?.length) throw new Error('no route')
+
+      const route = data.routes[0]
+      const coords: [number, number][] = route.geometry.coordinates.map(
+        ([lng, lat]: [number, number]) => [lat, lng]
+      )
+      setRouteCoords(coords)
+      setTotalDist(route.distance)
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const steps: NavStep[] = route.legs[0].steps.map((s: any) => ({
+        instruction: buildInstruction(s.maneuver.type, s.maneuver.modifier ?? '', s.name ?? ''),
+        distanceM:   s.distance,
+        maneuverPos: [s.maneuver.location[1], s.maneuver.location[0]] as [number, number],
+        modifier:    s.maneuver.modifier ?? s.maneuver.type ?? 'straight',
+      }))
+      setNavSteps(steps)
+      setNavStepIdx(0)
+      setNavMode(true)
+    } catch {
+      // silently fall back to current view — no route drawn
+    }
+    setNavLoading(false)
+  }
+
+  function stopNavigation() {
+    setNavMode(false)
+    setRouteCoords([])
+    setNavSteps([])
+    setNavStepIdx(0)
+    setTotalDist(0)
+  }
+
+  // Advance step when driver is within 40 m of the current maneuver point
+  useEffect(() => {
+    if (!navMode || !driverPos || navSteps.length === 0) return
+    const step = navSteps[navStepIdx]
+    if (!step || navStepIdx >= navSteps.length - 1) return
+    if (haversineDistance(driverPos, step.maneuverPos) < 40) {
+      setNavStepIdx(i => i + 1)
+    }
+  }, [driverPos, navMode, navSteps, navStepIdx])
+
   const isActive = gpsStatus === 'active'
+  const currentStep = navSteps[navStepIdx] ?? null
 
   return (
     <div className="dsp-root">
@@ -433,6 +583,8 @@ export default function DriverClient({
                   customerName={delivery.customer_name}
                   driverLat={driverPos?.[0] ?? null}
                   driverLng={driverPos?.[1] ?? null}
+                  routeCoords={routeCoords}
+                  followDriver={navMode}
                 />
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 8, color: '#94A3B8' }}>
@@ -444,24 +596,38 @@ export default function DriverClient({
                 </div>
               )}
 
-              {/* Customer info overlay — top of map */}
+              {/* Top overlay — nav instruction or customer info */}
               <div className="dsp-active-info">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                  <span className="dsp-pulse-dot" />
-                  <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#64748B' }}>Pedido activo</span>
-                </div>
-                <div className="dsp-delivery-customer" style={{ marginBottom: 4 }}>{delivery.customer_name}</div>
-                {delivery.delivery_address && (
-                  <div className="dsp-delivery-address" style={{ marginBottom: 4 }}>
-                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="12" height="12" style={{ flexShrink: 0 }}>
-                      <path strokeLinecap="round" d="M8 1.5C5.515 1.5 3.5 3.515 3.5 6c0 3.938 4.5 8.5 4.5 8.5S12.5 9.938 12.5 6c0-2.485-2.015-4.5-4.5-4.5z"/>
-                      <circle cx="8" cy="6" r="1.5"/>
-                    </svg>
-                    {delivery.delivery_address}
+                {navMode && currentStep ? (
+                  <div className="dsp-nav-instruction">
+                    <div className="dsp-nav-arrow">
+                      <NavArrow modifier={currentStep.modifier} />
+                    </div>
+                    <div className="dsp-nav-text">
+                      <div className="dsp-nav-dist">{fmtDist(currentStep.distanceM)}</div>
+                      <div className="dsp-nav-instr">{currentStep.instruction}</div>
+                      {totalDist > 0 && (
+                        <div className="dsp-nav-total">Total: {fmtDist(totalDist)}</div>
+                      )}
+                    </div>
                   </div>
-                )}
-                {delivery.notes && (
-                  <div className="dsp-delivery-notes" style={{ margin: 0 }}>{delivery.notes}</div>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                      <span className="dsp-pulse-dot" />
+                      <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#64748B' }}>Pedido activo</span>
+                    </div>
+                    <div className="dsp-delivery-customer" style={{ marginBottom: 4 }}>{delivery.customer_name}</div>
+                    {delivery.delivery_address && (
+                      <div className="dsp-delivery-address" style={{ marginBottom: 0 }}>
+                        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="12" height="12" style={{ flexShrink: 0 }}>
+                          <path strokeLinecap="round" d="M8 1.5C5.515 1.5 3.5 3.515 3.5 6c0 3.938 4.5 8.5 4.5 8.5S12.5 9.938 12.5 6c0-2.485-2.015-4.5-4.5-4.5z"/>
+                          <circle cx="8" cy="6" r="1.5"/>
+                        </svg>
+                        {delivery.delivery_address}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -476,17 +642,13 @@ export default function DriverClient({
                   </a>
                 )}
                 {delivery.customer_lat && delivery.customer_lng && (
-                  <a
-                    href={`https://www.google.com/maps/dir/?api=1&destination=${delivery.customer_lat},${delivery.customer_lng}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="dsp-btn-nav"
+                  <button
+                    className={navMode ? 'dsp-btn-nav-stop' : 'dsp-btn-nav'}
+                    onClick={navMode ? stopNavigation : startNavigation}
+                    disabled={navLoading}
                   >
-                    <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
-                      <path fillRule="evenodd" d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 103 9c0 3.492 1.698 5.988 3.355 7.584a13.731 13.731 0 002.273 1.765 11.842 11.842 0 00.976.544l.062.029.018.008.006.003zM10 11.25a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z" clipRule="evenodd"/>
-                    </svg>
-                    Como llegar
-                  </a>
+                    {navLoading ? 'Calculando...' : navMode ? 'Parar ruta' : 'Como llegar'}
+                  </button>
                 )}
                 <button className="dsp-btn-done" style={{ flex: 1 }} onClick={completeDelivery} disabled={completing}>
                   {completing ? 'Guardando...' : 'Entregado'}

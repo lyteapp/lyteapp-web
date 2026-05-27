@@ -320,7 +320,7 @@
   background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.08) 65%, transparent 100%);
 }
 
-/* Navigation button (Como llegar) */
+/* Navigation buttons */
 .dsp-btn-nav {
   display: flex;
   align-items: center;
@@ -338,8 +338,70 @@
   white-space: nowrap;
   transition: background 0.15s;
 }
+.dsp-btn-nav:hover:not(:disabled) { background: #BFDBFE; }
+.dsp-btn-nav:disabled { opacity: 0.6; cursor: not-allowed; }
 
-.dsp-btn-nav:hover { background: #BFDBFE; }
+.dsp-btn-nav-stop {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 13px 16px;
+  border-radius: 12px;
+  border: none;
+  background: #FEE2E2;
+  color: #DC2626;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.dsp-btn-nav-stop:hover { background: #FECACA; }
+
+/* Navigation instruction overlay */
+.dsp-nav-instruction {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.dsp-nav-arrow {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  background: #7C3AED;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dsp-nav-text { flex: 1; min-width: 0; }
+
+.dsp-nav-dist {
+  font-size: 26px;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: -0.5px;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.dsp-nav-instr {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1E293B;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+
+.dsp-nav-total {
+  font-size: 11px;
+  color: #94A3B8;
+}
 
 .dsp-btn-call {
   display: flex;

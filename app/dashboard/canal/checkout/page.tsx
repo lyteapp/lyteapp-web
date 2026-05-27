@@ -5,6 +5,43 @@ import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../../lib/auth'
 import '../canal.css'
 
+// ── PAYMENT METHODS ────────────────────────────────────────────
+interface PaymentMethod {
+  id: string; name: string; icon: string; enabled: boolean
+  fields: { key: string; label: string; placeholder: string }[]
+  values: Record<string, string>
+}
+const METHODS: Omit<PaymentMethod, 'enabled' | 'values'>[] = [
+  { id: 'pago_movil', name: 'Pago Movil', icon: 'PM', fields: [
+    { key: 'banco', label: 'Banco', placeholder: 'Ej: Banesco' },
+    { key: 'cedula', label: 'Cedula / RIF', placeholder: 'Ej: V-12345678' },
+    { key: 'telefono', label: 'Telefono', placeholder: 'Ej: 0414-1234567' },
+  ]},
+  { id: 'zelle', name: 'Zelle', icon: 'ZL', fields: [
+    { key: 'email', label: 'Email o telefono', placeholder: 'nombre@email.com' },
+    { key: 'titular', label: 'Nombre del titular', placeholder: 'Juan Perez' },
+  ]},
+  { id: 'usdt', name: 'USDT / Cripto', icon: 'CR', fields: [
+    { key: 'red', label: 'Red', placeholder: 'Ej: TRC20 (Tron)' },
+    { key: 'wallet', label: 'Wallet / Direccion', placeholder: 'TXxx...' },
+  ]},
+  { id: 'efectivo', name: 'Efectivo', icon: 'EF', fields: [
+    { key: 'instrucciones', label: 'Instrucciones', placeholder: 'Pago al momento de entrega' },
+  ]},
+  { id: 'transferencia', name: 'Transferencia bancaria', icon: 'TB', fields: [
+    { key: 'banco', label: 'Banco', placeholder: 'Ej: Mercantil' },
+    { key: 'cuenta', label: 'No de cuenta', placeholder: '0105-0000-00-0000000000' },
+    { key: 'titular', label: 'Titular', placeholder: 'Juan Perez' },
+    { key: 'rif', label: 'Cedula / RIF', placeholder: 'V-12345678' },
+  ]},
+  { id: 'binance', name: 'Binance Pay', icon: 'BN', fields: [
+    { key: 'id', label: 'Binance ID / Pay ID', placeholder: 'Ej: 123456789' },
+  ]},
+  { id: 'punto_venta', name: 'Punto de venta', icon: 'PV', fields: [
+    { key: 'instrucciones', label: 'Instrucciones', placeholder: 'Ej: Disponible en local' },
+  ]},
+]
+
 interface CheckoutSettings {
   requireName: boolean; requirePhone: boolean; requireAddress: boolean
   allowNotes: boolean; minOrder: string; deliveryEnabled: boolean; deliveryFee: string
@@ -27,7 +64,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 }
 
 const MOCK_ITEMS = [
-  { name: 'Hamburguesa clásica', price: 8.50, qty: 1, image: null },
+  { name: 'Hamburguesa clasica', price: 8.50, qty: 1, image: null },
   { name: 'Papas fritas',        price: 3.00, qty: 2, image: null },
 ]
 
@@ -193,16 +230,35 @@ export default function CheckoutPage() {
   const [success, setSuccess] = useState(false)
   const [settingsError, setSettingsError] = useState('')
 
+  // Pagos
+  const [methods, setMethods] = useState<PaymentMethod[]>(() =>
+    METHODS.map(m => ({ ...m, enabled: false, values: {} }))
+  )
+  const [openMethod, setOpenMethod] = useState<string | null>(null)
+  const [savingPagos, setSavingPagos] = useState(false)
+  const [successPagos, setSuccessPagos] = useState(false)
+  const [pagosError, setPagosError] = useState('')
+  const [storeId, setStoreId] = useState<string | null>(null)
+
   useEffect(() => {
     if (!user) return
     async function load() {
       try {
         const { data: store } = await supabase
           .from('stores')
-          .select('checkout_settings')
+          .select('id,checkout_settings,payment_methods')
           .eq('owner_id', user!.id)
           .maybeSingle()
-        if (store?.checkout_settings) setSettings({ ...DEFAULTS, ...store.checkout_settings })
+        if (!store) return
+        setStoreId(store.id)
+        if (store.checkout_settings) setSettings({ ...DEFAULTS, ...store.checkout_settings })
+        if (store.payment_methods) {
+          const pm = store.payment_methods as Record<string, { enabled: boolean; values: Record<string, string> }>
+          setMethods(prev => prev.map(m => {
+            const s = pm[m.id]
+            return s ? { ...m, enabled: s.enabled ?? false, values: s.values ?? {} } : m
+          }))
+        }
       } catch { /* silently handle */ }
     }
     load()
@@ -225,6 +281,18 @@ export default function CheckoutPage() {
     setSaving(false)
   }
 
+  async function savePagos() {
+    if (!storeId) return
+    setSavingPagos(true); setPagosError(''); setSuccessPagos(false)
+    const pm: Record<string, { enabled: boolean; values: Record<string, string> }> = {}
+    for (const m of methods) pm[m.id] = { enabled: m.enabled, values: m.values }
+    const { error: err } = await supabase.from('stores').update({ payment_methods: pm }).eq('id', storeId)
+    setSavingPagos(false)
+    if (err) { setPagosError(err.message); return }
+    setSuccessPagos(true)
+    setTimeout(() => setSuccessPagos(false), 3000)
+  }
+
   return (
     <div className="cn-page" style={{ maxWidth: 'none' }}>
       <div className="cn-header">
@@ -235,140 +303,207 @@ export default function CheckoutPage() {
       <div style={{ display: 'flex', gap: 40, alignItems: 'flex-start' }}>
 
         {/* ── Settings form ── */}
-        <form onSubmit={saveSettings} style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+
+          {/* ── Pagos ── */}
           <div className="cn-section">
             <div className="cn-section-head">
               <div className="cn-section-icon">
                 <svg viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h6a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                  <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM2 9v5a2 2 0 002 2h12a2 2 0 002-2V9H2zm4 3a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1z"/>
                 </svg>
               </div>
               <div>
-                <div className="cn-section-title">Campos del formulario</div>
-                <div className="cn-section-sub">Que datos solicitar al comprador</div>
+                <div className="cn-section-title">Metodos de pago</div>
+                <div className="cn-section-sub">Activa los metodos que aceptas y agrega tus datos</div>
               </div>
             </div>
-            <div className="cn-section-body">
-              <div className="cn-toggle-row">
-                <div className="cn-toggle-info">
-                  <div className="cn-toggle-label">Nombre del cliente</div>
-                  <div className="cn-toggle-hint">Pedir el nombre completo al hacer el pedido</div>
-                </div>
-                <Toggle checked={settings.requireName} onChange={v => setSetting('requireName', v)} />
+            <div className="cn-section-body" style={{ padding: '12px 20px 20px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {methods.map(m => (
+                  <div key={m.id} style={{ border: '1px solid rgba(15,23,42,0.08)', borderRadius: 12, overflow: 'hidden', background: 'white' }}>
+                    <div
+                      style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}
+                      onClick={() => setOpenMethod(prev => prev === m.id ? null : m.id)}
+                    >
+                      <div style={{ width: 32, height: 32, borderRadius: 8, background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#64748B', flexShrink: 0 }}>
+                        {m.icon}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A' }}>{m.name}</div>
+                        <div style={{ fontSize: 11, color: m.enabled ? '#7C3AED' : '#94A3B8' }}>{m.enabled ? 'Activo' : 'Inactivo'}</div>
+                      </div>
+                      <label className="cn-toggle" onClick={e => e.stopPropagation()}>
+                        <input type="checkbox" checked={m.enabled} onChange={e => setMethods(prev => prev.map(x => x.id === m.id ? { ...x, enabled: e.target.checked } : x))} />
+                        <span className="cn-toggle-track" />
+                      </label>
+                    </div>
+                    {openMethod === m.id && (
+                      <div style={{ padding: '0 16px 16px', borderTop: '1px solid rgba(15,23,42,0.06)' }}>
+                        <div style={{ paddingTop: 14, display: 'grid', gridTemplateColumns: m.fields.length > 2 ? '1fr 1fr' : '1fr', gap: 12 }}>
+                          {m.fields.map(f => (
+                            <div key={f.key} className="cn-field" style={{ marginBottom: 0 }}>
+                              <div className="cn-label">{f.label}</div>
+                              <input
+                                className="cn-input"
+                                placeholder={f.placeholder}
+                                value={m.values[f.key] ?? ''}
+                                onChange={e => setMethods(prev => prev.map(x => x.id === m.id ? { ...x, values: { ...x.values, [f.key]: e.target.value } } : x))}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
-              <div className="cn-toggle-row">
-                <div className="cn-toggle-info">
-                  <div className="cn-toggle-label">Telefono del cliente</div>
-                  <div className="cn-toggle-hint">Util para contactar y coordinar la entrega</div>
-                </div>
-                <Toggle checked={settings.requirePhone} onChange={v => setSetting('requirePhone', v)} />
-              </div>
-              <div className="cn-toggle-row">
-                <div className="cn-toggle-info">
-                  <div className="cn-toggle-label">Direccion de entrega</div>
-                  <div className="cn-toggle-hint">Activar si haces domicilios</div>
-                </div>
-                <Toggle checked={settings.requireAddress} onChange={v => setSetting('requireAddress', v)} />
-              </div>
-              <div className="cn-toggle-row">
-                <div className="cn-toggle-info">
-                  <div className="cn-toggle-label">Notas del pedido</div>
-                  <div className="cn-toggle-hint">Permite que el cliente agregue instrucciones especiales</div>
-                </div>
-                <Toggle checked={settings.allowNotes} onChange={v => setSetting('allowNotes', v)} />
+              {pagosError && <div className="cn-error" style={{ marginTop: 12 }}>{pagosError}</div>}
+              {successPagos && <div className="cn-success" style={{ marginTop: 12 }}>Metodos de pago guardados.</div>}
+              <div className="cn-actions">
+                <button type="button" className="cn-save-btn" onClick={savePagos} disabled={savingPagos}>
+                  {savingPagos ? 'Guardando...' : 'Guardar metodos de pago'}
+                </button>
               </div>
             </div>
           </div>
 
-          <div className="cn-section">
-            <div className="cn-section-head">
-              <div className="cn-section-icon">
-                <svg viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" clipRule="evenodd" d="M5 10.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5zm0 1a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm10-1a2.5 2.5 0 100 5 2.5 2.5 0 000-5zm0 1a1.5 1.5 0 110 3 1.5 1.5 0 010-3z"/>
-                  <path d="M5.5 10.5L8 7h1.5L10 5.5h2.5L13 7.5l1.5-1.5h2v2L14.5 10.5H5.5z"/>
-                </svg>
+          {/* ── Checkout settings ── */}
+          <form onSubmit={saveSettings}>
+            <div className="cn-section">
+              <div className="cn-section-head">
+                <div className="cn-section-icon">
+                  <svg viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h6a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="cn-section-title">Campos del formulario</div>
+                  <div className="cn-section-sub">Que datos solicitar al comprador</div>
+                </div>
               </div>
-              <div>
-                <div className="cn-section-title">Tipo de entrega</div>
-                <div className="cn-section-sub">Metodos de entrega que ofreces</div>
+              <div className="cn-section-body">
+                <div className="cn-toggle-row">
+                  <div className="cn-toggle-info">
+                    <div className="cn-toggle-label">Nombre del cliente</div>
+                    <div className="cn-toggle-hint">Pedir el nombre completo al hacer el pedido</div>
+                  </div>
+                  <Toggle checked={settings.requireName} onChange={v => setSetting('requireName', v)} />
+                </div>
+                <div className="cn-toggle-row">
+                  <div className="cn-toggle-info">
+                    <div className="cn-toggle-label">Telefono del cliente</div>
+                    <div className="cn-toggle-hint">Util para contactar y coordinar la entrega</div>
+                  </div>
+                  <Toggle checked={settings.requirePhone} onChange={v => setSetting('requirePhone', v)} />
+                </div>
+                <div className="cn-toggle-row">
+                  <div className="cn-toggle-info">
+                    <div className="cn-toggle-label">Direccion de entrega</div>
+                    <div className="cn-toggle-hint">Activar si haces domicilios</div>
+                  </div>
+                  <Toggle checked={settings.requireAddress} onChange={v => setSetting('requireAddress', v)} />
+                </div>
+                <div className="cn-toggle-row">
+                  <div className="cn-toggle-info">
+                    <div className="cn-toggle-label">Notas del pedido</div>
+                    <div className="cn-toggle-hint">Permite que el cliente agregue instrucciones especiales</div>
+                  </div>
+                  <Toggle checked={settings.allowNotes} onChange={v => setSetting('allowNotes', v)} />
+                </div>
               </div>
             </div>
-            <div className="cn-section-body">
-              <div className="cn-toggle-row">
-                <div className="cn-toggle-info">
-                  <div className="cn-toggle-label">Domicilio</div>
-                  <div className="cn-toggle-hint">El pedido se entrega en la direccion del cliente</div>
-                </div>
-                <Toggle
-                  checked={settings.deliveryTypes.delivery}
-                  onChange={v => setSettings(s => ({ ...s, deliveryTypes: { ...s.deliveryTypes, delivery: v } }))}
-                />
-              </div>
-              <div className="cn-toggle-row">
-                <div className="cn-toggle-info">
-                  <div className="cn-toggle-label">Retiro en tienda</div>
-                  <div className="cn-toggle-hint">El cliente viene a buscar su pedido</div>
-                </div>
-                <Toggle
-                  checked={settings.deliveryTypes.pickup}
-                  onChange={v => setSettings(s => ({ ...s, deliveryTypes: { ...s.deliveryTypes, pickup: v } }))}
-                />
-              </div>
-            </div>
-          </div>
 
-          <div className="cn-section">
-            <div className="cn-section-head">
-              <div className="cn-section-icon">
-                <svg viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clipRule="evenodd" />
-                </svg>
+            <div className="cn-section">
+              <div className="cn-section-head">
+                <div className="cn-section-icon">
+                  <svg viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M5 10.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5zm0 1a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm10-1a2.5 2.5 0 100 5 2.5 2.5 0 000-5zm0 1a1.5 1.5 0 110 3 1.5 1.5 0 010-3z"/>
+                    <path d="M5.5 10.5L8 7h1.5L10 5.5h2.5L13 7.5l1.5-1.5h2v2L14.5 10.5H5.5z"/>
+                  </svg>
+                </div>
+                <div>
+                  <div className="cn-section-title">Tipo de entrega</div>
+                  <div className="cn-section-sub">Metodos de entrega que ofreces</div>
+                </div>
               </div>
-              <div>
-                <div className="cn-section-title">Reglas del pedido</div>
-                <div className="cn-section-sub">Minimo de compra y envio</div>
+              <div className="cn-section-body">
+                <div className="cn-toggle-row">
+                  <div className="cn-toggle-info">
+                    <div className="cn-toggle-label">Domicilio</div>
+                    <div className="cn-toggle-hint">El pedido se entrega en la direccion del cliente</div>
+                  </div>
+                  <Toggle
+                    checked={settings.deliveryTypes.delivery}
+                    onChange={v => setSettings(s => ({ ...s, deliveryTypes: { ...s.deliveryTypes, delivery: v } }))}
+                  />
+                </div>
+                <div className="cn-toggle-row">
+                  <div className="cn-toggle-info">
+                    <div className="cn-toggle-label">Retiro en tienda</div>
+                    <div className="cn-toggle-hint">El cliente viene a buscar su pedido</div>
+                  </div>
+                  <Toggle
+                    checked={settings.deliveryTypes.pickup}
+                    onChange={v => setSettings(s => ({ ...s, deliveryTypes: { ...s.deliveryTypes, pickup: v } }))}
+                  />
+                </div>
               </div>
             </div>
-            <div className="cn-section-body">
-              <div className="cn-field">
-                <div className="cn-label">Monto minimo de pedido (USD)</div>
-                <div className="cn-prefix-wrap">
-                  <span className="cn-prefix">$</span>
-                  <input className="cn-prefix-input" type="number" min="0" step="0.01"
-                    value={settings.minOrder} onChange={e => setSetting('minOrder', e.target.value)}
-                    placeholder="0.00 — sin minimo" />
+
+            <div className="cn-section">
+              <div className="cn-section-head">
+                <div className="cn-section-icon">
+                  <svg viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="cn-section-title">Reglas del pedido</div>
+                  <div className="cn-section-sub">Minimo de compra y envio</div>
                 </div>
               </div>
-              <div className="cn-toggle-row" style={{ marginTop: 16 }}>
-                <div className="cn-toggle-info">
-                  <div className="cn-toggle-label">Cobrar envio</div>
-                  <div className="cn-toggle-hint">Agrega un costo fijo de delivery al pedido</div>
-                </div>
-                <Toggle checked={settings.deliveryEnabled} onChange={v => setSetting('deliveryEnabled', v)} />
-              </div>
-              {settings.deliveryEnabled && (
-                <div className="cn-field" style={{ marginTop: 12 }}>
-                  <div className="cn-label">Costo de envio (USD)</div>
+              <div className="cn-section-body">
+                <div className="cn-field">
+                  <div className="cn-label">Monto minimo de pedido (USD)</div>
                   <div className="cn-prefix-wrap">
                     <span className="cn-prefix">$</span>
                     <input className="cn-prefix-input" type="number" min="0" step="0.01"
-                      value={settings.deliveryFee} onChange={e => setSetting('deliveryFee', e.target.value)}
-                      placeholder="2.00" />
+                      value={settings.minOrder} onChange={e => setSetting('minOrder', e.target.value)}
+                      placeholder="0.00 — sin minimo" />
                   </div>
                 </div>
-              )}
+                <div className="cn-toggle-row" style={{ marginTop: 16 }}>
+                  <div className="cn-toggle-info">
+                    <div className="cn-toggle-label">Cobrar envio</div>
+                    <div className="cn-toggle-hint">Agrega un costo fijo de delivery al pedido</div>
+                  </div>
+                  <Toggle checked={settings.deliveryEnabled} onChange={v => setSetting('deliveryEnabled', v)} />
+                </div>
+                {settings.deliveryEnabled && (
+                  <div className="cn-field" style={{ marginTop: 12 }}>
+                    <div className="cn-label">Costo de envio (USD)</div>
+                    <div className="cn-prefix-wrap">
+                      <span className="cn-prefix">$</span>
+                      <input className="cn-prefix-input" type="number" min="0" step="0.01"
+                        value={settings.deliveryFee} onChange={e => setSetting('deliveryFee', e.target.value)}
+                        placeholder="2.00" />
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
 
-          {settingsError && <div className="cn-error">{settingsError}</div>}
-          {success && <div className="cn-success">Configuracion de checkout guardada.</div>}
-          <div className="cn-actions">
-            <button type="submit" className="cn-save-btn" disabled={saving}>
-              {saving ? 'Guardando...' : 'Guardar checkout'}
-            </button>
-          </div>
-        </form>
+            {settingsError && <div className="cn-error">{settingsError}</div>}
+            {success && <div className="cn-success">Configuracion de checkout guardada.</div>}
+            <div className="cn-actions">
+              <button type="submit" className="cn-save-btn" disabled={saving}>
+                {saving ? 'Guardando...' : 'Guardar checkout'}
+              </button>
+            </div>
+          </form>
+        </div>
 
         {/* ── Live preview ── */}
         <div style={{ position: 'sticky', top: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>

@@ -46,7 +46,6 @@ const canalSubItems: { href: string; tKey: TranslationKey }[] = [
 
 const settingsSubItems: { href: string; tKey: TranslationKey }[] = [
   { href: '/dashboard/configuracion?section=general',  tKey: 'nav.general' },
-  { href: '/dashboard/configuracion?section=pagos',    tKey: 'nav.payments' },
   { href: '/dashboard/configuracion?section=delivery', tKey: 'nav.delivery' },
 ]
 

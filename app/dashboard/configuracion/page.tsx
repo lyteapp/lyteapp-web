@@ -7,43 +7,6 @@ import { useAuth } from '../../lib/auth'
 import PhoneInput from '../../components/PhoneInput'
 import './configuracion.css'
 
-// ── PAYMENT METHODS ────────────────────────────────────────────
-interface PaymentMethod {
-  id: string; name: string; icon: string; enabled: boolean
-  fields: { key: string; label: string; placeholder: string }[]
-  values: Record<string, string>
-}
-const METHODS: Omit<PaymentMethod, 'enabled' | 'values'>[] = [
-  { id: 'pago_movil', name: 'Pago Móvil', icon: 'PM', fields: [
-    { key: 'banco', label: 'Banco', placeholder: 'Ej: Banesco' },
-    { key: 'cedula', label: 'Cédula / RIF', placeholder: 'Ej: V-12345678' },
-    { key: 'telefono', label: 'Teléfono', placeholder: 'Ej: 0414-1234567' },
-  ]},
-  { id: 'zelle', name: 'Zelle', icon: 'ZL', fields: [
-    { key: 'email', label: 'Email o teléfono', placeholder: 'nombre@email.com' },
-    { key: 'titular', label: 'Nombre del titular', placeholder: 'Juan Pérez' },
-  ]},
-  { id: 'usdt', name: 'USDT / Cripto', icon: 'CR', fields: [
-    { key: 'red', label: 'Red', placeholder: 'Ej: TRC20 (Tron)' },
-    { key: 'wallet', label: 'Wallet / Dirección', placeholder: 'TXxx...' },
-  ]},
-  { id: 'efectivo', name: 'Efectivo', icon: 'EF', fields: [
-    { key: 'instrucciones', label: 'Instrucciones', placeholder: 'Pago al momento de entrega' },
-  ]},
-  { id: 'transferencia', name: 'Transferencia bancaria', icon: 'TB', fields: [
-    { key: 'banco', label: 'Banco', placeholder: 'Ej: Mercantil' },
-    { key: 'cuenta', label: 'Nº de cuenta', placeholder: '0105-0000-00-0000000000' },
-    { key: 'titular', label: 'Titular', placeholder: 'Juan Pérez' },
-    { key: 'rif', label: 'Cédula / RIF', placeholder: 'V-12345678' },
-  ]},
-  { id: 'binance', name: 'Binance Pay', icon: 'BN', fields: [
-    { key: 'id', label: 'Binance ID / Pay ID', placeholder: 'Ej: 123456789' },
-  ]},
-  { id: 'punto_venta', name: 'Punto de venta', icon: 'PV', fields: [
-    { key: 'instrucciones', label: 'Instrucciones', placeholder: 'Ej: Disponible en local' },
-  ]},
-]
-
 // ── SECTION HEADER ─────────────────────────────────────────────
 function SectionHeader({ title, desc, open, onToggle, saved }: {
   title: string; desc: string
@@ -104,14 +67,6 @@ function ConfiguracionInner() {
   const [savingGeneral, setSavingGeneral] = useState(false)
   const [savedGeneral, setSavedGeneral] = useState(false)
 
-  // Pagos
-  const [methods, setMethods] = useState<PaymentMethod[]>(() =>
-    METHODS.map(m => ({ ...m, enabled: false, values: {} }))
-  )
-  const [openMethod, setOpenMethod] = useState<string | null>(null)
-  const [savingPagos, setSavingPagos] = useState(false)
-  const [savedPagos, setSavedPagos] = useState(false)
-
   // Delivery
   const [deliveryEnabled, setDeliveryEnabled] = useState(false)
   const [deliveryFee, setDeliveryFee] = useState('')
@@ -131,7 +86,7 @@ function ConfiguracionInner() {
     if (!user) return
     async function load() {
       const { data: store, error: storeErr } = await supabase
-        .from('stores').select('id,name,slug,city,email,map_url,whatsapp,whatsapp2,country,store_language,operating_hours,social_links,payment_methods,checkout_settings')
+        .from('stores').select('id,name,slug,city,email,map_url,whatsapp,whatsapp2,country,store_language,operating_hours,social_links,checkout_settings')
         .eq('owner_id', user!.id).maybeSingle()
 
       if (storeErr) { setError(storeErr.message); setLoading(false); return }
@@ -151,12 +106,6 @@ function ConfiguracionInner() {
         if (oh && typeof oh === 'object') setOperatingHours(oh)
         const sl = (store as any).social_links
         if (sl && typeof sl === 'object') setSocialLinks(prev => ({ ...prev, ...sl }))
-
-        const pm = store.payment_methods ?? {}
-        setMethods(prev => prev.map(m => {
-          const s = pm[m.id]
-          return s ? { ...m, enabled: s.enabled ?? false, values: s.values ?? {} } : m
-        }))
 
         const cs = store.checkout_settings ?? {}
         setDeliveryEnabled(cs.deliveryEnabled ?? false)
@@ -192,17 +141,6 @@ function ConfiguracionInner() {
     setSavingGeneral(false)
     if (err) { setError(err.message); return }
     flash(setSavedGeneral)
-  }
-
-  async function savePagos() {
-    if (!storeId) return
-    setSavingPagos(true); setError('')
-    const pm: Record<string, { enabled: boolean; values: Record<string, string> }> = {}
-    for (const m of methods) pm[m.id] = { enabled: m.enabled, values: m.values }
-    const { error: err } = await supabase.from('stores').update({ payment_methods: pm }).eq('id', storeId)
-    setSavingPagos(false)
-    if (err) { setError(err.message); return }
-    flash(setSavedPagos)
   }
 
   async function saveDelivery() {
@@ -373,49 +311,6 @@ function ConfiguracionInner() {
             ))}
 
             <SaveBtn saving={savingGeneral} onClick={saveGeneral} />
-          </div>
-        )}
-      </div>
-
-      {/* ── PAGOS ── */}
-      <div className="cf-card">
-        <SectionHeader title="Pagos" desc="Métodos de pago que aceptas en tu tienda" open={openSection === 'pagos'} onToggle={() => toggleSection('pagos')} saved={savedPagos} />
-        {openSection === 'pagos' && (
-          <div className="cf-card-body" style={{ gap: 8 }}>
-            <p className="cf-section-hint">Activa los métodos que aceptas y agrega tus datos para que los clientes puedan pagarte.</p>
-            {methods.map(m => (
-              <div key={m.id} className="cf-method-card">
-                <div className="cf-card-header" style={{ padding: '14px 16px' }} onClick={() => setOpenMethod(prev => prev === m.id ? null : m.id)}>
-                  <div className="cf-card-header-left">
-                    <div>
-                      <div className="cf-method-name" style={{ fontSize: 14 }}>{m.name}</div>
-                      <div className="cf-method-sub">{m.enabled ? 'Activo' : 'Inactivo'}</div>
-                    </div>
-                  </div>
-                  <button className={`cf-toggle${m.enabled ? ' on' : ''}`} onClick={e => { e.stopPropagation(); setMethods(prev => prev.map(x => x.id === m.id ? { ...x, enabled: !x.enabled } : x)) }}><div className="cf-toggle-knob" /></button>
-                </div>
-                {openMethod === m.id && (
-                  <div className="cf-card-body" style={{ paddingTop: 14 }}>
-                    {m.fields.length <= 2 ? m.fields.map(f => (
-                      <div key={f.key} className="cf-field">
-                        <label className="cf-label">{f.label}</label>
-                        <input className="cf-input" placeholder={f.placeholder} value={m.values[f.key] ?? ''} onChange={e => setMethods(prev => prev.map(x => x.id === m.id ? { ...x, values: { ...x.values, [f.key]: e.target.value } } : x))} />
-                      </div>
-                    )) : (
-                      <div className="cf-two-col">
-                        {m.fields.map(f => (
-                          <div key={f.key} className="cf-field">
-                            <label className="cf-label">{f.label}</label>
-                            <input className="cf-input" placeholder={f.placeholder} value={m.values[f.key] ?? ''} onChange={e => setMethods(prev => prev.map(x => x.id === m.id ? { ...x, values: { ...x.values, [f.key]: e.target.value } } : x))} />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-            <SaveBtn saving={savingPagos} onClick={savePagos} />
           </div>
         )}
       </div>

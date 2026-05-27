@@ -30,7 +30,7 @@ type Tab = 'live' | 'today' | 'couriers' | 'zones' | 'settlements'
 type DeliveryStatus = 'pending' | 'preparing' | 'ready' | 'picked_up' | 'delivered' | 'cancelled'
 type TodayFilter = 'all' | 'ongoing' | 'delivered' | 'cancelled'
 
-type Driver = { id: string; name: string; phone: string | null; is_active: boolean; created_at: string; avatar_url: string | null; vehicle: string | null; rating: number | null }
+type Driver = { id: string; name: string; phone: string | null; is_active: boolean; created_at: string; avatar_url: string | null }
 type DriverLocation = { driver_id: string; lat: number; lng: number; is_sharing: boolean; updated_at: string }
 type Order = { id: string; customer_name: string; customer_phone: string; customer_notes: string | null; payment_method: string | null; total: number; status: string; created_at: string }
 type Delivery = {
@@ -117,10 +117,8 @@ export default function DeliveryPage() {
   // Couriers tab
   const [showDriverForm, setShowDriverForm] = useState(false)
   const [editDriver, setEditDriver]         = useState<Driver | null>(null)
-  const [drName, setDrName]       = useState('')
-  const [drPhone, setDrPhone]     = useState('')
-  const [drVehicle, setDrVehicle] = useState('')
-  const [drRating, setDrRating]   = useState('')
+  const [drName, setDrName]   = useState('')
+  const [drPhone, setDrPhone] = useState('')
   const [drSaving, setDrSaving] = useState(false)
   const [drError, setDrError]   = useState('')
   const [drAvatarFile, setDrAvatarFile] = useState<File | null>(null)
@@ -283,27 +281,18 @@ export default function DeliveryPage() {
       avatarUrl = urlData.publicUrl
     }
 
-    const driverPayload = {
-      name: drName.trim(),
-      phone: drPhone.trim() || null,
-      avatar_url: avatarUrl,
-      vehicle: drVehicle.trim() || null,
-      rating: drRating ? parseFloat(drRating) : null,
-    }
-
     if (editDriver) {
       const { error } = await supabase.from('delivery_drivers')
-        .update(driverPayload)
+        .update({ name: drName.trim(), phone: drPhone.trim() || null, avatar_url: avatarUrl })
         .eq('id', editDriver.id)
       if (error) { setDrError(error.message); setDrSaving(false); return }
     } else {
       const { error } = await supabase.from('delivery_drivers')
-        .insert({ store_id: storeId, is_active: true, ...driverPayload })
+        .insert({ store_id: storeId, name: drName.trim(), phone: drPhone.trim() || null, is_active: true, avatar_url: avatarUrl })
       if (error) { setDrError(error.message); setDrSaving(false); return }
     }
 
-    setDrName(''); setDrPhone(''); setDrVehicle(''); setDrRating('')
-    setEditDriver(null); setShowDriverForm(false)
+    setDrName(''); setDrPhone(''); setEditDriver(null); setShowDriverForm(false)
     setDrSaving(false); setDrError(''); setDrAvatarFile(null); setDrAvatarPreview(null)
     showToast(editDriver ? 'Despachador actualizado' : 'Despachador agregado')
     await loadData(storeId)
@@ -874,7 +863,7 @@ export default function DeliveryPage() {
             <div style={{ fontSize: 13, color: 'var(--dv-ink-soft)' }}>
               {activeDrivers.length} activos · {drivers.length - activeDrivers.length} offline
             </div>
-            <button className="dv-btn-add" onClick={() => { setDrName(''); setDrPhone(''); setDrVehicle(''); setDrRating(''); setEditDriver(null); setDrAvatarFile(null); setDrAvatarPreview(null); setShowDriverForm(true) }}>
+            <button className="dv-btn-add" onClick={() => { setDrName(''); setDrPhone(''); setEditDriver(null); setDrAvatarFile(null); setDrAvatarPreview(null); setShowDriverForm(true) }}>
               + Agregar despachador
             </button>
           </div>
@@ -923,16 +912,6 @@ export default function DeliveryPage() {
                   <input className="dv-input" value={drPhone} onChange={e => setDrPhone(e.target.value)} placeholder="+58 412 000 0000" type="tel" />
                 </div>
               </div>
-              <div className="dv-driver-form-row">
-                <div className="dv-form-field">
-                  <label className="dv-form-label">Vehiculo</label>
-                  <input className="dv-input" value={drVehicle} onChange={e => setDrVehicle(e.target.value)} placeholder="Moto AB12C / Carro XYZ" />
-                </div>
-                <div className="dv-form-field">
-                  <label className="dv-form-label">Calificacion</label>
-                  <input className="dv-input" value={drRating} onChange={e => setDrRating(e.target.value)} placeholder="4.9" type="number" min="1" max="5" step="0.1" />
-                </div>
-              </div>
               {drError && (
                 <div style={{ marginTop: 8, padding: '8px 10px', background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 8, fontSize: 12, color: '#DC2626', lineHeight: 1.4 }}>
                   {drError}
@@ -970,7 +949,7 @@ export default function DeliveryPage() {
                       }
                       <div className="dv-courier-card-info">
                         <h4>{drv.name}</h4>
-                        <p>{drv.vehicle ? `${drv.vehicle}${drv.phone ? ' · ' + drv.phone : ''}` : (drv.phone || 'Sin telefono')}</p>
+                        <p>{drv.phone || 'Sin telefono'}</p>
                       </div>
                       {gpsActive && (
                         <span style={{ background: '#DCFCE7', color: '#15803D', padding: '2px 8px', borderRadius: 100, fontSize: 10, fontWeight: 600, marginLeft: 'auto', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -1000,7 +979,7 @@ export default function DeliveryPage() {
                       </div>
                     </div>
                     <div className="dv-courier-card-actions">
-                      <button onClick={() => { setEditDriver(drv); setDrName(drv.name); setDrPhone(drv.phone ?? ''); setDrVehicle(drv.vehicle ?? ''); setDrRating(drv.rating != null ? String(drv.rating) : ''); setDrAvatarFile(null); setDrAvatarPreview(drv.avatar_url ?? null); setShowDriverForm(true) }}>
+                      <button onClick={() => { setEditDriver(drv); setDrName(drv.name); setDrPhone(drv.phone ?? ''); setDrAvatarFile(null); setDrAvatarPreview(drv.avatar_url ?? null); setShowDriverForm(true) }}>
                         Editar
                       </button>
                       <button onClick={() => toggleDriver(drv)}>

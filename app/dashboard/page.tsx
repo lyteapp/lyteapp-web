@@ -7,22 +7,14 @@ import { useAuth } from '../lib/auth'
 import { useT } from '../lib/LocaleProvider'
 import './home.css'
 
-type ActiveOrder = {
-  id: string
-  customer_name: string
-  status: string
-  created_at: string
-  total: number
-}
+const BUCKETS = [
+  { label: '0–15 min', min: 0,  max: 15  },
+  { label: '15–30 min', min: 15, max: 30  },
+  { label: '30–45 min', min: 30, max: 45  },
+  { label: '+45 min',   min: 45, max: Infinity },
+]
 
-const STATUS_ORDER = ['pending', 'confirmed', 'processing', 'ready']
-const STATUS_LABEL: Record<string, string> = {
-  pending: 'Por confirmar', confirmed: 'Confirmado', processing: 'En proceso', ready: 'Listo',
-}
-
-function elapsed(iso: string) {
-  const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
-  if (m < 1) return 'ahora'
+function fmtMins(m: number) {
   if (m < 60) return `${m} min`
   return `${Math.floor(m / 60)}h ${m % 60}m`
 }
@@ -37,11 +29,9 @@ export default function Dashboard() {
   const [totalSales, setTotalSales] = useState(0)
   const [avgTicket, setAvgTicket] = useState(0)
   const [productCount, setProductCount] = useState(0)
-  const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([])
-  const [avgDeliveryMins, setAvgDeliveryMins] = useState<number | null>(null)
-  const [, setTick] = useState(0)
+  const [deliveryMins, setDeliveryMins] = useState<number[]>([])
 
-  const loadAvgDeliveryTime = useCallback(async (sid: string) => {
+  const loadDeliveryTimes = useCallback(async (sid: string) => {
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
     const { data } = await supabase
       .from('deliveries')
@@ -49,21 +39,10 @@ export default function Dashboard() {
       .eq('store_id', sid)
       .not('delivered_at', 'is', null)
       .gte('delivered_at', todayStart.toISOString())
-    if (!data?.length) { setAvgDeliveryMins(null); return }
-    const avg = data.reduce((acc, d) => {
-      return acc + (new Date(d.delivered_at).getTime() - new Date(d.created_at).getTime())
-    }, 0) / data.length / 60000
-    setAvgDeliveryMins(Math.round(avg))
-  }, [])
-
-  const loadActiveOrders = useCallback(async (sid: string) => {
-    const { data } = await supabase
-      .from('orders')
-      .select('id, customer_name, status, created_at, total')
-      .eq('store_id', sid)
-      .not('status', 'in', '(delivered,cancelled,completed)')
-      .order('created_at', { ascending: true })
-    setActiveOrders((data ?? []) as ActiveOrder[])
+    const mins = (data ?? []).map(d =>
+      Math.round((new Date(d.delivered_at).getTime() - new Date(d.created_at).getTime()) / 60000)
+    )
+    setDeliveryMins(mins)
   }, [])
 
   const loadStats = useCallback(async (sid: string, p: 'day' | 'week' | 'month') => {
@@ -90,24 +69,27 @@ export default function Dashboard() {
       setStoreSlug(data.slug ?? '')
       setStoreId(data.id)
       loadStats(data.id, 'day')
-      loadAvgDeliveryTime(data.id)
+      loadDeliveryTimes(data.id)
       supabase.from('products').select('id', { count: 'exact' }).eq('store_id', data.id).then(({ count }) => setProductCount(count ?? 0))
-      loadActiveOrders(data.id)
     })
-  }, [user, loadStats, loadActiveOrders])
+  }, [user, loadStats, loadDeliveryTimes])
 
   useEffect(() => {
     if (!storeId) return
     loadStats(storeId, period)
   }, [storeId, period, loadStats])
 
-  // Refresh active orders every 30s and re-render elapsed times every minute
   useEffect(() => {
     if (!storeId) return
-    const orderInterval = setInterval(() => { loadActiveOrders(storeId); loadAvgDeliveryTime(storeId) }, 30000)
-    const tickInterval  = setInterval(() => setTick(t => t + 1), 60000)
-    return () => { clearInterval(orderInterval); clearInterval(tickInterval) }
-  }, [storeId, loadActiveOrders])
+    const interval = setInterval(() => loadDeliveryTimes(storeId), 60000)
+    return () => clearInterval(interval)
+  }, [storeId, loadDeliveryTimes])
+
+  const avg   = deliveryMins.length ? Math.round(deliveryMins.reduce((a, b) => a + b, 0) / deliveryMins.length) : null
+  const best  = deliveryMins.length ? Math.min(...deliveryMins) : null
+  const worst = deliveryMins.length ? Math.max(...deliveryMins) : null
+  const bucketCounts = BUCKETS.map(b => deliveryMins.filter(m => m >= b.min && m < b.max).length)
+  const bucketMax = Math.max(...bucketCounts, 1)
 
   const firstName = user?.email?.split('@')[0] ?? ''
   const today = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
@@ -136,7 +118,6 @@ export default function Dashboard() {
             </button>
           </div>
         </div>
-
       </section>
 
       {/* ── KPI STRIP ── */}
@@ -228,65 +209,64 @@ export default function Dashboard() {
       {/* ── MAIN GRID ── */}
       <div className="dh-grid">
 
-        {/* Orders live */}
+        {/* Delivery times summary */}
         <div className="dh-card dh-orders">
-          <div className="dh-section-head" style={{ marginBottom: 16 }}>
-            <div className="dh-section-title">{t('dash.liveOrders')} <span className="dh-meta">{t('dash.realtime')}</span></div>
-            <Link href="/dashboard/pedidos" className="dh-section-link">{t('dash.openOrders')}</Link>
+          <div className="dh-section-head" style={{ marginBottom: 20 }}>
+            <div className="dh-section-title">Tiempos de entrega <span className="dh-meta">hoy</span></div>
+            <Link href="/dashboard/analitics" className="dh-section-link">Ver detalle</Link>
           </div>
 
-          {/* Average delivery time — big display */}
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 20, padding: '16px 18px', background: '#F8F7FF', borderRadius: 12, border: '1px solid #EDE9FE' }}>
-            <div style={{ lineHeight: 1 }}>
-              <span style={{ fontSize: 48, fontWeight: 800, color: '#7C3AED', letterSpacing: '-2px' }}>
-                {avgDeliveryMins !== null ? avgDeliveryMins : '—'}
-              </span>
-              {avgDeliveryMins !== null && <span style={{ fontSize: 20, fontWeight: 600, color: '#7C3AED', marginLeft: 4 }}>min</span>}
+          {/* Big avg number */}
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, marginBottom: 20 }}>
+            <span style={{ fontSize: 64, fontWeight: 800, color: '#0F172A', letterSpacing: '-3px', lineHeight: 1 }}>
+              {avg !== null ? avg : '—'}
+            </span>
+            {avg !== null && (
+              <span style={{ fontSize: 22, fontWeight: 600, color: '#7C3AED', marginBottom: 6 }}>min</span>
+            )}
+            <span style={{ fontSize: 13, color: '#94A3B8', marginBottom: 8, marginLeft: 6 }}>
+              promedio · {deliveryMins.length} {deliveryMins.length === 1 ? 'entrega' : 'entregas'}
+            </span>
+          </div>
+
+          {/* Best / Worst */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+            <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 10, padding: '12px 14px' }}>
+              <div style={{ fontSize: 10, fontWeight: 600, color: '#16A34A', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Mejor</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: '#15803D', letterSpacing: '-0.5px' }}>
+                {best !== null ? fmtMins(best) : '—'}
+              </div>
             </div>
-            <div style={{ fontSize: 13, color: '#64748B', lineHeight: 1.4 }}>
-              tiempo promedio<br />de entrega hoy
+            <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: '12px 14px' }}>
+              <div style={{ fontSize: 10, fontWeight: 600, color: '#DC2626', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Peor</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: '#B91C1C', letterSpacing: '-0.5px' }}>
+                {worst !== null ? fmtMins(worst) : '—'}
+              </div>
             </div>
           </div>
 
-          <div className="dh-pipeline">
-            {STATUS_ORDER.map((st, i) => {
-              const count = activeOrders.filter(o => o.status === st).length
-              return (
-                <div key={st} className="dh-pipe-stage">
-                  <div className="dh-pipe-count">{count}</div>
-                  <div className="dh-pipe-label">{STATUS_LABEL[st]}</div>
-                  {i < STATUS_ORDER.length - 1 && <svg className="dh-pipe-arrow" width="8" height="12" viewBox="0 0 8 12" fill="currentColor"><path d="M0 0 L8 6 L0 12 Z"/></svg>}
-                </div>
-              )
-            })}
-          </div>
-
-          {activeOrders.length === 0 ? (
-            <div className="dh-order-empty">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-              </svg>
-              <p>{t('dash.noOrders')}</p>
-              {storeSlug && <Link href={`/${storeSlug}`} target="_blank">{t('dash.viewStore')}</Link>}
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
-              {activeOrders.map(order => {
-                const mins = Math.floor((Date.now() - new Date(order.created_at).getTime()) / 60000)
-                const isUrgent = mins >= 20
+          {/* Distribution */}
+          {deliveryMins.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {BUCKETS.map((b, i) => {
+                const count = bucketCounts[i]
+                const pct = Math.round((count / bucketMax) * 100)
                 return (
-                  <div key={order.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 10, background: isUrgent ? '#FEF2F2' : '#F8FAFC', border: `1px solid ${isUrgent ? '#FECACA' : '#E2E8F0'}` }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{order.customer_name}</div>
-                      <div style={{ fontSize: 11, color: '#64748B', marginTop: 1 }}>{STATUS_LABEL[order.status] ?? order.status}</div>
+                  <div key={b.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 76, fontSize: 11, color: '#64748B', flexShrink: 0 }}>{b.label}</div>
+                    <div style={{ flex: 1, background: '#F1F5F9', borderRadius: 4, height: 7, overflow: 'hidden' }}>
+                      <div style={{ width: `${pct}%`, height: '100%', background: '#7C3AED', borderRadius: 4, transition: 'width 0.4s ease' }} />
                     </div>
-                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: isUrgent ? '#DC2626' : '#475569' }}>{elapsed(order.created_at)}</div>
-                      <div style={{ fontSize: 11, color: '#94A3B8' }}>${Number(order.total).toFixed(2)}</div>
-                    </div>
+                    <div style={{ width: 20, fontSize: 11, fontWeight: 600, color: '#475569', textAlign: 'right', flexShrink: 0 }}>{count}</div>
                   </div>
                 )
               })}
+            </div>
+          )}
+
+          {deliveryMins.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '24px 0', color: '#94A3B8', fontSize: 13 }}>
+              Sin entregas completadas hoy
             </div>
           )}
         </div>
@@ -328,7 +308,6 @@ export default function Dashboard() {
 
           {storeSlug ? (
             <>
-              {/* URL pill */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 10, padding: '10px 14px', marginBottom: 16 }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
                 <span style={{ flex: 1, fontSize: 12, color: '#475569', fontFamily: 'var(--font-geist-mono), monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -337,24 +316,21 @@ export default function Dashboard() {
                 <button
                   onClick={() => navigator.clipboard.writeText(`https://lyte-app.com/${storeSlug}`)}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: '#94A3B8', display: 'flex', alignItems: 'center' }}
-                  title="Copiar enlace"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                 </button>
               </div>
-
-              {/* CTA buttons */}
               <Link
                 href={`/${storeSlug}`}
                 target="_blank"
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, background: '#0F172A', color: 'white', borderRadius: 10, padding: '11px 0', fontSize: 13, fontWeight: 600, textDecoration: 'none', marginBottom: 8, transition: 'background 0.15s' }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, background: '#0F172A', color: 'white', borderRadius: 10, padding: '11px 0', fontSize: 13, fontWeight: 600, textDecoration: 'none', marginBottom: 8 }}
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                 Ver tienda
               </Link>
               <Link
                 href="/dashboard/canal/vitrina/editor"
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, background: '#F8FAFC', color: '#475569', border: '1px solid #E2E8F0', borderRadius: 10, padding: '10px 0', fontSize: 13, fontWeight: 500, textDecoration: 'none', transition: 'border-color 0.15s' }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, background: '#F8FAFC', color: '#475569', border: '1px solid #E2E8F0', borderRadius: 10, padding: '10px 0', fontSize: 13, fontWeight: 500, textDecoration: 'none' }}
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                 Editar diseño

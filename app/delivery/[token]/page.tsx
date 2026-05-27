@@ -23,10 +23,11 @@ export default async function TrackingPage({
 
   let storeLat: number | null = null
   let storeLng: number | null = null
+  let storeLogo: string | null = null
 
   if (delivery?.store_id) {
     const [{ data: store }, { data: driver }] = await Promise.all([
-      supabase.from('stores').select('template_config,store_lat,store_lng').eq('id', delivery.store_id).maybeSingle(),
+      supabase.from('stores').select('template_config,store_lat,store_lng,logo_url,name').eq('id', delivery.store_id).maybeSingle(),
       delivery.driver_id
         ? supabase.from('delivery_drivers').select('name,phone,vehicle,rating,avatar_url').eq('id', delivery.driver_id).maybeSingle()
         : Promise.resolve({ data: null }),
@@ -36,6 +37,7 @@ export default async function TrackingPage({
     if (driver) driverInfo = driver as NonNullable<typeof driverInfo>
     storeLat = store?.store_lat ?? null
     storeLng = store?.store_lng ?? null
+    storeLogo = store?.logo_url ?? null
   }
 
   return (
@@ -47,6 +49,7 @@ export default async function TrackingPage({
       driver={driverInfo}
       storeLat={storeLat}
       storeLng={storeLng}
+      storeLogo={storeLogo}
     />
   )
 }

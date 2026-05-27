@@ -12,6 +12,7 @@ interface Props {
   customerLng: number | null
   storeLat?:   number | null
   storeLng?:   number | null
+  storeLogo?:  string | null
   height?:     number | string
   mapboxToken: string
   mapStyle?:   string
@@ -30,7 +31,7 @@ function pad(
 export default function TrackingMap({
   driverLat, driverLng,
   customerLat, customerLng,
-  storeLat, storeLng,
+  storeLat, storeLng, storeLogo,
   height = 260,
   mapboxToken,
   mapStyle = 'mapbox://styles/mapbox/standard',
@@ -95,20 +96,47 @@ export default function TrackingMap({
       >
         <NavigationControl position="top-right" showCompass={false} />
 
-        {/* Store pin — shown when no driver yet */}
+        {/* Store marker — 3D building with logo, shown while driver not yet assigned */}
         {hasStore && !hasDriver && (
           <Marker longitude={storeLng!} latitude={storeLat!} anchor="bottom">
             <div style={{
-              background: accent, border: '3px solid white',
-              borderRadius: 12, padding: '5px 10px',
-              display: 'flex', alignItems: 'center', gap: 5,
-              boxShadow: `0 4px 14px ${accent}55`,
-              whiteSpace: 'nowrap' as const,
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.24))',
             }}>
-              <svg viewBox="0 0 20 20" fill="white" width={13} height={13}>
-                <path fillRule="evenodd" d="M10.496 2.132a1 1 0 00-.992 0l-7 4A1 1 0 003 7v9a1 1 0 001 1h3a1 1 0 001-1V12a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1h3a1 1 0 001-1V7a1 1 0 00-.504-.868l-7-4z" clipRule="evenodd"/>
+              {/* Logo circle */}
+              <div style={{
+                width: 40, height: 40, borderRadius: '50%',
+                border: '3px solid white', overflow: 'hidden',
+                background: '#F1F5F9', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                {storeLogo
+                  ? <img src={storeLogo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : (
+                    <svg viewBox="0 0 20 20" fill={accent} width="22" height="22">
+                      <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zm14 4H2v7a2 2 0 002 2h12a2 2 0 002-2V8zm-8 3a1 1 0 011 1v2a1 1 0 01-2 0v-2a1 1 0 011-1z" clipRule="evenodd"/>
+                    </svg>
+                  )
+                }
+              </div>
+              {/* 3D building */}
+              <svg viewBox="0 0 44 36" width="42" height="33" style={{ display: 'block', marginTop: -7 }}>
+                {/* Top face */}
+                <polygon points="2,14 30,14 42,6 14,6" fill={accent} />
+                <polygon points="2,14 30,14 42,6 14,6" fill="rgba(255,255,255,0.22)" />
+                {/* Right face */}
+                <polygon points="30,14 42,6 42,30 30,36" fill={accent} />
+                <polygon points="30,14 42,6 42,30 30,36" fill="rgba(0,0,0,0.28)" />
+                {/* Front face */}
+                <rect x="2" y="14" width="28" height="22" fill={accent} />
+                {/* Front windows */}
+                <rect x="5" y="18" width="9" height="7" rx="1.5" fill="rgba(255,255,255,0.65)" />
+                <rect x="16" y="18" width="9" height="7" rx="1.5" fill="rgba(255,255,255,0.65)" />
+                {/* Door */}
+                <rect x="10" y="28" width="9" height="8" rx="1" fill="rgba(0,0,0,0.25)" />
+                {/* Right side window */}
+                <polygon points="33,17 39.5,13 39.5,20 33,22.5" fill="rgba(255,255,255,0.4)" />
               </svg>
-              <span style={{ fontSize: 11, fontWeight: 700, color: 'white' }}>Tu tienda</span>
             </div>
           </Marker>
         )}

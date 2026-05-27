@@ -155,6 +155,7 @@ export default function TrackingClient({
   driver,
   storeLat = null,
   storeLng = null,
+  storeLogo = null,
 }: {
   initialDelivery: Delivery | null
   token: string
@@ -163,6 +164,7 @@ export default function TrackingClient({
   driver?: DriverInfo | null
   storeLat?: number | null
   storeLng?: number | null
+  storeLogo?: string | null
 }) {
   const [delivery, setDelivery] = useState<Delivery | null>(initialDelivery)
   const [driverLoc, setDriverLoc] = useState<{ lat: number; lng: number } | null>(null)
@@ -303,6 +305,7 @@ export default function TrackingClient({
             driverLng={delivery.status === 'picked_up' ? (driverLoc?.lng ?? delivery.driver_lng) : null}
             storeLat={delivery.status !== 'picked_up' ? storeLat : null}
             storeLng={delivery.status !== 'picked_up' ? storeLng : null}
+            storeLogo={storeLogo}
             customerLat={delivery.customer_lat}
             customerLng={delivery.customer_lng}
             height="100%"
@@ -480,6 +483,7 @@ export default function TrackingClient({
             driverLng={delivery.status === 'picked_up' ? (driverLoc?.lng ?? delivery.driver_lng) : null}
             storeLat={delivery.status !== 'picked_up' ? storeLat : null}
             storeLng={delivery.status !== 'picked_up' ? storeLng : null}
+            storeLogo={storeLogo}
             customerLat={delivery.customer_lat}
             customerLng={delivery.customer_lng}
             mapboxToken={mapboxToken}

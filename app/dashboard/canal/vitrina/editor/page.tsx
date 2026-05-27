@@ -149,13 +149,14 @@ export default function EditorPage() {
   const [photoSize, setPhotoSize]   = useState<'small' | 'medium' | 'large'>('medium')
   const [accentColor, setAccentColor] = useState('#7C3AED')
   const [priceSize, setPriceSize]   = useState<'small' | 'medium' | 'large'>('medium')
+  const [priceFont, setPriceFont]   = useState('')
 
   const [template, setTemplate]             = useState('clasico')
   const [categories, setCategories]         = useState<Category[]>([])
   const [categoryShapes, setCategoryShapes] = useState<Record<string, string>>({})
   const [baseConfig, setBaseConfig]         = useState<Record<string, unknown>>({})
 
-  const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'template' | null>(null)
+  const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'template' | 'price' | null>(null)
   const [iframeKey, setIframeKey]   = useState(0)
   const [saving, setSaving]         = useState(false)
   const [toolSaved, setToolSaved]   = useState(false)
@@ -188,6 +189,7 @@ export default function EditorPage() {
       if (cfg.priceColor) setAccentColor(cfg.priceColor as string)
       else if ((store as { brand_color?: string }).brand_color) setAccentColor((store as { brand_color: string }).brand_color)
       if (cfg.priceSize)  setPriceSize(cfg.priceSize as 'small' | 'medium' | 'large')
+      if (cfg.priceFont !== undefined) setPriceFont((cfg.priceFont as string) ?? '')
       if (cfg.categoryPhotoShapes) setCategoryShapes(cfg.categoryPhotoShapes as Record<string, string>)
       const { data: cats } = await supabase
         .from('categories').select('id,name')
@@ -199,6 +201,7 @@ export default function EditorPage() {
   // ── Build live preview CSS ─────────────────────────────
   function buildPreviewCSS(): string {
     const font = FONT_MAP[pageFont] ?? ''
+    const prFont = priceFont && FONT_MAP[priceFont] ? FONT_MAP[priceFont] : font
     const prSizeMap = { small: '12px', medium: '15px', large: '20px' }
 
     let shapeCSS = ''
@@ -290,12 +293,12 @@ export default function EditorPage() {
       .sf-cart-label     { font-size: ${(fontSizePx * 0.93).toFixed(1)}px !important; ${font ? `font-family: ${font} !important;` : ''} }
       .sf-cart-total     { font-size: ${(fontSizePx * 0.93).toFixed(1)}px !important; ${font ? `font-family: ${font} !important;` : ''} }
       .sf-cart-badge     { font-size: ${(fontSizePx * 0.8).toFixed(1)}px !important; }
-      .sf-co-price       { ${font ? `font-family: ${font} !important;` : ''} }
+      .sf-co-price       { ${prFont ? `font-family: ${prFont} !important;` : ''} }
       .sf-co-total-amt   { ${font ? `font-family: ${font} !important;` : ''} }
       .sf-card-price, .sf-esc-price, .sf-cat-price, .sf-vit-hero-price {
         color: ${accentColor} !important;
         font-size: ${prSizeMap[priceSize]} !important;
-        ${font ? `font-family: ${font} !important;` : ''}
+        ${prFont ? `font-family: ${prFont} !important;` : ''}
       }
       .sf-card-badge   { background: ${accentColor} !important; }
       .sf-cart-bar     { background: ${accentColor} !important; }
@@ -337,7 +340,7 @@ export default function EditorPage() {
   useEffect(() => {
     applyPreview()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageBg, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceSize])
+  }, [pageBg, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceSize, priceFont])
 
   // ── Auto-save template (reloads iframe immediately) ───
   async function handleTemplateSelect(t: string) {
@@ -371,7 +374,7 @@ export default function EditorPage() {
       ...baseConfig,
       pageBg, pageFont, fontSizePx, textAlign,
       photoShape, photoSize,
-      priceColor: accentColor, priceFont: pageFont, priceSize,
+      priceColor: accentColor, priceFont: priceFont || pageFont, priceSize,
       ...(Object.keys(categoryShapes).length > 0
         ? { categoryPhotoShapes: categoryShapes }
         : { categoryPhotoShapes: undefined }),
@@ -502,6 +505,18 @@ export default function EditorPage() {
             <rect x="3" y="3" width="18" height="5" rx="1" />
             <rect x="3" y="11" width="8" height="10" rx="1" />
             <rect x="13" y="11" width="8" height="10" rx="1" />
+          </svg>
+        </button>
+
+        {/* Precios */}
+        <button
+          className={`ed-tool-btn${activeTool === 'price' ? ' ed-tool-active' : ''}`}
+          title="Precios"
+          onClick={() => setActiveTool(p => p === 'price' ? null : 'price')}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
+            <line x1="7" y1="7" x2="7.01" y2="7"/>
           </svg>
         </button>
 
@@ -732,6 +747,82 @@ export default function EditorPage() {
                 </div>
               </>
             )}
+
+            <PanelSave />
+          </div>
+        )}
+
+        {/* Panel — Precios */}
+        {activeTool === 'price' && (
+          <div className="ed-tool-panel ed-tool-panel-lg ed-tool-panel-type">
+            <div className="ed-tp-title">Estilo de precios</div>
+
+            <div className="ed-tp-subtitle">Color</div>
+            <div className="ed-tp-swatches" style={{ position: 'relative' }}>
+              {ACCENT_COLORS.map(c => (
+                <button
+                  key={c}
+                  className={`ed-tp-swatch${accentColor === c ? ' ed-tp-active' : ''}`}
+                  style={{ background: c }}
+                  onClick={() => setAccentColor(c)}
+                />
+              ))}
+              <button
+                className={`ed-tp-swatch ed-tp-custom${isCustomAc ? ' ed-tp-active' : ''}`}
+                style={isCustomAc ? { background: accentColor } : undefined}
+                title="Personalizado"
+                onClick={() => acPickerRef.current?.click()}
+              >
+                {!isCustomAc && (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                )}
+              </button>
+              <input
+                ref={acPickerRef}
+                type="color"
+                value={isCustomAc ? accentColor : '#7C3AED'}
+                onChange={e => setAccentColor(e.target.value)}
+                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
+              />
+            </div>
+
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Tamano</div>
+            <div className="ed-size-opts">
+              {([
+                { id: 'small',  label: 'Pequeno' },
+                { id: 'medium', label: 'Mediano'  },
+                { id: 'large',  label: 'Grande'   },
+              ] as const).map(s => (
+                <button
+                  key={s.id}
+                  className={`ed-size-opt${priceSize === s.id ? ' ed-size-opt-active' : ''}`}
+                  onClick={() => setPriceSize(s.id)}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="ed-size-preview" style={{ width: 24, height: 24 }}>
+                    {s.id === 'small'  && <text x="4" y="17" fontSize="10" stroke="none" fill="currentColor">$</text>}
+                    {s.id === 'medium' && <text x="3" y="18" fontSize="14" stroke="none" fill="currentColor">$</text>}
+                    {s.id === 'large'  && <text x="2" y="20" fontSize="18" stroke="none" fill="currentColor">$</text>}
+                  </svg>
+                  <span className="ed-size-label">{s.label}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Fuente</div>
+            <div className="ed-font-grid">
+              {[{ id: '', name: 'Pagina' }, ...PAGE_FONTS].map(f => (
+                <button
+                  key={f.id}
+                  className={`ed-font-card${priceFont === f.id ? ' ed-font-card-active' : ''}`}
+                  onClick={() => setPriceFont(f.id)}
+                >
+                  <span className="ed-font-card-preview" style={{ fontFamily: f.id ? FONT_MAP[f.id] : undefined }}>$9</span>
+                  <span className="ed-font-card-name">{f.name}</span>
+                </button>
+              ))}
+            </div>
 
             <PanelSave />
           </div>

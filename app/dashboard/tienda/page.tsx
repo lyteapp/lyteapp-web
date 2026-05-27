@@ -16,95 +16,7 @@ type Store = {
   banner_url: string | null
   whatsapp: string | null
   instagram: string | null
-  template: string | null
-  template_config: Record<string, unknown> | null
 }
-
-const PRICE_PRESETS = ['#7C3AED', '#2563EB', '#DC2626', '#D97706', '#059669', '#DB2777', '#0F172A', '#64748B']
-
-const PRICE_FONTS = [
-  { id: '',           name: 'Predeterminada' },
-  { id: 'geist',      name: 'Geist' },
-  { id: 'poppins',    name: 'Poppins' },
-  { id: 'montserrat', name: 'Montserrat' },
-  { id: 'lato',       name: 'Lato' },
-  { id: 'oswald',     name: 'Oswald' },
-]
-
-const TEMPLATES = [
-  {
-    id: 'clasico',
-    name: 'Clásico',
-    desc: 'Blanco, limpio, rejilla de productos',
-    preview: (
-      <div style={{ background: '#FAFAF9', borderRadius: 10, padding: 10, height: '100%' }}>
-        <div style={{ background: 'white', borderRadius: 6, height: 22, marginBottom: 8, display: 'flex', alignItems: 'center', padding: '0 8px', gap: 6 }}>
-          <div style={{ width: 14, height: 14, borderRadius: 3, background: '#E2E8F0' }} />
-          <div style={{ flex: 1, height: 6, borderRadius: 100, background: '#E2E8F0' }} />
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 5 }}>
-          {[1,2,3,4,5,6].map(i => (
-            <div key={i} style={{ background: 'white', borderRadius: 6, overflow: 'hidden', border: '1px solid #F1F5F9' }}>
-              <div style={{ background: '#F1F5F9', aspectRatio: '1' }} />
-              <div style={{ padding: '4px 5px' }}>
-                <div style={{ height: 4, background: '#E2E8F0', borderRadius: 100, marginBottom: 3 }} />
-                <div style={{ height: 4, background: '#7C3AED', borderRadius: 100, width: '60%' }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    ),
-  },
-  {
-    id: 'oscuro',
-    name: 'Oscuro',
-    desc: 'Fondo negro, elegante y moderno',
-    preview: (
-      <div style={{ background: '#0F172A', borderRadius: 10, padding: 10, height: '100%' }}>
-        <div style={{ background: '#1E293B', borderRadius: 6, height: 22, marginBottom: 8, display: 'flex', alignItems: 'center', padding: '0 8px', gap: 6 }}>
-          <div style={{ width: 14, height: 14, borderRadius: 3, background: '#334155' }} />
-          <div style={{ flex: 1, height: 6, borderRadius: 100, background: '#334155' }} />
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 5 }}>
-          {[1,2,3,4,5,6].map(i => (
-            <div key={i} style={{ background: '#1E293B', borderRadius: 6, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ background: '#334155', aspectRatio: '1' }} />
-              <div style={{ padding: '4px 5px' }}>
-                <div style={{ height: 4, background: '#475569', borderRadius: 100, marginBottom: 3 }} />
-                <div style={{ height: 4, background: '#C4B5FD', borderRadius: 100, width: '60%' }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    ),
-  },
-  {
-    id: 'minimal',
-    name: 'Minimal',
-    desc: 'Lista limpia, precio al frente',
-    preview: (
-      <div style={{ background: '#F8FAFC', borderRadius: 10, padding: 10, height: '100%' }}>
-        <div style={{ background: 'white', borderRadius: 6, height: 22, marginBottom: 8, display: 'flex', alignItems: 'center', padding: '0 8px', gap: 6, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-          <div style={{ width: 14, height: 14, borderRadius: 3, background: '#F1F5F9' }} />
-          <div style={{ flex: 1, height: 6, borderRadius: 100, background: '#F1F5F9' }} />
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-          {[1,2,3,4].map(i => (
-            <div key={i} style={{ background: 'white', borderRadius: 6, padding: '6px 8px', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-              <div style={{ width: 28, height: 28, borderRadius: 5, background: '#F1F5F9', flexShrink: 0 }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ height: 4, background: '#E2E8F0', borderRadius: 100, marginBottom: 3, width: '70%' }} />
-                <div style={{ height: 4, background: '#0F172A', borderRadius: 100, width: '35%' }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    ),
-  },
-]
 
 function toSlug(text: string) {
   return text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -127,17 +39,11 @@ export default function TiendaPage() {
   const [instagram, setInstagram] = useState('')
   const [logoUrl, setLogoUrl] = useState('')
   const [bannerUrl, setBannerUrl] = useState('')
-  const [template, setTemplate] = useState('clasico')
   const [logoUploading, setLogoUploading] = useState(false)
   const [bannerUploading, setBannerUploading] = useState(false)
-  const [templateConfig, setTemplateConfig] = useState<Record<string, unknown>>({})
-  const [priceColor, setPriceColor] = useState('#7C3AED')
-  const [priceSize, setPriceSize]   = useState<'small' | 'medium' | 'large'>('medium')
-  const [priceFont, setPriceFont]   = useState('')
 
-  const logoRef          = useRef<HTMLInputElement>(null)
-  const bannerRef        = useRef<HTMLInputElement>(null)
-  const priceColorRef    = useRef<HTMLInputElement>(null)
+  const logoRef   = useRef<HTMLInputElement>(null)
+  const bannerRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!user) return
@@ -152,12 +58,6 @@ export default function TiendaPage() {
         setInstagram(data.instagram ?? '')
         setLogoUrl(data.logo_url ?? '')
         setBannerUrl(data.banner_url ?? '')
-        setTemplate(data.template ?? 'clasico')
-        const cfg = (data.template_config ?? {}) as Record<string, unknown>
-        setTemplateConfig(cfg)
-        if (cfg.priceColor) setPriceColor(cfg.priceColor as string)
-        if (cfg.priceSize)  setPriceSize(cfg.priceSize as 'small' | 'medium' | 'large')
-        if (cfg.priceFont !== undefined) setPriceFont((cfg.priceFont as string) ?? '')
       }
       setPageLoading(false)
     })
@@ -197,12 +97,6 @@ export default function TiendaPage() {
   async function handleSave() {
     if (!user || !name.trim() || !slug.trim()) { setError('El nombre y la URL son obligatorios.'); return }
     setSaving(true); setError('')
-    const newTemplateConfig = {
-      ...templateConfig,
-      priceColor,
-      priceSize,
-      ...(priceFont ? { priceFont } : { priceFont: undefined }),
-    }
     const payload = {
       owner_id: user.id,
       name: name.trim(),
@@ -212,8 +106,6 @@ export default function TiendaPage() {
       instagram: instagram.trim() || null,
       logo_url: logoUrl || null,
       banner_url: bannerUrl || null,
-      template,
-      template_config: newTemplateConfig,
     }
     const { error: err, data } = store
       ? await supabase.from('stores').update(payload).eq('id', store.id).select().single()
@@ -294,7 +186,6 @@ export default function TiendaPage() {
           <div className="ts-section-title">Fotos de la tienda</div>
           <div className="ts-photos-grid">
 
-            {/* Logo upload */}
             <div className="ts-photo-card" onClick={() => logoRef.current?.click()}>
               <div className="ts-photo-preview ts-photo-square">
                 {logoUrl
@@ -312,7 +203,6 @@ export default function TiendaPage() {
               </div>
             </div>
 
-            {/* Banner upload */}
             <div className="ts-photo-card" onClick={() => bannerRef.current?.click()}>
               <div className="ts-photo-preview ts-photo-wide">
                 {bannerUrl
@@ -333,84 +223,7 @@ export default function TiendaPage() {
           </div>
         </div>
 
-        {/* ── TEMPLATE ── */}
-        <div className="ts-section">
-          <div className="ts-section-title">Diseño de tu tienda</div>
-          <div className="ts-template-grid">
-            {TEMPLATES.map(t => (
-              <button
-                key={t.id}
-                className={`ts-template-card${template === t.id ? ' selected' : ''}`}
-                onClick={() => setTemplate(t.id)}
-              >
-                <div className="ts-template-preview">{t.preview}</div>
-                <div className="ts-template-foot">
-                  <div className="ts-template-name">{t.name}</div>
-                  <div className="ts-template-desc">{t.desc}</div>
-                </div>
-                {template === t.id && <div className="ts-template-check">✓</div>}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* ── PRECIOS ── */}
-        <div className="ts-section">
-          <div className="ts-section-title">Estilo de precios</div>
-          <div className="ts-price-block">
-
-            <div className="ts-price-field">
-              <div className="ts-label">Color</div>
-              <div className="ts-colors">
-                {PRICE_PRESETS.map(c => (
-                  <div
-                    key={c}
-                    className={`ts-color-swatch${priceColor === c ? ' selected' : ''}`}
-                    style={{ background: c }}
-                    onClick={() => setPriceColor(c)}
-                  />
-                ))}
-                <div
-                  className="ts-color-custom"
-                  style={{ background: PRICE_PRESETS.includes(priceColor) ? undefined : priceColor }}
-                  onClick={() => priceColorRef.current?.click()}
-                >
-                  {PRICE_PRESETS.includes(priceColor) ? '+' : null}
-                  <input ref={priceColorRef} type="color" value={priceColor} onChange={e => setPriceColor(e.target.value)} />
-                </div>
-              </div>
-              <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 24, height: 24, borderRadius: 6, background: priceColor }} />
-                <span style={{ fontSize: 12, fontFamily: 'var(--font-geist-mono), monospace', color: '#475569', fontWeight: 600 }}>{priceColor.toUpperCase()}</span>
-              </div>
-            </div>
-
-            <div className="ts-price-field">
-              <div className="ts-label">Tamaño</div>
-              <div className="ts-pill-row">
-                {(['small', 'medium', 'large'] as const).map(s => (
-                  <button key={s} type="button" className={`ts-pill-btn${priceSize === s ? ' selected' : ''}`} onClick={() => setPriceSize(s)}>
-                    {s === 'small' ? 'Pequeño' : s === 'medium' ? 'Mediano' : 'Grande'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="ts-price-field">
-              <div className="ts-label">Fuente</div>
-              <div className="ts-pill-row">
-                {PRICE_FONTS.map(f => (
-                  <button key={f.id} type="button" className={`ts-pill-btn${priceFont === f.id ? ' selected' : ''}`} onClick={() => setPriceFont(f.id)}>
-                    {f.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        {/* ── INFORMACIÓN ── */}
+        {/* ── DESCRIPCIÓN ── */}
         <div className="ts-section">
           <div className="ts-section-title">Descripción</div>
           <textarea
@@ -422,6 +235,7 @@ export default function TiendaPage() {
           />
         </div>
 
+        {/* ── CONTACTO ── */}
         <div className="ts-section">
           <div className="ts-section-title">Contacto y redes</div>
           <div className="ts-two-col">

@@ -128,10 +128,6 @@ export default function Dashboard() {
           </h1>
 
           <div className="dh-cta">
-            <Link href="/dashboard/productos" className="dh-btn-primary">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              {t('dash.addProduct')}
-            </Link>
             {storeSlug && (
               <Link href={`/${storeSlug}`} target="_blank" className="dh-btn-secondary">{t('dash.viewPublicStore')}</Link>
             )}
@@ -327,21 +323,49 @@ export default function Dashboard() {
         </div>
 
         {/* Store link card */}
-        <div className="dh-card dh-link-card">
-          <div className="dh-link-icon">🔗</div>
-          <div className="dh-link-title">{t('dash.publicStore')}</div>
+        <div className="dh-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: 0 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>Tu tienda publica</div>
+
           {storeSlug ? (
             <>
-              <div className="dh-link-url">lyte-app.com/{storeSlug}</div>
-              <Link href={`/${storeSlug}`} target="_blank" className="dh-link-btn">{t('dash.openStore')}</Link>
-              <button className="dh-link-copy" onClick={() => navigator.clipboard.writeText(`https://lyte-app.com/${storeSlug}`)}>
-                {t('dash.copyLink')}
-              </button>
+              {/* URL pill */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 10, padding: '10px 14px', marginBottom: 16 }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                <span style={{ flex: 1, fontSize: 12, color: '#475569', fontFamily: 'var(--font-geist-mono), monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  lyte-app.com/{storeSlug}
+                </span>
+                <button
+                  onClick={() => navigator.clipboard.writeText(`https://lyte-app.com/${storeSlug}`)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: '#94A3B8', display: 'flex', alignItems: 'center' }}
+                  title="Copiar enlace"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                </button>
+              </div>
+
+              {/* CTA buttons */}
+              <Link
+                href={`/${storeSlug}`}
+                target="_blank"
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, background: '#0F172A', color: 'white', borderRadius: 10, padding: '11px 0', fontSize: 13, fontWeight: 600, textDecoration: 'none', marginBottom: 8, transition: 'background 0.15s' }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                Ver tienda
+              </Link>
+              <Link
+                href="/dashboard/canal/vitrina/editor"
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, background: '#F8FAFC', color: '#475569', border: '1px solid #E2E8F0', borderRadius: 10, padding: '10px 0', fontSize: 13, fontWeight: 500, textDecoration: 'none', transition: 'border-color 0.15s' }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                Editar diseño
+              </Link>
             </>
           ) : (
             <>
-              <div className="dh-link-url" style={{ color: '#94A3B8' }}>{t('dash.setupFirst')}</div>
-              <Link href="/dashboard/canal/vitrina" className="dh-link-btn">{t('dash.configure')}</Link>
+              <div style={{ fontSize: 13, color: '#94A3B8', marginBottom: 16 }}>{t('dash.setupFirst')}</div>
+              <Link href="/dashboard/canal/vitrina" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0F172A', color: 'white', borderRadius: 10, padding: '11px 0', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
+                {t('dash.configure')}
+              </Link>
             </>
           )}
         </div>

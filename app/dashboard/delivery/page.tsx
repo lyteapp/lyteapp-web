@@ -693,26 +693,6 @@ export default function DeliveryPage() {
               )}
             </div>
 
-            {/* In-route strip */}
-            {inRoute.length > 0 && (
-              <div className="dv-route-strip">
-                <div className="dv-route-title">En ruta ahora</div>
-                {inRoute.map(del => {
-                  const mins = del.picked_up_at ? Math.floor((Date.now() - new Date(del.picked_up_at).getTime()) / 60000) : null
-                  const late = mins !== null && mins > 30
-                  return (
-                    <div key={del.id} className="dv-route-row">
-                      <div className="dv-route-left">
-                        <span className={`dv-route-dot ${late ? 'late' : 'ok'}`} />
-                        <span className="dv-route-name">{del.customer_name}</span>
-                        {del.driver && <span className="dv-route-courier">→ {(del.driver as Driver).name}</span>}
-                      </div>
-                      <span className={`dv-route-eta${late ? ' late' : ''}`}>{mins !== null ? `${mins} min` : '—'}</span>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
           </div>
 
           {/* ── MAP PANEL ── */}

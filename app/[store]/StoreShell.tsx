@@ -520,8 +520,8 @@ export default function StoreShell({ store, products, categories = [] }: { store
                 }}
               >
                 <svg viewBox="0 0 20 20" fill={deliveryType === 'delivery' ? '#7C3AED' : '#94A3B8'} width="20" height="20">
-                  <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
-                  <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1v-1h1a1 1 0 00.9-.561l2-4A1 1 0 0014 9h-3V5a1 1 0 00-1-1H3z"/>
+                  <path fillRule="evenodd" clipRule="evenodd" d="M5 10.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5zm0 1a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm10-1a2.5 2.5 0 100 5 2.5 2.5 0 000-5zm0 1a1.5 1.5 0 110 3 1.5 1.5 0 010-3z"/>
+                  <path d="M5.5 10.5L8 7h1.5L10 5.5h2.5L13 7.5l1.5-1.5h2v2L14.5 10.5H5.5z"/>
                 </svg>
                 <span style={{ fontSize: 13, fontWeight: deliveryType === 'delivery' ? 700 : 500, color: deliveryType === 'delivery' ? '#7C3AED' : '#64748B' }}>Domicilio</span>
               </button>

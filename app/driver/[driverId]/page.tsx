@@ -69,7 +69,7 @@ export default async function DriverPage(
     // Active delivery: assigned to this driver and still in progress
     supa
       .from('deliveries')
-      .select('id, customer_name, customer_phone, delivery_address, notes, status, picked_up_at, order_id')
+      .select('id, customer_name, customer_phone, delivery_address, notes, status, picked_up_at, order_id, customer_lat, customer_lng')
       .eq('driver_id', driverId)
       .in('status', ['ready', 'picked_up'])
       .order('created_at', { ascending: false })
@@ -127,4 +127,6 @@ export type ActiveDelivery = {
   status: string
   picked_up_at: string | null
   order_id: string | null
+  customer_lat: number | null
+  customer_lng: number | null
 }

@@ -1,8 +1,15 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import dynamic from 'next/dynamic'
 import { supabase } from '../../lib/supabase'
 import type { AvailableOrder, ActiveDelivery } from './page'
+
+const DriverMap = dynamic(() => import('./DriverMap'), { ssr: false, loading: () => (
+  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#E8EEF4' }}>
+    <div style={{ width: 22, height: 22, borderRadius: '50%', border: '3px solid rgba(124,58,237,0.15)', borderTopColor: '#7C3AED', animation: 'spin 0.8s linear infinite' }} />
+  </div>
+) })
 
 type Props = {
   driverId: string
@@ -40,6 +47,7 @@ export default function DriverClient({
   const [gpsStatus, setGpsStatus]       = useState<GpsStatus>('requesting')
   const [accuracy, setAccuracy]         = useState<number | null>(null)
   const [lastUpdate, setLastUpdate]     = useState<Date | null>(null)
+  const [driverPos, setDriverPos]       = useState<[number, number] | null>(null)
   const [installState, setInstallState] = useState<InstallState>('hidden')
   const [showIosHint, setShowIosHint]   = useState(false)
   const installPrompt = useRef<BeforeInstallPromptEvent | null>(null)
@@ -54,6 +62,7 @@ export default function DriverClient({
   // ── GPS ──────────────────────────────────────────────────────────
   const sendLocation = useCallback(async (lat: number, lng: number) => {
     lastSentAt.current = Date.now()
+    setDriverPos([lat, lng])
     await supabase.from('driver_locations').upsert({
       driver_id: driverId, store_id: storeId,
       lat, lng, is_sharing: true,
@@ -216,7 +225,7 @@ export default function DriverClient({
 
   const loadDelivery = useCallback(async () => {
     const { data } = await supabase.from('deliveries')
-      .select('id,customer_name,customer_phone,delivery_address,notes,status,picked_up_at,order_id')
+      .select('id,customer_name,customer_phone,delivery_address,notes,status,picked_up_at,order_id,customer_lat,customer_lng')
       .eq('driver_id', driverId).in('status', ['ready', 'picked_up'])
       .order('created_at', { ascending: false }).limit(1).maybeSingle()
     setDelivery(data as ActiveDelivery | null)
@@ -378,43 +387,84 @@ export default function DriverClient({
 
         {/* ── ACTIVE DELIVERY ── */}
         {delivery && (
-          <div className="dsp-section">
-            <div className="dsp-section-title">
+          <div className="dsp-active-wrap">
+            {/* Title bar */}
+            <div className="dsp-section-title" style={{ padding: '14px 16px 8px' }}>
               <span className="dsp-pulse-dot" />
-              Tu pedido activo
+              Pedido activo
             </div>
-            <div className="dsp-delivery-card">
-              <div className="dsp-delivery-customer">{delivery.customer_name}</div>
+
+            {/* Customer info strip */}
+            <div className="dsp-active-info">
+              <div className="dsp-delivery-customer" style={{ marginBottom: 4 }}>{delivery.customer_name}</div>
               {delivery.delivery_address && (
-                <div className="dsp-delivery-address">
-                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="13" height="13" style={{ flexShrink: 0 }}>
+                <div className="dsp-delivery-address" style={{ marginBottom: 4 }}>
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="12" height="12" style={{ flexShrink: 0 }}>
                     <path strokeLinecap="round" d="M8 1.5C5.515 1.5 3.5 3.515 3.5 6c0 3.938 4.5 8.5 4.5 8.5S12.5 9.938 12.5 6c0-2.485-2.015-4.5-4.5-4.5z"/>
                     <circle cx="8" cy="6" r="1.5"/>
                   </svg>
                   {delivery.delivery_address}
                 </div>
               )}
-              {delivery.customer_phone && (
-                <a href={`tel:${delivery.customer_phone}`} className="dsp-delivery-phone">
-                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="13" height="13" style={{ flexShrink: 0 }}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.042 11.042 0 005.516 5.516l.773-1.548a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V13a1 1 0 01-1 1h-1C7.82 14 2 8.18 2 3z"/>
+              {delivery.notes && (
+                <div className="dsp-delivery-notes" style={{ margin: 0 }}>{delivery.notes}</div>
+              )}
+            </div>
+
+            {/* Big map */}
+            <div className="dsp-active-map">
+              {delivery.customer_lat && delivery.customer_lng ? (
+                <DriverMap
+                  customerLat={delivery.customer_lat}
+                  customerLng={delivery.customer_lng}
+                  customerName={delivery.customer_name}
+                  driverLat={driverPos?.[0] ?? null}
+                  driverLng={driverPos?.[1] ?? null}
+                />
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 8, color: '#94A3B8' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="32" height="32">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/>
                   </svg>
-                  {delivery.customer_phone}
+                  <span style={{ fontSize: 12 }}>El cliente no compartio su ubicacion</span>
+                </div>
+              )}
+
+              {/* Navigate overlay button */}
+              {delivery.customer_lat && delivery.customer_lng && (
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${delivery.customer_lat},${delivery.customer_lng}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="dsp-nav-btn"
+                >
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15">
+                    <path fillRule="evenodd" d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 103 9c0 3.492 1.698 5.988 3.355 7.584a13.731 13.731 0 002.273 1.765 11.842 11.842 0 00.976.544l.062.029.018.008.006.003zM10 11.25a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z" clipRule="evenodd"/>
+                  </svg>
+                  Como llegar
                 </a>
               )}
-              {delivery.notes && (
-                <div className="dsp-delivery-notes">{delivery.notes}</div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="dsp-active-actions">
+              {delivery.customer_phone && (
+                <a href={`tel:${delivery.customer_phone}`} className="dsp-btn-call">
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="17" height="17">
+                    <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.042 11.042 0 005.516 5.516l.773-1.548a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-1C7.82 18 2 8.18 2 3z"/>
+                  </svg>
+                  Llamar
+                </a>
               )}
-              <div className="dsp-delivery-actions">
-                {delivery.status === 'ready' && (
-                  <button className="dsp-btn-pickup" onClick={markPickedUp}>
-                    Recogi el pedido
-                  </button>
-                )}
-                <button className="dsp-btn-done" onClick={completeDelivery} disabled={completing}>
-                  {completing ? 'Guardando...' : 'Entregado'}
+              {delivery.status === 'ready' && (
+                <button className="dsp-btn-pickup" style={{ flex: 1 }} onClick={markPickedUp}>
+                  Recogi el pedido
                 </button>
-              </div>
+              )}
+              <button className="dsp-btn-done" style={{ flex: 1 }} onClick={completeDelivery} disabled={completing}>
+                {completing ? 'Guardando...' : 'Entregado'}
+              </button>
             </div>
           </div>
         )}

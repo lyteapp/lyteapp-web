@@ -596,7 +596,7 @@ const es: Record<Key, string> = {
   'dash.step.storefront': 'Personaliza tu tienda (logo y colores)',
   'dash.step.addProducts': 'Agrega tus primeros productos',
   'dash.step.configPayments': 'Configura métodos de pago',
-  'dash.summary': 'Resumen del día',
+  'dash.summary': 'Resumen',
   'dash.viewDetail': 'Ver detalle →',
   'dash.kpi.sales': 'Ventas hoy',
   'dash.kpi.newCustomers': 'Clientes nuevos',

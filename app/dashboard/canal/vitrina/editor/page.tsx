@@ -157,6 +157,7 @@ export default function EditorPage() {
   const [baseConfig, setBaseConfig]         = useState<Record<string, unknown>>({})
 
   const [categoryNavStyle, setCategoryNavStyle] = useState('pills')
+  const [showCatNav, setShowCatNav] = useState(true)
   const [logoShape,      setLogoShape]      = useState('rounded')
   const [logoSize,       setLogoSize]       = useState('medium')
   const [headerLayout,   setHeaderLayout]   = useState('default')
@@ -197,6 +198,7 @@ export default function EditorPage() {
       if (cfg.priceFont !== undefined) setPriceFont((cfg.priceFont as string) ?? '')
       if (cfg.categoryPhotoShapes) setCategoryShapes(cfg.categoryPhotoShapes as Record<string, string>)
       if (cfg.categoryNavStyle) setCategoryNavStyle(cfg.categoryNavStyle as string)
+      if (cfg.showCatNav !== undefined) setShowCatNav(cfg.showCatNav as boolean)
       if (cfg.logoShape)     setLogoShape(cfg.logoShape as string)
       if (cfg.logoSize)      setLogoSize(cfg.logoSize as string)
       if (cfg.headerLayout)  setHeaderLayout(cfg.headerLayout as string)
@@ -393,7 +395,7 @@ export default function EditorPage() {
       pageBg, pageFont, fontSizePx, textAlign,
       photoShape, photoSize,
       priceColor: accentColor, priceFont: priceFont || pageFont, priceSize,
-      categoryNavStyle,
+      categoryNavStyle, showCatNav,
       logoShape, logoSize, headerLayout, showMenuButton,
       ...(Object.keys(categoryShapes).length > 0
         ? { categoryPhotoShapes: categoryShapes }
@@ -962,6 +964,23 @@ export default function EditorPage() {
                 </button>
               ))}
             </div>
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#F8FAFC', borderRadius: 10, cursor: 'pointer', gap: 12, marginTop: 14 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', lineHeight: 1.2 }}>Mostrar barra de categorias</div>
+                <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 3 }}>Ocultar si prefieres navegar sin barra</div>
+              </div>
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <input
+                  type="checkbox"
+                  checked={showCatNav}
+                  onChange={e => setShowCatNav(e.target.checked)}
+                  style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
+                />
+                <div style={{ width: 38, height: 22, borderRadius: 100, background: showCatNav ? '#7C3AED' : '#D1D5DB', transition: 'background 0.2s', cursor: 'pointer', position: 'relative' }}>
+                  <div style={{ position: 'absolute', top: 4, left: showCatNav ? 18 : 4, width: 14, height: 14, borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
+                </div>
+              </div>
+            </label>
             <PanelSave />
           </div>
         )}

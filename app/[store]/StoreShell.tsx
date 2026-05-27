@@ -68,6 +68,7 @@ type TemplateConfig = {
   photoSize?: 'small' | 'medium' | 'large'
   categoryPhotoShapes?: Record<string, string>
   categoryNavStyle?: string
+  showCatNav?: boolean
   showWhatsapp?: boolean
   showInstagram?: boolean
   showMenuButton?: boolean
@@ -1346,7 +1347,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
         </div>
       )}
 
-      {hasCats && tpl !== 'catalogo' && (
+      {hasCats && tpl !== 'catalogo' && cfg.showCatNav !== false && (
         <nav className={`sf-cat-nav sf-cat-nav-${cfgCatNavStyle}`}>
           {catGroups.map(({ cat }) => (
             <button

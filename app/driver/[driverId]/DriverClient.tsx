@@ -44,10 +44,12 @@ export default function DriverClient({
   const [showIosHint, setShowIosHint]   = useState(false)
   const installPrompt = useRef<BeforeInstallPromptEvent | null>(null)
 
-  const watchId   = useRef<number | null>(null)
+  const watchId          = useRef<number | null>(null)
   const fallbackInterval = useRef<ReturnType<typeof setInterval> | null>(null)
-  const lastSentAt = useRef<number>(0)
-  const wakeLock  = useRef<WakeLockSentinel | null>(null)
+  const lastSentAt       = useRef<number>(0)
+  const wakeLock         = useRef<WakeLockSentinel | null>(null)
+  const audioCtx         = useRef<AudioContext | null>(null)
+  const audioOsc         = useRef<OscillatorNode | null>(null)
 
   // ── GPS ──────────────────────────────────────────────────────────
   const sendLocation = useCallback(async (lat: number, lng: number) => {
@@ -62,10 +64,30 @@ export default function DriverClient({
 
   const startGps = useCallback(async () => {
     if (!navigator.geolocation) { setGpsStatus('error'); return }
+
+    // Wake lock — prevents screen timeout
     try {
       if ('wakeLock' in navigator)
         wakeLock.current = await (navigator as Navigator & { wakeLock: { request(t: string): Promise<WakeLockSentinel> } }).wakeLock.request('screen')
     } catch { /* not critical */ }
+
+    // Silent audio loop — keeps Android Chrome alive when screen is locked.
+    // The oscillator runs at near-zero gain (inaudible) but signals to the OS
+    // that the tab is "active", preventing JS/GPS suspension.
+    try {
+      if (!audioCtx.current) {
+        const ctx = new AudioContext()
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        gain.gain.value = 0.001          // essentially silent
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.start()
+        audioCtx.current = ctx
+        audioOsc.current = osc
+        if (ctx.state === 'suspended') await ctx.resume()
+      }
+    } catch { /* not critical — GPS still works without it */ }
 
     const opts: PositionOptions = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
 
@@ -99,6 +121,7 @@ export default function DriverClient({
     if (watchId.current !== null) { navigator.geolocation.clearWatch(watchId.current); watchId.current = null }
     if (fallbackInterval.current) { clearInterval(fallbackInterval.current); fallbackInterval.current = null }
     try { await wakeLock.current?.release() } catch { /* ignore */ }
+    try { audioOsc.current?.stop(); await audioCtx.current?.close(); audioOsc.current = null; audioCtx.current = null } catch { /* ignore */ }
     await supabase.from('driver_locations').upsert({
       driver_id: driverId, store_id: storeId,
       lat: 0, lng: 0, is_sharing: false,
@@ -165,6 +188,7 @@ export default function DriverClient({
     if (watchId.current !== null) navigator.geolocation.clearWatch(watchId.current)
     if (fallbackInterval.current) clearInterval(fallbackInterval.current)
     wakeLock.current?.release().catch(() => {})
+    try { audioOsc.current?.stop(); audioCtx.current?.close() } catch { /* ignore */ }
   }, [])
 
   // ── Load available orders ─────────────────────────────────────────
@@ -452,7 +476,7 @@ export default function DriverClient({
               <button className="dsp-gps-stop" onClick={stopGps}>Detener</button>
             </div>
             <div style={{ background: '#FFFBEB', borderTop: '1px solid #FDE68A', padding: '8px 18px', fontSize: 11, color: '#92400E', textAlign: 'center' }}>
-              Mantén la pantalla encendida para seguir compartiendo ubicacion
+              Android: puedes bloquear la pantalla · iOS: mantén Safari abierto
             </div>
           </>
         )}

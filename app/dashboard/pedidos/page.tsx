@@ -217,7 +217,10 @@ export default function PedidosPage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone, status, customerName }),
-    }).catch(() => {})
+    })
+      .then(r => r.json())
+      .then(d => { if (!d.sent) console.warn('[sms]', d.error ?? d.reason) })
+      .catch(e => console.error('[sms] fetch error', e))
   }
 
   async function updateStatus(orderId: string, status: OrderStatus) {

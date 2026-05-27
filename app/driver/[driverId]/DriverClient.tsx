@@ -519,6 +519,9 @@ export default function DriverClient({
     await supabase.from('deliveries')
       .update({ status: 'delivered', delivered_at: new Date().toISOString() })
       .eq('id', delivery.id)
+    if (delivery.order_id) {
+      await supabase.from('orders').update({ status: 'delivered' }).eq('id', delivery.order_id)
+    }
     setDelivery(null)
     setCompleting(false)
     await loadOrders()

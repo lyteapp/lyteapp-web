@@ -19,6 +19,7 @@
     "react-leaflet": "^5.0.0",
     "react-map-gl": "^7.1.9",
     "resend": "^6.12.3",
+    "twilio": "^6.0.2",
     "web-push": "^3.6.7"
   },
   "devDependencies": {

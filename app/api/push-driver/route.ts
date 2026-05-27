@@ -10,13 +10,34 @@ const supabase = createClient(
 )
 
 export async function POST(req: NextRequest) {
-  const { driverId, title, body, url } = await req.json()
-  if (!driverId) return NextResponse.json({ error: 'missing driverId' }, { status: 400 })
+  const { driverId, storeId, title, body, url } = await req.json()
+  if (!driverId && !storeId) return NextResponse.json({ error: 'missing driverId or storeId' }, { status: 400 })
 
-  const { data: subs } = await supabase
-    .from('driver_push_subscriptions')
-    .select('subscription')
-    .eq('driver_id', driverId)
+  let subs: { subscription: unknown }[] | null = null
+
+  if (driverId) {
+    // Notify a specific driver
+    const { data } = await supabase
+      .from('driver_push_subscriptions')
+      .select('subscription')
+      .eq('driver_id', driverId)
+    subs = data
+  } else {
+    // Notify all active drivers in the store
+    const { data: drivers } = await supabase
+      .from('delivery_drivers')
+      .select('id')
+      .eq('store_id', storeId)
+      .eq('is_active', true)
+    if (drivers?.length) {
+      const ids = drivers.map(d => d.id)
+      const { data } = await supabase
+        .from('driver_push_subscriptions')
+        .select('subscription')
+        .in('driver_id', ids)
+      subs = data
+    }
+  }
 
   if (!subs?.length) return NextResponse.json({ sent: 0 })
 
@@ -34,7 +55,8 @@ export async function POST(req: NextRequest) {
   await Promise.all(
     subs.map(async (row) => {
       try {
-        await webpush.sendNotification(row.subscription, payload)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await webpush.sendNotification(row.subscription as any, payload)
         sent++
       } catch (err: unknown) {
         if (err && typeof err === 'object' && 'statusCode' in err && err.statusCode === 410) {

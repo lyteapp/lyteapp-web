@@ -31,10 +31,47 @@ export default function TiendaOnboardingPage() {
   const [color, setColor] = useState('#C4B5FD')
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [address, setAddress]     = useState('')
+  const [addrLat, setAddrLat]     = useState<number | null>(null)
+  const [addrLng, setAddrLng]     = useState<number | null>(null)
+  const [locLoading, setLocLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const customColorRef = useRef<HTMLInputElement>(null)
+
+  const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''
+
+  async function geocodeAddress(addr: string) {
+    if (!addr.trim() || !MAPBOX_TOKEN) return
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(addr)}.json?access_token=${MAPBOX_TOKEN}&limit=1`
+    const res = await fetch(url)
+    const data = await res.json()
+    if (data.features?.length > 0) {
+      const [lng, lat] = data.features[0].center as [number, number]
+      setAddrLat(lat); setAddrLng(lng)
+    }
+  }
+
+  function handleDetectLocation() {
+    if (!navigator.geolocation) return
+    setLocLoading(true)
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords
+        setAddrLat(lat); setAddrLng(lng)
+        if (MAPBOX_TOKEN) {
+          const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${MAPBOX_TOKEN}&limit=1&types=address,place`
+          const res = await fetch(url)
+          const data = await res.json()
+          if (data.features?.length > 0) setAddress(data.features[0].place_name as string)
+        }
+        setLocLoading(false)
+      },
+      () => setLocLoading(false),
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }
 
   function handleLogoChange(e: { target: { files: FileList | null } }) {
     const f = e.target.files?.[0]
@@ -71,6 +108,9 @@ export default function TiendaOnboardingPage() {
         slug,
         whatsapp: phone.replace(/\D/g, '') || null,
         brand_color: color,
+        store_address: address.trim() || null,
+        store_lat: addrLat,
+        store_lng: addrLng,
         ...(logo_url ? { logo_url } : {}),
       }
 
@@ -154,6 +194,52 @@ export default function TiendaOnboardingPage() {
           <div className="ob-field">
             <label className="ob-label">WhatsApp para recibir pedidos</label>
             <PhoneInput value={phone} onChange={setPhone} />
+          </div>
+
+          {/* Location */}
+          <div className="ob-field">
+            <label className="ob-label">Direccion de la tienda (opcional)</label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                className="ob-input"
+                placeholder="Ej: Av. Principal, Local 3, Caracas"
+                value={address}
+                onChange={e => { setAddress(e.target.value); setAddrLat(null); setAddrLng(null) }}
+                onBlur={() => geocodeAddress(address)}
+                style={{ flex: 1 }}
+              />
+              <button
+                type="button"
+                onClick={handleDetectLocation}
+                disabled={locLoading}
+                style={{
+                  flexShrink: 0, border: '1.5px solid rgba(124,58,237,0.25)',
+                  borderRadius: 12, background: '#F5F3FF', color: '#7C3AED',
+                  padding: '0 14px', cursor: 'pointer', display: 'flex',
+                  alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 600,
+                  fontFamily: 'inherit',
+                }}
+                title="Detectar mi ubicacion"
+              >
+                {locLoading
+                  ? <span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid #C4B5FD', borderTopColor: '#7C3AED', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                  : (
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+                      <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                    </svg>
+                  )
+                }
+                Detectar
+              </button>
+            </div>
+            {addrLat != null && (
+              <div style={{ fontSize: 11, color: '#10B981', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <svg viewBox="0 0 20 20" fill="currentColor" width="11" height="11">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                Ubicacion guardada
+              </div>
+            )}
           </div>
 
           {/* Color */}

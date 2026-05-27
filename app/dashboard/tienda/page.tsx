@@ -16,6 +16,32 @@ type Store = {
   banner_url: string | null
   whatsapp: string | null
   instagram: string | null
+  store_address: string | null
+  store_lat: number | null
+  store_lng: number | null
+}
+
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''
+
+async function geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
+  if (!address.trim() || !MAPBOX_TOKEN) return null
+  const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=${MAPBOX_TOKEN}&limit=1`
+  const res = await fetch(url)
+  const data = await res.json()
+  if (data.features?.length > 0) {
+    const [lng, lat] = data.features[0].center as [number, number]
+    return { lat, lng }
+  }
+  return null
+}
+
+async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
+  if (!MAPBOX_TOKEN) return null
+  const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${MAPBOX_TOKEN}&limit=1&types=address,place`
+  const res = await fetch(url)
+  const data = await res.json()
+  if (data.features?.length > 0) return data.features[0].place_name as string
+  return null
 }
 
 function toSlug(text: string) {
@@ -39,8 +65,12 @@ export default function TiendaPage() {
   const [instagram, setInstagram] = useState('')
   const [logoUrl, setLogoUrl] = useState('')
   const [bannerUrl, setBannerUrl] = useState('')
-  const [logoUploading, setLogoUploading] = useState(false)
+  const [logoUploading, setLogoUploading]   = useState(false)
   const [bannerUploading, setBannerUploading] = useState(false)
+  const [storeAddress, setStoreAddress]     = useState('')
+  const [storeLat, setStoreLat]             = useState<number | null>(null)
+  const [storeLng, setStoreLng]             = useState<number | null>(null)
+  const [locLoading, setLocLoading]         = useState(false)
 
   const logoRef   = useRef<HTMLInputElement>(null)
   const bannerRef = useRef<HTMLInputElement>(null)
@@ -58,6 +88,9 @@ export default function TiendaPage() {
         setInstagram(data.instagram ?? '')
         setLogoUrl(data.logo_url ?? '')
         setBannerUrl(data.banner_url ?? '')
+        setStoreAddress(data.store_address ?? '')
+        setStoreLat(data.store_lat ?? null)
+        setStoreLng(data.store_lng ?? null)
       }
       setPageLoading(false)
     })
@@ -94,6 +127,29 @@ export default function TiendaPage() {
     setBannerUploading(false)
   }
 
+  async function handleDetectLocation() {
+    if (!navigator.geolocation) return
+    setLocLoading(true)
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords
+        setStoreLat(lat)
+        setStoreLng(lng)
+        const address = await reverseGeocode(lat, lng)
+        if (address) setStoreAddress(address)
+        setLocLoading(false)
+      },
+      () => setLocLoading(false),
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }
+
+  async function handleAddressBlur() {
+    if (!storeAddress.trim()) { setStoreLat(null); setStoreLng(null); return }
+    const coords = await geocodeAddress(storeAddress)
+    if (coords) { setStoreLat(coords.lat); setStoreLng(coords.lng) }
+  }
+
   async function handleSave() {
     if (!user || !name.trim() || !slug.trim()) { setError('El nombre y la URL son obligatorios.'); return }
     setSaving(true); setError('')
@@ -106,6 +162,9 @@ export default function TiendaPage() {
       instagram: instagram.trim() || null,
       logo_url: logoUrl || null,
       banner_url: bannerUrl || null,
+      store_address: storeAddress.trim() || null,
+      store_lat: storeLat,
+      store_lng: storeLng,
     }
     const { error: err, data } = store
       ? await supabase.from('stores').update(payload).eq('id', store.id).select().single()
@@ -233,6 +292,51 @@ export default function TiendaPage() {
             value={description}
             onChange={e => setDescription(e.target.value)}
           />
+        </div>
+
+        {/* ── UBICACION ── */}
+        <div className="ts-section">
+          <div className="ts-section-title">Ubicacion de la tienda</div>
+          <div className="ts-field">
+            <label className="ts-label">Direccion</label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                type="text"
+                className="ts-input"
+                style={{ flex: 1, border: '1px solid rgba(15,23,42,0.1)', borderRadius: 12, padding: '12px 14px' }}
+                placeholder="Ej: Av. Libertador 1234, Caracas"
+                value={storeAddress}
+                onChange={e => { setStoreAddress(e.target.value); setStoreLat(null); setStoreLng(null) }}
+                onBlur={handleAddressBlur}
+              />
+              <button
+                type="button"
+                className="ts-photo-btn"
+                style={{ flexShrink: 0, padding: '0 14px', display: 'flex', alignItems: 'center', gap: 6 }}
+                onClick={handleDetectLocation}
+                disabled={locLoading}
+                title="Detectar mi ubicacion"
+              >
+                {locLoading
+                  ? <div className="ts-spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
+                  : (
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+                      <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                    </svg>
+                  )
+                }
+                Detectar
+              </button>
+            </div>
+            {storeLat != null && storeLng != null && (
+              <div style={{ fontSize: 11, color: '#10B981', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <svg viewBox="0 0 20 20" fill="currentColor" width="11" height="11">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                Ubicacion guardada
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ── CONTACTO ── */}

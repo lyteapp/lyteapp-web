@@ -1454,13 +1454,13 @@ export default function StoreShell({ store, products, categories = [] }: { store
           ) : hasCats ? (
             <>
               {catGroups.map(({ cat, items }) => (
-                <div key={cat.id} className={`sf-cat-section${cfgCategoryShapes[cat.id] ? ` sf-pshape-${cfgCategoryShapes[cat.id]}` : ''}`}>
+                <div key={cat.id} id={`cat-${cat.id}`} className={`sf-cat-section${cfgCategoryShapes[cat.id] ? ` sf-pshape-${cfgCategoryShapes[cat.id]}` : ''}`}>
                   <h2 className="sf-section-title sf-cat-section-title">{cat.name}</h2>
                   <div className="sf-grid">{items.map(renderCard)}</div>
                 </div>
               ))}
               {uncategorized.length > 0 && (
-                <div className="sf-cat-section">
+                <div id="cat-other" className="sf-cat-section">
                   <h2 className="sf-section-title sf-cat-section-title">{t('store.ourProducts')}</h2>
                   <div className="sf-grid">{uncategorized.map(renderCard)}</div>
                 </div>

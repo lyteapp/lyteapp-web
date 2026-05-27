@@ -585,8 +585,9 @@
 .dv-btn-primary-sm:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ========== ZONAS ========== */
-.dv-zones-wrap { flex: 1; display: grid; grid-template-columns: 320px 1fr; overflow: hidden; }
-.dv-zones-list { background: white; border-right: 0.5px solid var(--dv-line); overflow-y: auto; padding: 16px; }
+.dv-zones-wrap { flex: 1; display: grid; grid-template-columns: 320px 1fr; grid-template-rows: 1fr; overflow: hidden; }
+.dv-zones-list { background: white; border-right: 0.5px solid var(--dv-line); overflow-y: auto; padding: 16px; min-height: 0; }
+.dv-zones-map { position: relative; overflow: hidden; min-height: 0; }
 .dv-zones-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
 .dv-zones-header h3 { font-size: 14px; font-weight: 500; }
 .dv-zone-item { background: var(--dv-cream-soft); border-radius: 10px; padding: 12px; margin-bottom: 8px; border: 1px solid transparent; transition: all 0.15s; }
@@ -597,7 +598,6 @@
 .dv-zone-item h4 { font-size: 13px; font-weight: 500; }
 .dv-zone-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--dv-ink-soft); }
 .dv-zone-fee { color: var(--dv-violet-deep); font-weight: 500; }
-.dv-zones-map { position: relative; overflow: hidden; }
 
 /* ========== LIQUIDACIONES ========== */
 .dv-settle-wrap { flex: 1; overflow: auto; padding: 16px 24px; }

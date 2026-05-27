@@ -1431,7 +1431,7 @@ export default function DeliveryPage() {
               <div className="dv-settings-field">
                 <label className="dv-settings-label">Zona de cobertura (descripcion)</label>
                 <textarea
-                  className="dv-settings-textarea"
+                  className="dv-settings-input dv-settings-textarea"
                   value={stDeliveryZone}
                   onChange={e => setStDeliveryZone(e.target.value)}
                   placeholder="Ej. Municipio Chacao, Las Mercedes, El Hatillo..."

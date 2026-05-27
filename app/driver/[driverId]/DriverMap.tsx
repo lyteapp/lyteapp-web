@@ -52,40 +52,72 @@ export default function DriverMap({
   const mapRef = useRef<MapRef>(null)
   const [loaded, setLoaded] = useState(false)
   const [mapBearing, setMapBearing] = useState(0)
-  const driverPos: [number, number] | null = driverLat && driverLng ? [driverLat, driverLng] : null
+
+  // ── Smooth marker position interpolation ────────────────────────
+  // When GPS fires (every 1-3 s), animate the marker from its current
+  // display position to the new fix over ~1.2 s so movement is fluid.
+  const displayPosRef = useRef<[number, number] | null>(null)
+  const rafRef        = useRef<number | null>(null)
+  const [smoothPos, setSmoothPos] = useState<[number, number] | null>(null)
 
   useEffect(() => {
-    if (!loaded || !mapRef.current) return
-    const map = mapRef.current
+    if (!driverLat || !driverLng) { setSmoothPos(null); return }
 
-    if (followDriver && driverPos) {
-      const bearing = routeCoords && routeCoords.length > 2
-        ? routeBearing(driverPos, routeCoords)
-        : 0
-      map.flyTo({
-        center: [driverPos[1], driverPos[0]],
-        zoom: 18,
-        pitch: 60,
-        bearing,
-        speed: 0.5,
-        curve: 1,
-        essential: true,
-      })
+    const target: [number, number] = [driverLat, driverLng]
+    const from: [number, number]   = displayPosRef.current ?? target
+    const startTime = performance.now()
+    const DURATION  = 1200 // ms — slightly longer than typical GPS interval
+
+    if (rafRef.current) cancelAnimationFrame(rafRef.current)
+
+    const step = (now: number) => {
+      const t    = Math.min((now - startTime) / DURATION, 1)
+      const ease = 1 - Math.pow(1 - t, 3) // ease-out cubic
+      const pos: [number, number] = [
+        from[0] + (target[0] - from[0]) * ease,
+        from[1] + (target[1] - from[1]) * ease,
+      ]
+      displayPosRef.current = pos
+      setSmoothPos(pos)
+      if (t < 1) rafRef.current = requestAnimationFrame(step)
+      else rafRef.current = null
+    }
+    rafRef.current = requestAnimationFrame(step)
+
+    return () => {
+      if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null }
+    }
+  }, [driverLat, driverLng])
+
+  // ── Camera: nav/follow mode — easeTo so consecutive calls don't stutter ──
+  useEffect(() => {
+    if (!loaded || !mapRef.current || !followDriver || !driverLat || !driverLng) return
+    const driverPos: [number, number] = [driverLat, driverLng]
+    const bearing = routeCoords && routeCoords.length > 2 ? routeBearing(driverPos, routeCoords) : 0
+    mapRef.current.easeTo({
+      center: [driverLng, driverLat],
+      zoom: 18, pitch: 60, bearing,
+      duration: 1000,
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, followDriver, driverLat, driverLng])
+
+  // ── Camera: overview mode — fit bounds only when entering overview ──
+  useEffect(() => {
+    if (!loaded || !mapRef.current || followDriver) return
+    if (driverLat && driverLng) {
+      mapRef.current.fitBounds(
+        [
+          [Math.min(driverLng, customerLng) - 0.001, Math.min(driverLat, customerLat) - 0.001],
+          [Math.max(driverLng, customerLng) + 0.001, Math.max(driverLat, customerLat) + 0.001],
+        ],
+        { padding: 64, maxZoom: 16, pitch: 0, bearing: 0, duration: 800 }
+      )
     } else {
-      if (driverPos) {
-        map.fitBounds(
-          [
-            [Math.min(driverPos[1], customerLng) - 0.001, Math.min(driverPos[0], customerLat) - 0.001],
-            [Math.max(driverPos[1], customerLng) + 0.001, Math.max(driverPos[0], customerLat) + 0.001],
-          ],
-          { padding: 64, maxZoom: 16, pitch: 0, bearing: 0, duration: 800 }
-        )
-      } else {
-        map.flyTo({ center: [customerLng, customerLat], zoom: 16, pitch: 0, bearing: 0, duration: 800 })
-      }
+      mapRef.current.flyTo({ center: [customerLng, customerLat], zoom: 16, pitch: 0, bearing: 0, duration: 800 })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded, followDriver, driverPos?.[0], driverPos?.[1]])
+  }, [loaded, followDriver]) // intentionally NOT on driverLat/driverLng in overview mode
 
   const geojsonRoute = routeCoords && routeCoords.length > 0
     ? {
@@ -93,7 +125,6 @@ export default function DriverMap({
         properties: {},
         geometry: {
           type: 'LineString' as const,
-          // routeCoords are [lat, lng]; GeoJSON needs [lng, lat]
           coordinates: routeCoords.map(([lat, lng]) => [lng, lat]),
         },
       }
@@ -149,26 +180,21 @@ export default function DriverMap({
         </div>
       </Marker>
 
-      {/* Driver arrow */}
-      {driverPos && (
-        <Marker longitude={driverPos[1]} latitude={driverPos[0]} anchor="center">
+      {/* Driver arrow — rendered at smoothed position */}
+      {smoothPos && (
+        <Marker longitude={smoothPos[1]} latitude={smoothPos[0]} anchor="center">
           <div style={{
             transform: `rotate(${((heading ?? 0) - mapBearing + 360) % 360}deg)`,
-            transition: 'transform 0.5s ease-out',
+            transition: 'transform 0.4s ease-out',
             filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.4))',
             width: 36, height: 45,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <svg viewBox="0 0 32 40" width="32" height="40" style={{ overflow: 'visible' }}>
-              {/* shadow */}
               <ellipse cx="16" cy="39" rx="9" ry="2.5" fill="rgba(0,0,0,0.22)" />
-              {/* left face — lit */}
               <path d="M16 2 L3 36 L16 29 Z" fill="#60A5FA" />
-              {/* right face — shadow */}
               <path d="M16 2 L29 36 L16 29 Z" fill="#1D4ED8" />
-              {/* bottom concave strip */}
               <path d="M3 36 Q16 41 29 36 L16 29 Z" fill="#2563EB" />
-              {/* center highlight ridge */}
               <line x1="16" y1="2" x2="16" y2="29" stroke="rgba(255,255,255,0.42)" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
           </div>

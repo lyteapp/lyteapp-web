@@ -206,8 +206,14 @@ export default function DriverClient({
 
   // ── GPS ──────────────────────────────────────────────────────────
   const sendLocation = useCallback(async (lat: number, lng: number) => {
-    lastSentAt.current = Date.now()
+    // Always update local position immediately for smooth map animation
     setDriverPos([lat, lng])
+
+    // Throttle Supabase uploads to max once per 3 s — reduces network and battery load
+    const now = Date.now()
+    if (now - lastSentAt.current < 3000) return
+    lastSentAt.current = now
+
     await supabase.from('driver_locations').upsert({
       driver_id: driverId, store_id: storeId,
       lat, lng, is_sharing: true,
@@ -252,7 +258,7 @@ export default function DriverClient({
     // Also try immediately — succeeds if there was already a gesture
     startAudio()
 
-    const opts: PositionOptions = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    const opts: PositionOptions = { enableHighAccuracy: true, timeout: 10000, maximumAge: 500 }
 
     // Start compass (no-op on iOS until user gesture in markPickedUp)
     initCompass()

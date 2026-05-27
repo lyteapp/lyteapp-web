@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import React, { useEffect, useRef, useState, useCallback } from 'react'
 import MapGL, { Marker, NavigationControl, Source, Layer } from 'react-map-gl'
 import type { MapRef, MapMouseEvent } from 'react-map-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
@@ -67,22 +67,24 @@ export default function ZonesMap({ zones, placingZone, onMapClick, previewCenter
     if (placingZone) onMapClick?.(e.lngLat.lat, e.lngLat.lng)
   }, [placingZone, onMapClick])
 
+  const fill: React.CSSProperties = { position: 'absolute', inset: 0 }
+
   if (error) return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#E8EEF4', padding: 24, textAlign: 'center', gap: 12 }}>
+    <div style={{ ...fill, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#E8EEF4', padding: 24, textAlign: 'center', gap: 12 }}>
       <svg viewBox="0 0 20 20" fill="#9CA3AF" width="32" height="32"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/></svg>
       <div style={{ fontSize: 13, color: '#6B7280', maxWidth: 220, lineHeight: 1.5 }}>{error}</div>
     </div>
   )
 
   if (!pos) return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#E8EEF4', flexDirection: 'column', gap: 10 }}>
+    <div style={{ ...fill, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#E8EEF4', flexDirection: 'column', gap: 10 }}>
       <div style={{ width: 24, height: 24, borderRadius: '50%', border: '3px solid rgba(124,58,237,0.15)', borderTopColor: '#7C3AED', animation: 'dbSpin 0.8s linear infinite' }} />
       <span style={{ fontSize: 12, color: '#9CA3AF' }}>Obteniendo ubicacion...</span>
     </div>
   )
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+    <div style={fill}>
       {placingZone && (
         <div style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 10, background: '#4C1D95', color: 'white', padding: '6px 14px', borderRadius: 100, fontSize: 12, fontWeight: 500, pointerEvents: 'none', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(76,29,149,0.4)' }}>
           Toca el mapa para colocar el centro de la zona

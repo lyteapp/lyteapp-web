@@ -1276,7 +1276,7 @@ export default function DeliveryPage() {
           </div>
 
           {/* ── Right: real map ── */}
-          <div className="dv-zones-map" style={{ position: 'relative', overflow: 'hidden' }}>
+          <div className="dv-zones-map">
             <ZonesMap
               zones={zones}
               placingZone={showZoneForm}

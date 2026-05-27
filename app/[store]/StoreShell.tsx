@@ -80,6 +80,7 @@ type TemplateConfig = {
   showMenuButton?: boolean
   logoShape?: string
   logoSize?: string
+  logoSizePx?: number
   headerLayout?: string
   logoPosition?: 'left' | 'center' | 'right' | 'none'
   namePosition?: 'left' | 'center' | 'right' | 'none'
@@ -279,8 +280,8 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const cfgPriceSize       = cfg.priceSize ?? 'medium'
   const cfgCategoryShapes  = cfg.categoryPhotoShapes ?? {}
   const cfgCatNavStyle     = cfg.categoryNavStyle ?? 'pills'
-  const cfgLogoShape    = cfg.logoShape ?? 'rounded'
-  const cfgLogoSize     = cfg.logoSize  ?? 'medium'
+  const cfgLogoShape   = cfg.logoShape ?? 'rounded'
+  const cfgLogoSizePx  = cfg.logoSizePx ?? (cfg.logoSize === 'small' ? 26 : cfg.logoSize === 'large' ? 46 : 34)
   const cfgLogoPosition: 'left' | 'center' | 'right' | 'none' =
     cfg.logoPosition ?? (
       cfg.headerLayout === 'solo-nombre' ? 'none' :
@@ -1354,7 +1355,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
         <div className="sf-topbar-inner sf-topbar-3col">
           <div className="sf-topbar-slot-left">
             {cfgLogoPosition === 'left' && store.logo_url && (
-              <div className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape} sf-nav-logo-${cfgLogoSize}`}>
+              <div className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape} sf-nav-logo-${cfgLogoShape}`} style={{ width: cfgLogoSizePx, height: cfgLogoSizePx }}>
                 <img src={store.logo_url} alt={store.name} className="sf-nav-logo-img" />
               </div>
             )}
@@ -1364,7 +1365,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
           </div>
           <div className="sf-topbar-slot-center">
             {cfgLogoPosition === 'center' && store.logo_url && (
-              <div className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape} sf-nav-logo-${cfgLogoSize}`}>
+              <div className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape} sf-nav-logo-${cfgLogoShape}`} style={{ width: cfgLogoSizePx, height: cfgLogoSizePx }}>
                 <img src={store.logo_url} alt={store.name} className="sf-nav-logo-img" />
               </div>
             )}
@@ -1374,7 +1375,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
           </div>
           <div className="sf-topbar-slot-right">
             {cfgLogoPosition === 'right' && store.logo_url && (
-              <div className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape} sf-nav-logo-${cfgLogoSize}`}>
+              <div className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape} sf-nav-logo-${cfgLogoShape}`} style={{ width: cfgLogoSizePx, height: cfgLogoSizePx }}>
                 <img src={store.logo_url} alt={store.name} className="sf-nav-logo-img" />
               </div>
             )}

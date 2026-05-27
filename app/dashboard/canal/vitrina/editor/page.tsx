@@ -159,8 +159,8 @@ export default function EditorPage() {
 
   const [categoryNavStyle, setCategoryNavStyle] = useState('pills')
   const [showCatNav, setShowCatNav] = useState(true)
-  const [logoShape,    setLogoShape]    = useState('rounded')
-  const [logoSize,     setLogoSize]     = useState('medium')
+  const [logoShape,   setLogoShape]   = useState('rounded')
+  const [logoSizePx,  setLogoSizePx]  = useState(34)
   const [logoPosition, setLogoPosition] = useState<'left' | 'center' | 'right' | 'none'>('left')
   const [namePosition, setNamePosition] = useState<'left' | 'center' | 'right' | 'none'>('left')
   const [showMenuButton, setShowMenuButton] = useState(false)
@@ -206,7 +206,11 @@ export default function EditorPage() {
       if (cfg.categoryNavStyle) setCategoryNavStyle(cfg.categoryNavStyle as string)
       if (cfg.showCatNav !== undefined) setShowCatNav(cfg.showCatNav as boolean)
       if (cfg.logoShape) setLogoShape(cfg.logoShape as string)
-      if (cfg.logoSize)  setLogoSize(cfg.logoSize as string)
+      if ((cfg as Record<string, unknown>).logoSizePx) {
+        setLogoSizePx(Number((cfg as Record<string, unknown>).logoSizePx))
+      } else if (cfg.logoSize) {
+        setLogoSizePx(cfg.logoSize === 'small' ? 26 : cfg.logoSize === 'large' ? 46 : 34)
+      }
       if (cfg.logoPosition) {
         setLogoPosition(cfg.logoPosition as 'left' | 'center' | 'right' | 'none')
       } else if (cfg.headerLayout) {
@@ -351,8 +355,8 @@ export default function EditorPage() {
       ${alignCSS}
       .sf-nav-logo-wrap {
         border-radius: ${logoShape === 'circle' ? '50%' : logoShape === 'square' ? '0' : '8px'} !important;
-        width:  ${logoSize === 'small' ? '26px' : logoSize === 'large' ? '46px' : '34px'} !important;
-        height: ${logoSize === 'small' ? '26px' : logoSize === 'large' ? '46px' : '34px'} !important;
+        width:  ${logoSizePx}px !important;
+        height: ${logoSizePx}px !important;
       }
     `
   }
@@ -373,7 +377,7 @@ export default function EditorPage() {
   useEffect(() => {
     applyPreview()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageBg, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceSize, priceFont, categoryNavStyle, logoShape, logoSize])
+  }, [pageBg, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceSize, priceFont, categoryNavStyle, logoShape, logoSizePx])
 
   // ── Auto-save template (reloads iframe immediately) ───
   async function handleTemplateSelect(t: string) {
@@ -403,7 +407,7 @@ export default function EditorPage() {
   async function handleLogoPosition(pos: 'left' | 'center' | 'right' | 'none') {
     setLogoPosition(pos)
     if (!storeId) return
-    const newConfig = { ...baseConfig, logoPosition: pos, headerLayout: undefined }
+    const newConfig = { ...baseConfig, logoPosition: pos, logoSizePx, headerLayout: undefined }
     await supabase.from('stores').update({ template_config: newConfig }).eq('id', storeId)
     setBaseConfig(newConfig)
     setIframeKey(k => k + 1)
@@ -427,7 +431,7 @@ export default function EditorPage() {
       photoShape, photoSize,
       priceColor: accentColor, priceFont: priceFont || pageFont, priceSize,
       categoryNavStyle, showCatNav,
-      logoShape, logoSize, logoPosition, namePosition, showMenuButton,
+      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton,
       headerLayout: undefined,
       contentBlocks: contentBlocks.length > 0 ? contentBlocks : undefined,
       ...(Object.keys(categoryShapes).length > 0
@@ -1104,26 +1108,22 @@ export default function EditorPage() {
               ))}
             </div>
 
-            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Tamano del logo</div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {([
-                { id: 'small',  label: 'Pequeno', sz: 20 },
-                { id: 'medium', label: 'Mediano',  sz: 28 },
-                { id: 'large',  label: 'Grande',  sz: 38 },
-              ]).map(s => (
-                <button
-                  key={s.id}
-                  onClick={() => setLogoSize(s.id)}
-                  style={{
-                    flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 6,
-                    padding: '10px 6px 8px', borderRadius: 10, border: `2px solid ${logoSize === s.id ? '#7C3AED' : '#E2E8F0'}`,
-                    background: logoSize === s.id ? '#F5F3FF' : 'white', cursor: 'pointer', minHeight: 70,
-                  }}
-                >
-                  <div style={{ width: s.sz, height: s.sz, borderRadius: 6, background: logoSize === s.id ? '#7C3AED' : '#E2E8F0', flexShrink: 0 }} />
-                  <span style={{ fontSize: 10, fontWeight: 600, color: logoSize === s.id ? '#7C3AED' : '#64748B' }}>{s.label}</span>
-                </button>
-              ))}
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>
+              Tamano del logo
+              <span className="ed-size-slider-val">{logoSizePx}px</span>
+            </div>
+            <div className="ed-size-slider-wrap">
+              <div style={{ width: 16, height: 16, borderRadius: 4, background: '#CBD5E1', flexShrink: 0 }} />
+              <input
+                type="range"
+                min={20}
+                max={60}
+                step={2}
+                value={logoSizePx}
+                onChange={e => setLogoSizePx(Number(e.target.value))}
+                className="ed-size-slider"
+              />
+              <div style={{ width: 28, height: 28, borderRadius: 6, background: '#CBD5E1', flexShrink: 0 }} />
             </div>
 
             <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Menu lateral</div>

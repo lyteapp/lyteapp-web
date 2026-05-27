@@ -40,14 +40,13 @@ const navItems: { href: string; tKey: TranslationKey; exact?: boolean; soon?: bo
 
 const canalSubItems: { href: string; tKey: TranslationKey }[] = [
   { href: '/dashboard/canal/vitrina/editor', tKey: 'nav.vitrina' },
-  { href: '/dashboard/canal/apariencia', tKey: 'nav.apariencia' },
-  { href: '/dashboard/canal/checkout',   tKey: 'nav.checkout' },
+  { href: '/dashboard/canal/checkout',       tKey: 'nav.checkout' },
+  { href: '/dashboard/canal/apariencia',     tKey: 'nav.apariencia' },
 ]
 
 const settingsSubItems: { href: string; tKey: TranslationKey }[] = [
   { href: '/dashboard/configuracion?section=general',  tKey: 'nav.general' },
   { href: '/dashboard/configuracion?section=pagos',    tKey: 'nav.payments' },
-  { href: '/dashboard/configuracion?section=checkout', tKey: 'nav.checkout' },
   { href: '/dashboard/configuracion?section=delivery', tKey: 'nav.delivery' },
 ]
 

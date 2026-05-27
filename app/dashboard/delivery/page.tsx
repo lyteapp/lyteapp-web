@@ -1285,6 +1285,7 @@ export default function DeliveryPage() {
               previewRadius={zRadius}
               previewColor={zColor}
               onUserPos={(lat, lng) => setZUserPos([lat, lng])}
+              mapboxToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
             />
           </div>
 

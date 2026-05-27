@@ -1,50 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { MapContainer, TileLayer, Marker, Circle, Popup, useMapEvents, useMap } from 'react-leaflet'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const iconFix = () => { delete (L.Icon.Default.prototype as any)._getIconUrl; L.Icon.Default.mergeOptions({ iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png', iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png', shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png' }) }
-
-const storeIcon = L.divIcon({
-  className: '',
-  html: `<div style="width:36px;height:36px;border-radius:10px;background:#4C1D95;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(76,29,149,0.4);border:2px solid white;">
-    <svg viewBox="0 0 20 20" fill="white" width="18" height="18"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>
-  </div>`,
-  iconSize: [36, 36], iconAnchor: [18, 36], popupAnchor: [0, -38],
-})
-
-function makeClickIcon(color: string) {
-  return L.divIcon({
-    className: '',
-    html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2.5px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);transform:translate(-50%,-50%)"></div>`,
-    iconSize: [1, 1], iconAnchor: [0, 0],
-  })
-}
-
-function ClickHandler({ active, onMapClick }: { active: boolean; onMapClick?: (lat: number, lng: number) => void }) {
-  useMapEvents({
-    click(e) {
-      if (active) onMapClick?.(e.latlng.lat, e.latlng.lng)
-    },
-  })
-  return null
-}
-
-function RecenterButton({ pos }: { pos: [number, number] }) {
-  const map = useMap()
-  return (
-    <button
-      onClick={() => map.setView(pos, map.getZoom())}
-      style={{ position: 'absolute', bottom: 14, right: 14, zIndex: 1000, width: 32, height: 32, borderRadius: 8, background: 'white', border: '0.5px solid rgba(15,23,42,0.12)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}
-      title="Mi ubicacion"
-    >
-      <svg viewBox="0 0 20 20" fill="#4C1D95" width="14" height="14"><path fillRule="evenodd" d="M10 2a8 8 0 100 16A8 8 0 0010 2zm0 14a6 6 0 110-12 6 6 0 010 12zm0-9a3 3 0 100 6 3 3 0 000-6z" clipRule="evenodd"/></svg>
-    </button>
-  )
-}
+import { useEffect, useRef, useState, useCallback } from 'react'
+import MapGL, { Marker, NavigationControl, Source, Layer } from 'react-map-gl'
+import type { MapRef, MapMouseEvent } from 'react-map-gl'
+import 'mapbox-gl/dist/mapbox-gl.css'
 
 export type DeliveryZone = {
   id: string
@@ -64,27 +23,49 @@ type Props = {
   previewRadius?: number
   previewColor?: string
   onUserPos?: (lat: number, lng: number) => void
+  mapboxToken: string
 }
 
-export default function ZonesMap({ zones, placingZone, onMapClick, previewCenter, previewRadius, previewColor, onUserPos }: Props) {
-  const [pos, setPos] = useState<[number, number] | null>(null)
+function circlePolygon(lat: number, lng: number, radiusM: number, steps = 64): GeoJSON.Feature<GeoJSON.Polygon> {
+  const R = 6371000
+  const dLat = (radiusM / R) * (180 / Math.PI)
+  const dLng = dLat / Math.cos((lat * Math.PI) / 180)
+  const coords: [number, number][] = []
+  for (let i = 0; i <= steps; i++) {
+    const a = (i / steps) * 2 * Math.PI
+    coords.push([lng + dLng * Math.cos(a), lat + dLat * Math.sin(a)])
+  }
+  return { type: 'Feature', geometry: { type: 'Polygon', coordinates: [coords] }, properties: {} }
+}
+
+export default function ZonesMap({ zones, placingZone, onMapClick, previewCenter, previewRadius, previewColor, onUserPos, mapboxToken }: Props) {
+  const mapRef = useRef<MapRef>(null)
+  const reportedPos = useRef(false)
+  const [pos, setPos]     = useState<[number, number] | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const reportedPos = useState(false)
 
   useEffect(() => {
-    iconFix()
     if (!navigator.geolocation) { setError('Geolocalización no disponible'); return }
     navigator.geolocation.getCurrentPosition(
       p => {
         const coords: [number, number] = [p.coords.latitude, p.coords.longitude]
         setPos(coords)
-        if (!reportedPos[0]) { reportedPos[1](true); onUserPos?.(coords[0], coords[1]) }
+        if (!reportedPos.current) { reportedPos.current = true; onUserPos?.(coords[0], coords[1]) }
       },
       () => setError('Activa la ubicacion en tu navegador para usar el mapa de zonas.'),
-      { enableHighAccuracy: true }
+      { enableHighAccuracy: true },
     )
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    const canvas = mapRef.current?.getCanvas()
+    if (canvas) canvas.style.cursor = placingZone ? 'crosshair' : ''
+  }, [placingZone])
+
+  const handleClick = useCallback((e: MapMouseEvent) => {
+    if (placingZone) onMapClick?.(e.lngLat.lat, e.lngLat.lng)
+  }, [placingZone, onMapClick])
 
   if (error) return (
     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#E8EEF4', padding: 24, textAlign: 'center', gap: 12 }}>
@@ -101,62 +82,74 @@ export default function ZonesMap({ zones, placingZone, onMapClick, previewCenter
   )
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       {placingZone && (
-        <div style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, background: '#4C1D95', color: 'white', padding: '6px 14px', borderRadius: 100, fontSize: 12, fontWeight: 500, pointerEvents: 'none', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(76,29,149,0.4)' }}>
+        <div style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 10, background: '#4C1D95', color: 'white', padding: '6px 14px', borderRadius: 100, fontSize: 12, fontWeight: 500, pointerEvents: 'none', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(76,29,149,0.4)' }}>
           Toca el mapa para colocar el centro de la zona
         </div>
       )}
-      <MapContainer
-        center={pos}
-        zoom={13}
-        style={{ flex: 1, width: '100%', cursor: placingZone ? 'crosshair' : undefined }}
-        zoomControl={true}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://carto.com/attributions">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-          subdomains="abcd"
-          maxZoom={20}
-        />
-        <ClickHandler active={placingZone} onMapClick={onMapClick} />
 
-        {/* Store / user location */}
-        <Marker position={pos} icon={storeIcon}>
-          <Popup><strong style={{ color: '#4C1D95' }}>Tu tienda</strong></Popup>
+      <MapGL
+        ref={mapRef}
+        initialViewState={{ longitude: pos[1], latitude: pos[0], zoom: 13 }}
+        style={{ width: '100%', height: '100%' }}
+        mapStyle="mapbox://styles/mapbox/standard"
+        mapboxAccessToken={mapboxToken}
+        attributionControl={false}
+        onClick={handleClick}
+      >
+        <NavigationControl position="bottom-right" showCompass={false} />
+
+        {/* Recenter */}
+        <button
+          onClick={e => { e.stopPropagation(); mapRef.current?.flyTo({ center: [pos[1], pos[0]], zoom: 13, duration: 600 }) }}
+          style={{ position: 'absolute', bottom: 80, right: 14, zIndex: 10, width: 32, height: 32, borderRadius: 8, background: 'white', border: '0.5px solid rgba(15,23,42,0.12)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}
+        >
+          <svg viewBox="0 0 20 20" fill="#4C1D95" width="14" height="14">
+            <path fillRule="evenodd" d="M10 2a8 8 0 100 16A8 8 0 0010 2zm0 14a6 6 0 110-12 6 6 0 010 12zm0-9a3 3 0 100 6 3 3 0 000-6z" clipRule="evenodd"/>
+          </svg>
+        </button>
+
+        {/* Store marker */}
+        <Marker longitude={pos[1]} latitude={pos[0]} anchor="center">
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: '#4C1D95', border: '2px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(76,29,149,0.4)' }}>
+            <svg viewBox="0 0 20 20" fill="white" width="18" height="18"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>
+          </div>
         </Marker>
 
         {/* Existing zones */}
         {zones.map(z => (
-          <Circle
-            key={z.id}
-            center={[z.center_lat, z.center_lng]}
-            radius={z.radius_m}
-            pathOptions={{ color: z.color, fillColor: z.color, fillOpacity: 0.12, weight: 2 }}
-          >
-            <Popup>
-              <div style={{ fontSize: 12 }}>
-                <strong>{z.name}</strong>
-                <div style={{ color: '#6B7280', marginTop: 3 }}>${z.fee.toFixed(2)} · {(z.radius_m / 1000).toFixed(1)} km</div>
-              </div>
-            </Popup>
-          </Circle>
+          <Source key={z.id} id={`zone-${z.id}`} type="geojson" data={circlePolygon(z.center_lat, z.center_lng, z.radius_m)}>
+            <Layer id={`zone-fill-${z.id}`} type="fill" paint={{ 'fill-color': z.color, 'fill-opacity': 0.12 }} />
+            <Layer id={`zone-line-${z.id}`} type="line" paint={{ 'line-color': z.color, 'line-width': 2, 'line-opacity': 0.85 }} />
+          </Source>
+        ))}
+
+        {/* Zone labels */}
+        {zones.map(z => (
+          <Marker key={`lbl-${z.id}`} longitude={z.center_lng} latitude={z.center_lat} anchor="center">
+            <div style={{ background: 'white', border: `1.5px solid ${z.color}`, borderRadius: 8, padding: '3px 8px', fontSize: 11, fontWeight: 600, color: '#0F172A', boxShadow: '0 1px 4px rgba(0,0,0,0.12)', whiteSpace: 'nowrap', pointerEvents: 'none', userSelect: 'none' }}>
+              {z.name} · ${z.fee.toFixed(2)}
+            </div>
+          </Marker>
         ))}
 
         {/* Preview zone while placing */}
         {previewCenter && (previewRadius ?? 0) > 0 && (
-          <>
-            <Circle
-              center={previewCenter}
-              radius={previewRadius!}
-              pathOptions={{ color: previewColor ?? '#7C3AED', fillColor: previewColor ?? '#7C3AED', fillOpacity: 0.18, weight: 2, dashArray: '8 5' }}
-            />
-            <Marker position={previewCenter} icon={makeClickIcon(previewColor ?? '#7C3AED')} />
-          </>
+          <Source id="zone-preview" type="geojson" data={circlePolygon(previewCenter[0], previewCenter[1], previewRadius!)}>
+            <Layer id="zone-preview-fill" type="fill" paint={{ 'fill-color': previewColor ?? '#7C3AED', 'fill-opacity': 0.18 }} />
+            <Layer id="zone-preview-line" type="line" paint={{ 'line-color': previewColor ?? '#7C3AED', 'line-width': 2, 'line-dasharray': [3, 2] }} />
+          </Source>
         )}
 
-        <RecenterButton pos={pos} />
-      </MapContainer>
+        {/* Preview center dot */}
+        {previewCenter && (
+          <Marker longitude={previewCenter[1]} latitude={previewCenter[0]} anchor="center">
+            <div style={{ width: 14, height: 14, borderRadius: '50%', background: previewColor ?? '#7C3AED', border: '2.5px solid white', boxShadow: '0 2px 6px rgba(0,0,0,0.3)' }} />
+          </Marker>
+        )}
+
+      </MapGL>
     </div>
   )
 }

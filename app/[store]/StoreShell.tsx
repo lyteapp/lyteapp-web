@@ -70,6 +70,7 @@ type TemplateConfig = {
   categoryNavStyle?: string
   showWhatsapp?: boolean
   showInstagram?: boolean
+  showMenuButton?: boolean
   logoShape?: string
   logoSize?: string
   headerLayout?: string
@@ -139,6 +140,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const [isIos, setIsIos]   = useState(false)
   const [installed, setInstalled] = useState(false)
   const [activeCatId, setActiveCatId] = useState<string | null>(null)
+  const [menuOpen, setMenuOpen]       = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedVariants, setSelectedVariants] = useState<Record<string, number>>({})
 
@@ -1297,11 +1299,20 @@ export default function StoreShell({ store, products, categories = [] }: { store
               <span className="sf-nav-name">{store.name}</span>
             )}
           </div>
-          {store.whatsapp && cfg.showWhatsapp !== false && (
-            <a href={`https://wa.me/${store.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="sf-nav-wa">
-              {WA_ICON} {t('store.contact')}
-            </a>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {store.whatsapp && cfg.showWhatsapp !== false && (
+              <a href={`https://wa.me/${store.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="sf-nav-wa">
+                {WA_ICON} {t('store.contact')}
+              </a>
+            )}
+            {cfg.showMenuButton && (
+              <button className="sf-menu-btn" onClick={() => setMenuOpen(true)} aria-label="Menu">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
+                  <path fillRule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1691,6 +1702,68 @@ export default function StoreShell({ store, products, categories = [] }: { store
             </div>
           )}
         </div>
+      )}
+      {/* ── DRAWER MENU ── */}
+      {cfg.showMenuButton && (
+        <>
+          {menuOpen && <div className="sf-drawer-overlay" onClick={() => setMenuOpen(false)} />}
+          <div className={`sf-drawer${menuOpen ? ' sf-drawer-open' : ''}`}>
+            <div className="sf-drawer-header">
+              <div className="sf-drawer-brand">
+                {store.logo_url && <img src={store.logo_url} alt={store.name} className="sf-drawer-logo" />}
+                <span className="sf-drawer-name">{store.name}</span>
+              </div>
+              <button className="sf-drawer-close" onClick={() => setMenuOpen(false)} aria-label="Cerrar">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+
+            {hasCats && (
+              <nav className="sf-drawer-nav">
+                {catGroups.map(({ cat }) => (
+                  <button
+                    key={cat.id}
+                    className="sf-drawer-link"
+                    onClick={() => {
+                      setMenuOpen(false)
+                      setActiveCatId(cat.id)
+                      setTimeout(() => document.getElementById(`cat-${cat.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+                    }}
+                  >
+                    {cat.name}
+                  </button>
+                ))}
+                {uncategorized.length > 0 && (
+                  <button
+                    className="sf-drawer-link"
+                    onClick={() => {
+                      setMenuOpen(false)
+                      setActiveCatId('__other')
+                      setTimeout(() => document.getElementById('cat-other')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+                    }}
+                  >
+                    {t('store.ourProducts')}
+                  </button>
+                )}
+              </nav>
+            )}
+
+            <div className="sf-drawer-social">
+              {store.whatsapp && cfg.showWhatsapp !== false && (
+                <a href={`https://wa.me/${store.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="sf-drawer-social-btn wa">
+                  {WA_ICON} WhatsApp
+                </a>
+              )}
+              {store.instagram && cfg.showInstagram !== false && (
+                <a href={`https://instagram.com/${store.instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="sf-drawer-social-btn ig">
+                  {IG_ICON} Instagram
+                </a>
+              )}
+            </div>
+          </div>
+        </>
       )}
     </div>
   )

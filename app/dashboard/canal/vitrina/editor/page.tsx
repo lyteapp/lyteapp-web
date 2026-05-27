@@ -157,9 +157,10 @@ export default function EditorPage() {
   const [baseConfig, setBaseConfig]         = useState<Record<string, unknown>>({})
 
   const [categoryNavStyle, setCategoryNavStyle] = useState('pills')
-  const [logoShape,    setLogoShape]    = useState('rounded')
-  const [logoSize,     setLogoSize]     = useState('medium')
-  const [headerLayout, setHeaderLayout] = useState('default')
+  const [logoShape,      setLogoShape]      = useState('rounded')
+  const [logoSize,       setLogoSize]       = useState('medium')
+  const [headerLayout,   setHeaderLayout]   = useState('default')
+  const [showMenuButton, setShowMenuButton] = useState(false)
   const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'template' | 'price' | 'categories' | 'brand' | null>(null)
   const [iframeKey, setIframeKey]   = useState(0)
   const [saving, setSaving]         = useState(false)
@@ -199,6 +200,7 @@ export default function EditorPage() {
       if (cfg.logoShape)     setLogoShape(cfg.logoShape as string)
       if (cfg.logoSize)      setLogoSize(cfg.logoSize as string)
       if (cfg.headerLayout)  setHeaderLayout(cfg.headerLayout as string)
+      if (cfg.showMenuButton !== undefined) setShowMenuButton(cfg.showMenuButton as boolean)
       const { data: cats } = await supabase
         .from('categories').select('id,name')
         .eq('store_id', store.id).order('position', { ascending: true })
@@ -392,7 +394,7 @@ export default function EditorPage() {
       photoShape, photoSize,
       priceColor: accentColor, priceFont: priceFont || pageFont, priceSize,
       categoryNavStyle,
-      logoShape, logoSize, headerLayout,
+      logoShape, logoSize, headerLayout, showMenuButton,
       ...(Object.keys(categoryShapes).length > 0
         ? { categoryPhotoShapes: categoryShapes }
         : { categoryPhotoShapes: undefined }),
@@ -1066,6 +1068,33 @@ export default function EditorPage() {
                 </button>
               ))}
             </div>
+
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Menu lateral</div>
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#F8FAFC', borderRadius: 10, cursor: 'pointer', gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', lineHeight: 1.2 }}>Mostrar boton de menu</div>
+                <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 3 }}>Abre un panel lateral con categorias y enlaces</div>
+              </div>
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <input
+                  type="checkbox"
+                  checked={showMenuButton}
+                  onChange={e => setShowMenuButton(e.target.checked)}
+                  style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
+                />
+                <div style={{
+                  width: 38, height: 22, borderRadius: 100,
+                  background: showMenuButton ? '#7C3AED' : '#D1D5DB',
+                  transition: 'background 0.2s', cursor: 'pointer', position: 'relative',
+                }}>
+                  <div style={{
+                    position: 'absolute', top: 4, left: showMenuButton ? 18 : 4,
+                    width: 14, height: 14, borderRadius: '50%', background: 'white',
+                    transition: 'left 0.2s',
+                  }} />
+                </div>
+              </div>
+            </label>
 
             <PanelSave />
           </div>

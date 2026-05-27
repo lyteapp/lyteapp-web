@@ -822,6 +822,92 @@ html, body { overflow-x: hidden; }
   }
 }
 
+/* ── HAMBURGER BUTTON ── */
+.sf-menu-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: 8px;
+  border: none; background: #F1F5F9; cursor: pointer;
+  color: #475569; transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+.sf-menu-btn:hover { background: #E2E8F0; color: #0F172A; }
+
+/* ── DRAWER ── */
+.sf-drawer-overlay {
+  position: fixed; inset: 0; z-index: 250;
+  background: rgba(15,23,42,0.4);
+  animation: sfFadeIn 0.2s ease;
+}
+@keyframes sfFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.sf-drawer {
+  position: fixed; top: 0; left: 0; bottom: 0;
+  width: 280px; max-width: 85%;
+  background: white; z-index: 260;
+  display: flex; flex-direction: column;
+  box-shadow: 4px 0 32px rgba(15,23,42,0.18);
+  transform: translateX(-100%);
+  transition: transform 0.26s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+}
+.sf-drawer-open { transform: translateX(0); }
+
+.sf-drawer-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 16px 14px;
+  border-bottom: 1px solid rgba(15,23,42,0.07);
+  flex-shrink: 0;
+}
+.sf-drawer-brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.sf-drawer-logo {
+  width: 32px; height: 32px; border-radius: 8px;
+  object-fit: contain; background: #F1F5F9; flex-shrink: 0;
+}
+.sf-drawer-name {
+  font-size: 15px; font-weight: 700; color: #0F172A;
+  letter-spacing: -0.02em; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.sf-drawer-close {
+  width: 30px; height: 30px; border-radius: 8px; border: none;
+  background: #F1F5F9; cursor: pointer; color: #64748B;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: background 0.15s;
+}
+.sf-drawer-close:hover { background: #E2E8F0; }
+
+.sf-drawer-nav {
+  display: flex; flex-direction: column;
+  padding: 10px 0; flex: 1;
+}
+.sf-drawer-link {
+  display: block; width: 100%; text-align: left;
+  padding: 13px 20px; border: none; background: none;
+  font-size: 15px; font-weight: 500; color: #0F172A;
+  cursor: pointer; font-family: inherit;
+  border-bottom: 1px solid rgba(15,23,42,0.05);
+  transition: background 0.12s, color 0.12s;
+}
+.sf-drawer-link:last-child { border-bottom: none; }
+.sf-drawer-link:hover { background: #F8FAFC; color: var(--sf-price-color, #7C3AED); }
+.sf-drawer-link:active { background: #F1F5F9; }
+
+.sf-drawer-social {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 14px 16px;
+  border-top: 1px solid rgba(15,23,42,0.07);
+  flex-shrink: 0;
+}
+.sf-drawer-social-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border-radius: 10px;
+  font-size: 13px; font-weight: 600; text-decoration: none;
+  transition: opacity 0.15s;
+}
+.sf-drawer-social-btn:hover { opacity: 0.85; }
+.sf-drawer-social-btn.wa { background: #DCFCE7; color: #166534; }
+.sf-drawer-social-btn.ig { background: #FDF2F8; color: #86198F; }
+
 /* ── DESIGN CONFIG (from template_config) ──────────────── */
 
 /* Price color + font via CSS custom props */

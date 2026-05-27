@@ -23,19 +23,34 @@ export async function POST(req: NextRequest) {
       .eq('driver_id', driverId)
     subs = data
   } else {
-    // Notify all active drivers in the store
-    const { data: drivers } = await supabase
+    // Notify available (active, not currently on a delivery) drivers in the store
+    const { data: activeDrivers } = await supabase
       .from('delivery_drivers')
       .select('id')
       .eq('store_id', storeId)
       .eq('is_active', true)
-    if (drivers?.length) {
-      const ids = drivers.map(d => d.id)
-      const { data } = await supabase
-        .from('driver_push_subscriptions')
-        .select('subscription')
-        .in('driver_id', ids)
-      subs = data
+
+    if (activeDrivers?.length) {
+      // Find drivers currently assigned to an ongoing delivery
+      const { data: busyRows } = await supabase
+        .from('deliveries')
+        .select('driver_id')
+        .eq('store_id', storeId)
+        .in('status', ['pending', 'preparing', 'ready', 'picked_up'])
+        .not('driver_id', 'is', null)
+
+      const busyIds = new Set((busyRows ?? []).map((r: { driver_id: string }) => r.driver_id))
+      const availableIds = activeDrivers
+        .map(d => d.id)
+        .filter(id => !busyIds.has(id))
+
+      if (availableIds.length) {
+        const { data } = await supabase
+          .from('driver_push_subscriptions')
+          .select('subscription')
+          .in('driver_id', availableIds)
+        subs = data
+      }
     }
   }
 

@@ -222,6 +222,19 @@ export default function PedidosPage() {
     } else {
       setDisplayOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o))
     }
+    if (status === 'ready' && storeId) {
+      const order = orders.find(o => o.id === orderId)
+      fetch('/api/push-driver', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeId,
+          title: 'Pedido listo para recoger',
+          body: order?.customer_name ? `Pedido de ${order.customer_name}` : 'Nuevo pedido disponible',
+          url: '/driver',
+        }),
+      }).catch(() => {})
+    }
     setUpdating(null)
   }
 

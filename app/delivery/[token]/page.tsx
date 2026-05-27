@@ -19,14 +19,18 @@ export default async function TrackingPage({
     .maybeSingle()
 
   let trackingConfig: Record<string, string> | null = null
+  let driverInfo: { name: string; phone: string | null; vehicle: string | null; rating: number | null; avatar_url: string | null } | null = null
+
   if (delivery?.store_id) {
-    const { data: store } = await supabase
-      .from('stores')
-      .select('template_config')
-      .eq('id', delivery.store_id)
-      .maybeSingle()
+    const [{ data: store }, { data: driver }] = await Promise.all([
+      supabase.from('stores').select('template_config').eq('id', delivery.store_id).maybeSingle(),
+      delivery.driver_id
+        ? supabase.from('delivery_drivers').select('name,phone,vehicle,rating,avatar_url').eq('id', delivery.driver_id).maybeSingle()
+        : Promise.resolve({ data: null }),
+    ])
     const cfg = store?.template_config as Record<string, unknown> | null
     if (cfg?.trackingConfig) trackingConfig = cfg.trackingConfig as Record<string, string>
+    if (driver) driverInfo = driver as NonNullable<typeof driverInfo>
   }
 
   return (
@@ -35,6 +39,7 @@ export default async function TrackingPage({
       token={token}
       trackingConfig={trackingConfig}
       mapboxToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
+      driver={driverInfo}
     />
   )
 }

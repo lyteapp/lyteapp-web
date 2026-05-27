@@ -33,6 +33,7 @@ export default function Dashboard() {
   const [storeSlug, setStoreSlug] = useState('')
   const [storeId, setStoreId] = useState<string | null>(null)
   const [orderCount, setOrderCount] = useState(0)
+  const [avgTicket, setAvgTicket] = useState(0)
   const [productCount, setProductCount] = useState(0)
   const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([])
   const [, setTick] = useState(0)
@@ -53,7 +54,15 @@ export default function Dashboard() {
       if (!data) return
       setStoreSlug(data.slug ?? '')
       setStoreId(data.id)
-      supabase.from('orders').select('id', { count: 'exact' }).eq('store_id', data.id).then(({ count }) => setOrderCount(count ?? 0))
+      const todayStart = new Date(); todayStart.setHours(0,0,0,0)
+      supabase.from('orders').select('id, total').eq('store_id', data.id).gte('created_at', todayStart.toISOString()).then(({ data: orders }) => {
+        const count = orders?.length ?? 0
+        setOrderCount(count)
+        if (count > 0) {
+          const sum = (orders ?? []).reduce((acc, o) => acc + Number(o.total ?? 0), 0)
+          setAvgTicket(sum / count)
+        }
+      })
       supabase.from('products').select('id', { count: 'exact' }).eq('store_id', data.id).then(({ count }) => setProductCount(count ?? 0))
       loadActiveOrders(data.id)
     })
@@ -141,6 +150,19 @@ export default function Dashboard() {
           <div className="dh-kpi-value">{orderCount}</div>
           <div className="dh-kpi-foot">
             <span className="dh-delta-flat">{t('dash.kpi.today')}</span>
+          </div>
+        </div>
+
+        <div className="dh-kpi">
+          <div className="dh-kpi-head">
+            <span className="dh-kpi-label">Ticket promedio</span>
+            <span className="dh-kpi-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 20h20M5 20V10l7-7 7 7v10"/><path d="M9 20v-5h6v5"/></svg>
+            </span>
+          </div>
+          <div className="dh-kpi-value">${avgTicket.toFixed(2)}</div>
+          <div className="dh-kpi-foot">
+            <span className="dh-delta-flat">Hoy</span>
           </div>
         </div>
 

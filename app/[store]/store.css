@@ -23,6 +23,17 @@ html, body { overflow-x: hidden; }
 .sf-topbar-brand { display: flex; align-items: center; gap: 10px; }
 .sf-nav-logo { width: 34px; height: 34px; border-radius: 8px; object-fit: contain; background: #F1F5F9; }
 .sf-nav-name { font-size: 1.07em; font-weight: 700; color: #0F172A; letter-spacing: -0.03em; }
+/* logo shape */
+.sf-nav-logo-rounded { border-radius: 8px; }
+.sf-nav-logo-circle  { border-radius: 50%; }
+.sf-nav-logo-square  { border-radius: 0; }
+/* logo size */
+.sf-nav-logo-small  { width: 26px; height: 26px; }
+.sf-nav-logo-medium { width: 34px; height: 34px; }
+.sf-nav-logo-large  { width: 46px; height: 46px; }
+/* header layout: centrado */
+.sf-topbar-inner-center { justify-content: center; }
+.sf-topbar-brand-center { flex: 1; justify-content: center; flex-direction: column; align-items: center; gap: 2px; }
 
 /* ── NAV (checkout only) ── */
 .sf-nav {

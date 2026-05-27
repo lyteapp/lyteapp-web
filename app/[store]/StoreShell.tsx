@@ -70,6 +70,9 @@ type TemplateConfig = {
   categoryNavStyle?: string
   showWhatsapp?: boolean
   showInstagram?: boolean
+  logoShape?: string
+  logoSize?: string
+  headerLayout?: string
 }
 type Store = {
   id: string; name: string; slug: string
@@ -256,6 +259,9 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const cfgPriceSize       = cfg.priceSize ?? 'medium'
   const cfgCategoryShapes  = cfg.categoryPhotoShapes ?? {}
   const cfgCatNavStyle     = cfg.categoryNavStyle ?? 'pills'
+  const cfgLogoShape       = cfg.logoShape   ?? 'rounded'
+  const cfgLogoSize        = cfg.logoSize    ?? 'medium'
+  const cfgHeaderLayout    = cfg.headerLayout ?? 'default'
   const pageStyle: React.CSSProperties = {
     ...(cfg.pageBg ? { background: cfg.pageBg } : {}),
     ...(cfgFontFamily ? { fontFamily: cfgFontFamily } : {}),
@@ -1282,10 +1288,14 @@ export default function StoreShell({ store, products, categories = [] }: { store
   return (
     <div className={`sf-page sf-tpl-${tpl} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize}`} style={pageStyle}>
       <div className="sf-topbar">
-        <div className="sf-topbar-inner">
-          <div className="sf-topbar-brand">
-            {store.logo_url && <img src={store.logo_url} alt={store.name} className="sf-nav-logo" />}
-            <span className="sf-nav-name">{store.name}</span>
+        <div className={`sf-topbar-inner${cfgHeaderLayout === 'centrado' ? ' sf-topbar-inner-center' : ''}`}>
+          <div className={`sf-topbar-brand${cfgHeaderLayout === 'centrado' ? ' sf-topbar-brand-center' : ''}`}>
+            {store.logo_url && cfgHeaderLayout !== 'solo-nombre' && (
+              <img src={store.logo_url} alt={store.name} className={`sf-nav-logo sf-nav-logo-${cfgLogoShape} sf-nav-logo-${cfgLogoSize}`} />
+            )}
+            {cfgHeaderLayout !== 'solo-logo' && (
+              <span className="sf-nav-name">{store.name}</span>
+            )}
           </div>
           {store.whatsapp && cfg.showWhatsapp !== false && (
             <a href={`https://wa.me/${store.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="sf-nav-wa">

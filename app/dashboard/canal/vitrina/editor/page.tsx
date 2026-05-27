@@ -157,7 +157,10 @@ export default function EditorPage() {
   const [baseConfig, setBaseConfig]         = useState<Record<string, unknown>>({})
 
   const [categoryNavStyle, setCategoryNavStyle] = useState('pills')
-  const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'template' | 'price' | 'categories' | null>(null)
+  const [logoShape,    setLogoShape]    = useState('rounded')
+  const [logoSize,     setLogoSize]     = useState('medium')
+  const [headerLayout, setHeaderLayout] = useState('default')
+  const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'template' | 'price' | 'categories' | 'brand' | null>(null)
   const [iframeKey, setIframeKey]   = useState(0)
   const [saving, setSaving]         = useState(false)
   const [toolSaved, setToolSaved]   = useState(false)
@@ -193,6 +196,9 @@ export default function EditorPage() {
       if (cfg.priceFont !== undefined) setPriceFont((cfg.priceFont as string) ?? '')
       if (cfg.categoryPhotoShapes) setCategoryShapes(cfg.categoryPhotoShapes as Record<string, string>)
       if (cfg.categoryNavStyle) setCategoryNavStyle(cfg.categoryNavStyle as string)
+      if (cfg.logoShape)     setLogoShape(cfg.logoShape as string)
+      if (cfg.logoSize)      setLogoSize(cfg.logoSize as string)
+      if (cfg.headerLayout)  setHeaderLayout(cfg.headerLayout as string)
       const { data: cats } = await supabase
         .from('categories').select('id,name')
         .eq('store_id', store.id).order('position', { ascending: true })
@@ -323,6 +329,14 @@ export default function EditorPage() {
       ${shapeCSS}
       ${imgSizeCSS}
       ${alignCSS}
+      .sf-nav-logo {
+        border-radius: ${logoShape === 'circle' ? '50%' : logoShape === 'square' ? '0' : '8px'} !important;
+        width:  ${logoSize === 'small' ? '26px' : logoSize === 'large' ? '46px' : '34px'} !important;
+        height: ${logoSize === 'small' ? '26px' : logoSize === 'large' ? '46px' : '34px'} !important;
+      }
+      ${headerLayout === 'solo-nombre' ? '.sf-nav-logo { display: none !important; }' : ''}
+      ${headerLayout === 'solo-logo'   ? '.sf-nav-name { display: none !important; }' : ''}
+      ${headerLayout === 'centrado'    ? '.sf-topbar-inner { justify-content: center !important; } .sf-topbar-brand { flex: 1; justify-content: center !important; flex-direction: column !important; align-items: center !important; gap: 2px !important; }' : ''}
     `
   }
 
@@ -342,7 +356,7 @@ export default function EditorPage() {
   useEffect(() => {
     applyPreview()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageBg, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceSize, priceFont, categoryNavStyle])
+  }, [pageBg, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceSize, priceFont, categoryNavStyle, logoShape, logoSize, headerLayout])
 
   // ── Auto-save template (reloads iframe immediately) ───
   async function handleTemplateSelect(t: string) {
@@ -378,6 +392,7 @@ export default function EditorPage() {
       photoShape, photoSize,
       priceColor: accentColor, priceFont: priceFont || pageFont, priceSize,
       categoryNavStyle,
+      logoShape, logoSize, headerLayout,
       ...(Object.keys(categoryShapes).length > 0
         ? { categoryPhotoShapes: categoryShapes }
         : { categoryPhotoShapes: undefined }),
@@ -520,6 +535,18 @@ export default function EditorPage() {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
             <line x1="7" y1="7" x2="7.01" y2="7"/>
+          </svg>
+        </button>
+
+        {/* Encabezado */}
+        <button
+          className={`ed-tool-btn${activeTool === 'brand' ? ' ed-tool-active' : ''}`}
+          title="Encabezado"
+          onClick={() => setActiveTool(p => p === 'brand' ? null : 'brand')}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="8" width="8" height="8" rx="2"/>
+            <path d="M14 10h7M14 13h5M14 16h6"/>
           </svg>
         </button>
 
@@ -933,6 +960,113 @@ export default function EditorPage() {
                 </button>
               ))}
             </div>
+            <PanelSave />
+          </div>
+        )}
+
+        {/* Panel — Encabezado */}
+        {activeTool === 'brand' && (
+          <div className="ed-tool-panel ed-tool-panel-lg">
+            <div className="ed-tp-title">Encabezado</div>
+
+            <div className="ed-tp-subtitle">Disposicion</div>
+            <div className="ed-cat-style-grid">
+              {([
+                {
+                  id: 'default',
+                  name: 'Logo + nombre',
+                  preview: (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 12px' }}>
+                      <div style={{ width: 22, height: 22, borderRadius: 5, background: '#E2E8F0', flexShrink: 0 }} />
+                      <div style={{ width: 52, height: 8, borderRadius: 4, background: '#CBD5E1' }} />
+                    </div>
+                  ),
+                },
+                {
+                  id: 'solo-nombre',
+                  name: 'Solo nombre',
+                  preview: (
+                    <div style={{ display: 'flex', alignItems: 'center', padding: '10px 12px' }}>
+                      <div style={{ width: 60, height: 8, borderRadius: 4, background: '#CBD5E1' }} />
+                    </div>
+                  ),
+                },
+                {
+                  id: 'solo-logo',
+                  name: 'Solo logo',
+                  preview: (
+                    <div style={{ display: 'flex', alignItems: 'center', padding: '10px 12px' }}>
+                      <div style={{ width: 28, height: 28, borderRadius: 6, background: '#E2E8F0' }} />
+                    </div>
+                  ),
+                },
+                {
+                  id: 'centrado',
+                  name: 'Centrado',
+                  preview: (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 12px' }}>
+                      <div style={{ width: 22, height: 22, borderRadius: 5, background: '#E2E8F0' }} />
+                      <div style={{ width: 48, height: 7, borderRadius: 4, background: '#CBD5E1' }} />
+                    </div>
+                  ),
+                },
+              ]).map(s => (
+                <button
+                  key={s.id}
+                  className={`ed-cat-style-card${headerLayout === s.id ? ' ed-cat-style-active' : ''}`}
+                  onClick={() => setHeaderLayout(s.id)}
+                >
+                  <div className="ed-cat-style-preview">{s.preview}</div>
+                  <div className="ed-cat-style-name">{s.name}</div>
+                  {headerLayout === s.id && <div className="ed-template-check">&#10003;</div>}
+                </button>
+              ))}
+            </div>
+
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Forma del logo</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {([
+                { id: 'rounded', label: 'Redondeado', radius: '6px' },
+                { id: 'circle',  label: 'Circulo',    radius: '50%' },
+                { id: 'square',  label: 'Cuadrado',   radius: '0' },
+              ]).map(s => (
+                <button
+                  key={s.id}
+                  onClick={() => setLogoShape(s.id)}
+                  style={{
+                    flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                    padding: '10px 6px', borderRadius: 10, border: `2px solid ${logoShape === s.id ? '#7C3AED' : '#E2E8F0'}`,
+                    background: logoShape === s.id ? '#F5F3FF' : 'white', cursor: 'pointer',
+                  }}
+                >
+                  <div style={{ width: 28, height: 28, borderRadius: s.radius, background: logoShape === s.id ? '#7C3AED' : '#E2E8F0' }} />
+                  <span style={{ fontSize: 10, fontWeight: 600, color: logoShape === s.id ? '#7C3AED' : '#64748B' }}>{s.label}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Tamano del logo</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {([
+                { id: 'small',  label: 'Pequeno', sz: 20 },
+                { id: 'medium', label: 'Mediano',  sz: 28 },
+                { id: 'large',  label: 'Grande',  sz: 38 },
+              ]).map(s => (
+                <button
+                  key={s.id}
+                  onClick={() => setLogoSize(s.id)}
+                  style={{
+                    flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 6,
+                    padding: '10px 6px 8px', borderRadius: 10, border: `2px solid ${logoSize === s.id ? '#7C3AED' : '#E2E8F0'}`,
+                    background: logoSize === s.id ? '#F5F3FF' : 'white', cursor: 'pointer', minHeight: 70,
+                  }}
+                >
+                  <div style={{ width: s.sz, height: s.sz, borderRadius: 6, background: logoSize === s.id ? '#7C3AED' : '#E2E8F0', flexShrink: 0 }} />
+                  <span style={{ fontSize: 10, fontWeight: 600, color: logoSize === s.id ? '#7C3AED' : '#64748B' }}>{s.label}</span>
+                </button>
+              ))}
+            </div>
+
             <PanelSave />
           </div>
         )}

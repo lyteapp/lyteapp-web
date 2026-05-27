@@ -38,6 +38,7 @@ type Product = {
   category_id?: string | null
 }
 type PaymentMethod = { type: string; label: string; enabled: boolean; details: Record<string, string> }
+type SavedLocation = { id: string; label: string; address: string; lat: number | null; lng: number | null }
 
 const PM_LABELS: Record<string, string> = {
   pago_movil: 'Pago Móvil', zelle: 'Zelle', efectivo_usd: 'Efectivo USD',
@@ -118,6 +119,11 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const [customerLat, setCustomerLat] = useState<number | null>(null)
   const [customerLng, setCustomerLng] = useState<number | null>(null)
   const [customerAddress, setCustomerAddress] = useState('')
+  const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([])
+  const [selectedLocId, setSelectedLocId]   = useState<string | null>(null)
+  const [showNewLoc, setShowNewLoc]         = useState(false)
+  const [newLocLabel, setNewLocLabel]       = useState('')
+  const [showSavePrompt, setShowSavePrompt] = useState(false)
   const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>(() => {
     const dt = store.checkout_settings?.deliveryTypes
     return (dt?.delivery === false && dt?.pickup) ? 'pickup' : 'delivery'
@@ -182,6 +188,18 @@ export default function StoreShell({ store, products, categories = [] }: { store
   }, [])
 
   useEffect(() => {
+    const ph = customerPhone.replace(/\D/g, '')
+    if (!ph) { setSavedLocations([]); setShowNewLoc(true); return }
+    try {
+      const raw = localStorage.getItem(`lyte-locs-${ph}`)
+      const locs: SavedLocation[] = raw ? JSON.parse(raw) : []
+      setSavedLocations(locs)
+      setSelectedLocId(null)
+      setShowNewLoc(locs.length === 0)
+    } catch { setSavedLocations([]); setShowNewLoc(true) }
+  }, [customerPhone])
+
+  useEffect(() => {
     try { localStorage.setItem(`cart-${store.slug}`, JSON.stringify(cart)) } catch {}
   }, [cart, store.slug])
 
@@ -198,7 +216,8 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const deliveryFeeAmt  = dtOn && deliveryType === 'delivery' && cs.deliveryEnabled && cs.deliveryFee
     ? Number(cs.deliveryFee)
     : 0
-  const orderTotal = cartTotal + deliveryFeeAmt
+  const orderTotal  = cartTotal + deliveryFeeAmt
+  const showLocForm = savedLocations.length === 0 || showNewLoc
 
   function getProdQty(productId: string): number {
     return Object.values(cart).filter(i => (i.productId ?? i.id) === productId).reduce((s, i) => s + i.quantity, 0)
@@ -309,6 +328,10 @@ export default function StoreShell({ store, products, categories = [] }: { store
   // ── Order submit ──
   async function handleSubmit() {
     if (!customerName.trim() || !customerPhone.trim()) { setError(t('store.error.required')); return }
+    if (deliveryType === 'delivery' && !customerLat && !customerAddress.trim()) {
+      setError('Ingresa tu direccion o comparte tu ubicacion GPS para continuar')
+      return
+    }
     setSubmitting(true); setError('')
     const paymentLabel = selectedPayment
       ? (enabledMethods.find(m => m.type === selectedPayment)?.label ?? selectedPayment)
@@ -555,12 +578,6 @@ export default function StoreShell({ store, products, categories = [] }: { store
             <label>{t('store.phone')}</label>
             <input type="tel" placeholder={t('store.phonePlaceholder')} value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} />
           </div>
-          {requireAddress && deliveryType === 'delivery' && (
-            <div className="sf-co-field">
-              <label>Direccion de entrega</label>
-              <input type="text" placeholder="Av. Principal, Edificio X, Apto Y" value={customerAddress} onChange={e => setCustomerAddress(e.target.value)} />
-            </div>
-          )}
           <div className="sf-co-field">
             <label>{t('store.notes')} <span className="sf-optional">{t('store.optional')}</span></label>
             <textarea placeholder={t('store.notesPlaceholder')} rows={2} value={customerNotes} onChange={e => setCustomerNotes(e.target.value)} />
@@ -595,44 +612,183 @@ export default function StoreShell({ store, products, categories = [] }: { store
           )}
         </div>
 
-        {/* Location permission card */}
-        {locationState === 'idle' && (
-          <div style={{ background: '#F5F3EF', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 4 }}>
-            <svg viewBox="0 0 20 20" fill="#7C3AED" width="20" height="20" style={{ flexShrink: 0, marginTop: 1 }}>
-              <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-            </svg>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', marginBottom: 2 }}>Rastreo en tiempo real</div>
-              <div style={{ fontSize: 12, color: '#64748B', marginBottom: 10, lineHeight: 1.4 }}>Comparte tu ubicacion para recibir un link y ver como viene tu pedido.</div>
-              <button
-                onClick={requestLocation}
-                style={{ background: '#7C3AED', color: 'white', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-              >
-                Compartir ubicacion
-              </button>
-            </div>
-          </div>
-        )}
-        {locationState === 'requesting' && (
-          <div style={{ background: '#F5F3EF', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-            <div style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid rgba(124,58,237,0.2)', borderTopColor: '#7C3AED', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
-            <span style={{ fontSize: 12, color: '#64748B' }}>Obteniendo ubicacion...</span>
-          </div>
-        )}
-        {locationState === 'granted' && (
-          <div style={{ background: '#ECFDF5', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-            <svg viewBox="0 0 20 20" fill="#10B981" width="16" height="16" style={{ flexShrink: 0 }}>
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
-            </svg>
-            <span style={{ fontSize: 12, color: '#065F46', fontWeight: 500 }}>Ubicacion compartida. Recibiras un link de rastreo.</span>
-          </div>
-        )}
-        {locationState === 'denied' && (
-          <div style={{ background: '#FFF7ED', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-            <svg viewBox="0 0 20 20" fill="#F59E0B" width="16" height="16" style={{ flexShrink: 0 }}>
-              <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-            </svg>
-            <span style={{ fontSize: 12, color: '#92400E' }}>Sin ubicacion. Tu pedido se procesara igual.</span>
+        {/* Ubicacion de entrega — solo para domicilio */}
+        {deliveryType === 'delivery' && (
+          <div className="sf-co-section">
+            <h3 className="sf-co-section-title">
+              Ubicacion de entrega <span style={{ color: '#EF4444' }}>*</span>
+            </h3>
+
+            {/* Saved locations */}
+            {savedLocations.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: showLocForm ? 12 : 0 }}>
+                {savedLocations.map(loc => (
+                  <div key={loc.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedLocId(loc.id)
+                        setCustomerAddress(loc.address)
+                        setCustomerLat(loc.lat)
+                        setCustomerLng(loc.lng)
+                        setShowNewLoc(false)
+                        setLocationState('idle')
+                        setShowSavePrompt(false)
+                      }}
+                      style={{
+                        flex: 1, display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '11px 14px', borderRadius: 12, border: 'none',
+                        cursor: 'pointer', textAlign: 'left' as const,
+                        background: selectedLocId === loc.id ? '#EDE9FE' : '#F8FAFC',
+                        outline: `2px solid ${selectedLocId === loc.id ? '#7C3AED' : '#E2E8F0'}`,
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      <svg viewBox="0 0 20 20" fill={selectedLocId === loc.id ? '#7C3AED' : '#94A3B8'} width="14" height="14" style={{ flexShrink: 0 }}>
+                        <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                      </svg>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: selectedLocId === loc.id ? '#7C3AED' : '#0F172A', lineHeight: 1.2 }}>{loc.label}</div>
+                        {loc.address && <div style={{ fontSize: 11, color: '#64748B', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{loc.address}</div>}
+                      </div>
+                      {selectedLocId === loc.id && (
+                        <svg viewBox="0 0 20 20" fill="#7C3AED" width="14" height="14" style={{ flexShrink: 0 }}>
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const ph = customerPhone.replace(/\D/g, '')
+                        const updated = savedLocations.filter(l => l.id !== loc.id)
+                        try { localStorage.setItem(`lyte-locs-${ph}`, JSON.stringify(updated)) } catch {}
+                        setSavedLocations(updated)
+                        if (selectedLocId === loc.id) {
+                          setSelectedLocId(null)
+                          setCustomerAddress('')
+                          setCustomerLat(null)
+                          setCustomerLng(null)
+                          setShowNewLoc(updated.length === 0)
+                        }
+                      }}
+                      style={{ width: 30, height: 30, borderRadius: '50%', border: 'none', background: '#FEE2E2', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                    >
+                      <svg viewBox="0 0 20 20" fill="#EF4444" width="12" height="12">
+                        <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.519.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+
+                {!showNewLoc && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedLocId(null)
+                      setShowNewLoc(true)
+                      setCustomerLat(null)
+                      setCustomerLng(null)
+                      setCustomerAddress('')
+                      setLocationState('idle')
+                      setShowSavePrompt(false)
+                      setNewLocLabel('')
+                    }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: '2px dashed #D1D5DB', borderRadius: 12, padding: '10px 14px', cursor: 'pointer', fontSize: 13, color: '#64748B', width: '100%' }}
+                  >
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+                      <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                    </svg>
+                    Nueva ubicacion
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Form: GPS + address input */}
+            {showLocForm && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {locationState === 'idle' && (
+                  <button type="button" onClick={requestLocation} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#7C3AED', color: 'white', border: 'none', borderRadius: 10, padding: '11px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, width: '100%' }}>
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15">
+                      <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                    </svg>
+                    Compartir mi ubicacion GPS
+                  </button>
+                )}
+                {locationState === 'requesting' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 14px', background: '#F8FAFC', borderRadius: 10, fontSize: 13, color: '#64748B' }}>
+                    <div style={{ width: 14, height: 14, border: '2px solid rgba(124,58,237,0.2)', borderTopColor: '#7C3AED', borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+                    Obteniendo ubicacion...
+                  </div>
+                )}
+                {locationState === 'granted' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#ECFDF5', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#065F46', fontWeight: 500 }}>
+                    <svg viewBox="0 0 20 20" fill="#10B981" width="14" height="14" style={{ flexShrink: 0 }}>
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+                    </svg>
+                    Ubicacion GPS compartida
+                  </div>
+                )}
+                {locationState === 'denied' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FFF7ED', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#92400E' }}>
+                    <svg viewBox="0 0 20 20" fill="#F59E0B" width="14" height="14" style={{ flexShrink: 0 }}>
+                      <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                    </svg>
+                    Ingresa la direccion manualmente
+                  </div>
+                )}
+
+                <div className="sf-co-field" style={{ marginBottom: 0 }}>
+                  <label>Direccion de entrega{locationState === 'granted' ? ' (opcional)' : ''}</label>
+                  <input type="text" placeholder="Av. Principal, Edificio X, Apto Y" value={customerAddress} onChange={e => setCustomerAddress(e.target.value)} />
+                </div>
+
+                {!showSavePrompt && customerPhone.replace(/\D/g, '') && (customerLat || customerAddress.trim()) && (
+                  <button type="button" onClick={() => setShowSavePrompt(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#7C3AED', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, padding: 0, alignSelf: 'flex-start' }}>
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="12" height="12">
+                      <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                    </svg>
+                    Guardar ubicacion
+                  </button>
+                )}
+                {showSavePrompt && (
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input
+                      type="text"
+                      placeholder="Nombre (Casa, Trabajo...)"
+                      value={newLocLabel}
+                      onChange={e => setNewLocLabel(e.target.value)}
+                      style={{ flex: 1, padding: '9px 12px', borderRadius: 8, border: '1.5px solid #E2E8F0', fontSize: 13, outline: 'none', minWidth: 0 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const ph = customerPhone.replace(/\D/g, '')
+                        if (!ph) return
+                        const loc: SavedLocation = {
+                          id: crypto.randomUUID(),
+                          label: newLocLabel.trim() || customerAddress.trim() || 'Mi ubicacion',
+                          address: customerAddress,
+                          lat: customerLat,
+                          lng: customerLng,
+                        }
+                        const updated = [...savedLocations, loc]
+                        try { localStorage.setItem(`lyte-locs-${ph}`, JSON.stringify(updated)) } catch {}
+                        setSavedLocations(updated)
+                        setSelectedLocId(loc.id)
+                        setShowNewLoc(false)
+                        setShowSavePrompt(false)
+                        setNewLocLabel('')
+                      }}
+                      style={{ background: '#7C3AED', color: 'white', border: 'none', borderRadius: 8, padding: '9px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' as const, flexShrink: 0 }}
+                    >
+                      Guardar
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 

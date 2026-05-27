@@ -2,10 +2,13 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import PhoneInput from '../../components/PhoneInput'
 import './tienda.css'
+
+const StoreMapPicker = dynamic(() => import('./StoreMapPicker'), { ssr: false })
 
 type Store = {
   id: string
@@ -148,6 +151,13 @@ export default function TiendaPage() {
     if (!storeAddress.trim()) { setStoreLat(null); setStoreLng(null); return }
     const coords = await geocodeAddress(storeAddress)
     if (coords) { setStoreLat(coords.lat); setStoreLng(coords.lng) }
+  }
+
+  async function handleMapLocationChange(lat: number, lng: number) {
+    setStoreLat(lat)
+    setStoreLng(lng)
+    const address = await reverseGeocode(lat, lng)
+    if (address) setStoreAddress(address)
   }
 
   async function handleSave() {
@@ -297,7 +307,7 @@ export default function TiendaPage() {
         {/* ── UBICACION ── */}
         <div className="ts-section">
           <div className="ts-section-title">Ubicacion de la tienda</div>
-          <div className="ts-field">
+          <div className="ts-field" style={{ marginBottom: 10 }}>
             <label className="ts-label">Direccion</label>
             <div style={{ display: 'flex', gap: 8 }}>
               <input
@@ -312,7 +322,7 @@ export default function TiendaPage() {
               <button
                 type="button"
                 className="ts-photo-btn"
-                style={{ flexShrink: 0, padding: '0 14px', display: 'flex', alignItems: 'center', gap: 6 }}
+                style={{ flexShrink: 0, padding: '0 16px', display: 'flex', alignItems: 'center', gap: 6, height: 46 }}
                 onClick={handleDetectLocation}
                 disabled={locLoading}
                 title="Detectar mi ubicacion"
@@ -325,17 +335,26 @@ export default function TiendaPage() {
                     </svg>
                   )
                 }
-                Detectar
+                Mi ubicacion
               </button>
             </div>
-            {storeLat != null && storeLng != null && (
-              <div style={{ fontSize: 11, color: '#10B981', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                <svg viewBox="0 0 20 20" fill="currentColor" width="11" height="11">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                Ubicacion guardada
-              </div>
-            )}
+          </div>
+
+          {/* Interactive map */}
+          <div style={{
+            height: 280, borderRadius: 16, overflow: 'hidden',
+            border: '1.5px solid rgba(15,23,42,0.08)',
+            boxShadow: '0 2px 12px rgba(15,23,42,0.06)',
+          }}>
+            <StoreMapPicker
+              lat={storeLat}
+              lng={storeLng}
+              mapboxToken={MAPBOX_TOKEN}
+              onLocationChange={handleMapLocationChange}
+            />
+          </div>
+          <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 6 }}>
+            Haz clic en el mapa o arrastra el pin para ajustar la posicion exacta
           </div>
         </div>
 

@@ -250,6 +250,8 @@ export default function DeliveryPage() {
 
   useEffect(() => {
     if (tab === 'zones') setZonesResizeTrigger(n => n + 1)
+    if (tab === 'live' && window.innerWidth <= 900) setShowMap(true)
+    if (tab !== 'live') setShowMap(false)
   }, [tab])
 
   function selectOrder(order: Order) {

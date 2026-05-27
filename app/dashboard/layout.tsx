@@ -42,8 +42,6 @@ const canalSubItems: { href: string; tKey: TranslationKey }[] = [
   { href: '/dashboard/canal/vitrina/editor', tKey: 'nav.vitrina' },
   { href: '/dashboard/canal/apariencia', tKey: 'nav.apariencia' },
   { href: '/dashboard/canal/checkout',   tKey: 'nav.checkout' },
-  { href: '/dashboard/canal/menu',       tKey: 'nav.menu' },
-  { href: '/dashboard/canal/resenas',    tKey: 'nav.resenas' },
 ]
 
 const settingsSubItems: { href: string; tKey: TranslationKey }[] = [

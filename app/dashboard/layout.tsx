@@ -264,9 +264,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           )}
 
-          {/* Bottom items: Chats, Analytics, Settings */}
+          {/* Analytics */}
+          <Link
+            href="/dashboard/analitics"
+            className={`db-nav-item${pathname.startsWith('/dashboard/analitics') ? ' active' : ''}`}
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" /></svg>
+            {t('nav.analytics')}
+          </Link>
+
+          {/* Bottom items: Chats, Settings */}
           <div className="db-nav-section">{t('nav.config')}</div>
-          {navItems.slice(3, 5).map((item) => {
+          {navItems.slice(3, 4).map((item) => {
             const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href)
             return (
               <Link

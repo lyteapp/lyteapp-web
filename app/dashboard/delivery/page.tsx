@@ -26,7 +26,7 @@ const ZonesMap = dynamic(() => import('./ZonesMap'), {
   ),
 })
 
-type Tab = 'live' | 'today' | 'couriers' | 'zones' | 'settlements'
+type Tab = 'live' | 'today' | 'couriers' | 'zones' | 'settlements' | 'settings'
 type DeliveryStatus = 'pending' | 'preparing' | 'ready' | 'picked_up' | 'delivered' | 'cancelled'
 type TodayFilter = 'all' | 'ongoing' | 'delivered' | 'cancelled'
 
@@ -125,6 +125,14 @@ export default function DeliveryPage() {
   const [drAvatarFile, setDrAvatarFile] = useState<File | null>(null)
   const [drAvatarPreview, setDrAvatarPreview] = useState<string | null>(null)
 
+  // Settings tab
+  const [stDeliveryEnabled, setStDeliveryEnabled] = useState(false)
+  const [stDeliveryFee,     setStDeliveryFee]     = useState('')
+  const [stDeliveryTime,    setStDeliveryTime]     = useState('')
+  const [stDeliveryZone,    setStDeliveryZone]     = useState('')
+  const [savingSettings,    setSavingSettings]     = useState(false)
+  const [savedSettings,     setSavedSettings]      = useState(false)
+
   // Available driver queue (realtime presence)
   type QueueEntry = { driverId: string; driverName: string; since: string }
   const [availableQueue, setAvailableQueue] = useState<QueueEntry[]>([])
@@ -154,13 +162,14 @@ export default function DeliveryPage() {
   }
 
   const loadData = useCallback(async (sid: string) => {
-    const [{ data: dels }, { data: drvs }, { data: orders }, { data: dispatched }, { data: locs }, { data: zns }] = await Promise.all([
+    const [{ data: dels }, { data: drvs }, { data: orders }, { data: dispatched }, { data: locs }, { data: zns }, { data: storeRow }] = await Promise.all([
       supabase.from('deliveries').select('*, driver:driver_id(id,name,phone,is_active)').eq('store_id', sid).order('created_at', { ascending: false }).limit(300),
       supabase.from('delivery_drivers').select('*').eq('store_id', sid).order('name'),
       supabase.from('orders').select('id,customer_name,customer_phone,customer_notes,payment_method,total,status,created_at').eq('store_id', sid).eq('status', 'ready').order('created_at', { ascending: false }),
       supabase.from('deliveries').select('order_id').eq('store_id', sid).not('order_id', 'is', null),
       supabase.from('driver_locations').select('*').eq('store_id', sid),
       supabase.from('delivery_zones').select('*').eq('store_id', sid).order('created_at'),
+      supabase.from('stores').select('checkout_settings').eq('id', sid).maybeSingle(),
     ])
     const dispatchedIds = new Set((dispatched ?? []).map((d: { order_id: string }) => d.order_id))
     setDeliveries((dels as Delivery[]) ?? [])
@@ -168,6 +177,11 @@ export default function DeliveryPage() {
     setReadyOrders((orders ?? []).filter((o: Order) => !dispatchedIds.has(o.id)))
     setDriverLocations((locs as DriverLocation[]) ?? [])
     setZones((zns as Zone[]) ?? [])
+    const cs = (storeRow as { checkout_settings?: Record<string, unknown> } | null)?.checkout_settings ?? {}
+    setStDeliveryEnabled(Boolean(cs.deliveryEnabled))
+    setStDeliveryFee(cs.deliveryFee ? String(cs.deliveryFee) : '')
+    setStDeliveryTime(typeof cs.deliveryTime === 'string' ? cs.deliveryTime : '')
+    setStDeliveryZone(typeof cs.deliveryZone === 'string' ? cs.deliveryZone : '')
   }, [])
 
   useEffect(() => {
@@ -408,6 +422,24 @@ export default function DeliveryPage() {
     showToast('Link copiado')
   }
 
+  async function saveSettings() {
+    if (!storeId) return
+    setSavingSettings(true)
+    const { data: existing } = await supabase.from('stores').select('checkout_settings').eq('id', storeId).maybeSingle()
+    const current = (existing as { checkout_settings?: Record<string, unknown> } | null)?.checkout_settings ?? {}
+    const merged = {
+      ...current,
+      deliveryEnabled: stDeliveryEnabled,
+      deliveryFee: stDeliveryFee ? parseFloat(stDeliveryFee) : null,
+      deliveryTime: stDeliveryTime.trim() || null,
+      deliveryZone: stDeliveryZone.trim() || null,
+    }
+    await supabase.from('stores').update({ checkout_settings: merged }).eq('id', storeId)
+    setSavingSettings(false)
+    setSavedSettings(true)
+    setTimeout(() => setSavedSettings(false), 2500)
+  }
+
   // Derived data
   const inRoute     = deliveries.filter(d => d.status === 'picked_up')
   const needsDriver = deliveries.filter(d => d.status === 'ready' && !d.driver_id)
@@ -474,6 +506,12 @@ export default function DeliveryPage() {
         </button>
         <button className={`dv-tab${tab === 'settlements' ? ' active' : ''}`} onClick={() => setTab('settlements')}>
           Liquidaciones
+        </button>
+        <button className={`dv-tab dv-tab-settings${tab === 'settings' ? ' active' : ''}`} onClick={() => setTab('settings')}>
+          <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+            <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd"/>
+          </svg>
+          Ajustes
         </button>
       </nav>
 
@@ -1323,6 +1361,79 @@ export default function DeliveryPage() {
               </tbody>
             </table>
           )}
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════════════
+          VISTA: AJUSTES
+      ══════════════════════════════════════════════ */}
+      <div className={`dv-view${tab === 'settings' ? ' active' : ''}`}>
+        <div className="dv-settings-wrap">
+
+          {/* Delivery general */}
+          <div className="dv-settings-section">
+            <div className="dv-settings-section-head">
+              <div>
+                <div className="dv-settings-section-title">Delivery</div>
+                <div className="dv-settings-section-sub">Configura las opciones generales de tu servicio de delivery</div>
+              </div>
+            </div>
+            <div className="dv-settings-body">
+              <div className="dv-settings-toggle-row">
+                <div>
+                  <div className="dv-settings-toggle-label">Activar delivery</div>
+                  <div className="dv-settings-toggle-hint">Los clientes pueden pedir delivery desde tu tienda</div>
+                </div>
+                <label className="dv-settings-toggle">
+                  <input type="checkbox" checked={stDeliveryEnabled} onChange={() => setStDeliveryEnabled(v => !v)} />
+                  <span className="dv-settings-toggle-track" />
+                </label>
+              </div>
+
+              <div className="dv-settings-field">
+                <label className="dv-settings-label">Tarifa base de delivery ($)</label>
+                <input
+                  className="dv-settings-input"
+                  type="number"
+                  min="0"
+                  step="0.50"
+                  value={stDeliveryFee}
+                  onChange={e => setStDeliveryFee(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div className="dv-settings-field">
+                <label className="dv-settings-label">Tiempo estimado de entrega</label>
+                <input
+                  className="dv-settings-input"
+                  type="text"
+                  value={stDeliveryTime}
+                  onChange={e => setStDeliveryTime(e.target.value)}
+                  placeholder="Ej. 30-45 min"
+                />
+              </div>
+
+              <div className="dv-settings-field">
+                <label className="dv-settings-label">Zona de cobertura (descripcion)</label>
+                <textarea
+                  className="dv-settings-textarea"
+                  value={stDeliveryZone}
+                  onChange={e => setStDeliveryZone(e.target.value)}
+                  placeholder="Ej. Municipio Chacao, Las Mercedes, El Hatillo..."
+                  rows={3}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button className="dv-settings-save-btn" onClick={saveSettings} disabled={savingSettings}>
+              {savingSettings ? 'Guardando...' : 'Guardar ajustes'}
+            </button>
+            {savedSettings && <span className="dv-settings-saved">Guardado</span>}
+          </div>
+
         </div>
       </div>
 

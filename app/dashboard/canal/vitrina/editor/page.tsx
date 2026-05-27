@@ -331,7 +331,7 @@ export default function EditorPage() {
       ${shapeCSS}
       ${imgSizeCSS}
       ${alignCSS}
-      .sf-nav-logo {
+      .sf-nav-logo-wrap {
         border-radius: ${logoShape === 'circle' ? '50%' : logoShape === 'square' ? '0' : '8px'} !important;
         width:  ${logoSize === 'small' ? '26px' : logoSize === 'large' ? '46px' : '34px'} !important;
         height: ${logoSize === 'small' ? '26px' : logoSize === 'large' ? '46px' : '34px'} !important;

@@ -1293,7 +1293,9 @@ export default function StoreShell({ store, products, categories = [] }: { store
         <div className={`sf-topbar-inner${cfgHeaderLayout === 'centrado' ? ' sf-topbar-inner-center' : ''}`}>
           <div className={`sf-topbar-brand${cfgHeaderLayout === 'centrado' ? ' sf-topbar-brand-center' : ''}`}>
             {store.logo_url && cfgHeaderLayout !== 'solo-nombre' && (
-              <img src={store.logo_url} alt={store.name} className={`sf-nav-logo sf-nav-logo-${cfgLogoShape} sf-nav-logo-${cfgLogoSize}`} />
+              <div className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape} sf-nav-logo-${cfgLogoSize}`}>
+                <img src={store.logo_url} alt={store.name} className="sf-nav-logo-img" />
+              </div>
             )}
             {cfgHeaderLayout !== 'solo-logo' && (
               <span className="sf-nav-name">{store.name}</span>
@@ -1710,7 +1712,11 @@ export default function StoreShell({ store, products, categories = [] }: { store
           <div className={`sf-drawer${menuOpen ? ' sf-drawer-open' : ''}`}>
             <div className="sf-drawer-header">
               <div className="sf-drawer-brand">
-                {store.logo_url && <img src={store.logo_url} alt={store.name} className="sf-drawer-logo" />}
+                {store.logo_url && (
+                <div className={`sf-drawer-logo sf-nav-logo-${cfgLogoShape}`}>
+                  <img src={store.logo_url} alt={store.name} />
+                </div>
+              )}
                 <span className="sf-drawer-name">{store.name}</span>
               </div>
               <button className="sf-drawer-close" onClick={() => setMenuOpen(false)} aria-label="Cerrar">

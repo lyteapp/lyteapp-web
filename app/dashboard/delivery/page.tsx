@@ -125,6 +125,10 @@ export default function DeliveryPage() {
   const [drAvatarFile, setDrAvatarFile] = useState<File | null>(null)
   const [drAvatarPreview, setDrAvatarPreview] = useState<string | null>(null)
 
+  // Available driver queue (realtime presence)
+  type QueueEntry = { driverId: string; driverName: string; since: string }
+  const [availableQueue, setAvailableQueue] = useState<QueueEntry[]>([])
+
   // QR modals
   const [qrDel, setQrDel]       = useState<Delivery | null>(null)
   const [qrDriver, setQrDriver] = useState<Driver | null>(null)
@@ -170,6 +174,25 @@ export default function DeliveryPage() {
       setLoading(false)
     })
   }, [user, loadData])
+
+  // Presence: available driver queue
+  useEffect(() => {
+    if (!storeId) return
+    const ch = supabase.channel(`driver-queue-${storeId}`)
+      .on('presence', { event: 'sync' }, () => {
+        const state = ch.presenceState<{ driverName: string; since: string }>()
+        const queue = Object.entries(state)
+          .map(([driverId, presences]) => ({
+            driverId,
+            driverName: presences[0]?.driverName ?? 'Despachador',
+            since: presences[0]?.since ?? new Date().toISOString(),
+          }))
+          .sort((a, b) => new Date(a.since).getTime() - new Date(b.since).getTime())
+        setAvailableQueue(queue)
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
+  }, [storeId])
 
   useEffect(() => {
     if (!storeId) return
@@ -510,6 +533,22 @@ export default function DeliveryPage() {
               )}
             </div>
             <div className="dv-panel-body">
+              {/* Available driver queue */}
+              {availableQueue.length > 0 && (
+                <div className="dv-drv-queue">
+                  <div style={{ fontSize: 10, fontWeight: 600, color: '#15803D', textTransform: 'uppercase', letterSpacing: '0.08em', paddingBottom: 4 }}>
+                    Despachadores disponibles · {availableQueue.length}
+                  </div>
+                  {availableQueue.map((entry, i) => (
+                    <div key={entry.driverId} className="dv-drv-queue-row">
+                      <div className="dv-drv-queue-num">{i + 1}</div>
+                      <span className="dv-drv-queue-name">{entry.driverName}</span>
+                      <span className="dv-drv-queue-since">{timeAgo(entry.since)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {readyOrders.length === 0 && needsDriver.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--dv-ink-soft)', fontSize: 12 }}>
                   Sin pedidos en cola

@@ -158,6 +158,9 @@ export default function DriverClient({
   const [navLoading, setNavLoading] = useState(false)
   const [totalDist, setTotalDist]   = useState(0)
 
+  const [isAvailable, setIsAvailable] = useState(false)
+  const [availSince, setAvailSince]   = useState<string | null>(null)
+
   const watchId          = useRef<number | null>(null)
   const fallbackInterval = useRef<ReturnType<typeof setInterval> | null>(null)
   const lastSentAt       = useRef<number>(0)
@@ -165,6 +168,7 @@ export default function DriverClient({
   const lockRelease      = useRef<(() => void) | null>(null)
   const audioEl          = useRef<HTMLAudioElement | null>(null)
   const compassOff       = useRef<(() => void) | null>(null)
+  const availChannel     = useRef<ReturnType<typeof supabase.channel> | null>(null)
 
   // ── Compass ───────────────────────────────────────────────────────
   function initCompass() {
@@ -406,6 +410,7 @@ export default function DriverClient({
     compassOff.current?.()
     try { audioEl.current?.pause() } catch { /* ignore */ }
     wakeLock.current?.release().catch(() => {})
+    availChannel.current?.untrack().catch(() => {})
   }, [])
 
   // ── Load available orders ─────────────────────────────────────────
@@ -441,11 +446,46 @@ export default function DriverClient({
     return () => { supabase.removeChannel(ch) }
   }, [storeId, driverId, loadOrders, loadDelivery])
 
+  // ── Availability queue ───────────────────────────────────────────
+  async function toggleAvailable() {
+    if (isAvailable) {
+      await availChannel.current?.untrack()
+      supabase.removeChannel(availChannel.current!)
+      availChannel.current = null
+      setIsAvailable(false)
+      setAvailSince(null)
+    } else {
+      const since = new Date().toISOString()
+      const ch = supabase.channel(`driver-queue-${storeId}`, {
+        config: { presence: { key: driverId } },
+      })
+      ch.subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await ch.track({ driverName, since })
+          setIsAvailable(true)
+          setAvailSince(since)
+        }
+      })
+      availChannel.current = ch
+    }
+  }
+
+  async function leaveQueue() {
+    if (!availChannel.current) return
+    await availChannel.current.untrack()
+    supabase.removeChannel(availChannel.current)
+    availChannel.current = null
+    setIsAvailable(false)
+    setAvailSince(null)
+  }
+
   // ── Claim an order ────────────────────────────────────────────────
   async function claimOrder(order: AvailableOrder) {
     if (delivery) return // already has one
     setClaiming(order.id)
     setErrorMsg('')
+
+    leaveQueue()
 
     // Optimistic removal
     setOrders(prev => prev.filter(o => o.id !== order.id))
@@ -772,6 +812,20 @@ export default function DriverClient({
 
         {/* ── AVAILABLE ORDERS ── hidden while a delivery is active */}
         {!delivery && <div className="dsp-section">
+
+          {/* DISPONIBLE toggle */}
+          <button
+            className={`dsp-btn-available${isAvailable ? ' active' : ''}`}
+            onClick={toggleAvailable}
+          >
+            {isAvailable ? 'EN COLA · DISPONIBLE' : 'DISPONIBLE'}
+            {isAvailable && availSince && (
+              <span className="dsp-available-since">
+                {`Esperando desde ${new Date(availSince).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}`}
+              </span>
+            )}
+          </button>
+
           <div className="dsp-section-title">
             Pedidos disponibles
             {orders.length > 0 && <span className="dsp-count">{orders.length}</span>}

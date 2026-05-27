@@ -613,6 +613,22 @@
 .dsp-btn-claim:active { transform: scale(0.98); }
 .dsp-btn-claim:disabled { opacity: 0.45; cursor: not-allowed; }
 
+/* ── Available button ── */
+.dsp-btn-available {
+  width: 100%; padding: 18px 16px;
+  border-radius: 16px;
+  border: 2px solid rgba(15,23,42,0.1);
+  background: white;
+  font-size: 16px; font-weight: 800; letter-spacing: 0.06em;
+  color: #0F172A; cursor: pointer; font-family: inherit;
+  transition: all 0.2s;
+  margin-bottom: 14px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+}
+.dsp-btn-available:hover { border-color: #22C55E; color: #16A34A; }
+.dsp-btn-available.active { background: #22C55E; border-color: #22C55E; color: white; }
+.dsp-available-since { font-size: 11px; font-weight: 500; opacity: 0.75; letter-spacing: 0; }
+
 /* ── Empty state ── */
 .dsp-empty {
   background: #fff;

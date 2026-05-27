@@ -323,7 +323,12 @@ export default function TrackingClient({
         {/* Header gradient */}
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '48px 20px 40px', background: `linear-gradient(180deg, ${accent}F2 0%, ${accent}B3 60%, transparent 100%)`, zIndex: 5 }}>
           <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 400, marginBottom: 4 }}>Tu pedido</div>
-          <div style={{ fontSize: 18, color: 'white', fontWeight: 700 }}>{delivery.customer_name}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 1 }}>
+            <span style={{ fontSize: 12, color: 'white', fontWeight: 700, background: 'rgba(255,255,255,0.18)', borderRadius: 6, padding: '2px 8px', letterSpacing: '0.04em', flexShrink: 0 }}>
+              #{delivery.id.slice(0, 4).toUpperCase()}
+            </span>
+            <span style={{ fontSize: 18, color: 'white', fontWeight: 700 }}>{delivery.customer_name}</span>
+          </div>
           {delivery.delivery_address && (
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>{delivery.delivery_address}</div>
           )}

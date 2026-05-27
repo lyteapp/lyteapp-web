@@ -227,8 +227,11 @@ export default function Apariencia() {
           {/* Header gradient — accent color, customer name + address */}
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '14px 14px 32px', background: `linear-gradient(180deg, ${trConfig.accentColor}F2 0%, ${trConfig.accentColor}B3 60%, transparent 100%)`, zIndex: 5 }}>
             <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.75)', fontWeight: 400, marginBottom: 2 }}>Tu pedido</div>
-            <div style={{ fontSize: 12, color: 'white', fontWeight: 700 }}>Maria Garcia</div>
-            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.85)', marginTop: 1 }}>Av. Libertador 1234, Caracas</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 1 }}>
+              <span style={{ fontSize: 9, color: 'white', fontWeight: 700, background: 'rgba(255,255,255,0.18)', borderRadius: 5, padding: '1px 6px', letterSpacing: '0.04em', flexShrink: 0 }}>#A3F2</span>
+              <span style={{ fontSize: 12, color: 'white', fontWeight: 700 }}>Maria Garcia</span>
+            </div>
+            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.85)' }}>Av. Libertador 1234, Caracas</div>
           </div>
 
           {/* Driver marker — accent circle with truck */}

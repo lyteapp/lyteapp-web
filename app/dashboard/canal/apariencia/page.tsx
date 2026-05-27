@@ -297,82 +297,120 @@ export default function Apariencia() {
         </div>
       )}
 
-      {/* ── Status mode preview ── */}
+      {/* ── Status mode preview — mirrors tracking.css exactly at ~0.78x scale ── */}
       {trConfig.mode === 'status' && (
-        <div style={{ height: '100%', overflowY: 'auto', padding: '18px 14px 24px', display: 'flex', flexDirection: 'column', gap: 9, scrollbarWidth: 'none' as const }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-            <span style={{ fontSize: fs(15), fontWeight: 800, color: '#0F172A', letterSpacing: '-0.04em' }}>
+        <div style={{
+          height: '100%', overflowY: 'auto', scrollbarWidth: 'none' as const,
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          padding: '0 14px 32px',
+        }}>
+          {/* Brand bar — .tr-brand-bar: padding 20px 4px, flex space-between */}
+          <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0' }}>
+            <span style={{ fontSize: fs(13), fontWeight: 800, color: '#0F172A', letterSpacing: '-0.04em' }}>
               Lyte<span style={{ color: trConfig.accentColor }}>app</span>
             </span>
-            <span style={{ fontSize: fs(8), fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            <span style={{ fontSize: fs(8), fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase' as const, letterSpacing: '0.08em' }}>
               Rastreo de pedido
             </span>
           </div>
-          <div style={{ background: 'white', borderRadius: 18, padding: '20px 14px 16px', textAlign: 'center', boxShadow: '0 4px 20px rgba(15,23,42,0.08)' }}>
-            <div style={{ width: 60, height: 60, borderRadius: '50%', background: '#FFF7ED', margin: '0 auto 14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" width="28" height="28">
+
+          {/* Hero card — .tr-hero: bg white, radius 24px, padding 32px 28px, center col, mb 12 */}
+          <div style={{
+            width: '100%', background: 'white', borderRadius: 18, padding: '22px 16px 18px',
+            boxShadow: '0 4px 32px rgba(15,23,42,0.08)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            textAlign: 'center', marginBottom: 9,
+          }}>
+            {/* .tr-hero-icon.preparing: 72px → 54px, bg #FFF7ED, mb 18 */}
+            <div style={{ width: 54, height: 54, borderRadius: '50%', background: '#FFF7ED', marginBottom: 13, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" width="26" height="26">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" />
               </svg>
             </div>
-            <div style={{ fontSize: fs(14), fontWeight: 800, color: '#0F172A', marginBottom: 6, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+            {/* .tr-hero-status: calc(20px*scale), weight 800, #0F172A, mb 8 */}
+            <div style={{ fontSize: fs(15), fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', marginBottom: 6, lineHeight: 1.2 }}>
               En preparacion en cocina
             </div>
+            {/* .tr-hero-sub: calc(14px*scale), #64748B, lh 1.5 */}
             <div style={{ fontSize: fs(11), color: '#64748B', lineHeight: 1.5 }}>
               Estamos preparando tu pedido con mucho cuidado. Te avisamos cuando salga.
             </div>
           </div>
-          <div style={{ background: 'white', borderRadius: 14, padding: '10px 14px', boxShadow: '0 2px 10px rgba(15,23,42,0.05)' }}>
-            <div style={{ fontSize: fs(12), fontWeight: 700, color: '#0F172A', marginBottom: 4 }}>Maria Garcia</div>
-            <div style={{ fontSize: fs(10), color: '#64748B', display: 'flex', alignItems: 'flex-start', gap: 5 }}>
-              <svg viewBox="0 0 20 20" fill="currentColor" width="11" height="11" style={{ flexShrink: 0, marginTop: 1, color: '#94A3B8' }}>
+
+          {/* Info card — .tr-info-card: radius 16px, padding 18px 22px, shadow, mb 12 */}
+          <div style={{
+            width: '100%', background: 'white', borderRadius: 12, padding: '13px 16px',
+            boxShadow: '0 2px 12px rgba(15,23,42,0.06)', marginBottom: 9,
+          }}>
+            {/* .tr-info-name: calc(16px*scale), weight 700, #0F172A */}
+            <div style={{ fontSize: fs(12), fontWeight: 700, color: '#0F172A', marginBottom: 3 }}>Maria Garcia</div>
+            {/* .tr-info-row: calc(13px*scale), #64748B, flex, gap 6 */}
+            <div style={{ fontSize: fs(10), color: '#64748B', display: 'flex', alignItems: 'flex-start', gap: 5, marginTop: 3, lineHeight: 1.5 }}>
+              <svg viewBox="0 0 20 20" fill="currentColor" width="11" height="11" style={{ flexShrink: 0, marginTop: 2, color: '#94A3B8' }}>
                 <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
               </svg>
               Av. Libertador 1234, Caracas
             </div>
           </div>
-          <div style={{ background: 'white', borderRadius: 14, padding: '14px 14px 10px', boxShadow: '0 2px 10px rgba(15,23,42,0.05)' }}>
-            <div style={{ fontSize: fs(9), fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 14 }}>
+
+          {/* Steps card — .tr-steps-card: radius 20px, padding 24px 22px, shadow, mb 12 */}
+          <div style={{
+            width: '100%', background: 'white', borderRadius: 15, padding: '17px 15px 13px',
+            boxShadow: '0 2px 12px rgba(15,23,42,0.06)', marginBottom: 9,
+          }}>
+            {/* .tr-steps-title: 10px, weight 700, #94A3B8, uppercase, mb 20 */}
+            <div style={{ fontSize: fs(8), fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 14 }}>
               Progreso de tu pedido
             </div>
+
             {STEPS_PREVIEW.map(({ label, state }, i, arr) => (
-              <div key={label} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 22, flexShrink: 0 }}>
+              <div key={label} style={{ display: 'flex', gap: 10 }}>
+                {/* .tr-step-left: flex col, center, width 28px → 20px */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0, width: 20 }}>
+                  {/* .tr-dot: 28px circle → 20px */}
                   <div style={{
-                    width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                    width: 20, height: 20, borderRadius: '50%', flexShrink: 0, zIndex: 1,
                     background: state === 'done' ? '#10B981' : state === 'current' ? trConfig.accentColor : '#F8FAFC',
                     border: `2px solid ${state === 'done' ? '#10B981' : state === 'current' ? trConfig.accentColor : '#E2E8F0'}`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
                     {state === 'done' && (
-                      <svg viewBox="0 0 10 10" fill="white" width="9" height="9">
-                        <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                      <svg viewBox="0 0 16 16" fill="white" width="9" height="9">
+                        <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 01.208 1.04l-5 7.5a.75.75 0 01-1.154.114l-3-3a.75.75 0 011.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 011.04-.207z" clipRule="evenodd" />
                       </svg>
                     )}
-                    {state === 'current' && <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'white' }} />}
+                    {state === 'current' && <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'white' }} />}
+                    {state === 'future' && <span style={{ fontSize: 8, fontWeight: 700, color: '#CBD5E1' }}>{i + 1}</span>}
                   </div>
+                  {/* .tr-connector: width 2, flex 1, min-height 28 → 20, margin 3 0 */}
                   {i < arr.length - 1 && (
-                    <div style={{ width: 2, height: 22, background: state === 'done' ? '#10B981' : '#E2E8F0', margin: '2px 0' }} />
+                    <div style={{ width: 2, flex: 1, minHeight: 20, background: state === 'done' ? '#10B981' : '#E2E8F0', margin: '2px 0' }} />
                   )}
                 </div>
-                <div style={{ paddingBottom: i < arr.length - 1 ? 22 : 0 }}>
+                {/* .tr-step-body: padding 2px 0 28px → 2px 0 20px; last child 4px */}
+                <div style={{ flex: 1, padding: `2px 0 ${i < arr.length - 1 ? 20 : 4}px` }}>
+                  {/* .tr-step-label: calc(14px*scale), weight 700, line-height=dot height */}
                   <div style={{
-                    fontSize: fs(11), fontWeight: state === 'current' ? 700 : 400, lineHeight: '18px',
+                    fontSize: fs(11), fontWeight: 700, lineHeight: '20px',
                     color: state === 'done' ? '#0F172A' : state === 'current' ? trConfig.accentColor : '#CBD5E1',
                   }}>
                     {label}
                   </div>
+                  {/* .tr-step-desc: calc(12px*scale), #64748B */}
                   {state === 'current' && (
-                    <div style={{ fontSize: fs(9), color: '#64748B', marginTop: 2, lineHeight: 1.4 }}>
-                      Tu pedido esta en cocina, lo estan preparando.
+                    <div style={{ fontSize: fs(9), color: '#64748B', marginTop: 2, lineHeight: 1.5 }}>
+                      Tu pedido esta en cocina, lo estan preparando con mucho cuidado.
                     </div>
                   )}
                 </div>
               </div>
             ))}
           </div>
+
+          {/* Footer — .tr-footer: mt 24, 12px, #94A3B8 */}
           <div style={{ textAlign: 'center', fontSize: fs(9), color: '#94A3B8', marginTop: 4 }}>
-            Powered by <strong style={{ color: '#64748B' }}>LyteApp</strong>
+            Powered by <strong style={{ color: '#64748B' }}>LyteApp</strong> · Crea tu tienda gratis
           </div>
         </div>
       )}

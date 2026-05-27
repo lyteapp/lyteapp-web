@@ -14,6 +14,11 @@ const supabase = createClient(
 
 type Status = 'pending' | 'preparing' | 'ready' | 'picked_up' | 'delivered' | 'cancelled'
 
+interface DriverInfo {
+  name: string; phone: string | null; vehicle: string | null
+  rating: number | null; avatar_url: string | null
+}
+
 interface Delivery {
   id: string; customer_name: string; customer_phone: string
   delivery_address: string; status: Status; notes: string | null
@@ -21,6 +26,7 @@ interface Delivery {
   driver_id: string | null
   driver_lat: number | null; driver_lng: number | null
   customer_lat: number | null; customer_lng: number | null
+  driver?: DriverInfo | null
 }
 
 interface TrackingConfig {
@@ -78,6 +84,20 @@ const STEPS: Step[] = [
 ]
 
 const STATUS_ORDER: Record<string, number> = { pending: 0, preparing: 1, ready: 2, picked_up: 3, delivered: 4 }
+
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+function deliveryPin(id: string): string {
+  let h = 0
+  for (let i = 0; i < id.length; i++) { h = (h * 31 + id.charCodeAt(i)) >>> 0 }
+  return String(1000 + (h % 9000))
+}
 
 const HERO: Record<string, { title: string; sub: string }> = {
   pending:   { title: 'Pedido recibido',          sub: 'Tu pedido fue registrado. La cocina lo tiene y comenzara a prepararlo pronto.' },
@@ -334,18 +354,15 @@ export default function TrackingClient({
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '47%', background: '#F5F3EF', borderRadius: '24px 24px 0 0', zIndex: 10, overflowY: 'auto', scrollbarWidth: 'none' as const }}>
           <div style={{ width: 36, height: 4, background: 'rgba(15,23,42,0.15)', borderRadius: 100, margin: '12px auto 0' }} />
 
-          {/* Status */}
-          <div style={{ padding: '14px 20px 10px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-              <div style={{ width: 7, height: 7, borderRadius: '50%', background: statusDot, flexShrink: 0 }} />
-              <span style={{ fontSize: 11, color: statusDot, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>{statusLabel}</span>
-            </div>
-            <div style={{ fontSize: 20, fontWeight: 600, color: '#0F172A', letterSpacing: '-0.5px', lineHeight: 1.2, marginBottom: 4 }}>{hero.title}</div>
-            <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.5 }}>{hero.sub}</div>
+          {/* Status row */}
+          <div style={{ padding: '12px 20px 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: statusDot, flexShrink: 0 }} />
+            <span style={{ fontSize: 11, color: statusDot, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>{statusLabel}</span>
+            <span style={{ marginLeft: 'auto', fontSize: 11, color: '#94A3B8' }}>{hero.title}</span>
           </div>
 
           {/* Horizontal timeline */}
-          <div style={{ padding: '8px 20px 14px', display: 'flex', alignItems: 'flex-start' }}>
+          <div style={{ padding: '4px 20px 12px', display: 'flex', alignItems: 'flex-start' }}>
             {tlSteps.map(({ label, idx }, i, arr) => {
               const done   = idx < currentIdx
               const active = idx === currentIdx
@@ -362,28 +379,73 @@ export default function TrackingClient({
             })}
           </div>
 
-          {/* Address card */}
-          {delivery.delivery_address && (
-            <div style={{ margin: '0 16px 10px', background: 'white', borderRadius: 14, padding: '12px 16px', display: 'flex', alignItems: 'flex-start', gap: 10, border: '0.5px solid rgba(15,23,42,0.08)' }}>
-              <div style={{ width: 32, height: 32, borderRadius: 9, background: accent + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <svg viewBox="0 0 20 20" fill={accent} width="14" height="14">
-                  <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                </svg>
+          {/* Driver card */}
+          {delivery.driver && (
+            <div style={{ margin: '0 16px 10px', background: 'white', borderRadius: 16, padding: '14px 16px', border: '0.5px solid rgba(15,23,42,0.08)', display: 'flex', alignItems: 'center', gap: 12 }}>
+              {delivery.driver.avatar_url
+                ? <img src={delivery.driver.avatar_url} alt={delivery.driver.name} style={{ width: 46, height: 46, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '2px solid #E2E8F0' }} />
+                : (
+                  <div style={{ width: 46, height: 46, borderRadius: '50%', background: accent + '22', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: accent }}>
+                    {delivery.driver.name[0].toUpperCase()}
+                  </div>
+                )
+              }
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#0F172A', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{delivery.driver.name}</div>
+                <div style={{ fontSize: 12, color: '#64748B', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {delivery.driver.vehicle && <span>{delivery.driver.vehicle}</span>}
+                  {delivery.driver.vehicle && delivery.driver.rating != null && <span style={{ color: '#CBD5E1' }}>·</span>}
+                  {delivery.driver.rating != null && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                      <svg viewBox="0 0 16 16" fill="#F59E0B" width="11" height="11"><path d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z"/></svg>
+                      {delivery.driver.rating.toFixed(1)}
+                    </span>
+                  )}
+                </div>
               </div>
-              <div>
-                <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 2 }}>Direccion de entrega</div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', lineHeight: 1.4 }}>{delivery.delivery_address}</div>
+              <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                {delivery.driver.phone && (
+                  <a href={`tel:${delivery.driver.phone}`} style={{ width: 36, height: 36, borderRadius: '50%', background: accent + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
+                    <svg viewBox="0 0 20 20" fill={accent} width="16" height="16"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/></svg>
+                  </a>
+                )}
+                {delivery.driver.phone && (
+                  <a href={`https://wa.me/${delivery.driver.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" style={{ width: 36, height: 36, borderRadius: '50%', background: '#25D36618', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
+                    <svg viewBox="0 0 24 24" fill="#25D366" width="17" height="17"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                  </a>
+                )}
               </div>
             </div>
           )}
 
-          {/* Notes */}
-          {delivery.notes && (
-            <div style={{ margin: '0 16px 10px', background: 'white', borderRadius: 14, padding: '12px 16px', border: '0.5px solid rgba(15,23,42,0.08)' }}>
-              <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 2 }}>Nota del pedido</div>
-              <div style={{ fontSize: 13, color: '#0F172A', lineHeight: 1.4 }}>"{delivery.notes}"</div>
+          {/* Distance info */}
+          {driverLoc && delivery.customer_lat != null && delivery.customer_lng != null && (
+            <div style={{ margin: '0 16px 10px', background: 'white', borderRadius: 14, padding: '10px 16px', border: '0.5px solid rgba(15,23,42,0.08)', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 30, height: 30, borderRadius: 9, background: accent + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg viewBox="0 0 20 20" fill={accent} width="13" height="13"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/></svg>
+              </div>
+              <div style={{ fontSize: 13, color: '#475569' }}>
+                {(() => {
+                  const km = haversineKm(driverLoc.lat, driverLoc.lng, delivery.customer_lat!, delivery.customer_lng!)
+                  const mins = Math.max(1, Math.round(km / 0.4))
+                  const eta = new Date(Date.now() + mins * 60000).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })
+                  const distLabel = km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`
+                  return <><strong style={{ color: '#0F172A' }}>{mins} min</strong> · llega {eta} · {delivery.driver?.name?.split(' ')[0] ?? 'El despachador'} esta a {distLabel}</>
+                })()}
+              </div>
             </div>
           )}
+
+          {/* PIN card */}
+          <div style={{ margin: '0 16px 10px', background: `linear-gradient(135deg, ${accent} 0%, ${accent}CC 100%)`, borderRadius: 16, padding: '14px 18px' }}>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', marginBottom: 8, fontWeight: 500 }}>PIN de entrega</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {deliveryPin(delivery.id).split('').map((d, i) => (
+                <div key={i} style={{ width: 38, height: 46, background: 'rgba(255,255,255,0.18)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 800, color: 'white', letterSpacing: 0 }}>{d}</div>
+              ))}
+            </div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 8 }}>Comparte este PIN con el despachador al recibir</div>
+          </div>
 
           {/* Footer */}
           <div style={{ textAlign: 'center', padding: '8px 0 24px', fontSize: 11, color: '#94A3B8' }}>

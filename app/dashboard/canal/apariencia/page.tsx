@@ -50,6 +50,8 @@ interface TrackingConfig {
   fontFamily: string
   fontSize: string
   mapStyle: string
+  statusConnectorSize:   'sm' | 'md' | 'lg'
+  locationConnectorSize: 'sm' | 'md' | 'lg'
 }
 
 const DEFAULT_TR_CONFIG: TrackingConfig = {
@@ -59,7 +61,15 @@ const DEFAULT_TR_CONFIG: TrackingConfig = {
   fontFamily: 'system',
   fontSize: 'md',
   mapStyle: 'mapbox://styles/mapbox/standard',
+  statusConnectorSize:   'sm',
+  locationConnectorSize: 'sm',
 }
+
+const CONN_OPTS = [
+  { id: 'sm' as const, label: 'Fina',   px: 2 },
+  { id: 'md' as const, label: 'Normal', px: 4 },
+  { id: 'lg' as const, label: 'Gruesa', px: 7 },
+]
 
 const STEPS_PREVIEW = [
   { label: 'Pedido recibido', state: 'done'    },
@@ -158,7 +168,9 @@ export default function Apariencia() {
   const previewFont  = FONT_STACKS[trConfig.fontFamily] ?? FONT_STACKS.system
   const previewScale = FONT_SCALE_NUM[trConfig.fontSize] ?? 1
   const fs = (n: number) => Math.round(n * previewScale)
-  const mapPreset = MAP_STYLE_PRESETS.find(s => s.id === (trConfig.mapStyle ?? MAP_STYLE_PRESETS[0].id)) ?? MAP_STYLE_PRESETS[0]
+  const mapPreset   = MAP_STYLE_PRESETS.find(s => s.id === (trConfig.mapStyle ?? MAP_STYLE_PRESETS[0].id)) ?? MAP_STYLE_PRESETS[0]
+  const statusConnW     = CONN_OPTS.find(o => o.id === trConfig.statusConnectorSize)?.px   ?? 2
+  const locationConnH   = CONN_OPTS.find(o => o.id === trConfig.locationConnectorSize)?.px ?? 2
 
   async function save(e: { preventDefault(): void }) {
     e.preventDefault()
@@ -264,9 +276,9 @@ export default function Apariencia() {
               ].map(({ label, done, active }, i, arr) => (
                 <div key={label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <div style={{ width: '100%', display: 'flex', alignItems: 'center' }}>
-                    {i > 0 && <div style={{ flex: 1, height: 2, background: done ? trConfig.accentColor : 'rgba(148,163,184,0.3)' }} />}
+                    {i > 0 && <div style={{ flex: 1, height: locationConnH, background: done ? trConfig.accentColor : 'rgba(148,163,184,0.3)', borderRadius: locationConnH }} />}
                     <div style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: (done || active) ? trConfig.accentColor : '#CBD5E1', boxShadow: active ? `0 0 0 3px ${trConfig.accentColor}33` : 'none', zIndex: 1 }} />
-                    {i < arr.length - 1 && <div style={{ flex: 1, height: 2, background: (done && !active) ? trConfig.accentColor : 'rgba(148,163,184,0.3)' }} />}
+                    {i < arr.length - 1 && <div style={{ flex: 1, height: locationConnH, background: (done && !active) ? trConfig.accentColor : 'rgba(148,163,184,0.3)', borderRadius: locationConnH }} />}
                   </div>
                   <span style={{ fontSize: 7, marginTop: 3, textAlign: 'center' as const, lineHeight: 1.2, color: done ? '#475569' : active ? trConfig.accentColor : '#94A3B8', fontWeight: active ? 600 : 400 }}>{label}</span>
                 </div>
@@ -463,9 +475,8 @@ export default function Apariencia() {
                     {state === 'current' && <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'white' }} />}
                     {state === 'future' && <span style={{ fontSize: 8, fontWeight: 700, color: '#CBD5E1' }}>{i + 1}</span>}
                   </div>
-                  {/* .tr-connector: width 2, flex 1, min-height 28 → 20, margin 3 0 */}
                   {i < arr.length - 1 && (
-                    <div style={{ width: 2, flex: 1, minHeight: 20, background: state === 'done' ? '#10B981' : '#E2E8F0', margin: '2px 0' }} />
+                    <div style={{ width: statusConnW, flex: 1, minHeight: 20, background: state === 'done' ? '#10B981' : '#E2E8F0', margin: '2px 0', borderRadius: statusConnW }} />
                   )}
                 </div>
                 {/* .tr-step-body: padding 2px 0 28px → 2px 0 20px; last child 4px */}
@@ -624,6 +635,43 @@ export default function Apariencia() {
                 onChange={e => setTrConfig(p => ({ ...p, accentColor: e.target.value }))}
               />
             </div>
+          </div>
+        </div>
+
+        {/* Connector thickness */}
+        <div className="cn-field">
+          <div className="cn-label">Grosor de la barra de progreso</div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+            {CONN_OPTS.map(({ id, label, px }) => {
+              const isStatus   = trConfig.mode === 'status'
+              const currentVal = isStatus ? trConfig.statusConnectorSize : trConfig.locationConnectorSize
+              const selected   = currentVal === id
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setTrConfig(p => isStatus
+                    ? { ...p, statusConnectorSize: id }
+                    : { ...p, locationConnectorSize: id }
+                  )}
+                  style={{
+                    flex: 1, padding: '10px 6px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                    background: selected ? trConfig.accentColor + '12' : '#F8FAFC',
+                    outline: `2px solid ${selected ? trConfig.accentColor : 'rgba(15,23,42,0.1)'}`,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                    transition: 'outline-color 0.15s, background 0.15s',
+                  }}
+                >
+                  {trConfig.mode === 'status'
+                    ? <div style={{ width: px, height: 28, background: selected ? trConfig.accentColor : '#CBD5E1', borderRadius: px / 2, transition: 'background 0.15s' }} />
+                    : <div style={{ height: px, width: 28, background: selected ? trConfig.accentColor : '#CBD5E1', borderRadius: px / 2, transition: 'background 0.15s' }} />
+                  }
+                  <span style={{ fontSize: 10, fontWeight: selected ? 700 : 500, color: selected ? trConfig.accentColor : '#64748B', fontFamily: 'var(--font-geist-sans), sans-serif' }}>
+                    {label}
+                  </span>
+                </button>
+              )
+            })}
           </div>
         </div>
 

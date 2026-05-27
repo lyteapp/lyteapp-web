@@ -38,6 +38,8 @@ interface TrackingConfig {
   fontFamily?: string
   fontSize?: string
   mapStyle?: string
+  statusConnectorSize?:   'sm' | 'md' | 'lg'
+  locationConnectorSize?: 'sm' | 'md' | 'lg'
 }
 
 const FONT_STACKS: Record<string, string> = {
@@ -70,6 +72,7 @@ const GOOGLE_FONT_URLS: Record<string, string> = {
 }
 
 const FONT_SCALES: Record<string, string> = { sm: '0.875', md: '1', lg: '1.125' }
+const CONNECTOR_PX: Record<string, string> = { sm: '2px', md: '4px', lg: '7px' }
 
 type Step = {
   key: Status
@@ -215,10 +218,12 @@ export default function TrackingClient({
   }, [trackingConfig?.fontFamily])
 
   const cssVars = {
-    '--tr-accent': trackingConfig?.accentColor ?? '#7C3AED',
-    '--tr-bg':     trackingConfig?.bgColor     ?? '#F1EFE9',
-    '--tr-font':   FONT_STACKS[trackingConfig?.fontFamily ?? 'system'] ?? FONT_STACKS.system,
-    '--tr-scale':  FONT_SCALES[trackingConfig?.fontSize   ?? 'md']     ?? '1',
+    '--tr-accent':       trackingConfig?.accentColor ?? '#7C3AED',
+    '--tr-bg':           trackingConfig?.bgColor     ?? '#F1EFE9',
+    '--tr-font':         FONT_STACKS[trackingConfig?.fontFamily ?? 'system'] ?? FONT_STACKS.system,
+    '--tr-scale':        FONT_SCALES[trackingConfig?.fontSize   ?? 'md']     ?? '1',
+    '--tr-connector-w':  CONNECTOR_PX[trackingConfig?.statusConnectorSize   ?? 'sm'] ?? '2px',
+    '--tr-connector-h':  CONNECTOR_PX[trackingConfig?.locationConnectorSize ?? 'sm'] ?? '2px',
   } as React.CSSProperties
 
   const fetchDelivery = useCallback(async () => {

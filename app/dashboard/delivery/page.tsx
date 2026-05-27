@@ -130,6 +130,7 @@ export default function DeliveryPage() {
   const [stDeliveryFee,     setStDeliveryFee]     = useState('')
   const [stDeliveryTime,    setStDeliveryTime]     = useState('')
   const [stDeliveryZone,    setStDeliveryZone]     = useState('')
+  const [stAutoAssign,      setStAutoAssign]        = useState(false)
   const [savingSettings,    setSavingSettings]     = useState(false)
   const [savedSettings,     setSavedSettings]      = useState(false)
 
@@ -182,6 +183,7 @@ export default function DeliveryPage() {
     setStDeliveryFee(cs.deliveryFee ? String(cs.deliveryFee) : '')
     setStDeliveryTime(typeof cs.deliveryTime === 'string' ? cs.deliveryTime : '')
     setStDeliveryZone(typeof cs.deliveryZone === 'string' ? cs.deliveryZone : '')
+    setStAutoAssign(Boolean(cs.autoAssign))
   }, [])
 
   useEffect(() => {
@@ -433,6 +435,7 @@ export default function DeliveryPage() {
       deliveryFee: stDeliveryFee ? parseFloat(stDeliveryFee) : null,
       deliveryTime: stDeliveryTime.trim() || null,
       deliveryZone: stDeliveryZone.trim() || null,
+      autoAssign: stAutoAssign,
     }
     await supabase.from('stores').update({ checkout_settings: merged }).eq('id', storeId)
     setSavingSettings(false)
@@ -1386,6 +1389,17 @@ export default function DeliveryPage() {
                 </div>
                 <label className="dv-settings-toggle">
                   <input type="checkbox" checked={stDeliveryEnabled} onChange={() => setStDeliveryEnabled(v => !v)} />
+                  <span className="dv-settings-toggle-track" />
+                </label>
+              </div>
+
+              <div className="dv-settings-toggle-row">
+                <div>
+                  <div className="dv-settings-toggle-label">Distribucion automatica</div>
+                  <div className="dv-settings-toggle-hint">Asigna pedidos listos al despachador disponible mas antiguo en cola</div>
+                </div>
+                <label className="dv-settings-toggle">
+                  <input type="checkbox" checked={stAutoAssign} onChange={() => setStAutoAssign(v => !v)} />
                   <span className="dv-settings-toggle-track" />
                 </label>
               </div>

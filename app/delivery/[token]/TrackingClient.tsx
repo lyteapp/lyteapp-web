@@ -155,17 +155,17 @@ export default function TrackingClient({
     const driverId = delivery?.driver_id
     if (!driverId) return
 
-    // Fetch initial location
-    supabase.from('driver_locations')
-      .select('lat,lng,is_sharing,updated_at')
-      .eq('driver_id', driverId)
-      .eq('is_sharing', true)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data && (Date.now() - new Date(data.updated_at).getTime()) < 600_000) {
-          setDriverLoc({ lat: data.lat, lng: data.lng })
-        }
-      })
+    const fetchLoc = async () => {
+      const { data } = await supabase.from('driver_locations')
+        .select('lat,lng,is_sharing,updated_at')
+        .eq('driver_id', driverId)
+        .maybeSingle()
+      if (data?.is_sharing && (Date.now() - new Date(data.updated_at).getTime()) < 600_000) {
+        setDriverLoc({ lat: data.lat, lng: data.lng })
+      }
+    }
+
+    fetchLoc()
 
     const ch = supabase.channel(`driver-loc-${driverId}`)
       .on('postgres_changes', {
@@ -178,7 +178,10 @@ export default function TrackingClient({
       })
       .subscribe()
 
-    return () => { supabase.removeChannel(ch) }
+    // Poll every 8 s as fallback in case realtime misses an event
+    const poll = setInterval(fetchLoc, 8000)
+
+    return () => { supabase.removeChannel(ch); clearInterval(poll) }
   }, [delivery?.driver_id])
 
   useEffect(() => {

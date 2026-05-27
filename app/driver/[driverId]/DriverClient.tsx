@@ -44,11 +44,14 @@ export default function DriverClient({
   const [showIosHint, setShowIosHint]   = useState(false)
   const installPrompt = useRef<BeforeInstallPromptEvent | null>(null)
 
-  const watchId  = useRef<number | null>(null)
-  const wakeLock = useRef<WakeLockSentinel | null>(null)
+  const watchId   = useRef<number | null>(null)
+  const fallbackInterval = useRef<ReturnType<typeof setInterval> | null>(null)
+  const lastSentAt = useRef<number>(0)
+  const wakeLock  = useRef<WakeLockSentinel | null>(null)
 
   // ── GPS ──────────────────────────────────────────────────────────
   const sendLocation = useCallback(async (lat: number, lng: number) => {
+    lastSentAt.current = Date.now()
     await supabase.from('driver_locations').upsert({
       driver_id: driverId, store_id: storeId,
       lat, lng, is_sharing: true,
@@ -64,6 +67,8 @@ export default function DriverClient({
         wakeLock.current = await (navigator as Navigator & { wakeLock: { request(t: string): Promise<WakeLockSentinel> } }).wakeLock.request('screen')
     } catch { /* not critical */ }
 
+    const opts: PositionOptions = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+
     watchId.current = navigator.geolocation.watchPosition(
       pos => {
         sendLocation(pos.coords.latitude, pos.coords.longitude)
@@ -71,12 +76,28 @@ export default function DriverClient({
         setGpsStatus('active')
       },
       () => setGpsStatus('error'),
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 4000 }
+      opts
     )
+
+    // Fallback: if watchPosition stalls (background/screen lock), poll every 15 s
+    if (fallbackInterval.current) clearInterval(fallbackInterval.current)
+    fallbackInterval.current = setInterval(() => {
+      if (Date.now() - lastSentAt.current < 14000) return // watchPosition is alive
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          sendLocation(pos.coords.latitude, pos.coords.longitude)
+          setAccuracy(Math.round(pos.coords.accuracy))
+          setGpsStatus('active')
+        },
+        () => {}, // silent — main watch will surface the error
+        opts
+      )
+    }, 15000)
   }, [sendLocation])
 
   const stopGps = useCallback(async () => {
     if (watchId.current !== null) { navigator.geolocation.clearWatch(watchId.current); watchId.current = null }
+    if (fallbackInterval.current) { clearInterval(fallbackInterval.current); fallbackInterval.current = null }
     try { await wakeLock.current?.release() } catch { /* ignore */ }
     await supabase.from('driver_locations').upsert({
       driver_id: driverId, store_id: storeId,
@@ -142,6 +163,7 @@ export default function DriverClient({
 
   useEffect(() => () => {
     if (watchId.current !== null) navigator.geolocation.clearWatch(watchId.current)
+    if (fallbackInterval.current) clearInterval(fallbackInterval.current)
     wakeLock.current?.release().catch(() => {})
   }, [])
 
@@ -418,14 +440,21 @@ export default function DriverClient({
 
         {/* GPS toggle at bottom */}
         {isActive && (
-          <div className="dsp-gps-bar">
-            <div className="dsp-gps-info">
-              <span className="dsp-gps-dot on" />
-              Compartiendo ubicacion
-              {lastUpdate && <span className="dsp-gps-time"> · {lastUpdate.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>}
+          <>
+            <div className="dsp-gps-bar">
+              <div className="dsp-gps-info">
+                <span className="dsp-gps-dot on" />
+                <span>
+                  GPS activo
+                  {lastUpdate && <span className="dsp-gps-time"> · {lastUpdate.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>}
+                </span>
+              </div>
+              <button className="dsp-gps-stop" onClick={stopGps}>Detener</button>
             </div>
-            <button className="dsp-gps-stop" onClick={stopGps}>Detener</button>
-          </div>
+            <div style={{ background: '#FFFBEB', borderTop: '1px solid #FDE68A', padding: '8px 18px', fontSize: 11, color: '#92400E', textAlign: 'center' }}>
+              Mantén la pantalla encendida para seguir compartiendo ubicacion
+            </div>
+          </>
         )}
 
       </div>

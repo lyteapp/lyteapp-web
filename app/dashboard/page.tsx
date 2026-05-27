@@ -14,10 +14,6 @@ const BUCKETS = [
   { label: '+45 min',   min: 45, max: Infinity },
 ]
 
-function fmtMins(m: number) {
-  if (m < 60) return `${m} min`
-  return `${Math.floor(m / 60)}h ${m % 60}m`
-}
 
 export default function Dashboard() {
   const { user } = useAuth()
@@ -29,20 +25,41 @@ export default function Dashboard() {
   const [totalSales, setTotalSales] = useState(0)
   const [avgTicket, setAvgTicket] = useState(0)
   const [productCount, setProductCount] = useState(0)
-  const [deliveryMins, setDeliveryMins] = useState<number[]>([])
+  const [driverMins,   setDriverMins]   = useState<number[]>([])
+  const [instoreMins,  setInstoreMins]  = useState<number[]>([])
+  const [totalMins,    setTotalMins]    = useState<number[]>([])
 
   const loadDeliveryTimes = useCallback(async (sid: string) => {
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
-    const { data } = await supabase
+
+    // Dispatch time (delivery.created_at → delivered_at), split by driver presence
+    const { data: dels } = await supabase
       .from('deliveries')
-      .select('created_at, delivered_at')
+      .select('created_at, delivered_at, driver_id')
       .eq('store_id', sid)
       .not('delivered_at', 'is', null)
       .gte('delivered_at', todayStart.toISOString())
-    const mins = (data ?? []).map(d =>
-      Math.round((new Date(d.delivered_at).getTime() - new Date(d.created_at).getTime()) / 60000)
-    )
-    setDeliveryMins(mins)
+
+    const calcMins = (a: string, b: string) =>
+      Math.round((new Date(b).getTime() - new Date(a).getTime()) / 60000)
+
+    setDriverMins((dels ?? []).filter(d => d.driver_id).map(d => calcMins(d.created_at, d.delivered_at)))
+    setInstoreMins((dels ?? []).filter(d => !d.driver_id).map(d => calcMins(d.created_at, d.delivered_at)))
+
+    // Total time = from when order was placed (orders.created_at) to delivered_at
+    const { data: withOrder } = await supabase
+      .from('deliveries')
+      .select('delivered_at, order:order_id(created_at)')
+      .eq('store_id', sid)
+      .not('delivered_at', 'is', null)
+      .not('order_id', 'is', null)
+      .gte('delivered_at', todayStart.toISOString())
+
+    setTotalMins((withOrder ?? []).map(d => {
+      const orderCreated = (d.order as unknown as { created_at: string } | null)?.created_at
+      if (!orderCreated) return 0
+      return calcMins(orderCreated, d.delivered_at)
+    }).filter(m => m > 0))
   }, [])
 
   const loadStats = useCallback(async (sid: string, p: 'day' | 'week' | 'month') => {
@@ -85,10 +102,12 @@ export default function Dashboard() {
     return () => clearInterval(interval)
   }, [storeId, loadDeliveryTimes])
 
-  const avg   = deliveryMins.length ? Math.round(deliveryMins.reduce((a, b) => a + b, 0) / deliveryMins.length) : null
-  const best  = deliveryMins.length ? Math.min(...deliveryMins) : null
-  const worst = deliveryMins.length ? Math.max(...deliveryMins) : null
-  const bucketCounts = BUCKETS.map(b => deliveryMins.filter(m => m >= b.min && m < b.max).length)
+  const avgOf = (arr: number[]) => arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : null
+  const avgDriver  = avgOf(driverMins)
+  const avgInstore = avgOf(instoreMins)
+  const avgTotal   = avgOf(totalMins)
+  const allMins    = [...driverMins, ...instoreMins]
+  const bucketCounts = BUCKETS.map(b => allMins.filter((m: number) => m >= b.min && m < b.max).length)
   const bucketMax = Math.max(...bucketCounts, 1)
 
   const firstName = user?.email?.split('@')[0] ?? ''
@@ -216,37 +235,29 @@ export default function Dashboard() {
             <Link href="/dashboard/analitics" className="dh-section-link">Ver detalle</Link>
           </div>
 
-          {/* Big avg number */}
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, marginBottom: 20 }}>
-            <span style={{ fontSize: 64, fontWeight: 800, color: '#0F172A', letterSpacing: '-3px', lineHeight: 1 }}>
-              {avg !== null ? avg : '—'}
-            </span>
-            {avg !== null && (
-              <span style={{ fontSize: 22, fontWeight: 600, color: '#7C3AED', marginBottom: 6 }}>min</span>
-            )}
-            <span style={{ fontSize: 13, color: '#94A3B8', marginBottom: 8, marginLeft: 6 }}>
-              promedio · {deliveryMins.length} {deliveryMins.length === 1 ? 'entrega' : 'entregas'}
-            </span>
+          {/* Three avg stats */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 }}>
+            {[
+              { label: 'Delivery', sub: 'con despachador', value: avgDriver, count: driverMins.length },
+              { label: 'En tienda', sub: 'sin despachador', value: avgInstore, count: instoreMins.length },
+              { label: 'Total', sub: 'pedido a entrega', value: avgTotal, count: totalMins.length },
+            ].map(stat => (
+              <div key={stat.label} style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: '14px 12px' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>{stat.label}</div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 3, marginBottom: 3 }}>
+                  <span style={{ fontSize: 28, fontWeight: 800, color: '#0F172A', letterSpacing: '-1px', lineHeight: 1 }}>
+                    {stat.value !== null ? stat.value : '—'}
+                  </span>
+                  {stat.value !== null && <span style={{ fontSize: 13, fontWeight: 600, color: '#7C3AED' }}>min</span>}
+                </div>
+                <div style={{ fontSize: 10, color: '#94A3B8' }}>{stat.sub}</div>
+                <div style={{ fontSize: 10, color: '#CBD5E1', marginTop: 2 }}>{stat.count} entregas</div>
+              </div>
+            ))}
           </div>
 
-          {/* Best / Worst */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
-            <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 10, padding: '12px 14px' }}>
-              <div style={{ fontSize: 10, fontWeight: 600, color: '#16A34A', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Mejor</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: '#15803D', letterSpacing: '-0.5px' }}>
-                {best !== null ? fmtMins(best) : '—'}
-              </div>
-            </div>
-            <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: '12px 14px' }}>
-              <div style={{ fontSize: 10, fontWeight: 600, color: '#DC2626', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Peor</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: '#B91C1C', letterSpacing: '-0.5px' }}>
-                {worst !== null ? fmtMins(worst) : '—'}
-              </div>
-            </div>
-          </div>
-
-          {/* Distribution */}
-          {deliveryMins.length > 0 && (
+          {/* Distribution (dispatch time across all types) */}
+          {allMins.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {BUCKETS.map((b, i) => {
                 const count = bucketCounts[i]
@@ -262,9 +273,7 @@ export default function Dashboard() {
                 )
               })}
             </div>
-          )}
-
-          {deliveryMins.length === 0 && (
+          ) : (
             <div style={{ textAlign: 'center', padding: '24px 0', color: '#94A3B8', fontSize: 13 }}>
               Sin entregas completadas hoy
             </div>

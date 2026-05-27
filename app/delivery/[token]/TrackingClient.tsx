@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { createClient } from '@supabase/supabase-js'
 import './tracking.css'
@@ -171,6 +171,10 @@ export default function TrackingClient({
 }) {
   const [delivery, setDelivery] = useState<Delivery | null>(initialDelivery)
   const [driverLoc, setDriverLoc] = useState<{ lat: number; lng: number } | null>(null)
+  const sheetRef  = useRef<HTMLDivElement>(null)
+  const dragRef   = useRef<{ startY: number; startTranslate: number } | null>(null)
+  const [sheetTranslateY, setSheetTranslateY] = useState(0)
+  const [sheetAnimate,    setSheetAnimate]    = useState(false)
 
   // Subscribe to live driver GPS from driver_locations
   useEffect(() => {
@@ -316,6 +320,35 @@ export default function TrackingClient({
     const statusLabel = STATUS_LABELS[delivery.status] ?? 'en camino'
     const font = FONT_STACKS[trackingConfig.fontFamily ?? 'system'] ?? FONT_STACKS.system
 
+    const PEEK = 72
+
+    function snapSheet(open: boolean) {
+      const h = sheetRef.current?.offsetHeight ?? 320
+      setSheetTranslateY(open ? 0 : h - PEEK)
+      setSheetAnimate(true)
+    }
+
+    function onHandleDown(e: React.PointerEvent) {
+      e.currentTarget.setPointerCapture(e.pointerId)
+      dragRef.current = { startY: e.clientY, startTranslate: sheetTranslateY }
+      setSheetAnimate(false)
+    }
+
+    function onHandleMove(e: React.PointerEvent) {
+      if (!dragRef.current) return
+      const h = sheetRef.current?.offsetHeight ?? 320
+      const delta = e.clientY - dragRef.current.startY
+      setSheetTranslateY(Math.max(0, Math.min(h - PEEK, dragRef.current.startTranslate + delta)))
+    }
+
+    function onHandleUp(_e: React.PointerEvent) {
+      if (!dragRef.current) return
+      const h = sheetRef.current?.offsetHeight ?? 320
+      const delta = sheetTranslateY - dragRef.current.startTranslate
+      dragRef.current = null
+      snapSheet(!(delta > 30 || sheetTranslateY > (h - PEEK) * 0.45))
+    }
+
     return (
       <div style={{ ...cssVars, position: 'relative', height: '100dvh', overflow: 'hidden', background: '#E4EAF1', fontFamily: font }}>
 
@@ -362,8 +395,29 @@ export default function TrackingClient({
         <div style={{ position: 'absolute', top: 'calc(56% - 60px)', left: 0, right: 0, height: 70, background: 'linear-gradient(transparent, #F5F3EF)', zIndex: 4 }} />
 
         {/* Bottom sheet */}
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '47%', background: '#F5F3EF', borderRadius: '24px 24px 0 0', zIndex: 10, overflowY: 'auto', scrollbarWidth: 'none' as const }}>
-          <div style={{ width: 36, height: 4, background: 'rgba(15,23,42,0.15)', borderRadius: 100, margin: '12px auto 0' }} />
+        <div
+          ref={sheetRef}
+          style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0, height: '47%',
+            background: '#F5F3EF', borderRadius: '24px 24px 0 0', zIndex: 10,
+            overflowY: sheetTranslateY > 0 ? 'hidden' : 'auto',
+            scrollbarWidth: 'none' as const,
+            transform: `translateY(${sheetTranslateY}px)`,
+            transition: sheetAnimate ? 'transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
+            willChange: 'transform',
+          }}
+          onTransitionEnd={() => setSheetAnimate(false)}
+        >
+          {/* Drag handle */}
+          <div
+            style={{ padding: '10px 0 4px', cursor: 'grab', touchAction: 'none', userSelect: 'none' as const }}
+            onPointerDown={onHandleDown}
+            onPointerMove={onHandleMove}
+            onPointerUp={onHandleUp}
+            onPointerCancel={onHandleUp}
+          >
+            <div style={{ width: 36, height: 4, background: 'rgba(15,23,42,0.15)', borderRadius: 100, margin: '0 auto' }} />
+          </div>
 
           {/* Status */}
           <div style={{ padding: '14px 20px 10px' }}>

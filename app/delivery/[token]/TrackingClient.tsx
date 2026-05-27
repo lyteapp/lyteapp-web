@@ -361,8 +361,8 @@ export default function TrackingClient({
     return (
       <div style={{ ...cssVars, position: 'relative', height: '100dvh', overflow: 'hidden', background: '#E4EAF1', fontFamily: font }}>
 
-        {/* Map area */}
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '56%' }}>
+        {/* Map area — expands as bottom sheet slides down */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: `calc(56% + ${sheetTranslateY}px)` }}>
           <TrackingMap
             driverLat={delivery.status === 'picked_up' ? (driverLoc?.lat ?? delivery.driver_lat) : null}
             driverLng={delivery.status === 'picked_up' ? (driverLoc?.lng ?? delivery.driver_lng) : null}
@@ -399,9 +399,6 @@ export default function TrackingClient({
             Ubicacion en vivo
           </div>
         )}
-
-        {/* Map bottom fade */}
-        <div style={{ position: 'absolute', top: 'calc(56% - 60px)', left: 0, right: 0, height: 70, background: 'linear-gradient(transparent, #F5F3EF)', zIndex: 4 }} />
 
         {/* Bottom sheet */}
         <div

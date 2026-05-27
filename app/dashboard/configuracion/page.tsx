@@ -112,15 +112,6 @@ function ConfiguracionInner() {
   const [savingPagos, setSavingPagos] = useState(false)
   const [savedPagos, setSavedPagos] = useState(false)
 
-  // Checkout
-  const [requireName, setRequireName] = useState(true)
-  const [requirePhone, setRequirePhone] = useState(true)
-  const [requireAddress, setRequireAddress] = useState(false)
-  const [allowNotes, setAllowNotes] = useState(true)
-  const [minOrder, setMinOrder] = useState('')
-  const [savingCheckout, setSavingCheckout] = useState(false)
-  const [savedCheckout, setSavedCheckout] = useState(false)
-
   // Delivery
   const [deliveryEnabled, setDeliveryEnabled] = useState(false)
   const [deliveryFee, setDeliveryFee] = useState('')
@@ -168,11 +159,6 @@ function ConfiguracionInner() {
         }))
 
         const cs = store.checkout_settings ?? {}
-        setRequireName(cs.requireName ?? true)
-        setRequirePhone(cs.requirePhone ?? true)
-        setRequireAddress(cs.requireAddress ?? false)
-        setAllowNotes(cs.allowNotes ?? true)
-        setMinOrder(cs.minOrder ? String(cs.minOrder) : '')
         setDeliveryEnabled(cs.deliveryEnabled ?? false)
         setDeliveryFee(cs.deliveryFee ? String(cs.deliveryFee) : '')
         setDeliveryTime(cs.deliveryTime ?? '')
@@ -217,17 +203,6 @@ function ConfiguracionInner() {
     setSavingPagos(false)
     if (err) { setError(err.message); return }
     flash(setSavedPagos)
-  }
-
-  async function saveCheckout() {
-    if (!storeId) return
-    setSavingCheckout(true); setError('')
-    const { data: store } = await supabase.from('stores').select('checkout_settings').eq('id', storeId).maybeSingle()
-    const cs = { ...(store?.checkout_settings ?? {}), requireName, requirePhone, requireAddress, allowNotes, minOrder: minOrder ? parseFloat(minOrder) : null }
-    const { error: err } = await supabase.from('stores').update({ checkout_settings: cs }).eq('id', storeId)
-    setSavingCheckout(false)
-    if (err) { setError(err.message); return }
-    flash(setSavedCheckout)
   }
 
   async function saveDelivery() {
@@ -441,32 +416,6 @@ function ConfiguracionInner() {
               </div>
             ))}
             <SaveBtn saving={savingPagos} onClick={savePagos} />
-          </div>
-        )}
-      </div>
-
-      {/* ── CHECKOUT ── */}
-      <div className="cf-card">
-        <SectionHeader title="Checkout" desc="Qué datos le pides al cliente al hacer un pedido" open={openSection === 'checkout'} onToggle={() => toggleSection('checkout')} saved={savedCheckout} />
-        {openSection === 'checkout' && (
-          <div className="cf-card-body">
-            <p className="cf-section-hint">Selecciona qué información necesitas de tus clientes para procesar sus pedidos.</p>
-            {[
-              { label: 'Requerir nombre del cliente', val: requireName, set: setRequireName },
-              { label: 'Requerir teléfono', val: requirePhone, set: setRequirePhone },
-              { label: 'Requerir dirección de entrega', val: requireAddress, set: setRequireAddress },
-              { label: 'Permitir notas en el pedido', val: allowNotes, set: setAllowNotes },
-            ].map(({ label, val, set }) => (
-              <div key={label} className="cf-toggle-row">
-                <span className="cf-toggle-label">{label}</span>
-                <button className={`cf-toggle${val ? ' on' : ''}`} onClick={() => set(!val)}><div className="cf-toggle-knob" /></button>
-              </div>
-            ))}
-            <div className="cf-field" style={{ marginTop: 8 }}>
-              <label className="cf-label">Pedido mínimo (USD)</label>
-              <input className="cf-input" type="number" min="0" step="0.01" placeholder="Ej: 5.00 — dejar vacío para sin mínimo" value={minOrder} onChange={e => setMinOrder(e.target.value)} />
-            </div>
-            <SaveBtn saving={savingCheckout} onClick={saveCheckout} />
           </div>
         )}
       </div>

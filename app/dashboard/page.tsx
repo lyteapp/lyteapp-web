@@ -32,6 +32,7 @@ export default function Dashboard() {
   const t = useT()
   const [storeSlug, setStoreSlug] = useState('')
   const [storeId, setStoreId] = useState<string | null>(null)
+  const [period, setPeriod] = useState<'day' | 'week' | 'month'>('day')
   const [orderCount, setOrderCount] = useState(0)
   const [totalSales, setTotalSales] = useState(0)
   const [avgTicket, setAvgTicket] = useState(0)
@@ -49,24 +50,39 @@ export default function Dashboard() {
     setActiveOrders((data ?? []) as ActiveOrder[])
   }, [])
 
+  const loadStats = useCallback(async (sid: string, p: 'day' | 'week' | 'month') => {
+    const start = new Date()
+    if (p === 'day')   { start.setHours(0, 0, 0, 0) }
+    if (p === 'week')  { start.setDate(start.getDate() - start.getDay()); start.setHours(0, 0, 0, 0) }
+    if (p === 'month') { start.setDate(1); start.setHours(0, 0, 0, 0) }
+    const { data: orders } = await supabase
+      .from('orders')
+      .select('id, total')
+      .eq('store_id', sid)
+      .gte('created_at', start.toISOString())
+    const count = orders?.length ?? 0
+    const sum   = (orders ?? []).reduce((acc, o) => acc + Number(o.total ?? 0), 0)
+    setOrderCount(count)
+    setTotalSales(sum)
+    setAvgTicket(count > 0 ? sum / count : 0)
+  }, [])
+
   useEffect(() => {
     if (!user) return
     supabase.from('stores').select('id,name,slug').eq('owner_id', user.id).maybeSingle().then(({ data }) => {
       if (!data) return
       setStoreSlug(data.slug ?? '')
       setStoreId(data.id)
-      const todayStart = new Date(); todayStart.setHours(0,0,0,0)
-      supabase.from('orders').select('id, total').eq('store_id', data.id).gte('created_at', todayStart.toISOString()).then(({ data: orders }) => {
-        const count = orders?.length ?? 0
-        setOrderCount(count)
-        const sum = (orders ?? []).reduce((acc, o) => acc + Number(o.total ?? 0), 0)
-        setTotalSales(sum)
-        if (count > 0) setAvgTicket(sum / count)
-      })
+      loadStats(data.id, 'day')
       supabase.from('products').select('id', { count: 'exact' }).eq('store_id', data.id).then(({ count }) => setProductCount(count ?? 0))
       loadActiveOrders(data.id)
     })
-  }, [user, loadActiveOrders])
+  }, [user, loadStats, loadActiveOrders])
+
+  useEffect(() => {
+    if (!storeId) return
+    loadStats(storeId, period)
+  }, [storeId, period, loadStats])
 
   // Refresh active orders every 30s and re-render elapsed times every minute
   useEffect(() => {
@@ -113,7 +129,23 @@ export default function Dashboard() {
       {/* ── KPI STRIP ── */}
       <div className="dh-section-head">
         <div className="dh-section-title">{t('dash.summary')}</div>
-        <Link href="/dashboard/pedidos" className="dh-section-link">{t('dash.viewDetail')}</Link>
+        <div style={{ display: 'flex', gap: 4, background: '#F1F5F9', borderRadius: 8, padding: 3 }}>
+          {(['day', 'week', 'month'] as const).map(p => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              style={{
+                padding: '4px 12px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                background: period === p ? 'white' : 'transparent',
+                color: period === p ? '#0F172A' : '#64748B',
+                boxShadow: period === p ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                transition: 'all 0.15s',
+              }}
+            >
+              {p === 'day' ? 'Dia' : p === 'week' ? 'Semana' : 'Mes'}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="dh-kpi-grid">

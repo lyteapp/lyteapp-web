@@ -150,6 +150,7 @@ export default function EditorPage() {
   const [photoShape, setPhotoShape] = useState<'sharp' | 'square' | 'circle'>('square')
   const [photoSize, setPhotoSize]   = useState<'small' | 'medium' | 'large'>('medium')
   const [accentColor, setAccentColor] = useState('#7C3AED')
+  const [priceColor,  setPriceColor]  = useState('#7C3AED')
   const [priceSize, setPriceSize]   = useState<'small' | 'medium' | 'large'>('medium')
   const [priceFont, setPriceFont]   = useState('')
 
@@ -177,7 +178,9 @@ export default function EditorPage() {
   const bgPickerRef       = useRef<HTMLInputElement>(null)
   const cardPickerRef     = useRef<HTMLInputElement>(null)
   const acPickerRef       = useRef<HTMLInputElement>(null)
-  const acPickerColorsRef = useRef<HTMLInputElement>(null)
+  const acPickerColorsRef    = useRef<HTMLInputElement>(null)
+  const pricePickerRef       = useRef<HTMLInputElement>(null)
+  const pricePickerColorsRef = useRef<HTMLInputElement>(null)
 
   // ── Load saved config ──────────────────────────────────
   useEffect(() => {
@@ -202,7 +205,10 @@ export default function EditorPage() {
       if (cfg.textAlign)  setTextAlign(cfg.textAlign as 'left' | 'center')
       if (cfg.photoShape) setPhotoShape(cfg.photoShape as 'sharp' | 'square' | 'circle')
       if (cfg.photoSize)  setPhotoSize(cfg.photoSize as 'small' | 'medium' | 'large')
-      if (cfg.priceColor) setAccentColor(cfg.priceColor as string)
+      if (cfg.priceColor) setPriceColor(cfg.priceColor as string)
+      else if ((store as { brand_color?: string }).brand_color) setPriceColor((store as { brand_color: string }).brand_color)
+      if ((cfg as Record<string,unknown>).accentColor) setAccentColor((cfg as Record<string,unknown>).accentColor as string)
+      else if (cfg.priceColor) setAccentColor(cfg.priceColor as string)
       else if ((store as { brand_color?: string }).brand_color) setAccentColor((store as { brand_color: string }).brand_color)
       if (cfg.priceSize)  setPriceSize(cfg.priceSize as 'small' | 'medium' | 'large')
       if (cfg.priceFont !== undefined) setPriceFont((cfg.priceFont as string) ?? '')
@@ -307,7 +313,8 @@ export default function EditorPage() {
         ${pageBg ? `background: ${pageBg} !important;` : ''}
         ${font  ? `font-family: ${font} !important;` : ''}
         font-size: ${fontSizePx}px !important;
-        --sf-price-color: ${accentColor} !important;
+        --sf-price-color: ${priceColor} !important;
+        --sf-accent-color: ${accentColor} !important;
         --sf-price-font: ${font};
       }
       .sf-nav-name       { font-size: ${(fontSizePx * 1.07).toFixed(1)}px !important; }
@@ -333,10 +340,13 @@ export default function EditorPage() {
       .sf-co-price       { ${prFont ? `font-family: ${prFont} !important;` : ''} }
       .sf-co-total-amt   { ${font ? `font-family: ${font} !important;` : ''} }
       .sf-card-price, .sf-esc-price, .sf-cat-price, .sf-vit-hero-price {
-        color: ${accentColor} !important;
+        color: ${priceColor} !important;
         font-size: ${prSizeMap[priceSize]} !important;
         ${prFont ? `font-family: ${prFont} !important;` : ''}
       }
+      .sf-modal-base-price  { color: ${priceColor} !important; }
+      .sf-modal-extra-price { color: ${priceColor} !important; }
+      .sf-co-price          { color: ${priceColor} !important; }
       .sf-card-badge   { background: ${accentColor} !important; }
       .sf-cart-bar     { background: ${accentColor} !important; }
       .sf-add-btn      { background: ${accentColor} !important; }
@@ -346,13 +356,10 @@ export default function EditorPage() {
       .sf-modal-chip.selected { background: ${accentColor} !important; border-color: ${accentColor} !important; }
       .sf-modal-extra-check.on { background: ${accentColor} !important; border-color: ${accentColor} !important; }
       .sf-modal-extra.selected { border-color: ${accentColor} !important; }
-      .sf-modal-base-price  { color: ${accentColor} !important; }
-      .sf-modal-extra-price { color: ${accentColor} !important; }
       .sf-payment-radio.on  { background: ${accentColor} !important; border-color: ${accentColor} !important; }
       .sf-payment-opt.selected { border-color: ${accentColor} !important; }
       .sf-qty button { color: ${accentColor} !important; }
       .sf-qty span   { color: ${accentColor} !important; }
-      .sf-co-price   { color: ${accentColor} !important; }
       .sf-co-opt-tag { color: ${accentColor} !important; }
       .sf-co-edit-btn { color: ${accentColor} !important; }
       ${shapeCSS}
@@ -382,7 +389,7 @@ export default function EditorPage() {
   useEffect(() => {
     applyPreview()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageBg, cardBg, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceSize, priceFont, categoryNavStyle, logoShape, logoSizePx])
+  }, [pageBg, cardBg, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, categoryNavStyle, logoShape, logoSizePx])
 
   // ── Auto-save template (reloads iframe immediately) ───
   async function handleTemplateSelect(t: string) {
@@ -434,7 +441,7 @@ export default function EditorPage() {
       ...baseConfig,
       pageBg, cardBg: cardBg || undefined, pageFont, fontSizePx, textAlign,
       photoShape, photoSize,
-      priceColor: accentColor, priceFont: priceFont || pageFont, priceSize,
+      priceColor, accentColor, priceFont: priceFont || pageFont, priceSize,
       categoryNavStyle, showCatNav,
       logoShape, logoSizePx, logoPosition, namePosition, showMenuButton,
       headerLayout: undefined,
@@ -455,9 +462,10 @@ export default function EditorPage() {
     setTimeout(() => setToolSaved(false), 2000)
   }
 
-  const isCustomBg   = !BG_COLORS.some(c => c.value === pageBg)
-  const isCustomCard = cardBg !== '' && cardBg !== 'transparent' && !BG_COLORS.some(c => c.value === cardBg)
-  const isCustomAc   = !ACCENT_COLORS.includes(accentColor)
+  const isCustomBg    = !BG_COLORS.some(c => c.value === pageBg)
+  const isCustomCard  = cardBg !== '' && cardBg !== 'transparent' && !BG_COLORS.some(c => c.value === cardBg)
+  const isCustomAc    = !ACCENT_COLORS.includes(accentColor)
+  const isCustomPrice = !ACCENT_COLORS.includes(priceColor)
 
   function PanelSave() {
     return (
@@ -720,7 +728,38 @@ export default function EditorPage() {
               />
             </div>
 
-            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Color de acento</div>
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Precios</div>
+            <div className="ed-tp-swatches" style={{ position: 'relative' }}>
+              {ACCENT_COLORS.map(c => (
+                <button
+                  key={c}
+                  className={`ed-tp-swatch${priceColor === c ? ' ed-tp-active' : ''}`}
+                  style={{ background: c }}
+                  onClick={() => setPriceColor(c)}
+                />
+              ))}
+              <button
+                className={`ed-tp-swatch ed-tp-custom${isCustomPrice ? ' ed-tp-active' : ''}`}
+                style={isCustomPrice ? { background: priceColor } : undefined}
+                title="Personalizado"
+                onClick={() => pricePickerColorsRef.current?.click()}
+              >
+                {!isCustomPrice && (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                )}
+              </button>
+              <input
+                ref={pricePickerColorsRef}
+                type="color"
+                value={isCustomPrice ? priceColor : '#7C3AED'}
+                onChange={e => setPriceColor(e.target.value)}
+                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
+              />
+            </div>
+
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Acentos (botones)</div>
             <div className="ed-tp-swatches" style={{ position: 'relative' }}>
               {ACCENT_COLORS.map(c => (
                 <button
@@ -946,28 +985,28 @@ export default function EditorPage() {
               {ACCENT_COLORS.map(c => (
                 <button
                   key={c}
-                  className={`ed-tp-swatch${accentColor === c ? ' ed-tp-active' : ''}`}
+                  className={`ed-tp-swatch${priceColor === c ? ' ed-tp-active' : ''}`}
                   style={{ background: c }}
-                  onClick={() => setAccentColor(c)}
+                  onClick={() => setPriceColor(c)}
                 />
               ))}
               <button
-                className={`ed-tp-swatch ed-tp-custom${isCustomAc ? ' ed-tp-active' : ''}`}
-                style={isCustomAc ? { background: accentColor } : undefined}
+                className={`ed-tp-swatch ed-tp-custom${isCustomPrice ? ' ed-tp-active' : ''}`}
+                style={isCustomPrice ? { background: priceColor } : undefined}
                 title="Personalizado"
-                onClick={() => acPickerRef.current?.click()}
+                onClick={() => pricePickerRef.current?.click()}
               >
-                {!isCustomAc && (
+                {!isCustomPrice && (
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                     <path d="M12 5v14M5 12h14" />
                   </svg>
                 )}
               </button>
               <input
-                ref={acPickerRef}
+                ref={pricePickerRef}
                 type="color"
-                value={isCustomAc ? accentColor : '#7C3AED'}
-                onChange={e => setAccentColor(e.target.value)}
+                value={isCustomPrice ? priceColor : '#7C3AED'}
+                onChange={e => setPriceColor(e.target.value)}
                 style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
               />
             </div>

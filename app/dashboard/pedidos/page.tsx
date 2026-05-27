@@ -89,7 +89,8 @@ export default function PedidosPage() {
   const [whatsapp, setWhatsapp] = useState<string>('')
   const [orders, setOrders] = useState<Order[]>([])
   const [filter, setFilter]     = useState<'all' | OrderStatus>('all')
-  const [dateFilter, setDateFilter] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo,   setDateTo]   = useState('')
   const [expanded, setExpanded] = useState<string | null>(null)
   const [updating, setUpdating] = useState<string | null>(null)
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set())
@@ -392,7 +393,15 @@ export default function PedidosPage() {
   const todayStr     = toLocalDate(new Date().toISOString())
   const yesterdayStr = (() => { const d = new Date(); d.setDate(d.getDate()-1); return toLocalDate(d.toISOString()) })()
 
-  const dateFiltered = dateFilter ? orders.filter(o => toLocalDate(o.created_at) === dateFilter) : orders
+  const hasDateFilter = !!(dateFrom || dateTo)
+  const dateFiltered = hasDateFilter
+    ? orders.filter(o => {
+        const d = toLocalDate(o.created_at)
+        if (dateFrom && d < dateFrom) return false
+        if (dateTo   && d > dateTo)   return false
+        return true
+      })
+    : orders
   const filtered = filter === 'all' ? dateFiltered : dateFiltered.filter(o => o.status === filter)
 
   if (loading) {
@@ -418,14 +427,20 @@ export default function PedidosPage() {
       {/* ── DATE FILTER BAR ── */}
       <div className="pd-date-bar">
         <button
-          className={`pd-date-quick${dateFilter === todayStr ? ' active' : ''}`}
-          onClick={() => setDateFilter(p => p === todayStr ? '' : todayStr)}
+          className={`pd-date-quick${dateFrom === todayStr && dateTo === todayStr ? ' active' : ''}`}
+          onClick={() => {
+            if (dateFrom === todayStr && dateTo === todayStr) { setDateFrom(''); setDateTo('') }
+            else { setDateFrom(todayStr); setDateTo(todayStr) }
+          }}
         >
           Hoy
         </button>
         <button
-          className={`pd-date-quick${dateFilter === yesterdayStr ? ' active' : ''}`}
-          onClick={() => setDateFilter(p => p === yesterdayStr ? '' : yesterdayStr)}
+          className={`pd-date-quick${dateFrom === yesterdayStr && dateTo === yesterdayStr ? ' active' : ''}`}
+          onClick={() => {
+            if (dateFrom === yesterdayStr && dateTo === yesterdayStr) { setDateFrom(''); setDateTo('') }
+            else { setDateFrom(yesterdayStr); setDateTo(yesterdayStr) }
+          }}
         >
           Ayer
         </button>
@@ -436,15 +451,26 @@ export default function PedidosPage() {
           <input
             type="date"
             className="pd-date-input"
-            value={dateFilter}
+            value={dateFrom}
+            max={dateTo || todayStr}
+            placeholder="Desde"
+            onChange={e => setDateFrom(e.target.value)}
+          />
+          <span className="pd-date-sep">—</span>
+          <input
+            type="date"
+            className="pd-date-input"
+            value={dateTo}
+            min={dateFrom || undefined}
             max={todayStr}
-            onChange={e => setDateFilter(e.target.value)}
+            placeholder="Hasta"
+            onChange={e => setDateTo(e.target.value)}
           />
         </div>
-        {dateFilter && (
+        {hasDateFilter && (
           <>
             <span className="pd-date-count">{dateFiltered.length} pedido{dateFiltered.length !== 1 ? 's' : ''}</span>
-            <button className="pd-date-clear" onClick={() => setDateFilter('')} title="Quitar filtro">
+            <button className="pd-date-clear" onClick={() => { setDateFrom(''); setDateTo('') }} title="Quitar filtro">
               <svg viewBox="0 0 20 20" fill="currentColor" width="12" height="12">
                 <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
               </svg>

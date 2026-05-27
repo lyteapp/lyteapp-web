@@ -65,7 +65,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [orderNotif, setOrderNotif] = useState<{ name: string; total: number } | null>(null)
   const notifTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [canalOpen, setCanalOpen]         = useState(false)
-  const [productosOpen, setProductosOpen] = useState(true)
+  const [productosOpen, setProductosOpen] = useState(false)
   const [settingsOpen, setSettingsOpen]   = useState(false)
   const [mobileNav, setMobileNav] = useState(false)
   const { play, unlock } = useLyteSound()

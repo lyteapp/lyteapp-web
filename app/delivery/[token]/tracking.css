@@ -164,6 +164,28 @@
   to   { transform: scaleY(1); }
 }
 
+/* ── Horizontal connector (location mode timeline) */
+.tr-h-connector {
+  flex: 1; height: 2px;
+  background: rgba(148, 163, 184, 0.3);
+  position: relative; overflow: hidden;
+}
+
+.tr-h-connector-fill {
+  position: absolute; inset: 0;
+  background: var(--tr-accent, #7C3AED);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+.tr-h-connector-fill.done {
+  animation: trSlideRight 0.45s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes trSlideRight {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
 .tr-step-body {
   padding: 2px 0 28px; flex: 1;
 }

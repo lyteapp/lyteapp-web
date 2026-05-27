@@ -357,9 +357,23 @@ export default function TrackingClient({
               return (
                 <div key={label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <div style={{ width: '100%', display: 'flex', alignItems: 'center' }}>
-                    {i > 0 && <div style={{ flex: 1, height: 2, background: done ? accent : 'rgba(148,163,184,0.3)' }} />}
-                    <div style={{ width: 9, height: 9, borderRadius: '50%', flexShrink: 0, background: (done || active) ? accent : '#CBD5E1', boxShadow: active ? `0 0 0 3px ${accent}33` : 'none' }} />
-                    {i < arr.length - 1 && <div style={{ flex: 1, height: 2, background: done ? accent : 'rgba(148,163,184,0.3)' }} />}
+                    {i > 0 && (
+                      <div className="tr-h-connector">
+                        <div
+                          className={`tr-h-connector-fill${done ? ' done' : ''}`}
+                          style={done ? { animationDelay: `${(i - 1) * 0.07}s` } : undefined}
+                        />
+                      </div>
+                    )}
+                    <div style={{ width: 9, height: 9, borderRadius: '50%', flexShrink: 0, background: (done || active) ? accent : '#CBD5E1', boxShadow: active ? `0 0 0 3px ${accent}33` : 'none', transition: 'background 0.35s, box-shadow 0.35s' }} />
+                    {i < arr.length - 1 && (
+                      <div className="tr-h-connector">
+                        <div
+                          className={`tr-h-connector-fill${done ? ' done' : ''}`}
+                          style={done ? { animationDelay: `${i * 0.07}s` } : undefined}
+                        />
+                      </div>
+                    )}
                   </div>
                   <span style={{ fontSize: 9, marginTop: 4, textAlign: 'center' as const, lineHeight: 1.2, color: active ? accent : done ? '#475569' : '#94A3B8', fontWeight: active ? 700 : 400 }}>{label}</span>
                 </div>

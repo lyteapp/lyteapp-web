@@ -115,6 +115,15 @@ function NavArrow({ modifier }: { modifier: string }) {
   )
 }
 
+function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const raw = atob(base64)
+  const arr = new Uint8Array(raw.length)
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i)
+  return arr.buffer
+}
+
 function timeAgo(iso: string) {
   const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
   if (m < 1) return 'Ahora mismo'
@@ -283,6 +292,44 @@ export default function DriverClient({
 
   // Auto-start GPS on mount
   useEffect(() => { startGps() }, [startGps])
+
+  // Register service worker + push notifications
+  useEffect(() => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
+    const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+    if (!vapidKey) return
+
+    async function registerPush() {
+      try {
+        const reg = await navigator.serviceWorker.register('/sw.js')
+        await navigator.serviceWorker.ready
+
+        // Don't re-subscribe if already active
+        const existing = await reg.pushManager.getSubscription()
+        const sub = existing ?? await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidKey!),
+        })
+
+        // Save subscription endpoint to Supabase (upsert by endpoint)
+        await supabase.from('driver_push_subscriptions').upsert({
+          driver_id: driverId,
+          endpoint: sub.endpoint,
+          subscription: JSON.parse(JSON.stringify(sub)),
+        }, { onConflict: 'driver_id,endpoint' })
+      } catch {
+        // Push blocked by user or not supported — silent fail
+      }
+    }
+
+    // Ask for permission on first interaction to satisfy browser policy
+    if (Notification.permission === 'granted') {
+      registerPush()
+    } else if (Notification.permission !== 'denied') {
+      Notification.requestPermission().then(p => { if (p === 'granted') registerPush() })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [driverId])
 
   // Re-acquire wake lock on tab focus
   useEffect(() => {

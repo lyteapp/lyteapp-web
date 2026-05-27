@@ -219,19 +219,37 @@ export default function DeliveryPage() {
     setDNotes(del.notes || '')
   }
 
+  async function notifyDriver(driverId: string, customerName: string, driverUrl: string) {
+    try {
+      await fetch('/api/push-driver', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          driverId,
+          title: 'Nuevo pedido asignado',
+          body: `Pedido para ${customerName}`,
+          url: driverUrl,
+        }),
+      })
+    } catch { /* non-critical */ }
+  }
+
   async function createDelivery() {
     if (!storeId || !selectedOrderId) return
     const order = readyOrders.find(o => o.id === selectedOrderId)
     if (!order) return
     setDSaving(true)
-    await supabase.from('deliveries').insert({
+    const { data: newDel } = await supabase.from('deliveries').insert({
       store_id: storeId, order_id: order.id,
       customer_name: order.customer_name, customer_phone: order.customer_phone,
       delivery_address: dAddress.trim(), driver_id: dDriverId || null,
       driver_fee: parseFloat(dFee) || 0, notes: dNotes.trim() || null, status: 'ready',
-    })
+    }).select('id').single()
     setSelectedOrderId(null); setDSaving(false)
     showToast('Entrega despachada')
+    if (dDriverId && newDel?.id) {
+      notifyDriver(dDriverId, order.customer_name, `${BASE_URL}/driver/${dDriverId}`)
+    }
     await loadData(storeId)
   }
 
@@ -244,9 +262,13 @@ export default function DeliveryPage() {
       driver_fee: parseFloat(dFee) || 0,
       notes: dNotes.trim() || null,
     }).eq('id', selectedDeliveryId)
+    const del = deliveries.find(d => d.id === selectedDeliveryId)
     setSelectedDeliveryId(null)
     setDSaving(false)
     showToast('Despachador asignado')
+    if (dDriverId && del) {
+      notifyDriver(dDriverId, del.customer_name, `${BASE_URL}/driver/${dDriverId}`)
+    }
     await loadData(storeId)
   }
 

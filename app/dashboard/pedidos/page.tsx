@@ -88,7 +88,8 @@ export default function PedidosPage() {
   const [storeName, setStoreName] = useState<string>('')
   const [whatsapp, setWhatsapp] = useState<string>('')
   const [orders, setOrders] = useState<Order[]>([])
-  const [filter, setFilter] = useState<'all' | OrderStatus>('all')
+  const [filter, setFilter]     = useState<'all' | OrderStatus>('all')
+  const [dateFilter, setDateFilter] = useState('')
   const [expanded, setExpanded] = useState<string | null>(null)
   const [updating, setUpdating] = useState<string | null>(null)
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set())
@@ -372,6 +373,11 @@ export default function PedidosPage() {
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank')
   }
 
+  function toLocalDate(iso: string): string {
+    const d = new Date(iso)
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+  }
+
   function timeAgo(iso: string): string {
     const diff = Date.now() - new Date(iso).getTime()
     const m = Math.floor(diff / 60000)
@@ -383,7 +389,11 @@ export default function PedidosPage() {
     return t('orders.time.day', { n: String(d) })
   }
 
-  const filtered = filter === 'all' ? orders : orders.filter(o => o.status === filter)
+  const todayStr     = toLocalDate(new Date().toISOString())
+  const yesterdayStr = (() => { const d = new Date(); d.setDate(d.getDate()-1); return toLocalDate(d.toISOString()) })()
+
+  const dateFiltered = dateFilter ? orders.filter(o => toLocalDate(o.created_at) === dateFilter) : orders
+  const filtered = filter === 'all' ? dateFiltered : dateFiltered.filter(o => o.status === filter)
 
   if (loading) {
     return (
@@ -405,6 +415,44 @@ export default function PedidosPage() {
 
   return (
     <div style={{ paddingBottom: 80 }}>
+      {/* ── DATE FILTER BAR ── */}
+      <div className="pd-date-bar">
+        <button
+          className={`pd-date-quick${dateFilter === todayStr ? ' active' : ''}`}
+          onClick={() => setDateFilter(p => p === todayStr ? '' : todayStr)}
+        >
+          Hoy
+        </button>
+        <button
+          className={`pd-date-quick${dateFilter === yesterdayStr ? ' active' : ''}`}
+          onClick={() => setDateFilter(p => p === yesterdayStr ? '' : yesterdayStr)}
+        >
+          Ayer
+        </button>
+        <div className="pd-date-input-wrap">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14" className="pd-date-icon">
+            <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+          </svg>
+          <input
+            type="date"
+            className="pd-date-input"
+            value={dateFilter}
+            max={todayStr}
+            onChange={e => setDateFilter(e.target.value)}
+          />
+        </div>
+        {dateFilter && (
+          <>
+            <span className="pd-date-count">{dateFiltered.length} pedido{dateFiltered.length !== 1 ? 's' : ''}</span>
+            <button className="pd-date-clear" onClick={() => setDateFilter('')} title="Quitar filtro">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="12" height="12">
+                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </>
+        )}
+      </div>
+
       <div className="pd-header">
         <div className="pd-header-left">
           <div className="pd-count">{filtered.length} {filtered.length === 1 ? t('orders.status.pending').toLowerCase() : t('orders.filter.all').toLowerCase()}</div>

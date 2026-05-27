@@ -9,6 +9,50 @@
   animation: dbSpin 0.8s linear infinite;
 }
 
+/* ── DATE FILTER BAR ── */
+.pd-date-bar {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 16px; flex-wrap: wrap;
+}
+.pd-date-quick {
+  font-size: 12px; font-weight: 600;
+  padding: 7px 14px; border-radius: 100px;
+  border: 1px solid rgba(15,23,42,0.1);
+  background: white; color: #475569;
+  cursor: pointer; font-family: inherit;
+  transition: all 0.15s;
+}
+.pd-date-quick:hover { border-color: rgba(124,58,237,0.3); color: #7C3AED; }
+.pd-date-quick.active { background: #7C3AED; color: white; border-color: #7C3AED; }
+.pd-date-input-wrap {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 100px;
+  border: 1px solid rgba(15,23,42,0.1);
+  background: white; cursor: pointer;
+  transition: border-color 0.15s;
+}
+.pd-date-input-wrap:focus-within { border-color: #7C3AED; }
+.pd-date-icon { color: #94A3B8; flex-shrink: 0; }
+.pd-date-input {
+  border: none; outline: none; background: transparent;
+  font-size: 12px; font-weight: 500; color: #0F172A;
+  font-family: inherit; cursor: pointer;
+  width: 120px;
+}
+.pd-date-input::-webkit-calendar-picker-indicator { opacity: 0.4; cursor: pointer; }
+.pd-date-count {
+  font-size: 12px; font-weight: 600; color: #7C3AED;
+  background: #F5F3FF; padding: 5px 12px; border-radius: 100px;
+}
+.pd-date-clear {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1px solid rgba(15,23,42,0.1);
+  background: white; cursor: pointer; color: #64748B;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.pd-date-clear:hover { background: #FEE2E2; border-color: #FCA5A5; color: #EF4444; }
+
 /* ── HEADER ── */
 .pd-header {
   display: flex; align-items: center;

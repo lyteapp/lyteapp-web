@@ -192,11 +192,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             className={`db-nav-item${pathname.startsWith('/dashboard/delivery') ? ' active' : ''}`}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M5 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0z"/>
-              <path d="M15 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0z"/>
-              <path d="M5 17H3v-4l2-5h8l1 3h2l2 3v3h-3"/>
-              <path d="M9 17h6"/>
-              <path d="M13 5h4l2 4"/>
+              <circle cx="5.5" cy="17.5" r="2.5"/>
+              <circle cx="18.5" cy="17.5" r="2.5"/>
+              <path d="M8 17.5h7"/>
+              <path d="M15 17.5l-1.5-5H9l-3 5"/>
+              <path d="M13.5 12.5l1-4h3l1.5 4"/>
+              <path d="M9 12.5h4.5"/>
+              <path d="M16 8.5h2.5"/>
             </svg>
             {t('nav.delivery')}
           </Link>

@@ -308,9 +308,12 @@ export default function Apariencia() {
               Rastreo de pedido
             </span>
           </div>
-          <div style={{ background: 'white', borderRadius: 18, padding: '18px 14px', textAlign: 'center', boxShadow: '0 4px 20px rgba(15,23,42,0.08)' }}>
-            <div style={{ width: 52, height: 52, borderRadius: '50%', background: trConfig.accentColor + '1A', margin: '0 auto 12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ width: 20, height: 20, borderRadius: '50%', background: trConfig.accentColor }} />
+          <div style={{ background: 'white', borderRadius: 18, padding: '20px 14px 16px', textAlign: 'center', boxShadow: '0 4px 20px rgba(15,23,42,0.08)' }}>
+            <div style={{ width: 60, height: 60, borderRadius: '50%', background: '#FFF7ED', margin: '0 auto 14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" width="28" height="28">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" />
+              </svg>
             </div>
             <div style={{ fontSize: fs(14), fontWeight: 800, color: '#0F172A', marginBottom: 6, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
               En preparacion en cocina
@@ -334,25 +337,25 @@ export default function Apariencia() {
             </div>
             {STEPS_PREVIEW.map(({ label, state }, i, arr) => (
               <div key={label} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 18, flexShrink: 0 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 22, flexShrink: 0 }}>
                   <div style={{
-                    width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+                    width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
                     background: state === 'done' ? '#10B981' : state === 'current' ? trConfig.accentColor : '#F8FAFC',
                     border: `2px solid ${state === 'done' ? '#10B981' : state === 'current' ? trConfig.accentColor : '#E2E8F0'}`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
                     {state === 'done' && (
-                      <svg viewBox="0 0 10 10" fill="white" width="8" height="8">
+                      <svg viewBox="0 0 10 10" fill="white" width="9" height="9">
                         <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     )}
-                    {state === 'current' && <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'white' }} />}
+                    {state === 'current' && <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'white' }} />}
                   </div>
                   {i < arr.length - 1 && (
-                    <div style={{ width: 2, height: 18, background: state === 'done' ? '#10B981' : '#E2E8F0', margin: '2px 0' }} />
+                    <div style={{ width: 2, height: 22, background: state === 'done' ? '#10B981' : '#E2E8F0', margin: '2px 0' }} />
                   )}
                 </div>
-                <div style={{ paddingBottom: i < arr.length - 1 ? 18 : 0 }}>
+                <div style={{ paddingBottom: i < arr.length - 1 ? 22 : 0 }}>
                   <div style={{
                     fontSize: fs(11), fontWeight: state === 'current' ? 700 : 400, lineHeight: '18px',
                     color: state === 'done' ? '#0F172A' : state === 'current' ? trConfig.accentColor : '#CBD5E1',

@@ -119,17 +119,17 @@
 
 .tr-step-left {
   display: flex; flex-direction: column; align-items: center; flex-shrink: 0;
-  width: 28px;
+  width: var(--tr-dot-sz, 28px);
 }
 
 .tr-dot {
-  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  width: var(--tr-dot-sz, 28px); height: var(--tr-dot-sz, 28px); border-radius: 50%; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
   background: #F1F5F9; border: 2px solid #E2E8F0; z-index: 1;
   transition: all 0.4s;
 }
-.tr-dot.done    { background: #10B981; border-color: #10B981; }
-.tr-dot.current { background: var(--tr-accent, #7C3AED); border-color: var(--tr-accent, #7C3AED); }
+.tr-dot.done    { background: var(--tr-dot-color, #10B981); border-color: var(--tr-dot-color, #10B981); }
+.tr-dot.current { background: var(--tr-dot-color, var(--tr-accent, #7C3AED)); border-color: var(--tr-dot-color, var(--tr-accent, #7C3AED)); }
 .tr-dot.future  { background: #F8FAFC; border-color: #E2E8F0; }
 
 .tr-dot-check { color: white; }
@@ -196,7 +196,7 @@
 .tr-step-label {
   font-size: calc(14px * var(--tr-scale, 1));
   font-weight: 700; color: #CBD5E1;
-  line-height: 28px; transition: color 0.3s;
+  line-height: var(--tr-dot-sz, 28px); transition: color 0.3s;
 }
 .tr-step.done .tr-step-label    { color: #0F172A; }
 .tr-step.current .tr-step-label { color: var(--tr-accent, #7C3AED); }

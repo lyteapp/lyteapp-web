@@ -52,6 +52,9 @@ interface TrackingConfig {
   mapStyle: string
   statusConnectorSize:   'sm' | 'md' | 'lg'
   locationConnectorSize: 'sm' | 'md' | 'lg'
+  dotColor:              string
+  statusDotSize:         'sm' | 'md' | 'lg'
+  locationDotSize:       'sm' | 'md' | 'lg'
 }
 
 const DEFAULT_TR_CONFIG: TrackingConfig = {
@@ -63,6 +66,9 @@ const DEFAULT_TR_CONFIG: TrackingConfig = {
   mapStyle: 'mapbox://styles/mapbox/standard',
   statusConnectorSize:   'sm',
   locationConnectorSize: 'sm',
+  dotColor:              '#10B981',
+  statusDotSize:         'md',
+  locationDotSize:       'md',
 }
 
 const CONN_OPTS = [
@@ -70,6 +76,14 @@ const CONN_OPTS = [
   { id: 'md' as const, label: 'Normal', px: 4 },
   { id: 'lg' as const, label: 'Gruesa', px: 7 },
 ]
+
+const DOT_OPTS = [
+  { id: 'sm' as const, label: 'Peq.',  statusPreviewPx: 14, locPreviewPx: 5  },
+  { id: 'md' as const, label: 'Med.',  statusPreviewPx: 20, locPreviewPx: 7  },
+  { id: 'lg' as const, label: 'Gran.', statusPreviewPx: 26, locPreviewPx: 10 },
+]
+
+const DOT_COLOR_PRESETS = ['#10B981', '#7C3AED', '#2563EB', '#F59E0B', '#EF4444', '#0F172A']
 
 const STEPS_PREVIEW = [
   { label: 'Pedido recibido', state: 'done'    },
@@ -123,6 +137,7 @@ export default function Apariencia() {
   const [isMobile, setIsMobile]             = useState(false)
   const [mobileTab, setMobileTab]           = useState<'preview' | 'config'>('preview')
   const trAccentRef = useRef<HTMLInputElement>(null)
+  const trDotRef    = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768)
@@ -169,8 +184,11 @@ export default function Apariencia() {
   const previewScale = FONT_SCALE_NUM[trConfig.fontSize] ?? 1
   const fs = (n: number) => Math.round(n * previewScale)
   const mapPreset   = MAP_STYLE_PRESETS.find(s => s.id === (trConfig.mapStyle ?? MAP_STYLE_PRESETS[0].id)) ?? MAP_STYLE_PRESETS[0]
-  const statusConnW     = CONN_OPTS.find(o => o.id === trConfig.statusConnectorSize)?.px   ?? 2
-  const locationConnH   = CONN_OPTS.find(o => o.id === trConfig.locationConnectorSize)?.px ?? 2
+  const statusConnW       = CONN_OPTS.find(o => o.id === trConfig.statusConnectorSize)?.px     ?? 2
+  const locationConnH     = CONN_OPTS.find(o => o.id === trConfig.locationConnectorSize)?.px   ?? 2
+  const statusDotPreviewPx   = DOT_OPTS.find(o => o.id === trConfig.statusDotSize)?.statusPreviewPx   ?? 20
+  const locationDotPreviewPx = DOT_OPTS.find(o => o.id === trConfig.locationDotSize)?.locPreviewPx    ?? 7
+  const dotColor = trConfig.dotColor
 
   async function save(e: { preventDefault(): void }) {
     e.preventDefault()
@@ -302,11 +320,11 @@ export default function Apariencia() {
               ].map(({ label, done, active }, i, arr) => (
                 <div key={label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <div style={{ width: '100%', display: 'flex', alignItems: 'center' }}>
-                    {i > 0 && <div style={{ flex: 1, height: locationConnH, background: done ? trConfig.accentColor : 'rgba(148,163,184,0.3)', borderRadius: locationConnH }} />}
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: (done || active) ? trConfig.accentColor : '#CBD5E1', boxShadow: active ? `0 0 0 3px ${trConfig.accentColor}33` : 'none', zIndex: 1 }} />
-                    {i < arr.length - 1 && <div style={{ flex: 1, height: locationConnH, background: (done && !active) ? trConfig.accentColor : 'rgba(148,163,184,0.3)', borderRadius: locationConnH }} />}
+                    {i > 0 && <div style={{ flex: 1, height: locationConnH, background: done ? dotColor : 'rgba(148,163,184,0.3)', borderRadius: locationConnH }} />}
+                    <div style={{ width: locationDotPreviewPx, height: locationDotPreviewPx, borderRadius: '50%', flexShrink: 0, background: (done || active) ? dotColor : '#CBD5E1', boxShadow: active ? `0 0 0 ${Math.round(locationDotPreviewPx * 0.43)}px ${dotColor}33` : 'none', zIndex: 1, transition: 'all 0.25s' }} />
+                    {i < arr.length - 1 && <div style={{ flex: 1, height: locationConnH, background: (done && !active) ? dotColor : 'rgba(148,163,184,0.3)', borderRadius: locationConnH }} />}
                   </div>
-                  <span style={{ fontSize: 7, marginTop: 3, textAlign: 'center' as const, lineHeight: 1.2, color: done ? '#475569' : active ? trConfig.accentColor : '#94A3B8', fontWeight: active ? 600 : 400 }}>{label}</span>
+                  <span style={{ fontSize: 7, marginTop: 3, textAlign: 'center' as const, lineHeight: 1.2, color: done ? '#475569' : active ? dotColor : '#94A3B8', fontWeight: active ? 600 : 400 }}>{label}</span>
                 </div>
               ))}
             </div>
@@ -481,30 +499,30 @@ export default function Apariencia() {
               <div key={label} style={{ display: 'flex', gap: 10 }}>
                 {/* .tr-step-left: flex col, center, width 28px → 20px */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0, width: 20 }}>
-                  {/* .tr-dot: 28px circle → 20px */}
-                  <div style={{
-                    width: 20, height: 20, borderRadius: '50%', flexShrink: 0, zIndex: 1,
-                    background: state === 'done' ? '#10B981' : state === 'current' ? trConfig.accentColor : '#F8FAFC',
-                    border: `2px solid ${state === 'done' ? '#10B981' : state === 'current' ? trConfig.accentColor : '#E2E8F0'}`,
+                    <div style={{
+                    width: statusDotPreviewPx, height: statusDotPreviewPx, borderRadius: '50%', flexShrink: 0, zIndex: 1,
+                    background: state === 'done' ? dotColor : state === 'current' ? dotColor : '#F8FAFC',
+                    border: `2px solid ${state === 'done' ? dotColor : state === 'current' ? dotColor : '#E2E8F0'}`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.25s',
                   }}>
                     {state === 'done' && (
-                      <svg viewBox="0 0 16 16" fill="white" width="9" height="9">
+                      <svg viewBox="0 0 16 16" fill="white" width={Math.round(statusDotPreviewPx * 0.45)} height={Math.round(statusDotPreviewPx * 0.45)}>
                         <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 01.208 1.04l-5 7.5a.75.75 0 01-1.154.114l-3-3a.75.75 0 011.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 011.04-.207z" clipRule="evenodd" />
                       </svg>
                     )}
-                    {state === 'current' && <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'white' }} />}
+                    {state === 'current' && <div style={{ width: Math.round(statusDotPreviewPx * 0.35), height: Math.round(statusDotPreviewPx * 0.35), borderRadius: '50%', background: 'white' }} />}
                     {state === 'future' && <span style={{ fontSize: 8, fontWeight: 700, color: '#CBD5E1' }}>{i + 1}</span>}
                   </div>
                   {i < arr.length - 1 && (
-                    <div style={{ width: statusConnW, flex: 1, minHeight: 20, background: state === 'done' ? '#10B981' : '#E2E8F0', margin: '2px 0', borderRadius: statusConnW }} />
+                    <div style={{ width: statusConnW, flex: 1, minHeight: 20, background: state === 'done' ? dotColor : '#E2E8F0', margin: '2px 0', borderRadius: statusConnW }} />
                   )}
                 </div>
                 {/* .tr-step-body: padding 2px 0 28px → 2px 0 20px; last child 4px */}
                 <div style={{ flex: 1, padding: `2px 0 ${i < arr.length - 1 ? 20 : 4}px` }}>
                   {/* .tr-step-label: calc(14px*scale), weight 700, line-height=dot height */}
                   <div style={{
-                    fontSize: fs(11), fontWeight: 700, lineHeight: '20px',
+                    fontSize: fs(11), fontWeight: 700, lineHeight: `${statusDotPreviewPx}px`,
                     color: state === 'done' ? '#0F172A' : state === 'current' ? trConfig.accentColor : '#CBD5E1',
                   }}>
                     {label}
@@ -687,6 +705,69 @@ export default function Apariencia() {
                     ? <div style={{ width: px, height: 28, background: selected ? trConfig.accentColor : '#CBD5E1', borderRadius: px / 2, transition: 'background 0.15s' }} />
                     : <div style={{ height: px, width: 28, background: selected ? trConfig.accentColor : '#CBD5E1', borderRadius: px / 2, transition: 'background 0.15s' }} />
                   }
+                  <span style={{ fontSize: 10, fontWeight: selected ? 700 : 500, color: selected ? trConfig.accentColor : '#64748B', fontFamily: 'var(--font-geist-sans), sans-serif' }}>
+                    {label}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Dot color */}
+        <div className="cn-field">
+          <div className="cn-label">Color de los puntos</div>
+          <div className="cn-colors">
+            {DOT_COLOR_PRESETS.map(c => (
+              <div
+                key={c}
+                className={`cn-color-swatch${trConfig.dotColor === c ? ' selected' : ''}`}
+                style={{ background: c }}
+                onClick={() => setTrConfig(p => ({ ...p, dotColor: c }))}
+              />
+            ))}
+            <div
+              className="cn-color-custom"
+              style={{ background: DOT_COLOR_PRESETS.includes(trConfig.dotColor) ? undefined : trConfig.dotColor }}
+              onClick={() => trDotRef.current?.click()}
+            >
+              {DOT_COLOR_PRESETS.includes(trConfig.dotColor) ? '+' : null}
+              <input
+                ref={trDotRef}
+                type="color"
+                value={trConfig.dotColor}
+                onChange={e => setTrConfig(p => ({ ...p, dotColor: e.target.value }))}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Dot size */}
+        <div className="cn-field">
+          <div className="cn-label">Tamaño de los puntos</div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+            {DOT_OPTS.map(({ id, label, statusPreviewPx, locPreviewPx }) => {
+              const isStatus   = trConfig.mode === 'status'
+              const currentVal = isStatus ? trConfig.statusDotSize : trConfig.locationDotSize
+              const selected   = currentVal === id
+              const pxShow     = isStatus ? statusPreviewPx : locPreviewPx
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setTrConfig(p => isStatus
+                    ? { ...p, statusDotSize: id }
+                    : { ...p, locationDotSize: id }
+                  )}
+                  style={{
+                    flex: 1, padding: '10px 6px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                    background: selected ? trConfig.accentColor + '12' : '#F8FAFC',
+                    outline: `2px solid ${selected ? trConfig.accentColor : 'rgba(15,23,42,0.1)'}`,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                    transition: 'outline-color 0.15s, background 0.15s',
+                  }}
+                >
+                  <div style={{ width: pxShow, height: pxShow, borderRadius: '50%', background: selected ? trConfig.accentColor : '#CBD5E1', transition: 'all 0.15s' }} />
                   <span style={{ fontSize: 10, fontWeight: selected ? 700 : 500, color: selected ? trConfig.accentColor : '#64748B', fontFamily: 'var(--font-geist-sans), sans-serif' }}>
                     {label}
                   </span>

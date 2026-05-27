@@ -40,6 +40,9 @@ interface TrackingConfig {
   mapStyle?: string
   statusConnectorSize?:   'sm' | 'md' | 'lg'
   locationConnectorSize?: 'sm' | 'md' | 'lg'
+  dotColor?:              string
+  statusDotSize?:         'sm' | 'md' | 'lg'
+  locationDotSize?:       'sm' | 'md' | 'lg'
 }
 
 const FONT_STACKS: Record<string, string> = {
@@ -71,8 +74,10 @@ const GOOGLE_FONT_URLS: Record<string, string> = {
   Ubuntu:           'https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;700&display=swap',
 }
 
-const FONT_SCALES: Record<string, string> = { sm: '0.875', md: '1', lg: '1.125' }
-const CONNECTOR_PX: Record<string, string> = { sm: '2px', md: '4px', lg: '7px' }
+const FONT_SCALES:    Record<string, string> = { sm: '0.875', md: '1', lg: '1.125' }
+const CONNECTOR_PX:   Record<string, string> = { sm: '2px', md: '4px', lg: '7px' }
+const STATUS_DOT_PX:  Record<string, string> = { sm: '20px', md: '28px', lg: '36px' }
+const LOCATION_DOT_PX:Record<string, string> = { sm: '7px',  md: '9px',  lg: '13px' }
 
 type Step = {
   key: Status
@@ -228,6 +233,8 @@ export default function TrackingClient({
     '--tr-scale':        FONT_SCALES[trackingConfig?.fontSize   ?? 'md']     ?? '1',
     '--tr-connector-w':  CONNECTOR_PX[trackingConfig?.statusConnectorSize   ?? 'sm'] ?? '2px',
     '--tr-connector-h':  CONNECTOR_PX[trackingConfig?.locationConnectorSize ?? 'sm'] ?? '2px',
+    '--tr-dot-color':    trackingConfig?.dotColor ?? '#10B981',
+    '--tr-dot-sz':       STATUS_DOT_PX[trackingConfig?.statusDotSize ?? 'md'] ?? '28px',
   } as React.CSSProperties
 
   const fetchDelivery = useCallback(async () => {
@@ -318,7 +325,9 @@ export default function TrackingClient({
     }
     const statusDot   = STATUS_DOTS[delivery.status]  ?? '#1D9E75'
     const statusLabel = STATUS_LABELS[delivery.status] ?? 'en camino'
-    const font = FONT_STACKS[trackingConfig.fontFamily ?? 'system'] ?? FONT_STACKS.system
+    const font       = FONT_STACKS[trackingConfig.fontFamily ?? 'system'] ?? FONT_STACKS.system
+    const dotColor   = trackingConfig?.dotColor ?? '#10B981'
+    const locDotSz   = parseInt(LOCATION_DOT_PX[trackingConfig?.locationDotSize ?? 'md'] ?? '9')
 
     const PEEK = 72
 
@@ -445,7 +454,7 @@ export default function TrackingClient({
                         />
                       </div>
                     )}
-                    <div style={{ width: 9, height: 9, borderRadius: '50%', flexShrink: 0, background: (done || active) ? accent : '#CBD5E1', boxShadow: active ? `0 0 0 3px ${accent}33` : 'none', transition: 'background 0.35s, box-shadow 0.35s' }} />
+                    <div style={{ width: locDotSz, height: locDotSz, borderRadius: '50%', flexShrink: 0, background: (done || active) ? dotColor : '#CBD5E1', boxShadow: active ? `0 0 0 3px ${dotColor}33` : 'none', transition: 'background 0.35s, box-shadow 0.35s' }} />
                     {i < arr.length - 1 && (
                       <div className="tr-h-connector">
                         <div
@@ -455,7 +464,7 @@ export default function TrackingClient({
                       </div>
                     )}
                   </div>
-                  <span style={{ fontSize: 9, marginTop: 4, textAlign: 'center' as const, lineHeight: 1.2, color: active ? accent : done ? '#475569' : '#94A3B8', fontWeight: active ? 700 : 400 }}>{label}</span>
+                  <span style={{ fontSize: 9, marginTop: 4, textAlign: 'center' as const, lineHeight: 1.2, color: active ? dotColor : done ? '#475569' : '#94A3B8', fontWeight: active ? 700 : 400 }}>{label}</span>
                 </div>
               )
             })}

@@ -8,11 +8,13 @@ import '../canal.css'
 interface CheckoutSettings {
   requireName: boolean; requirePhone: boolean; requireAddress: boolean
   allowNotes: boolean; minOrder: string; deliveryEnabled: boolean; deliveryFee: string
+  deliveryTypes: { delivery: boolean; pickup: boolean }
 }
 
 const DEFAULTS: CheckoutSettings = {
   requireName: true, requirePhone: true, requireAddress: false,
   allowNotes: true, minOrder: '', deliveryEnabled: false, deliveryFee: '',
+  deliveryTypes: { delivery: true, pickup: false },
 }
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
@@ -30,8 +32,11 @@ const MOCK_ITEMS = [
 ]
 
 function CheckoutPreview({ settings }: { settings: CheckoutSettings }) {
+  const bothTypes    = settings.deliveryTypes.delivery && settings.deliveryTypes.pickup
+  const onlyPickup   = !settings.deliveryTypes.delivery && settings.deliveryTypes.pickup
+  const [previewType, setPreviewType] = useState<'delivery' | 'pickup'>(onlyPickup ? 'pickup' : 'delivery')
   const subtotal = MOCK_ITEMS.reduce((s, i) => s + i.price * i.qty, 0)
-  const fee      = settings.deliveryEnabled && settings.deliveryFee ? Number(settings.deliveryFee) : 0
+  const fee      = previewType === 'delivery' && settings.deliveryEnabled && settings.deliveryFee ? Number(settings.deliveryFee) : 0
   const total    = subtotal + fee
 
   return (
@@ -96,6 +101,50 @@ function CheckoutPreview({ settings }: { settings: CheckoutSettings }) {
           </div>
         </div>
 
+        {/* Delivery type selector */}
+        {(bothTypes || settings.deliveryTypes.delivery || settings.deliveryTypes.pickup) && (
+          <div style={{ background: 'white', borderRadius: 14, padding: '12px 14px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#0F172A', marginBottom: 10 }}>Tipo de entrega</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {settings.deliveryTypes.delivery && (
+                <button
+                  type="button"
+                  onClick={() => setPreviewType('delivery')}
+                  style={{
+                    flex: 1, padding: '8px 6px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                    background: previewType === 'delivery' ? '#EDE9FE' : '#F8FAFC',
+                    outline: `2px solid ${previewType === 'delivery' ? '#7C3AED' : '#E2E8F0'}`,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+                  }}
+                >
+                  <svg viewBox="0 0 20 20" fill={previewType === 'delivery' ? '#7C3AED' : '#94A3B8'} width="16" height="16">
+                    <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
+                    <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1v-1h1a1 1 0 00.9-.561l2-4A1 1 0 0014 9h-3V5a1 1 0 00-1-1H3z"/>
+                  </svg>
+                  <span style={{ fontSize: 9, fontWeight: previewType === 'delivery' ? 700 : 500, color: previewType === 'delivery' ? '#7C3AED' : '#64748B' }}>Domicilio</span>
+                </button>
+              )}
+              {settings.deliveryTypes.pickup && (
+                <button
+                  type="button"
+                  onClick={() => setPreviewType('pickup')}
+                  style={{
+                    flex: 1, padding: '8px 6px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                    background: previewType === 'pickup' ? '#EDE9FE' : '#F8FAFC',
+                    outline: `2px solid ${previewType === 'pickup' ? '#7C3AED' : '#E2E8F0'}`,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+                  }}
+                >
+                  <svg viewBox="0 0 20 20" fill={previewType === 'pickup' ? '#7C3AED' : '#94A3B8'} width="16" height="16">
+                    <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zm14 4H2v7a2 2 0 002 2h12a2 2 0 002-2V8zm-8 3a1 1 0 011 1v2a1 1 0 01-2 0v-2a1 1 0 011-1z" clipRule="evenodd"/>
+                  </svg>
+                  <span style={{ fontSize: 9, fontWeight: previewType === 'pickup' ? 700 : 500, color: previewType === 'pickup' ? '#7C3AED' : '#64748B' }}>Retiro en tienda</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Customer info section */}
         <div style={{ background: 'white', borderRadius: 14, padding: '12px 14px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: '#0F172A', marginBottom: 10 }}>Tus datos</div>
@@ -112,9 +161,9 @@ function CheckoutPreview({ settings }: { settings: CheckoutSettings }) {
                 <div style={{ height: 8, width: '40%', background: '#E2E8F0', borderRadius: 3 }} />
               </div>
             )}
-            {settings.requireAddress && (
+            {settings.requireAddress && previewType === 'delivery' && (
               <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 10px' }}>
-                <div style={{ fontSize: 8, color: '#94A3B8', marginBottom: 2 }}>Direccion</div>
+                <div style={{ fontSize: 8, color: '#94A3B8', marginBottom: 2 }}>Direccion de entrega</div>
                 <div style={{ height: 8, width: '70%', background: '#E2E8F0', borderRadius: 3 }} />
               </div>
             )}
@@ -227,6 +276,43 @@ export default function CheckoutPage() {
                   <div className="cn-toggle-hint">Permite que el cliente agregue instrucciones especiales</div>
                 </div>
                 <Toggle checked={settings.allowNotes} onChange={v => setSetting('allowNotes', v)} />
+              </div>
+            </div>
+          </div>
+
+          <div className="cn-section">
+            <div className="cn-section-head">
+              <div className="cn-section-icon">
+                <svg viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
+                  <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1v-1h1a1 1 0 00.9-.561l2-4A1 1 0 0014 9h-3V5a1 1 0 00-1-1H3z"/>
+                </svg>
+              </div>
+              <div>
+                <div className="cn-section-title">Tipo de entrega</div>
+                <div className="cn-section-sub">Metodos de entrega que ofreces</div>
+              </div>
+            </div>
+            <div className="cn-section-body">
+              <div className="cn-toggle-row">
+                <div className="cn-toggle-info">
+                  <div className="cn-toggle-label">Domicilio</div>
+                  <div className="cn-toggle-hint">El pedido se entrega en la direccion del cliente</div>
+                </div>
+                <Toggle
+                  checked={settings.deliveryTypes.delivery}
+                  onChange={v => setSettings(s => ({ ...s, deliveryTypes: { ...s.deliveryTypes, delivery: v } }))}
+                />
+              </div>
+              <div className="cn-toggle-row">
+                <div className="cn-toggle-info">
+                  <div className="cn-toggle-label">Retiro en tienda</div>
+                  <div className="cn-toggle-hint">El cliente viene a buscar su pedido</div>
+                </div>
+                <Toggle
+                  checked={settings.deliveryTypes.pickup}
+                  onChange={v => setSettings(s => ({ ...s, deliveryTypes: { ...s.deliveryTypes, pickup: v } }))}
+                />
               </div>
             </div>
           </div>

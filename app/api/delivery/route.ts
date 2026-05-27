@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { id, store_id, order_id, customer_name, customer_phone, customer_lat, customer_lng } = body
+    const { id, store_id, order_id, customer_name, customer_phone, customer_lat, customer_lng, delivery_address } = body
 
     if (!store_id || !customer_name) {
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       order_id: order_id ?? null,
       customer_name,
       customer_phone: customer_phone ?? '',
-      delivery_address: '',
+      delivery_address: delivery_address ?? '',
       status: 'pending',
       driver_fee: 0,
       fee_paid: false,

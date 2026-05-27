@@ -73,6 +73,12 @@ type Store = {
   description: string | null; whatsapp: string | null; instagram: string | null
   payment_methods: unknown; template: string | null
   template_config?: TemplateConfig | null
+  checkout_settings?: {
+    requireName?: boolean; requirePhone?: boolean; requireAddress?: boolean
+    allowNotes?: boolean; minOrder?: string
+    deliveryEnabled?: boolean; deliveryFee?: string
+    deliveryTypes?: { delivery?: boolean; pickup?: boolean }
+  } | null
 }
 
 
@@ -111,6 +117,11 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const [locationState, setLocationState] = useState<'idle' | 'requesting' | 'granted' | 'denied'>('idle')
   const [customerLat, setCustomerLat] = useState<number | null>(null)
   const [customerLng, setCustomerLng] = useState<number | null>(null)
+  const [customerAddress, setCustomerAddress] = useState('')
+  const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>(() => {
+    const dt = store.checkout_settings?.deliveryTypes
+    return (dt?.delivery === false && dt?.pickup) ? 'pickup' : 'delivery'
+  })
   const [installPrompt, setInstallPrompt] = useState<Event & { prompt(): void } | null>(null)
   const [showIosHint, setShowIosHint] = useState(false)
   const [isIos, setIsIos]   = useState(false)
@@ -177,6 +188,17 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const cartItems  = Object.values(cart).filter(i => i.quantity > 0)
   const cartCount  = cartItems.reduce((s, i) => s + i.quantity, 0)
   const cartTotal  = cartItems.reduce((s, i) => s + (i.price + i.extraPrice) * i.quantity, 0)
+
+  // ── Checkout settings ──
+  const cs              = store.checkout_settings ?? {}
+  const dtOn            = cs.deliveryTypes?.delivery !== false  // domicilio habilitado (default true)
+  const puOn            = cs.deliveryTypes?.pickup === true     // retiro habilitado (default false)
+  const bothTypes       = dtOn && puOn
+  const requireAddress  = cs.requireAddress ?? false
+  const deliveryFeeAmt  = dtOn && deliveryType === 'delivery' && cs.deliveryEnabled && cs.deliveryFee
+    ? Number(cs.deliveryFee)
+    : 0
+  const orderTotal = cartTotal + deliveryFeeAmt
 
   function getProdQty(productId: string): number {
     return Object.values(cart).filter(i => (i.productId ?? i.id) === productId).reduce((s, i) => s + i.quantity, 0)
@@ -291,6 +313,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
     const paymentLabel = selectedPayment
       ? (enabledMethods.find(m => m.type === selectedPayment)?.label ?? selectedPayment)
       : paymentFreeText
+    const isPickup = deliveryType === 'pickup'
 
     try {
       const newOrderId = crypto.randomUUID()
@@ -298,7 +321,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
         id: newOrderId, store_id: store.id,
         customer_name: customerName.trim(), customer_phone: customerPhone.trim(),
         customer_notes: customerNotes.trim() || null,
-        payment_method: paymentLabel || null, total: cartTotal, status: 'pending',
+        payment_method: paymentLabel || null, total: orderTotal, status: 'pending',
       })
       if (oErr) throw new Error(oErr.message)
 
@@ -314,15 +337,16 @@ export default function StoreShell({ store, products, categories = [] }: { store
         }))
       )
 
-      // Generate delivery ID upfront so tracking link is always available
-      const newDeliveryId = crypto.randomUUID()
-      setDeliveryTrackId(newDeliveryId)
+      // Comanda lines
+      const newDeliveryId = isPickup ? null : crypto.randomUUID()
+      if (newDeliveryId) setDeliveryTrackId(newDeliveryId)
 
-      // Comanda lines (tracking link always included)
       const lines: string[] = [
         `*Comanda #${newOrderId.slice(0, 8).toUpperCase()}*`,
         new Date().toLocaleString('es-VE', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
         '', `*Nombre:* ${customerName}`, `*Telefono:* ${customerPhone}`,
+        ...(bothTypes ? [`*Tipo:* ${isPickup ? 'Retiro en tienda' : 'Domicilio'}`] : []),
+        ...(!isPickup && customerAddress.trim() ? [`*Direccion:* ${customerAddress.trim()}`] : []),
         ...(paymentLabel ? [`*Pago:* ${paymentLabel}`] : []),
         '', '*Productos:*',
         ...cartItems.flatMap(i => {
@@ -335,26 +359,30 @@ export default function StoreShell({ store, products, categories = [] }: { store
           if (so?.notes)     rows.push(`    Nota: ${so.notes}`)
           return rows
         }),
-        '', `*Total: $${cartTotal.toFixed(2)}*`,
+        '', `*Subtotal: $${cartTotal.toFixed(2)}*`,
+        ...(deliveryFeeAmt > 0 ? [`*Envio: $${deliveryFeeAmt.toFixed(2)}*`] : []),
+        `*Total: $${orderTotal.toFixed(2)}*`,
         ...(customerNotes ? ['', `*Notas:* ${customerNotes}`] : []),
-        '', 'Rastrea tu pedido en tiempo real:', `https://lyte-app.com/delivery/${newDeliveryId}`,
+        ...(!isPickup && newDeliveryId ? ['', 'Rastrea tu pedido en tiempo real:', `https://lyte-app.com/delivery/${newDeliveryId}`] : []),
       ]
 
-      // Create delivery BEFORE navigating — fire-and-forget cancels on mobile
-      // when browser backgrounds after WhatsApp opens
-      await fetch('/api/delivery', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: newDeliveryId,
-          store_id: store.id,
-          order_id: newOrderId,
-          customer_name: customerName.trim(),
-          customer_phone: customerPhone.trim(),
-          customer_lat: customerLat,
-          customer_lng: customerLng,
-        }),
-      }).catch(() => {})
+      // Create delivery record only for domicilio
+      if (!isPickup && newDeliveryId) {
+        await fetch('/api/delivery', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: newDeliveryId,
+            store_id: store.id,
+            order_id: newOrderId,
+            customer_name: customerName.trim(),
+            customer_phone: customerPhone.trim(),
+            delivery_address: customerAddress.trim(),
+            customer_lat: customerLat,
+            customer_lng: customerLng,
+          }),
+        }).catch(() => {})
+      }
 
       const shortId = newOrderId.slice(0, 8).toUpperCase()
       setOrderId(shortId); setCart({})
@@ -463,11 +491,59 @@ export default function StoreShell({ store, products, categories = [] }: { store
               </div>
             </div>
           ))}
+          {deliveryFeeAmt > 0 && (
+            <div className="sf-co-total" style={{ fontWeight: 400, fontSize: 13, color: '#64748B', borderTop: 'none', paddingTop: 0 }}>
+              <span>Envio</span>
+              <span>${deliveryFeeAmt.toFixed(2)}</span>
+            </div>
+          )}
           <div className="sf-co-total">
             <span>{t('store.total')}</span>
-            <span className="sf-co-total-amt">${cartTotal.toFixed(2)}</span>
+            <span className="sf-co-total-amt">${orderTotal.toFixed(2)}</span>
           </div>
         </div>
+
+        {/* Delivery type selector */}
+        {bothTypes && (
+          <div className="sf-co-section">
+            <h3 className="sf-co-section-title">Tipo de entrega</h3>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => setDeliveryType('delivery')}
+                style={{
+                  flex: 1, padding: '12px 8px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                  background: deliveryType === 'delivery' ? '#EDE9FE' : '#F8FAFC',
+                  outline: `2px solid ${deliveryType === 'delivery' ? '#7C3AED' : '#E2E8F0'}`,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                  transition: 'all 0.15s',
+                }}
+              >
+                <svg viewBox="0 0 20 20" fill={deliveryType === 'delivery' ? '#7C3AED' : '#94A3B8'} width="20" height="20">
+                  <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
+                  <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1v-1h1a1 1 0 00.9-.561l2-4A1 1 0 0014 9h-3V5a1 1 0 00-1-1H3z"/>
+                </svg>
+                <span style={{ fontSize: 13, fontWeight: deliveryType === 'delivery' ? 700 : 500, color: deliveryType === 'delivery' ? '#7C3AED' : '#64748B' }}>Domicilio</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeliveryType('pickup')}
+                style={{
+                  flex: 1, padding: '12px 8px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                  background: deliveryType === 'pickup' ? '#EDE9FE' : '#F8FAFC',
+                  outline: `2px solid ${deliveryType === 'pickup' ? '#7C3AED' : '#E2E8F0'}`,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                  transition: 'all 0.15s',
+                }}
+              >
+                <svg viewBox="0 0 20 20" fill={deliveryType === 'pickup' ? '#7C3AED' : '#94A3B8'} width="20" height="20">
+                  <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zm14 4H2v7a2 2 0 002 2h12a2 2 0 002-2V8zm-8 3a1 1 0 011 1v2a1 1 0 01-2 0v-2a1 1 0 011-1z" clipRule="evenodd"/>
+                </svg>
+                <span style={{ fontSize: 13, fontWeight: deliveryType === 'pickup' ? 700 : 500, color: deliveryType === 'pickup' ? '#7C3AED' : '#64748B' }}>Retiro en tienda</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="sf-co-section">
           <h3 className="sf-co-section-title">{t('store.yourInfo')}</h3>
@@ -479,6 +555,12 @@ export default function StoreShell({ store, products, categories = [] }: { store
             <label>{t('store.phone')}</label>
             <input type="tel" placeholder={t('store.phonePlaceholder')} value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} />
           </div>
+          {requireAddress && deliveryType === 'delivery' && (
+            <div className="sf-co-field">
+              <label>Direccion de entrega</label>
+              <input type="text" placeholder="Av. Principal, Edificio X, Apto Y" value={customerAddress} onChange={e => setCustomerAddress(e.target.value)} />
+            </div>
+          )}
           <div className="sf-co-field">
             <label>{t('store.notes')} <span className="sf-optional">{t('store.optional')}</span></label>
             <textarea placeholder={t('store.notesPlaceholder')} rows={2} value={customerNotes} onChange={e => setCustomerNotes(e.target.value)} />
@@ -556,7 +638,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
 
         {error && <div className="sf-co-error">{error}</div>}
         <button className="sf-submit-btn" onClick={handleSubmit} disabled={submitting || cartItems.length === 0}>
-          {submitting ? t('store.sending') : `${t('store.confirmOrder')} · $${cartTotal.toFixed(2)}`}
+          {submitting ? t('store.sending') : `${t('store.confirmOrder')} · $${orderTotal.toFixed(2)}`}
         </button>
       </div>
 

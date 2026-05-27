@@ -17,6 +17,7 @@ interface Props {
   mapboxToken: string
   mapStyle?:   string
   accent?:     string
+  locked?:     boolean
 }
 
 function pad(
@@ -36,6 +37,7 @@ export default function TrackingMap({
   mapboxToken,
   mapStyle = 'mapbox://styles/mapbox/standard',
   accent = '#7C3AED',
+  locked = false,
 }: Props) {
   const mapRef  = useRef<MapRef>(null)
   const loaded  = useRef(false)
@@ -87,14 +89,15 @@ export default function TrackingMap({
         style={{ width: '100%', height: '100%' }}
         mapStyle={mapStyle}
         mapboxAccessToken={mapboxToken}
-        scrollZoom
-        doubleClickZoom
-        touchZoomRotate
+        scrollZoom={!locked}
+        doubleClickZoom={!locked}
+        touchZoomRotate={!locked}
+        dragPan={!locked}
         dragRotate={false}
         attributionControl={false}
         onLoad={() => { loaded.current = true; fitInitial() }}
       >
-        <NavigationControl position="top-right" showCompass={false} />
+        {!locked && <NavigationControl position="top-right" showCompass={false} />}
 
         {/* Store marker — 3D building with logo, shown while driver not yet assigned */}
         {hasStore && !hasDriver && (

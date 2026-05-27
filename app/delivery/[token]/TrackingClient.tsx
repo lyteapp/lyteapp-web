@@ -361,8 +361,8 @@ export default function TrackingClient({
     return (
       <div style={{ ...cssVars, position: 'relative', height: '100dvh', overflow: 'hidden', background: '#E4EAF1', fontFamily: font }}>
 
-        {/* Map area — expands as bottom sheet slides down */}
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: `calc(56% + ${sheetTranslateY}px)` }}>
+        {/* Map area — full screen, sheet overlays on top */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
           <TrackingMap
             driverLat={delivery.status === 'picked_up' ? (driverLoc?.lat ?? delivery.driver_lat) : null}
             driverLng={delivery.status === 'picked_up' ? (driverLoc?.lng ?? delivery.driver_lng) : null}
@@ -375,6 +375,7 @@ export default function TrackingClient({
             mapboxToken={mapboxToken}
             mapStyle={trackingConfig?.mapStyle}
             accent={accent}
+            locked
           />
         </div>
 

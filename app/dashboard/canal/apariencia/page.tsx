@@ -24,18 +24,18 @@ const TR_BG_PRESETS = [
   { color: '#F0FDF4', label: 'Menta'   },
 ]
 const TR_FONTS = [
-  { id: 'system',            name: 'Sistema'         },
-  { id: 'Inter',             name: 'Inter'           },
-  { id: 'Roboto',            name: 'Roboto'          },
-  { id: 'Poppins',           name: 'Poppins'         },
-  { id: 'Montserrat',        name: 'Montserrat'      },
-  { id: 'Lato',              name: 'Lato'            },
-  { id: 'DM Sans',           name: 'DM Sans'         },
-  { id: 'Nunito',            name: 'Nunito'          },
-  { id: 'Raleway',           name: 'Raleway'         },
-  { id: 'Oswald',            name: 'Oswald'          },
-  { id: 'Playfair Display',  name: 'Playfair'        },
-  { id: 'Ubuntu',            name: 'Ubuntu'          },
+  { id: 'system',           name: 'Sistema'  },
+  { id: 'Inter',            name: 'Inter'    },
+  { id: 'Roboto',           name: 'Roboto'   },
+  { id: 'Poppins',          name: 'Poppins'  },
+  { id: 'Montserrat',       name: 'Monts.'   },
+  { id: 'Lato',             name: 'Lato'     },
+  { id: 'DM Sans',          name: 'DM Sans'  },
+  { id: 'Nunito',           name: 'Nunito'   },
+  { id: 'Raleway',          name: 'Raleway'  },
+  { id: 'Oswald',           name: 'Oswald'   },
+  { id: 'Playfair Display', name: 'Playfair' },
+  { id: 'Ubuntu',           name: 'Ubuntu'   },
 ]
 const TR_SIZES = [
   { id: 'sm', name: 'Pequeña' },
@@ -109,7 +109,16 @@ export default function Apariencia() {
   const [saving, setSaving]                 = useState(false)
   const [success, setSuccess]               = useState(false)
   const [error, setError]                   = useState('')
+  const [isMobile, setIsMobile]             = useState(false)
+  const [mobileTab, setMobileTab]           = useState<'preview' | 'config'>('preview')
   const trAccentRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   useEffect(() => {
     if (!user) return
@@ -167,413 +176,338 @@ export default function Apariencia() {
     setSaving(false)
   }
 
-  /* suppress unused-var warnings for state kept for save() */
   void template; void color; void categories; void categoryShapes; void setTemplate; void setColor; void setCategoryShapes
 
-  return (
-    <div style={{ margin: '-28px -32px', display: 'flex', height: 'calc(100dvh - 56px)', overflow: 'hidden' }}>
+  // ── Shared: phone screen contents ────────────────────────────────────
+  const screenContents = (
+    <div style={{
+      borderRadius: 38,
+      overflow: 'hidden',
+      height: 580,
+      position: 'relative',
+      fontFamily: previewFont,
+      background: trConfig.mode === 'location' ? mapPreset.bg : trConfig.bgColor,
+    }}>
 
-      {/* ── Preview canvas ── */}
-      <div style={{
-        flex: 1,
-        background: '#0F172A',
-        backgroundImage: 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)',
-        backgroundSize: '22px 22px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        overflow: 'hidden',
-        position: 'relative',
-      }}>
+      {/* ── Location mode preview ── */}
+      {trConfig.mode === 'location' && (
+        <div style={{ position: 'absolute', inset: 0 }}>
+          <svg viewBox="0 0 480 540" preserveAspectRatio="xMidYMid slice" style={{ position: 'absolute', inset: 0, width: '100%', height: '56%' }}>
+            <rect width="480" height="540" fill={mapPreset.bg}/>
+            <polygon points="0,200 120,180 200,260 80,300" fill={mapPreset.terrain} opacity="0.5"/>
+            <polygon points="320,80 480,60 480,200 360,180" fill={mapPreset.terrain} opacity="0.5"/>
+            <path d="M -20 120 L 100 110 L 200 130 L 320 100 L 460 140" stroke={mapPreset.road1} strokeWidth="32" fill="none" strokeLinecap="round"/>
+            <path d="M -20 290 L 90 280 L 220 310 L 360 290 L 480 320" stroke={mapPreset.road2} strokeWidth="28" fill="none" strokeLinecap="round"/>
+            <path d="M 80 -20 L 95 130 L 110 290 L 125 440" stroke={mapPreset.road1} strokeWidth="22" fill="none" strokeLinecap="round"/>
+            <path d="M 220 -20 L 230 130 L 240 310 L 250 460" stroke={mapPreset.road2} strokeWidth="26" fill="none" strokeLinecap="round"/>
+            <path d="M 350 -20 L 360 100 L 370 290 L 380 440" stroke={mapPreset.road1} strokeWidth="22" fill="none" strokeLinecap="round"/>
+            <rect x="40" y="160" width="50" height="40" rx="3" fill={mapPreset.building} opacity="0.7"/>
+            <rect x="140" y="170" width="60" height="50" rx="3" fill={mapPreset.building} opacity="0.6"/>
+            <rect x="270" y="160" width="50" height="40" rx="3" fill={mapPreset.building} opacity="0.7"/>
+            <rect x="50" y="330" width="40" height="60" rx="3" fill={mapPreset.building} opacity="0.7"/>
+            <rect x="150" y="340" width="55" height="55" rx="3" fill={mapPreset.building} opacity="0.6"/>
+            <path d="M 110 295 Q 180 310 235 330 Q 280 350 320 360 L 360 380" stroke={trConfig.accentColor} strokeWidth="5" fill="none" strokeLinecap="round" strokeDasharray="10 6" opacity="0.85"/>
+          </svg>
 
-        {/* label */}
-        <div style={{ position: 'absolute', top: 20, left: 24, fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-          Vista previa
-        </div>
-
-        {/* Phone frame */}
-        <div style={{
-          background: '#1C1C1E',
-          borderRadius: 50,
-          padding: '16px 10px',
-          boxShadow: '0 0 0 1px rgba(255,255,255,0.07), 0 48px 120px rgba(0,0,0,0.7)',
-          width: 310,
-          flexShrink: 0,
-        }}>
-          {/* dynamic island */}
-          <div style={{ width: 90, height: 8, background: '#000', borderRadius: 20, margin: '0 auto 14px' }} />
-
-          {/* screen */}
-          <div style={{
-            borderRadius: 38,
-            overflow: 'hidden',
-            height: 580,
-            position: 'relative',
-            fontFamily: previewFont,
-            background: trConfig.mode === 'location' ? mapPreset.bg : trConfig.bgColor,
-          }}>
-
-            {/* ── Location mode preview ── */}
-            {trConfig.mode === 'location' && (
-              <div style={{ position: 'absolute', inset: 0 }}>
-
-                {/* Map SVG */}
-                <svg viewBox="0 0 480 540" preserveAspectRatio="xMidYMid slice" style={{ position: 'absolute', inset: 0, width: '100%', height: '56%' }}>
-                  <rect width="480" height="540" fill={mapPreset.bg}/>
-                  <polygon points="0,200 120,180 200,260 80,300" fill={mapPreset.terrain} opacity="0.5"/>
-                  <polygon points="320,80 480,60 480,200 360,180" fill={mapPreset.terrain} opacity="0.5"/>
-                  <path d="M -20 120 L 100 110 L 200 130 L 320 100 L 460 140" stroke={mapPreset.road1} strokeWidth="32" fill="none" strokeLinecap="round"/>
-                  <path d="M -20 290 L 90 280 L 220 310 L 360 290 L 480 320" stroke={mapPreset.road2} strokeWidth="28" fill="none" strokeLinecap="round"/>
-                  <path d="M 80 -20 L 95 130 L 110 290 L 125 440" stroke={mapPreset.road1} strokeWidth="22" fill="none" strokeLinecap="round"/>
-                  <path d="M 220 -20 L 230 130 L 240 310 L 250 460" stroke={mapPreset.road2} strokeWidth="26" fill="none" strokeLinecap="round"/>
-                  <path d="M 350 -20 L 360 100 L 370 290 L 380 440" stroke={mapPreset.road1} strokeWidth="22" fill="none" strokeLinecap="round"/>
-                  <rect x="40" y="160" width="50" height="40" rx="3" fill={mapPreset.building} opacity="0.7"/>
-                  <rect x="140" y="170" width="60" height="50" rx="3" fill={mapPreset.building} opacity="0.6"/>
-                  <rect x="270" y="160" width="50" height="40" rx="3" fill={mapPreset.building} opacity="0.7"/>
-                  <rect x="50" y="330" width="40" height="60" rx="3" fill={mapPreset.building} opacity="0.7"/>
-                  <rect x="150" y="340" width="55" height="55" rx="3" fill={mapPreset.building} opacity="0.6"/>
-                  <path d="M 110 295 Q 180 310 235 330 Q 280 350 320 360 L 360 380" stroke={trConfig.accentColor} strokeWidth="5" fill="none" strokeLinecap="round" strokeDasharray="10 6" opacity="0.85"/>
-                </svg>
-
-                {/* Header gradient overlay */}
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '14px 14px 32px', background: `linear-gradient(180deg, ${trConfig.accentColor}F2 0%, ${trConfig.accentColor}B3 60%, transparent 100%)`, zIndex: 5 }}>
-                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.75)', fontWeight: 400, marginBottom: 2 }}>Tu pedido</div>
-                  <div style={{ fontSize: 12, color: 'white', fontWeight: 600 }}>#0142 · La Cocina de Sofia</div>
-                </div>
-
-                {/* Courier pin on map */}
-                <div style={{ position: 'absolute', top: '38%', left: '38%', transform: 'translate(-50%, -50%)', zIndex: 6 }}>
-                  <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'white', border: `2.5px solid #4C1D95`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(76,29,149,0.4)' }}>
-                    <svg viewBox="0 0 20 20" fill="#4C1D95" width="18" height="18">
-                      <path d="M11 3H8v2H6v2h2v2H6v2h2v2h3v-2h2v-2h-2V7h2V5h-2V3z"/>
-                      <path fillRule="evenodd" d="M4 18a2 2 0 100-4 2 2 0 000 4zm12 0a2 2 0 100-4 2 2 0 000 4zM2 8h16v8H2V8z" clipRule="evenodd"/>
-                    </svg>
-                  </div>
-                  <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 38, height: 38, borderRadius: '50%', background: `${trConfig.accentColor}30`, animation: 'none' }} />
-                </div>
-
-                {/* Destination pin */}
-                <div style={{ position: 'absolute', top: '50%', left: '65%', transform: 'translate(-50%, -100%)', zIndex: 6 }}>
-                  <div style={{ width: 24, height: 24, borderRadius: '50% 50% 50% 0', background: '#0F172A', transform: 'rotate(-45deg)', border: '2px solid white', boxShadow: '0 3px 8px rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <svg viewBox="0 0 20 20" fill="white" width="10" height="10" style={{ transform: 'rotate(45deg)' }}>
-                      <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
-                    </svg>
-                  </div>
-                </div>
-
-                {/* GPS badge */}
-                <div style={{ position: 'absolute', top: 80, right: 10, zIndex: 6, background: 'white', padding: '4px 8px', borderRadius: 100, display: 'flex', alignItems: 'center', gap: 5, fontSize: 8, fontWeight: 500, color: '#475569', boxShadow: '0 2px 6px rgba(0,0,0,0.08)' }}>
-                  <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#1D9E75', flexShrink: 0 }} />
-                  Actualizado hace 6s
-                </div>
-
-                {/* Map bottom fade */}
-                <div style={{ position: 'absolute', top: 'calc(56% - 40px)', left: 0, right: 0, height: 50, background: 'linear-gradient(transparent, #F5F3EF)', zIndex: 4 }} />
-
-                {/* Bottom sheet */}
-                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '47%', background: '#F5F3EF', borderRadius: '20px 20px 0 0', zIndex: 10, overflowY: 'auto', scrollbarWidth: 'none' as const }}>
-                  <div style={{ width: 28, height: 3, background: 'rgba(15,23,42,0.15)', borderRadius: 100, margin: '8px auto 0' }} />
-
-                  {/* ETA */}
-                  <div style={{ padding: '10px 14px 6px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
-                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#1D9E75', flexShrink: 0 }} />
-                      <span style={{ fontSize: 8, color: '#1D9E75', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>en camino</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginBottom: 2 }}>
-                      <span style={{ fontSize: 26, fontWeight: 500, letterSpacing: '-1px', lineHeight: 1, color: '#0F172A' }}>8</span>
-                      <span style={{ fontSize: 13, color: '#475569' }}>min</span>
-                      <span style={{ fontSize: 9, color: '#475569', marginLeft: 3 }}>· llega 2:55 PM</span>
-                    </div>
-                    <div style={{ fontSize: 9, color: '#475569' }}>Luis esta a 1.4 km de tu casa</div>
-                  </div>
-
-                  {/* Timeline */}
-                  <div style={{ padding: '4px 14px 8px', display: 'flex', alignItems: 'flex-start' }}>
-                    {[
-                      { label: 'Recibido',   done: true,  active: false },
-                      { label: 'Preparando', done: true,  active: false },
-                      { label: 'Listo',      done: true,  active: false },
-                      { label: 'En camino',  done: false, active: true  },
-                      { label: 'Entregado',  done: false, active: false },
-                    ].map(({ label, done, active }, i, arr) => (
-                      <div key={label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <div style={{ width: '100%', display: 'flex', alignItems: 'center' }}>
-                          {i > 0 && <div style={{ flex: 1, height: 2, background: done ? trConfig.accentColor : 'rgba(148,163,184,0.3)' }} />}
-                          <div style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: (done || active) ? trConfig.accentColor : '#CBD5E1', boxShadow: active ? `0 0 0 3px ${trConfig.accentColor}33` : 'none', zIndex: 1 }} />
-                          {i < arr.length - 1 && <div style={{ flex: 1, height: 2, background: (done && !active) ? trConfig.accentColor : 'rgba(148,163,184,0.3)' }} />}
-                        </div>
-                        <span style={{ fontSize: 7, marginTop: 3, textAlign: 'center' as const, lineHeight: 1.2, color: done ? '#475569' : active ? trConfig.accentColor : '#94A3B8', fontWeight: active ? 600 : 400 }}>{label}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Courier card */}
-                  <div style={{ margin: '0 10px 7px', background: 'white', borderRadius: 12, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10, border: '0.5px solid rgba(15,23,42,0.08)' }}>
-                    <div style={{ width: 34, height: 34, borderRadius: '50%', background: trConfig.accentColor + '22', color: trConfig.accentColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: 11, flexShrink: 0 }}>LR</div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: '#0F172A', marginBottom: 1 }}>Luis Ramirez</div>
-                      <div style={{ fontSize: 9, color: '#475569' }}>Moto AB12C · 4.9</div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 5 }}>
-                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: trConfig.accentColor + '18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <svg viewBox="0 0 20 20" fill={trConfig.accentColor} width="12" height="12"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/></svg>
-                      </div>
-                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#25D366', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <svg viewBox="0 0 24 24" fill="white" width="13" height="13"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* PIN card */}
-                  <div style={{ margin: '0 10px 7px', borderRadius: 12, padding: '12px 14px', background: `linear-gradient(135deg, #4C1D95, ${trConfig.accentColor})`, color: 'white', position: 'relative', overflow: 'hidden' }}>
-                    <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative', zIndex: 1 }}>
-                      <div style={{ width: 32, height: 32, borderRadius: 9, background: 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <svg viewBox="0 0 20 20" fill="white" width="15" height="15"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"/></svg>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 8, opacity: 0.8, textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 3 }}>PIN de entrega</div>
-                        <div style={{ fontSize: 17, fontWeight: 600, letterSpacing: 4, lineHeight: 1 }}>4 7 2 9</div>
-                        <div style={{ fontSize: 8, opacity: 0.85, marginTop: 3 }}>Dile este numero a Luis al llegar</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* footer */}
-                  <div style={{ textAlign: 'center', padding: '6px 0 14px', fontSize: 9, color: '#94A3B8' }}>
-                    Powered by <strong style={{ color: '#64748B' }}>LyteApp</strong>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* ── Status mode preview ── */}
-            {trConfig.mode === 'status' && (
-              <div style={{ height: '100%', overflowY: 'auto', padding: '18px 14px 24px', display: 'flex', flexDirection: 'column', gap: 9, scrollbarWidth: 'none' as const }}>
-
-                {/* brand bar */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-                  <span style={{ fontSize: fs(15), fontWeight: 800, color: '#0F172A', letterSpacing: '-0.04em' }}>
-                    Lyte<span style={{ color: trConfig.accentColor }}>app</span>
-                  </span>
-                  <span style={{ fontSize: fs(8), fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                    Rastreo de pedido
-                  </span>
-                </div>
-
-                {/* hero card */}
-                <div style={{ background: 'white', borderRadius: 18, padding: '18px 14px', textAlign: 'center', boxShadow: '0 4px 20px rgba(15,23,42,0.08)' }}>
-                  <div style={{ width: 52, height: 52, borderRadius: '50%', background: trConfig.accentColor + '1A', margin: '0 auto 12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ width: 20, height: 20, borderRadius: '50%', background: trConfig.accentColor }} />
-                  </div>
-                  <div style={{ fontSize: fs(14), fontWeight: 800, color: '#0F172A', marginBottom: 6, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-                    En preparacion en cocina
-                  </div>
-                  <div style={{ fontSize: fs(11), color: '#64748B', lineHeight: 1.5 }}>
-                    Estamos preparando tu pedido con mucho cuidado. Te avisamos cuando salga.
-                  </div>
-                </div>
-
-                {/* info card */}
-                <div style={{ background: 'white', borderRadius: 14, padding: '10px 14px', boxShadow: '0 2px 10px rgba(15,23,42,0.05)' }}>
-                  <div style={{ fontSize: fs(12), fontWeight: 700, color: '#0F172A', marginBottom: 4 }}>Maria Garcia</div>
-                  <div style={{ fontSize: fs(10), color: '#64748B', display: 'flex', alignItems: 'flex-start', gap: 5 }}>
-                    <svg viewBox="0 0 20 20" fill="currentColor" width="11" height="11" style={{ flexShrink: 0, marginTop: 1, color: '#94A3B8' }}>
-                      <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                    </svg>
-                    Av. Libertador 1234, Caracas
-                  </div>
-                </div>
-
-                {/* steps card */}
-                <div style={{ background: 'white', borderRadius: 14, padding: '14px 14px 10px', boxShadow: '0 2px 10px rgba(15,23,42,0.05)' }}>
-                  <div style={{ fontSize: fs(9), fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 14 }}>
-                    Progreso de tu pedido
-                  </div>
-                  {STEPS_PREVIEW.map(({ label, state }, i, arr) => (
-                    <div key={label} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 18, flexShrink: 0 }}>
-                        <div style={{
-                          width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
-                          background: state === 'done' ? '#10B981' : state === 'current' ? trConfig.accentColor : '#F8FAFC',
-                          border: `2px solid ${state === 'done' ? '#10B981' : state === 'current' ? trConfig.accentColor : '#E2E8F0'}`,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}>
-                          {state === 'done' && (
-                            <svg viewBox="0 0 10 10" fill="white" width="8" height="8">
-                              <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                          )}
-                          {state === 'current' && <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'white' }} />}
-                        </div>
-                        {i < arr.length - 1 && (
-                          <div style={{ width: 2, height: 18, background: state === 'done' ? '#10B981' : '#E2E8F0', margin: '2px 0' }} />
-                        )}
-                      </div>
-                      <div style={{ paddingBottom: i < arr.length - 1 ? 18 : 0 }}>
-                        <div style={{
-                          fontSize: fs(11), fontWeight: state === 'current' ? 700 : 400, lineHeight: '18px',
-                          color: state === 'done' ? '#0F172A' : state === 'current' ? trConfig.accentColor : '#CBD5E1',
-                        }}>
-                          {label}
-                        </div>
-                        {state === 'current' && (
-                          <div style={{ fontSize: fs(9), color: '#64748B', marginTop: 2, lineHeight: 1.4 }}>
-                            Tu pedido esta en cocina, lo estan preparando.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* footer */}
-                <div style={{ textAlign: 'center', fontSize: fs(9), color: '#94A3B8', marginTop: 4 }}>
-                  Powered by <strong style={{ color: '#64748B' }}>LyteApp</strong>
-                </div>
-
-              </div>
-            )}
-
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '14px 14px 32px', background: `linear-gradient(180deg, ${trConfig.accentColor}F2 0%, ${trConfig.accentColor}B3 60%, transparent 100%)`, zIndex: 5 }}>
+            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.75)', fontWeight: 400, marginBottom: 2 }}>Tu pedido</div>
+            <div style={{ fontSize: 12, color: 'white', fontWeight: 600 }}>#0142 · La Cocina de Sofia</div>
           </div>
 
-          {/* home bar */}
-          <div style={{ width: 80, height: 4, background: '#3A3A3C', borderRadius: 2, margin: '14px auto 0' }} />
+          <div style={{ position: 'absolute', top: '38%', left: '38%', transform: 'translate(-50%, -50%)', zIndex: 6 }}>
+            <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'white', border: `2.5px solid #4C1D95`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(76,29,149,0.4)' }}>
+              <svg viewBox="0 0 20 20" fill="#4C1D95" width="18" height="18">
+                <path d="M11 3H8v2H6v2h2v2H6v2h2v2h3v-2h2v-2h-2V7h2V5h-2V3z"/>
+                <path fillRule="evenodd" d="M4 18a2 2 0 100-4 2 2 0 000 4zm12 0a2 2 0 100-4 2 2 0 000 4zM2 8h16v8H2V8z" clipRule="evenodd"/>
+              </svg>
+            </div>
+          </div>
+
+          <div style={{ position: 'absolute', top: '50%', left: '65%', transform: 'translate(-50%, -100%)', zIndex: 6 }}>
+            <div style={{ width: 24, height: 24, borderRadius: '50% 50% 50% 0', background: '#0F172A', transform: 'rotate(-45deg)', border: '2px solid white', boxShadow: '0 3px 8px rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg viewBox="0 0 20 20" fill="white" width="10" height="10" style={{ transform: 'rotate(45deg)' }}>
+                <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
+              </svg>
+            </div>
+          </div>
+
+          <div style={{ position: 'absolute', top: 80, right: 10, zIndex: 6, background: 'white', padding: '4px 8px', borderRadius: 100, display: 'flex', alignItems: 'center', gap: 5, fontSize: 8, fontWeight: 500, color: '#475569', boxShadow: '0 2px 6px rgba(0,0,0,0.08)' }}>
+            <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#1D9E75', flexShrink: 0 }} />
+            Actualizado hace 6s
+          </div>
+
+          <div style={{ position: 'absolute', top: 'calc(56% - 40px)', left: 0, right: 0, height: 50, background: 'linear-gradient(transparent, #F5F3EF)', zIndex: 4 }} />
+
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '47%', background: '#F5F3EF', borderRadius: '20px 20px 0 0', zIndex: 10, overflowY: 'auto', scrollbarWidth: 'none' as const }}>
+            <div style={{ width: 28, height: 3, background: 'rgba(15,23,42,0.15)', borderRadius: 100, margin: '8px auto 0' }} />
+            <div style={{ padding: '10px 14px 6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#1D9E75', flexShrink: 0 }} />
+                <span style={{ fontSize: 8, color: '#1D9E75', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>en camino</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginBottom: 2 }}>
+                <span style={{ fontSize: 26, fontWeight: 500, letterSpacing: '-1px', lineHeight: 1, color: '#0F172A' }}>8</span>
+                <span style={{ fontSize: 13, color: '#475569' }}>min</span>
+                <span style={{ fontSize: 9, color: '#475569', marginLeft: 3 }}>· llega 2:55 PM</span>
+              </div>
+              <div style={{ fontSize: 9, color: '#475569' }}>Luis esta a 1.4 km de tu casa</div>
+            </div>
+            <div style={{ padding: '4px 14px 8px', display: 'flex', alignItems: 'flex-start' }}>
+              {[
+                { label: 'Recibido', done: true, active: false },
+                { label: 'Preparando', done: true, active: false },
+                { label: 'Listo', done: true, active: false },
+                { label: 'En camino', done: false, active: true },
+                { label: 'Entregado', done: false, active: false },
+              ].map(({ label, done, active }, i, arr) => (
+                <div key={label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div style={{ width: '100%', display: 'flex', alignItems: 'center' }}>
+                    {i > 0 && <div style={{ flex: 1, height: 2, background: done ? trConfig.accentColor : 'rgba(148,163,184,0.3)' }} />}
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: (done || active) ? trConfig.accentColor : '#CBD5E1', boxShadow: active ? `0 0 0 3px ${trConfig.accentColor}33` : 'none', zIndex: 1 }} />
+                    {i < arr.length - 1 && <div style={{ flex: 1, height: 2, background: (done && !active) ? trConfig.accentColor : 'rgba(148,163,184,0.3)' }} />}
+                  </div>
+                  <span style={{ fontSize: 7, marginTop: 3, textAlign: 'center' as const, lineHeight: 1.2, color: done ? '#475569' : active ? trConfig.accentColor : '#94A3B8', fontWeight: active ? 600 : 400 }}>{label}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ margin: '0 10px 7px', background: 'white', borderRadius: 12, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10, border: '0.5px solid rgba(15,23,42,0.08)' }}>
+              <div style={{ width: 34, height: 34, borderRadius: '50%', background: trConfig.accentColor + '22', color: trConfig.accentColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: 11, flexShrink: 0 }}>LR</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#0F172A', marginBottom: 1 }}>Luis Ramirez</div>
+                <div style={{ fontSize: 9, color: '#475569' }}>Moto AB12C · 4.9</div>
+              </div>
+            </div>
+            <div style={{ margin: '0 10px 7px', borderRadius: 12, padding: '12px 14px', background: `linear-gradient(135deg, #4C1D95, ${trConfig.accentColor})`, color: 'white', position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative', zIndex: 1 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 9, background: 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg viewBox="0 0 20 20" fill="white" width="15" height="15"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"/></svg>
+                </div>
+                <div>
+                  <div style={{ fontSize: 8, opacity: 0.8, textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 3 }}>PIN de entrega</div>
+                  <div style={{ fontSize: 17, fontWeight: 600, letterSpacing: 4, lineHeight: 1 }}>4 7 2 9</div>
+                  <div style={{ fontSize: 8, opacity: 0.85, marginTop: 3 }}>Dile este numero a Luis al llegar</div>
+                </div>
+              </div>
+            </div>
+            <div style={{ textAlign: 'center', padding: '6px 0 14px', fontSize: 9, color: '#94A3B8' }}>
+              Powered by <strong style={{ color: '#64748B' }}>LyteApp</strong>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Status mode preview ── */}
+      {trConfig.mode === 'status' && (
+        <div style={{ height: '100%', overflowY: 'auto', padding: '18px 14px 24px', display: 'flex', flexDirection: 'column', gap: 9, scrollbarWidth: 'none' as const }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+            <span style={{ fontSize: fs(15), fontWeight: 800, color: '#0F172A', letterSpacing: '-0.04em' }}>
+              Lyte<span style={{ color: trConfig.accentColor }}>app</span>
+            </span>
+            <span style={{ fontSize: fs(8), fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              Rastreo de pedido
+            </span>
+          </div>
+          <div style={{ background: 'white', borderRadius: 18, padding: '18px 14px', textAlign: 'center', boxShadow: '0 4px 20px rgba(15,23,42,0.08)' }}>
+            <div style={{ width: 52, height: 52, borderRadius: '50%', background: trConfig.accentColor + '1A', margin: '0 auto 12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 20, height: 20, borderRadius: '50%', background: trConfig.accentColor }} />
+            </div>
+            <div style={{ fontSize: fs(14), fontWeight: 800, color: '#0F172A', marginBottom: 6, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+              En preparacion en cocina
+            </div>
+            <div style={{ fontSize: fs(11), color: '#64748B', lineHeight: 1.5 }}>
+              Estamos preparando tu pedido con mucho cuidado. Te avisamos cuando salga.
+            </div>
+          </div>
+          <div style={{ background: 'white', borderRadius: 14, padding: '10px 14px', boxShadow: '0 2px 10px rgba(15,23,42,0.05)' }}>
+            <div style={{ fontSize: fs(12), fontWeight: 700, color: '#0F172A', marginBottom: 4 }}>Maria Garcia</div>
+            <div style={{ fontSize: fs(10), color: '#64748B', display: 'flex', alignItems: 'flex-start', gap: 5 }}>
+              <svg viewBox="0 0 20 20" fill="currentColor" width="11" height="11" style={{ flexShrink: 0, marginTop: 1, color: '#94A3B8' }}>
+                <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+              </svg>
+              Av. Libertador 1234, Caracas
+            </div>
+          </div>
+          <div style={{ background: 'white', borderRadius: 14, padding: '14px 14px 10px', boxShadow: '0 2px 10px rgba(15,23,42,0.05)' }}>
+            <div style={{ fontSize: fs(9), fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 14 }}>
+              Progreso de tu pedido
+            </div>
+            {STEPS_PREVIEW.map(({ label, state }, i, arr) => (
+              <div key={label} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 18, flexShrink: 0 }}>
+                  <div style={{
+                    width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+                    background: state === 'done' ? '#10B981' : state === 'current' ? trConfig.accentColor : '#F8FAFC',
+                    border: `2px solid ${state === 'done' ? '#10B981' : state === 'current' ? trConfig.accentColor : '#E2E8F0'}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {state === 'done' && (
+                      <svg viewBox="0 0 10 10" fill="white" width="8" height="8">
+                        <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                    {state === 'current' && <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'white' }} />}
+                  </div>
+                  {i < arr.length - 1 && (
+                    <div style={{ width: 2, height: 18, background: state === 'done' ? '#10B981' : '#E2E8F0', margin: '2px 0' }} />
+                  )}
+                </div>
+                <div style={{ paddingBottom: i < arr.length - 1 ? 18 : 0 }}>
+                  <div style={{
+                    fontSize: fs(11), fontWeight: state === 'current' ? 700 : 400, lineHeight: '18px',
+                    color: state === 'done' ? '#0F172A' : state === 'current' ? trConfig.accentColor : '#CBD5E1',
+                  }}>
+                    {label}
+                  </div>
+                  {state === 'current' && (
+                    <div style={{ fontSize: fs(9), color: '#64748B', marginTop: 2, lineHeight: 1.4 }}>
+                      Tu pedido esta en cocina, lo estan preparando.
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ textAlign: 'center', fontSize: fs(9), color: '#94A3B8', marginTop: 4 }}>
+            Powered by <strong style={{ color: '#64748B' }}>LyteApp</strong>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+
+  // ── Shared: phone frame ───────────────────────────────────────────────
+  const phoneFrame = (
+    <div style={{
+      background: '#1C1C1E',
+      borderRadius: 50,
+      padding: '16px 10px',
+      boxShadow: '0 0 0 1px rgba(255,255,255,0.07), 0 48px 120px rgba(0,0,0,0.7)',
+      width: 310,
+      flexShrink: 0,
+    }}>
+      <div style={{ width: 90, height: 8, background: '#000', borderRadius: 20, margin: '0 auto 14px' }} />
+      {screenContents}
+      <div style={{ width: 80, height: 4, background: '#3A3A3C', borderRadius: 2, margin: '14px auto 0' }} />
+    </div>
+  )
+
+  // ── Shared: all tool controls ─────────────────────────────────────────
+  const toolsBody = (
+    <>
+      {/* mode switch */}
+      <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(15,23,42,0.07)', flexShrink: 0 }}>
+        <div className="cn-label" style={{ marginBottom: 8 }}>Estilo de rastreo</div>
+        <div style={{ display: 'flex', background: '#F1F5F9', borderRadius: 10, padding: 3, gap: 2 }}>
+          {([
+            { id: 'status',   label: 'Estatus', icon: (
+              <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13">
+                <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 6a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2zm0 6a1 1 0 011-1h6a1 1 0 010 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+              </svg>
+            )},
+            { id: 'location', label: 'Ubicacion', icon: (
+              <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13">
+                <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+              </svg>
+            )},
+          ] as const).map(opt => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => setTrConfig(p => ({ ...p, mode: opt.id }))}
+              style={{
+                flex: 1, padding: '8px 0', borderRadius: 8, border: 'none', cursor: 'pointer',
+                background: trConfig.mode === opt.id ? 'white' : 'transparent',
+                boxShadow: trConfig.mode === opt.id ? '0 1px 4px rgba(15,23,42,0.1)' : 'none',
+                fontSize: 12, fontWeight: 600,
+                color: trConfig.mode === opt.id ? '#0F172A' : '#94A3B8',
+                fontFamily: 'var(--font-geist-sans), sans-serif',
+                transition: 'all 0.15s',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+              }}
+            >
+              {opt.icon}
+              {opt.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* ── Tools sidebar ── */}
-      <form
-        onSubmit={save}
-        style={{
-          width: 320,
-          flexShrink: 0,
-          background: 'white',
-          borderLeft: '1px solid rgba(15,23,42,0.07)',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-        }}
-      >
-        {/* header */}
-        <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid rgba(15,23,42,0.07)', flexShrink: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#0F172A', letterSpacing: '-0.02em' }}>Rastreo de pedido</div>
-          <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 3 }}>Personaliza la pagina de seguimiento del cliente</div>
-        </div>
+      {/* scrollable controls */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 0' }}>
 
-        {/* mode switch */}
-        <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(15,23,42,0.07)', flexShrink: 0 }}>
-          <div className="cn-label" style={{ marginBottom: 8 }}>Estilo de rastreo</div>
-          <div style={{ display: 'flex', background: '#F1F5F9', borderRadius: 10, padding: 3, gap: 2 }}>
-            {([
-              { id: 'status',   label: 'Estatus', icon: (
-                <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13">
-                  <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 6a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2zm0 6a1 1 0 011-1h6a1 1 0 010 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-                </svg>
-              )},
-              { id: 'location', label: 'Ubicacion', icon: (
-                <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13">
-                  <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                </svg>
-              )},
-            ] as const).map(opt => (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => setTrConfig(p => ({ ...p, mode: opt.id }))}
-                style={{
-                  flex: 1, padding: '8px 0', borderRadius: 8, border: 'none', cursor: 'pointer',
-                  background: trConfig.mode === opt.id ? 'white' : 'transparent',
-                  boxShadow: trConfig.mode === opt.id ? '0 1px 4px rgba(15,23,42,0.1)' : 'none',
-                  fontSize: 12, fontWeight: 600,
-                  color: trConfig.mode === opt.id ? '#0F172A' : '#94A3B8',
-                  fontFamily: 'var(--font-geist-sans), sans-serif',
-                  transition: 'all 0.15s',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                }}
-              >
-                {opt.icon}
-                {opt.label}
-              </button>
-            ))}
+        {/* Map style */}
+        <div className="cn-field">
+          <div className="cn-label">Estilo del mapa</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6, marginTop: 6 }}>
+            {MAP_STYLE_PRESETS.map(s => {
+              const selected = (trConfig.mapStyle ?? MAP_STYLE_PRESETS[0].id) === s.id
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setTrConfig(p => ({ ...p, mapStyle: s.id }))}
+                  style={{
+                    border: `2px solid ${selected ? trConfig.accentColor : 'rgba(15,23,42,0.1)'}`,
+                    borderRadius: 10,
+                    padding: '5px 4px 4px',
+                    background: selected ? trConfig.accentColor + '10' : '#F8FAFC',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 4,
+                    transition: 'border-color 0.15s',
+                  }}
+                >
+                  <svg viewBox="0 0 42 26" width="100%" style={{ borderRadius: 4, display: 'block' }}>
+                    <rect width="42" height="26" fill={s.bg} rx="3"/>
+                    <polygon points="0,14 14,12 22,17 42,14" fill={s.terrain} opacity="0.55"/>
+                    <path d="M -2 11 L 14 9 L 22 12 L 42 10" stroke={s.road1} strokeWidth="3.5" fill="none" strokeLinecap="round"/>
+                    <path d="M -2 18 L 10 17 L 25 20 L 42 18" stroke={s.road2} strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+                    <rect x="3" y="3" width="7" height="5" rx="1" fill={s.building} opacity="0.85"/>
+                    <rect x="13" y="2" width="9" height="6" rx="1" fill={s.building} opacity="0.75"/>
+                    <rect x="27" y="3" width="8" height="5" rx="1" fill={s.building} opacity="0.8"/>
+                  </svg>
+                  <span style={{ fontSize: 9, fontWeight: selected ? 700 : 500, color: selected ? trConfig.accentColor : '#475569', lineHeight: 1, whiteSpace: 'nowrap' }}>
+                    {s.label}
+                  </span>
+                </button>
+              )
+            })}
           </div>
         </div>
 
-        {/* scrollable tools */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 0' }}>
-
-          {/* Map style */}
-          <div className="cn-field">
-            <div className="cn-label">Estilo del mapa</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6, marginTop: 6 }}>
-              {MAP_STYLE_PRESETS.map(s => {
-                const selected = (trConfig.mapStyle ?? MAP_STYLE_PRESETS[0].id) === s.id
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => setTrConfig(p => ({ ...p, mapStyle: s.id }))}
-                    style={{
-                      border: `2px solid ${selected ? trConfig.accentColor : 'rgba(15,23,42,0.1)'}`,
-                      borderRadius: 10,
-                      padding: '5px 4px 4px',
-                      background: selected ? trConfig.accentColor + '10' : '#F8FAFC',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: 4,
-                      transition: 'border-color 0.15s',
-                    }}
-                  >
-                    <svg viewBox="0 0 42 26" width="100%" style={{ borderRadius: 4, display: 'block' }}>
-                      <rect width="42" height="26" fill={s.bg} rx="3"/>
-                      <polygon points="0,14 14,12 22,17 42,14" fill={s.terrain} opacity="0.55"/>
-                      <path d="M -2 11 L 14 9 L 22 12 L 42 10" stroke={s.road1} strokeWidth="3.5" fill="none" strokeLinecap="round"/>
-                      <path d="M -2 18 L 10 17 L 25 20 L 42 18" stroke={s.road2} strokeWidth="2.5" fill="none" strokeLinecap="round"/>
-                      <rect x="3" y="3" width="7" height="5" rx="1" fill={s.building} opacity="0.85"/>
-                      <rect x="13" y="2" width="9" height="6" rx="1" fill={s.building} opacity="0.75"/>
-                      <rect x="27" y="3" width="8" height="5" rx="1" fill={s.building} opacity="0.8"/>
-                    </svg>
-                    <span style={{ fontSize: 9, fontWeight: selected ? 700 : 500, color: selected ? trConfig.accentColor : '#475569', lineHeight: 1, whiteSpace: 'nowrap' }}>
-                      {s.label}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Accent color */}
-          <div className="cn-field">
-            <div className="cn-label">Color de acento</div>
-            <div className="cn-colors">
-              {TR_ACCENT_PRESETS.map(c => (
-                <div
-                  key={c}
-                  className={`cn-color-swatch${trConfig.accentColor === c ? ' selected' : ''}`}
-                  style={{ background: c }}
-                  onClick={() => setTrConfig(p => ({ ...p, accentColor: c }))}
-                />
-              ))}
+        {/* Accent color */}
+        <div className="cn-field">
+          <div className="cn-label">Color de acento</div>
+          <div className="cn-colors">
+            {TR_ACCENT_PRESETS.map(c => (
               <div
-                className="cn-color-custom"
-                style={{ background: TR_ACCENT_PRESETS.includes(trConfig.accentColor) ? undefined : trConfig.accentColor }}
-                onClick={() => trAccentRef.current?.click()}
-              >
-                {TR_ACCENT_PRESETS.includes(trConfig.accentColor) ? '+' : null}
-                <input
-                  ref={trAccentRef}
-                  type="color"
-                  value={trConfig.accentColor}
-                  onChange={e => setTrConfig(p => ({ ...p, accentColor: e.target.value }))}
-                />
-              </div>
+                key={c}
+                className={`cn-color-swatch${trConfig.accentColor === c ? ' selected' : ''}`}
+                style={{ background: c }}
+                onClick={() => setTrConfig(p => ({ ...p, accentColor: c }))}
+              />
+            ))}
+            <div
+              className="cn-color-custom"
+              style={{ background: TR_ACCENT_PRESETS.includes(trConfig.accentColor) ? undefined : trConfig.accentColor }}
+              onClick={() => trAccentRef.current?.click()}
+            >
+              {TR_ACCENT_PRESETS.includes(trConfig.accentColor) ? '+' : null}
+              <input
+                ref={trAccentRef}
+                type="color"
+                value={trConfig.accentColor}
+                onChange={e => setTrConfig(p => ({ ...p, accentColor: e.target.value }))}
+              />
             </div>
           </div>
+        </div>
 
-          {/* Background */}
+        {/* Background — status mode only */}
+        {trConfig.mode === 'status' && (
           <div className="cn-field">
             <div className="cn-label">Color de fondo</div>
             <div className="cn-pill-row" style={{ flexWrap: 'wrap' }}>
@@ -591,51 +525,158 @@ export default function Apariencia() {
               ))}
             </div>
           </div>
+        )}
 
-          {/* Font family */}
-          <div className="cn-field">
-            <div className="cn-label">Fuente</div>
-            <div className="cn-pill-row" style={{ flexWrap: 'wrap' }}>
-              {TR_FONTS.map(f => (
-                <button
-                  key={f.id}
-                  type="button"
-                  className={`cn-pill-btn${trConfig.fontFamily === f.id ? ' selected' : ''}`}
-                  onClick={() => setTrConfig(p => ({ ...p, fontFamily: f.id }))}
-                >
-                  {f.name}
-                </button>
-              ))}
-            </div>
+        {/* Font family */}
+        <div className="cn-field">
+          <div className="cn-label">Fuente</div>
+          <div className="cn-pill-row" style={{ flexWrap: 'wrap' }}>
+            {TR_FONTS.map(f => (
+              <button
+                key={f.id}
+                type="button"
+                className={`cn-pill-btn${trConfig.fontFamily === f.id ? ' selected' : ''}`}
+                onClick={() => setTrConfig(p => ({ ...p, fontFamily: f.id }))}
+              >
+                {f.name}
+              </button>
+            ))}
           </div>
-
-          {/* Font size */}
-          <div className="cn-field">
-            <div className="cn-label">Tamaño de texto</div>
-            <div className="cn-pill-row">
-              {TR_SIZES.map(s => (
-                <button
-                  key={s.id}
-                  type="button"
-                  className={`cn-pill-btn${trConfig.fontSize === s.id ? ' selected' : ''}`}
-                  onClick={() => setTrConfig(p => ({ ...p, fontSize: s.id }))}
-                >
-                  {s.name}
-                </button>
-              ))}
-            </div>
-          </div>
-
         </div>
 
-        {/* footer / save */}
-        <div style={{ padding: '16px 20px', borderTop: '1px solid rgba(15,23,42,0.07)', flexShrink: 0 }}>
-          {error   && <div className="cn-error"   style={{ marginBottom: 12 }}>{error}</div>}
-          {success && <div className="cn-success" style={{ marginBottom: 12 }}>Guardado correctamente.</div>}
-          <button type="submit" className="cn-save-btn" disabled={saving} style={{ width: '100%' }}>
-            {saving ? 'Guardando...' : 'Guardar cambios'}
-          </button>
+        {/* Font size */}
+        <div className="cn-field">
+          <div className="cn-label">Tamaño de texto</div>
+          <div className="cn-pill-row">
+            {TR_SIZES.map(s => (
+              <button
+                key={s.id}
+                type="button"
+                className={`cn-pill-btn${trConfig.fontSize === s.id ? ' selected' : ''}`}
+                onClick={() => setTrConfig(p => ({ ...p, fontSize: s.id }))}
+              >
+                {s.name}
+              </button>
+            ))}
+          </div>
         </div>
+
+      </div>
+    </>
+  )
+
+  // ── Shared: save footer ───────────────────────────────────────────────
+  const saveFooter = (
+    <div style={{ padding: '16px 20px', borderTop: '1px solid rgba(15,23,42,0.07)', flexShrink: 0, background: 'white' }}>
+      {error   && <div className="cn-error"   style={{ marginBottom: 12 }}>{error}</div>}
+      {success && <div className="cn-success" style={{ marginBottom: 12 }}>Guardado correctamente.</div>}
+      <button type="submit" className="cn-save-btn" disabled={saving} style={{ width: '100%' }}>
+        {saving ? 'Guardando...' : 'Guardar cambios'}
+      </button>
+    </div>
+  )
+
+  // ── Mobile layout ─────────────────────────────────────────────────────
+  if (isMobile) {
+    return (
+      <div style={{ margin: '-16px -16px', display: 'flex', flexDirection: 'column', height: 'calc(100dvh - 56px)', background: 'white' }}>
+
+        {/* Tab bar */}
+        <div style={{ display: 'flex', borderBottom: '1px solid rgba(15,23,42,0.08)', flexShrink: 0, background: 'white' }}>
+          {([
+            { id: 'preview', label: 'Vista previa' },
+            { id: 'config',  label: 'Configurar'   },
+          ] as const).map(tab => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setMobileTab(tab.id)}
+              style={{
+                flex: 1, padding: '14px 0', border: 'none',
+                background: 'transparent', cursor: 'pointer',
+                fontSize: 14, fontWeight: 600,
+                color: mobileTab === tab.id ? '#7C3AED' : '#94A3B8',
+                borderBottom: `2px solid ${mobileTab === tab.id ? '#7C3AED' : 'transparent'}`,
+                fontFamily: 'var(--font-geist-sans), sans-serif',
+                transition: 'color 0.15s',
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Preview tab */}
+        {mobileTab === 'preview' && (
+          <div style={{
+            flex: 1,
+            background: '#0F172A',
+            backgroundImage: 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)',
+            backgroundSize: '22px 22px',
+            overflowY: 'auto',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'flex-start',
+            padding: '24px 12px 32px',
+          }}>
+            <div style={{ transform: 'scale(0.82)', transformOrigin: 'top center', flexShrink: 0, marginBottom: '-110px' }}>
+              {phoneFrame}
+            </div>
+          </div>
+        )}
+
+        {/* Config tab */}
+        {mobileTab === 'config' && (
+          <form onSubmit={save} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'white' }}>
+            {toolsBody}
+            {saveFooter}
+          </form>
+        )}
+      </div>
+    )
+  }
+
+  // ── Desktop layout ────────────────────────────────────────────────────
+  return (
+    <div style={{ margin: '-28px -32px', display: 'flex', height: 'calc(100dvh - 56px)', overflow: 'hidden' }}>
+
+      {/* Preview canvas */}
+      <div style={{
+        flex: 1,
+        background: '#0F172A',
+        backgroundImage: 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)',
+        backgroundSize: '22px 22px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        position: 'relative',
+      }}>
+        <div style={{ position: 'absolute', top: 20, left: 24, fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+          Vista previa
+        </div>
+        {phoneFrame}
+      </div>
+
+      {/* Tools sidebar */}
+      <form
+        onSubmit={save}
+        style={{
+          width: 320,
+          flexShrink: 0,
+          background: 'white',
+          borderLeft: '1px solid rgba(15,23,42,0.07)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+      >
+        <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid rgba(15,23,42,0.07)', flexShrink: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#0F172A', letterSpacing: '-0.02em' }}>Rastreo de pedido</div>
+          <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 3 }}>Personaliza la pagina de seguimiento del cliente</div>
+        </div>
+        {toolsBody}
+        {saveFooter}
       </form>
 
     </div>

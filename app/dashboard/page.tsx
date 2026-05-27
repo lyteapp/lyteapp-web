@@ -38,7 +38,23 @@ export default function Dashboard() {
   const [avgTicket, setAvgTicket] = useState(0)
   const [productCount, setProductCount] = useState(0)
   const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([])
+  const [avgDeliveryMins, setAvgDeliveryMins] = useState<number | null>(null)
   const [, setTick] = useState(0)
+
+  const loadAvgDeliveryTime = useCallback(async (sid: string) => {
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
+    const { data } = await supabase
+      .from('deliveries')
+      .select('created_at, delivered_at')
+      .eq('store_id', sid)
+      .not('delivered_at', 'is', null)
+      .gte('delivered_at', todayStart.toISOString())
+    if (!data?.length) { setAvgDeliveryMins(null); return }
+    const avg = data.reduce((acc, d) => {
+      return acc + (new Date(d.delivered_at).getTime() - new Date(d.created_at).getTime())
+    }, 0) / data.length / 60000
+    setAvgDeliveryMins(Math.round(avg))
+  }, [])
 
   const loadActiveOrders = useCallback(async (sid: string) => {
     const { data } = await supabase
@@ -74,6 +90,7 @@ export default function Dashboard() {
       setStoreSlug(data.slug ?? '')
       setStoreId(data.id)
       loadStats(data.id, 'day')
+      loadAvgDeliveryTime(data.id)
       supabase.from('products').select('id', { count: 'exact' }).eq('store_id', data.id).then(({ count }) => setProductCount(count ?? 0))
       loadActiveOrders(data.id)
     })
@@ -87,7 +104,7 @@ export default function Dashboard() {
   // Refresh active orders every 30s and re-render elapsed times every minute
   useEffect(() => {
     if (!storeId) return
-    const orderInterval = setInterval(() => loadActiveOrders(storeId), 30000)
+    const orderInterval = setInterval(() => { loadActiveOrders(storeId); loadAvgDeliveryTime(storeId) }, 30000)
     const tickInterval  = setInterval(() => setTick(t => t + 1), 60000)
     return () => { clearInterval(orderInterval); clearInterval(tickInterval) }
   }, [storeId, loadActiveOrders])
@@ -217,9 +234,22 @@ export default function Dashboard() {
 
         {/* Orders live */}
         <div className="dh-card dh-orders">
-          <div className="dh-section-head" style={{ marginBottom: 18 }}>
+          <div className="dh-section-head" style={{ marginBottom: 16 }}>
             <div className="dh-section-title">{t('dash.liveOrders')} <span className="dh-meta">{t('dash.realtime')}</span></div>
             <Link href="/dashboard/pedidos" className="dh-section-link">{t('dash.openOrders')}</Link>
+          </div>
+
+          {/* Average delivery time — big display */}
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 20, padding: '16px 18px', background: '#F8F7FF', borderRadius: 12, border: '1px solid #EDE9FE' }}>
+            <div style={{ lineHeight: 1 }}>
+              <span style={{ fontSize: 48, fontWeight: 800, color: '#7C3AED', letterSpacing: '-2px' }}>
+                {avgDeliveryMins !== null ? avgDeliveryMins : '—'}
+              </span>
+              {avgDeliveryMins !== null && <span style={{ fontSize: 20, fontWeight: 600, color: '#7C3AED', marginLeft: 4 }}>min</span>}
+            </div>
+            <div style={{ fontSize: 13, color: '#64748B', lineHeight: 1.4 }}>
+              tiempo promedio<br />de entrega hoy
+            </div>
           </div>
 
           <div className="dh-pipeline">

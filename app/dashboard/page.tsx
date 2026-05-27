@@ -221,36 +221,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Activity */}
-        <div className="dh-card" style={{ padding: '22px 24px' }}>
-          <div className="dh-section-head" style={{ marginBottom: 6 }}>
-            <div className="dh-section-title">{t('dash.recentActivity')}</div>
-          </div>
-          <div className="dh-activity">
-            <div className="dh-act-row dh-act-recent">
-              <span className="dh-act-dot" />
-              <div>
-                <div className="dh-act-text">{t('dash.act.created')}</div>
-                <span className="dh-act-time">{t('dash.act.today')}</span>
-              </div>
-            </div>
-            <div className="dh-act-row">
-              <span className="dh-act-dot" />
-              <div>
-                <div className="dh-act-text">{t('dash.act.setupStore')}</div>
-                <span className="dh-act-time">{t('dash.act.pending')}</span>
-              </div>
-            </div>
-            <div className="dh-act-row">
-              <span className="dh-act-dot" />
-              <div>
-                <div className="dh-act-text">{t('dash.act.firstProduct')}</div>
-                <span className="dh-act-time">{t('dash.act.pending')}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Store link card */}
         <div className="dh-card dh-link-card">
           <div className="dh-link-icon">🔗</div>

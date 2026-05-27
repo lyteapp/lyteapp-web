@@ -83,6 +83,67 @@ html, body { overflow-x: hidden; }
 .sf-social-btn.wa { background: #E9FBF0; color: #16A34A; }
 .sf-social-btn.ig { background: #FDF0F7; color: #9333EA; }
 
+/* ── CATEGORY NAV ── */
+.sf-cat-nav {
+  position: sticky; top: 0; z-index: 20;
+  background: inherit;
+  border-bottom: 1px solid rgba(15,23,42,0.06);
+  display: flex; overflow-x: auto; scrollbar-width: none;
+  padding: 0 16px; gap: 2px;
+  -webkit-overflow-scrolling: touch;
+}
+.sf-cat-nav::-webkit-scrollbar { display: none; }
+.sf-cat-nav-inner { display: flex; gap: 2px; }
+.sf-cat-btn {
+  flex-shrink: 0; white-space: nowrap; border: none; cursor: pointer;
+  font-size: 0.87em; font-weight: 500; line-height: 1;
+  padding: 10px 16px; border-radius: 100px;
+  background: transparent; color: #64748B; transition: all 0.15s;
+  font-family: inherit;
+}
+
+/* pills (default) */
+.sf-cat-nav-pills .sf-cat-btn.sf-cat-active {
+  background: var(--sf-price-color, #7C3AED); color: white; font-weight: 600;
+}
+
+/* chips */
+.sf-cat-nav-chips .sf-cat-btn {
+  border: 1.5px solid transparent; padding: 8px 14px;
+}
+.sf-cat-nav-chips .sf-cat-btn.sf-cat-active {
+  border-color: var(--sf-price-color, #7C3AED);
+  color: var(--sf-price-color, #7C3AED); font-weight: 700;
+}
+
+/* underline */
+.sf-cat-nav-underline {
+  border-bottom: 2px solid rgba(15,23,42,0.08); gap: 0; padding: 0 12px;
+}
+.sf-cat-nav-underline .sf-cat-btn {
+  border-radius: 0; padding: 11px 14px;
+  border-bottom: 2px solid transparent; margin-bottom: -2px;
+}
+.sf-cat-nav-underline .sf-cat-btn.sf-cat-active {
+  border-bottom-color: var(--sf-price-color, #7C3AED);
+  color: var(--sf-price-color, #7C3AED); font-weight: 700;
+}
+
+/* boxes */
+.sf-cat-nav-boxes { padding: 8px 16px; gap: 5px; }
+.sf-cat-nav-boxes .sf-cat-btn {
+  border-radius: 8px; padding: 8px 14px; background: rgba(15,23,42,0.05);
+}
+.sf-cat-nav-boxes .sf-cat-btn.sf-cat-active {
+  background: var(--sf-price-color, #7C3AED); color: white; font-weight: 600;
+}
+
+.sf-cat-section { scroll-margin-top: 44px; }
+
+/* dark template overrides */
+.sf-tpl-oscuro .sf-cat-nav { background: #1E293B; border-color: rgba(255,255,255,0.06); }
+.sf-tpl-oscuro .sf-cat-btn { color: #94A3B8; }
+
 /* ── PRODUCTS ── */
 .sf-products-section { padding: 32px 0 48px; }
 .sf-section-inner { max-width: 1100px; margin: 0 auto; padding: 0 24px; }

@@ -1972,3 +1972,45 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
   align-items: center;
   justify-content: center;
 }
+
+/* ── Category nav style picker ── */
+.ed-cat-style-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.ed-cat-style-card {
+  position: relative;
+  border: 2px solid #E2E8F0;
+  border-radius: 10px;
+  background: white;
+  cursor: pointer;
+  overflow: hidden;
+  padding: 0;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  text-align: left;
+}
+.ed-cat-style-card:hover {
+  border-color: #CBD5E1;
+  box-shadow: 0 2px 8px rgba(15,23,42,0.06);
+}
+.ed-cat-style-card.ed-cat-style-active {
+  border-color: #7C3AED;
+  box-shadow: 0 0 0 1px #7C3AED22;
+}
+
+.ed-cat-style-preview {
+  background: #F8FAFC;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.ed-cat-style-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #0F172A;
+  padding: 6px 8px;
+}

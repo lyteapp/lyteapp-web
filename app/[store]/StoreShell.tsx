@@ -67,6 +67,7 @@ type TemplateConfig = {
   priceSize?: 'small' | 'medium' | 'large'
   photoSize?: 'small' | 'medium' | 'large'
   categoryPhotoShapes?: Record<string, string>
+  categoryNavStyle?: string
 }
 type Store = {
   id: string; name: string; slug: string
@@ -132,6 +133,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const [showIosHint, setShowIosHint] = useState(false)
   const [isIos, setIsIos]   = useState(false)
   const [installed, setInstalled] = useState(false)
+  const [activeCatId, setActiveCatId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedVariants, setSelectedVariants] = useState<Record<string, number>>({})
 
@@ -251,6 +253,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const cfgPriceFontFamily = cfg.priceFont ? FONT_MAP[cfg.priceFont] : undefined
   const cfgPriceSize       = cfg.priceSize ?? 'medium'
   const cfgCategoryShapes  = cfg.categoryPhotoShapes ?? {}
+  const cfgCatNavStyle     = cfg.categoryNavStyle ?? 'pills'
   const pageStyle: React.CSSProperties = {
     ...(cfg.pageBg ? { background: cfg.pageBg } : {}),
     ...(cfgFontFamily ? { fontFamily: cfgFontFamily } : {}),
@@ -1317,6 +1320,34 @@ export default function StoreShell({ store, products, categories = [] }: { store
         </div>
       )}
 
+      {hasCats && tpl !== 'catalogo' && (
+        <nav className={`sf-cat-nav sf-cat-nav-${cfgCatNavStyle}`}>
+          {catGroups.map(({ cat }) => (
+            <button
+              key={cat.id}
+              className={`sf-cat-btn${activeCatId === cat.id ? ' sf-cat-active' : ''}`}
+              onClick={() => {
+                setActiveCatId(cat.id)
+                document.getElementById(`cat-${cat.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }}
+            >
+              {cat.name}
+            </button>
+          ))}
+          {uncategorized.length > 0 && (
+            <button
+              className={`sf-cat-btn${activeCatId === '__other' ? ' sf-cat-active' : ''}`}
+              onClick={() => {
+                setActiveCatId('__other')
+                document.getElementById('cat-other')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }}
+            >
+              {t('store.ourProducts')}
+            </button>
+          )}
+        </nav>
+      )}
+
       <div className="sf-products-section">
         <div className="sf-section-inner">
           {products.length === 0 ? (
@@ -1329,13 +1360,13 @@ export default function StoreShell({ store, products, categories = [] }: { store
             hasCats ? (
               <>
                 {catGroups.map(({ cat, items }) => (
-                  <div key={cat.id} className={`sf-cat-section${cfgCategoryShapes[cat.id] ? ` sf-pshape-${cfgCategoryShapes[cat.id]}` : ''}`}>
+                  <div key={cat.id} id={`cat-${cat.id}`} className={`sf-cat-section${cfgCategoryShapes[cat.id] ? ` sf-pshape-${cfgCategoryShapes[cat.id]}` : ''}`}>
                     <h2 className="sf-section-title sf-cat-section-title">{cat.name}</h2>
                     <div className="sf-grid">{items.map(renderCard)}</div>
                   </div>
                 ))}
                 {uncategorized.length > 0 && (
-                  <div className="sf-cat-section">
+                  <div id="cat-other" className="sf-cat-section">
                     <h2 className="sf-section-title sf-cat-section-title">{t('store.ourProducts')}</h2>
                     <div className="sf-grid">{uncategorized.map(renderCard)}</div>
                   </div>
@@ -1369,13 +1400,13 @@ export default function StoreShell({ store, products, categories = [] }: { store
             hasCats ? (
               <>
                 {catGroups.map(({ cat, items }) => (
-                  <div key={cat.id} className={`sf-cat-section${cfgCategoryShapes[cat.id] ? ` sf-pshape-${cfgCategoryShapes[cat.id]}` : ''}`}>
+                  <div key={cat.id} id={`cat-${cat.id}`} className={`sf-cat-section${cfgCategoryShapes[cat.id] ? ` sf-pshape-${cfgCategoryShapes[cat.id]}` : ''}`}>
                     <h2 className="sf-section-title sf-cat-section-title">{cat.name}</h2>
                     <div className="sf-esc-list">{items.map(renderEscRow)}</div>
                   </div>
                 ))}
                 {uncategorized.length > 0 && (
-                  <div className="sf-cat-section">
+                  <div id="cat-other" className="sf-cat-section">
                     <h2 className="sf-section-title sf-cat-section-title">{t('store.ourProducts')}</h2>
                     <div className="sf-esc-list">{uncategorized.map(renderEscRow)}</div>
                   </div>
@@ -1399,7 +1430,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
               ) : (
                 <>
                   {catGroupsFiltered.map(({ cat, items }) => (
-                    <div key={cat.id} className={`sf-cat-section${cfgCategoryShapes[cat.id] ? ` sf-pshape-${cfgCategoryShapes[cat.id]}` : ''}`}>
+                    <div key={cat.id} id={`cat-${cat.id}`} className={`sf-cat-section${cfgCategoryShapes[cat.id] ? ` sf-pshape-${cfgCategoryShapes[cat.id]}` : ''}`}>
                       <h2 className="sf-section-title sf-cat-section-title">{cat.name}</h2>
                       <div className="sf-cat-list">{items.map(renderCatRow)}</div>
                     </div>

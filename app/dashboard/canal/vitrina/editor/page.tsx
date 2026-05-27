@@ -156,7 +156,8 @@ export default function EditorPage() {
   const [categoryShapes, setCategoryShapes] = useState<Record<string, string>>({})
   const [baseConfig, setBaseConfig]         = useState<Record<string, unknown>>({})
 
-  const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'template' | 'price' | null>(null)
+  const [categoryNavStyle, setCategoryNavStyle] = useState('pills')
+  const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'template' | 'price' | 'categories' | null>(null)
   const [iframeKey, setIframeKey]   = useState(0)
   const [saving, setSaving]         = useState(false)
   const [toolSaved, setToolSaved]   = useState(false)
@@ -191,6 +192,7 @@ export default function EditorPage() {
       if (cfg.priceSize)  setPriceSize(cfg.priceSize as 'small' | 'medium' | 'large')
       if (cfg.priceFont !== undefined) setPriceFont((cfg.priceFont as string) ?? '')
       if (cfg.categoryPhotoShapes) setCategoryShapes(cfg.categoryPhotoShapes as Record<string, string>)
+      if (cfg.categoryNavStyle) setCategoryNavStyle(cfg.categoryNavStyle as string)
       const { data: cats } = await supabase
         .from('categories').select('id,name')
         .eq('store_id', store.id).order('position', { ascending: true })
@@ -340,7 +342,7 @@ export default function EditorPage() {
   useEffect(() => {
     applyPreview()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageBg, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceSize, priceFont])
+  }, [pageBg, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceSize, priceFont, categoryNavStyle])
 
   // ── Auto-save template (reloads iframe immediately) ───
   async function handleTemplateSelect(t: string) {
@@ -375,6 +377,7 @@ export default function EditorPage() {
       pageBg, pageFont, fontSizePx, textAlign,
       photoShape, photoSize,
       priceColor: accentColor, priceFont: priceFont || pageFont, priceSize,
+      categoryNavStyle,
       ...(Object.keys(categoryShapes).length > 0
         ? { categoryPhotoShapes: categoryShapes }
         : { categoryPhotoShapes: undefined }),
@@ -517,6 +520,20 @@ export default function EditorPage() {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
             <line x1="7" y1="7" x2="7.01" y2="7"/>
+          </svg>
+        </button>
+
+        {/* Categorias */}
+        <button
+          className={`ed-tool-btn${activeTool === 'categories' ? ' ed-tool-active' : ''}`}
+          title="Categorias"
+          onClick={() => setActiveTool(p => p === 'categories' ? null : 'categories')}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+            <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+            <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+            <rect x="14" y="14" width="7" height="7" rx="1.5"/>
           </svg>
         </button>
 
@@ -846,6 +863,73 @@ export default function EditorPage() {
                     <div className="ed-template-desc">{t.desc}</div>
                   </div>
                   {template === t.id && <div className="ed-template-check">&#10003;</div>}
+                </button>
+              ))}
+            </div>
+            <PanelSave />
+          </div>
+        )}
+
+        {/* Panel — Categorias */}
+        {activeTool === 'categories' && (
+          <div className="ed-tool-panel ed-tool-panel-lg">
+            <div className="ed-tp-title">Categorias</div>
+            <div className="ed-tp-subtitle">Estilo de los botones</div>
+            <div className="ed-cat-style-grid">
+              {([
+                {
+                  id: 'pills',
+                  name: 'Rellenos',
+                  preview: (
+                    <div style={{ display: 'flex', gap: 5, padding: '8px 10px' }}>
+                      {['Todo', 'Comida', 'Bebidas'].map((l, i) => (
+                        <div key={l} style={{ padding: '5px 10px', borderRadius: 100, fontSize: 9, fontWeight: i === 0 ? 700 : 500, background: i === 0 ? '#7C3AED' : 'transparent', color: i === 0 ? 'white' : '#94A3B8', whiteSpace: 'nowrap' as const }}>{l}</div>
+                      ))}
+                    </div>
+                  ),
+                },
+                {
+                  id: 'chips',
+                  name: 'Contorno',
+                  preview: (
+                    <div style={{ display: 'flex', gap: 5, padding: '8px 10px' }}>
+                      {['Todo', 'Comida', 'Bebidas'].map((l, i) => (
+                        <div key={l} style={{ padding: '4px 9px', borderRadius: 100, fontSize: 9, fontWeight: i === 0 ? 700 : 500, border: `1.5px solid ${i === 0 ? '#7C3AED' : '#E2E8F0'}`, color: i === 0 ? '#7C3AED' : '#94A3B8', whiteSpace: 'nowrap' as const }}>{l}</div>
+                      ))}
+                    </div>
+                  ),
+                },
+                {
+                  id: 'underline',
+                  name: 'Subrayado',
+                  preview: (
+                    <div style={{ display: 'flex', borderBottom: '2px solid #E2E8F0', padding: '0 10px' }}>
+                      {['Todo', 'Comida', 'Bebidas'].map((l, i) => (
+                        <div key={l} style={{ padding: '8px 10px', fontSize: 9, fontWeight: i === 0 ? 700 : 500, borderBottom: `2px solid ${i === 0 ? '#7C3AED' : 'transparent'}`, marginBottom: -2, color: i === 0 ? '#7C3AED' : '#94A3B8', whiteSpace: 'nowrap' as const }}>{l}</div>
+                      ))}
+                    </div>
+                  ),
+                },
+                {
+                  id: 'boxes',
+                  name: 'Cajas',
+                  preview: (
+                    <div style={{ display: 'flex', gap: 5, padding: '8px 10px' }}>
+                      {['Todo', 'Comida', 'Bebidas'].map((l, i) => (
+                        <div key={l} style={{ padding: '5px 10px', borderRadius: 6, fontSize: 9, fontWeight: i === 0 ? 700 : 500, background: i === 0 ? '#7C3AED' : 'rgba(15,23,42,0.05)', color: i === 0 ? 'white' : '#94A3B8', whiteSpace: 'nowrap' as const }}>{l}</div>
+                      ))}
+                    </div>
+                  ),
+                },
+              ]).map(s => (
+                <button
+                  key={s.id}
+                  className={`ed-cat-style-card${categoryNavStyle === s.id ? ' ed-cat-style-active' : ''}`}
+                  onClick={() => setCategoryNavStyle(s.id)}
+                >
+                  <div className="ed-cat-style-preview">{s.preview}</div>
+                  <div className="ed-cat-style-name">{s.name}</div>
+                  {categoryNavStyle === s.id && <div className="ed-template-check">&#10003;</div>}
                 </button>
               ))}
             </div>

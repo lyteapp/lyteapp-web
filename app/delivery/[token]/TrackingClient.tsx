@@ -153,12 +153,16 @@ export default function TrackingClient({
   trackingConfig,
   mapboxToken = '',
   driver,
+  storeLat = null,
+  storeLng = null,
 }: {
   initialDelivery: Delivery | null
   token: string
   trackingConfig?: TrackingConfig | null
   mapboxToken?: string
   driver?: DriverInfo | null
+  storeLat?: number | null
+  storeLng?: number | null
 }) {
   const [delivery, setDelivery] = useState<Delivery | null>(initialDelivery)
   const [driverLoc, setDriverLoc] = useState<{ lat: number; lng: number } | null>(null)
@@ -295,13 +299,16 @@ export default function TrackingClient({
         {/* Map area */}
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '56%' }}>
           <TrackingMap
-            driverLat={driverLoc?.lat ?? delivery.driver_lat}
-            driverLng={driverLoc?.lng ?? delivery.driver_lng}
+            driverLat={delivery.status === 'picked_up' ? (driverLoc?.lat ?? delivery.driver_lat) : null}
+            driverLng={delivery.status === 'picked_up' ? (driverLoc?.lng ?? delivery.driver_lng) : null}
+            storeLat={delivery.status !== 'picked_up' ? storeLat : null}
+            storeLng={delivery.status !== 'picked_up' ? storeLng : null}
             customerLat={delivery.customer_lat}
             customerLng={delivery.customer_lng}
             height="100%"
             mapboxToken={mapboxToken}
             mapStyle={trackingConfig?.mapStyle}
+            accent={accent}
           />
         </div>
 
@@ -465,15 +472,19 @@ export default function TrackingClient({
         </div>
       )}
 
-      {delivery.status === 'picked_up' && (
+      {/* Map card: store while preparing → driver when picked up, hidden once delivered */}
+      {!isCancelled && !isDone && (delivery.status === 'picked_up' || storeLat != null) && (
         <div className="tr-map-card">
           <TrackingMap
-            driverLat={driverLoc?.lat ?? delivery.driver_lat}
-            driverLng={driverLoc?.lng ?? delivery.driver_lng}
+            driverLat={delivery.status === 'picked_up' ? (driverLoc?.lat ?? delivery.driver_lat) : null}
+            driverLng={delivery.status === 'picked_up' ? (driverLoc?.lng ?? delivery.driver_lng) : null}
+            storeLat={delivery.status !== 'picked_up' ? storeLat : null}
+            storeLng={delivery.status !== 'picked_up' ? storeLng : null}
             customerLat={delivery.customer_lat}
             customerLng={delivery.customer_lng}
             mapboxToken={mapboxToken}
             mapStyle={trackingConfig?.mapStyle}
+            accent={accent}
           />
         </div>
       )}

@@ -213,16 +213,19 @@ export default function PedidosPage() {
     })
   }
 
-  function notifyCustomerSms(phone: string | null | undefined, status: string, customerName?: string | null) {
-    if (!phone) return
-    fetch('/api/sms-customer', {
+  function notifyDrivers(customerName: string | null | undefined) {
+    if (!storeId) return
+    const body = customerName ? `Pedido de ${customerName}` : 'Nuevo pedido disponible'
+    fetch('/api/push-driver', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, status, customerName, businessName: storeName }),
-    })
-      .then(r => r.json())
-      .then(d => { if (!d.sent) console.warn('[sms]', d.error ?? d.reason) })
-      .catch(e => console.error('[sms] fetch error', e))
+      body: JSON.stringify({ storeId, title: 'Pedido listo para recoger', body, url: '/driver' }),
+    }).catch(() => {})
+    fetch('/api/sms-driver', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ storeId, customerName, businessName: storeName }),
+    }).catch(() => {})
   }
 
   async function updateStatus(orderId: string, status: OrderStatus) {
@@ -236,19 +239,9 @@ export default function PedidosPage() {
     } else {
       setDisplayOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o))
     }
-    const order = orders.find(o => o.id === orderId)
-    notifyCustomerSms(order?.customer_phone, status, order?.customer_name)
-    if (status === 'ready' && storeId) {
-      fetch('/api/push-driver', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          storeId,
-          title: 'Pedido listo para recoger',
-          body: order?.customer_name ? `Pedido de ${order.customer_name}` : 'Nuevo pedido disponible',
-          url: '/driver',
-        }),
-      }).catch(() => {})
+    if (status === 'ready') {
+      const order = orders.find(o => o.id === orderId)
+      notifyDrivers(order?.customer_name)
     }
     setUpdating(null)
   }
@@ -331,23 +324,11 @@ export default function PedidosPage() {
       } else {
         setDisplayOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o))
       }
-      const order = orders.find(o => o.id === orderId)
-      const displayOrder = displayOrders.find(o => o.id === orderId)
-      const phone = displayOrder?.customer_phone ?? order?.customer_phone
-      const name  = displayOrder?.customer_name  ?? order?.customer_name
-      notifyCustomerSms(phone, status, name)
-      // Notify all active drivers when a new order is ready for pickup
-      if (status === 'ready' && storeId) {
-        fetch('/api/push-driver', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            storeId,
-            title: 'Pedido listo para recoger',
-            body: order?.customer_name ? `Pedido de ${order.customer_name}` : 'Nuevo pedido disponible',
-            url: `/driver`,
-          }),
-        }).catch(() => {})
+      if (status === 'ready') {
+        const order = orders.find(o => o.id === orderId)
+        const displayOrder = displayOrders.find(o => o.id === orderId)
+        const name = displayOrder?.customer_name ?? order?.customer_name
+        notifyDrivers(name)
       }
     } finally {
       setDisplayUpdating(null)

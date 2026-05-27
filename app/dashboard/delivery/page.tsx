@@ -279,13 +279,6 @@ export default function DeliveryPage() {
     if (status === 'delivered') patch.delivered_at = new Date().toISOString()
     await supabase.from('deliveries').update(patch).eq('id', del.id)
     setDeliveries(p => p.map(d => d.id === del.id ? { ...d, ...patch } as Delivery : d))
-    if (del.customer_phone && (status === 'picked_up' || status === 'delivered' || status === 'cancelled')) {
-      fetch('/api/sms-customer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: del.customer_phone, status, customerName: del.customer_name, businessName: storeName }),
-      }).catch(() => {})
-    }
     showToast(status === 'delivered' ? 'Entrega confirmada' : 'Estado actualizado')
   }
 

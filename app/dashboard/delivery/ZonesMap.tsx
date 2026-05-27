@@ -24,6 +24,7 @@ type Props = {
   previewColor?: string
   onUserPos?: (lat: number, lng: number) => void
   mapboxToken: string
+  resizeTrigger?: number
 }
 
 function circlePolygon(lat: number, lng: number, radiusM: number, steps = 64): GeoJSON.Feature<GeoJSON.Polygon> {
@@ -38,11 +39,17 @@ function circlePolygon(lat: number, lng: number, radiusM: number, steps = 64): G
   return { type: 'Feature', geometry: { type: 'Polygon', coordinates: [coords] }, properties: {} }
 }
 
-export default function ZonesMap({ zones, placingZone, onMapClick, previewCenter, previewRadius, previewColor, onUserPos, mapboxToken }: Props) {
+export default function ZonesMap({ zones, placingZone, onMapClick, previewCenter, previewRadius, previewColor, onUserPos, mapboxToken, resizeTrigger }: Props) {
   const mapRef = useRef<MapRef>(null)
   const reportedPos = useRef(false)
   const [pos, setPos]     = useState<[number, number] | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (resizeTrigger === undefined) return
+    const id = requestAnimationFrame(() => mapRef.current?.resize())
+    return () => cancelAnimationFrame(id)
+  }, [resizeTrigger])
 
   useEffect(() => {
     if (!navigator.geolocation) { setError('Geolocalización no disponible'); return }

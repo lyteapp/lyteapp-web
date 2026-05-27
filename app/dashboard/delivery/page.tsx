@@ -103,6 +103,7 @@ export default function DeliveryPage() {
   const [todayFilter, setTodayFilter] = useState<TodayFilter>('all')
 
   // Zones tab
+  const [zonesResizeTrigger, setZonesResizeTrigger] = useState(0)
   const [zones, setZones]               = useState<Zone[]>([])
   const [showZoneForm, setShowZoneForm] = useState(false)
   const [editZone, setEditZone]         = useState<Zone | null>(null)
@@ -246,6 +247,10 @@ export default function DeliveryPage() {
     }, 1000)
     return () => { if (qrTimer.current) clearInterval(qrTimer.current) }
   }, [qrDel])
+
+  useEffect(() => {
+    if (tab === 'zones') setZonesResizeTrigger(n => n + 1)
+  }, [tab])
 
   function selectOrder(order: Order) {
     setSelectedOrderId(order.id)
@@ -1286,6 +1291,7 @@ export default function DeliveryPage() {
               previewColor={zColor}
               onUserPos={(lat, lng) => setZUserPos([lat, lng])}
               mapboxToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
+              resizeTrigger={zonesResizeTrigger}
             />
           </div>
 

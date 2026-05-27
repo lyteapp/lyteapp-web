@@ -90,9 +90,7 @@ export default function DriverMap({
       attributionControl={false}
     >
       <TileLayer
-        url={`https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`}
-        tileSize={512}
-        zoomOffset={-1}
+        url={`https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/256/{z}/{x}/{y}@2x?access_token=${mapboxToken}`}
         maxZoom={22}
       />
 

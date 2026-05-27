@@ -739,24 +739,30 @@ export default function DriverClient({
 
               {/* Action buttons overlay — bottom of map */}
               <div className="dsp-active-actions">
-                {delivery.customer_phone && (
-                  <a href={`tel:${delivery.customer_phone}`} className="dsp-btn-call">
-                    <svg viewBox="0 0 20 20" fill="currentColor" width="17" height="17">
-                      <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.042 11.042 0 005.516 5.516l.773-1.548a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-1C7.82 18 2 8.18 2 3z"/>
-                    </svg>
-                    Llamar
-                  </a>
+                {/* Secondary row: call + navigation (only when at least one is available) */}
+                {(delivery.customer_phone || (delivery.customer_lat && delivery.customer_lng)) && (
+                  <div className="dsp-actions-row">
+                    {delivery.customer_phone && (
+                      <a href={`tel:${delivery.customer_phone}`} className="dsp-btn-call">
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="17" height="17">
+                          <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.042 11.042 0 005.516 5.516l.773-1.548a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-1C7.82 18 2 8.18 2 3z"/>
+                        </svg>
+                        Llamar
+                      </a>
+                    )}
+                    {delivery.customer_lat && delivery.customer_lng && (
+                      <button
+                        className={navMode ? 'dsp-btn-nav-stop' : 'dsp-btn-nav'}
+                        onClick={navMode ? stopNavigation : startNavigation}
+                        disabled={navLoading}
+                      >
+                        {navLoading ? 'Calculando...' : navMode ? 'Parar ruta' : 'Como llegar'}
+                      </button>
+                    )}
+                  </div>
                 )}
-                {delivery.customer_lat && delivery.customer_lng && (
-                  <button
-                    className={navMode ? 'dsp-btn-nav-stop' : 'dsp-btn-nav'}
-                    onClick={navMode ? stopNavigation : startNavigation}
-                    disabled={navLoading}
-                  >
-                    {navLoading ? 'Calculando...' : navMode ? 'Parar ruta' : 'Como llegar'}
-                  </button>
-                )}
-                <button className="dsp-btn-done" style={{ flex: 1 }} onClick={completeDelivery} disabled={completing}>
+                {/* Primary action: always full width */}
+                <button className="dsp-btn-done" onClick={completeDelivery} disabled={completing}>
                   {completing ? 'Guardando...' : 'Entregado'}
                 </button>
               </div>

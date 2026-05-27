@@ -315,17 +315,27 @@
   bottom: 0; left: 0; right: 0;
   z-index: 1001;
   display: flex;
+  flex-direction: column;
   gap: 8px;
-  padding: 24px 16px 20px;
-  background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.08) 65%, transparent 100%);
+  padding: 28px 14px 20px;
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+  background: linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.18) 60%, transparent 100%);
+}
+
+/* Secondary actions row (Llamar + Como llegar) */
+.dsp-actions-row {
+  display: flex;
+  gap: 8px;
 }
 
 /* Navigation buttons */
 .dsp-btn-nav {
+  flex: 1;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 13px 16px;
+  padding: 13px 12px;
   border-radius: 12px;
   border: none;
   background: #DBEAFE;
@@ -342,10 +352,12 @@
 .dsp-btn-nav:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .dsp-btn-nav-stop {
+  flex: 1;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 13px 16px;
+  padding: 13px 12px;
   border-radius: 12px;
   border: none;
   background: #FEE2E2;
@@ -404,10 +416,12 @@
 }
 
 .dsp-btn-call {
+  flex: 1;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 13px 18px;
+  padding: 13px 12px;
   border-radius: 12px;
   border: none;
   background: #DCFCE7;
@@ -496,13 +510,13 @@
 .dsp-btn-pickup:hover { background: #DDD8FB; }
 
 .dsp-btn-done {
-  flex: 1;
-  padding: 13px;
+  width: 100%;
+  padding: 15px;
   border-radius: 12px;
   border: none;
   background: #7C3AED;
   color: #fff;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;

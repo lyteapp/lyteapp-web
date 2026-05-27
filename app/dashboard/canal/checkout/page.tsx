@@ -68,13 +68,36 @@ const MOCK_ITEMS = [
   { name: 'Papas fritas',        price: 3.00, qty: 2, image: null },
 ]
 
+const MOCK_PAYMENTS = ['Pago Movil', 'Zelle']
+
+function PvField({ label, width = '65%' }: { label: string; width?: string }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8 }}>
+      <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(15,23,42,0.4)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
+      <div style={{ background: '#F8F7F4', border: '1px solid rgba(15,23,42,0.1)', borderRadius: 8, padding: '9px 10px' }}>
+        <div style={{ height: 8, width, background: '#E2E8F0', borderRadius: 3 }} />
+      </div>
+    </div>
+  )
+}
+
 function CheckoutPreview({ settings }: { settings: CheckoutSettings }) {
-  const bothTypes    = settings.deliveryTypes.delivery && settings.deliveryTypes.pickup
-  const onlyPickup   = !settings.deliveryTypes.delivery && settings.deliveryTypes.pickup
+  const bothTypes  = settings.deliveryTypes.delivery && settings.deliveryTypes.pickup
+  const onlyPickup = !settings.deliveryTypes.delivery && settings.deliveryTypes.pickup
   const [previewType, setPreviewType] = useState<'delivery' | 'pickup'>(onlyPickup ? 'pickup' : 'delivery')
+  const [selPayment, setSelPayment]   = useState(MOCK_PAYMENTS[0])
   const subtotal = MOCK_ITEMS.reduce((s, i) => s + i.price * i.qty, 0)
   const fee      = previewType === 'delivery' && settings.deliveryEnabled && settings.deliveryFee ? Number(settings.deliveryFee) : 0
   const total    = subtotal + fee
+
+  const sec: React.CSSProperties = {
+    background: 'white', border: '1px solid rgba(15,23,42,0.08)',
+    borderRadius: 14, padding: '13px 14px',
+  }
+  const secTitle: React.CSSProperties = {
+    fontSize: 11, fontWeight: 700, color: '#0F172A',
+    letterSpacing: '-0.02em', marginBottom: 10,
+  }
 
   return (
     <div style={{
@@ -82,139 +105,136 @@ function CheckoutPreview({ settings }: { settings: CheckoutSettings }) {
       border: '10px solid #1E1E2E', borderRadius: 36,
       boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
       overflow: 'hidden', background: '#F8F7F4',
-      maxHeight: 620, display: 'flex', flexDirection: 'column',
+      maxHeight: 640, display: 'flex', flexDirection: 'column',
     }}>
-      {/* Phone status bar */}
+      {/* Status bar */}
       <div style={{ background: 'white', padding: '10px 20px 6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontSize: 11, fontWeight: 600, color: '#0F172A' }}>9:41</span>
-        <div style={{ width: 90, height: 10, borderRadius: 10, background: '#1E1E2E' }} />
+        <div style={{ width: 80, height: 10, borderRadius: 10, background: '#1E1E2E' }} />
         <span style={{ fontSize: 10, color: '#0F172A' }}>●●●</span>
       </div>
 
-      {/* Nav bar */}
-      <div style={{ background: 'white', padding: '8px 16px', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', gap: 8 }}>
+      {/* Nav */}
+      <div style={{ background: 'white', padding: '9px 16px', borderBottom: '1px solid rgba(15,23,42,0.08)', display: 'flex', alignItems: 'center', gap: 8 }}>
         <svg viewBox="0 0 20 20" fill="#64748B" width="14" height="14"><path fillRule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clipRule="evenodd"/></svg>
         <span style={{ fontSize: 11, fontWeight: 700, color: '#0F172A', flex: 1, textAlign: 'center', marginRight: 14 }}>Tu pedido</span>
       </div>
 
-      {/* Scrollable content */}
-      <div style={{ overflowY: 'auto', flex: 1, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {/* Content */}
+      <div style={{ overflowY: 'auto', flex: 1, padding: '12px 12px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
 
-        {/* Summary section */}
-        <div style={{ background: 'white', borderRadius: 14, padding: '12px 14px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+        {/* ── Resumen ── */}
+        <div style={sec}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#0F172A' }}>Resumen</span>
-            <span style={{ fontSize: 10, color: '#7C3AED', fontWeight: 600 }}>Vaciar</span>
+            <span style={secTitle}>Resumen</span>
+            <span style={{ fontSize: 9, color: '#EF4444', fontWeight: 600, background: 'rgba(239,68,68,0.08)', borderRadius: 6, padding: '3px 7px' }}>Vaciar</span>
           </div>
-          {MOCK_ITEMS.map(item => (
-            <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 8, background: '#F1F5F9', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {MOCK_ITEMS.map((item, idx) => (
+            <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: 9, paddingBottom: idx < MOCK_ITEMS.length - 1 ? 8 : 0, borderBottom: idx < MOCK_ITEMS.length - 1 ? '1px solid rgba(15,23,42,0.06)' : 'none', marginBottom: idx < MOCK_ITEMS.length - 1 ? 8 : 0 }}>
+              <div style={{ width: 38, height: 38, borderRadius: 8, background: '#F1F5F9', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" strokeWidth="1.5" width="14" height="14"><path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/></svg>
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 10, fontWeight: 600, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</div>
-                <div style={{ fontSize: 10, color: '#7C3AED', fontWeight: 600 }}>${(item.price * item.qty).toFixed(2)}</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#7C3AED', marginTop: 2 }}>${(item.price * item.qty).toFixed(2)}</div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#F8FAFC', borderRadius: 6, padding: '2px 6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#F8FAFC', borderRadius: 8, padding: '4px 8px' }}>
                 <span style={{ fontSize: 10, color: '#64748B', fontWeight: 700 }}>−</span>
                 <span style={{ fontSize: 10, fontWeight: 700, color: '#0F172A', minWidth: 10, textAlign: 'center' }}>{item.qty}</span>
                 <span style={{ fontSize: 10, color: '#64748B', fontWeight: 700 }}>+</span>
               </div>
             </div>
           ))}
-          <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 10, color: '#64748B' }}>Subtotal</span>
-            <span style={{ fontSize: 10, fontWeight: 600, color: '#0F172A' }}>${subtotal.toFixed(2)}</span>
-          </div>
           {fee > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-              <span style={{ fontSize: 10, color: '#64748B' }}>Envio</span>
-              <span style={{ fontSize: 10, fontWeight: 600, color: '#0F172A' }}>${fee.toFixed(2)}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#64748B', marginTop: 8 }}>
+              <span>Envio</span><span>${fee.toFixed(2)}</span>
             </div>
           )}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#0F172A' }}>Total</span>
-            <span style={{ fontSize: 11, fontWeight: 800, color: '#0F172A' }}>${total.toFixed(2)}</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, marginTop: 6, borderTop: '2px solid #F1F5F9' }}>
+            <span style={{ fontSize: 10, fontWeight: 600, color: '#475569' }}>Total</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: '#0F172A' }}>${total.toFixed(2)}</span>
           </div>
         </div>
 
-        {/* Delivery type selector */}
-        {(bothTypes || settings.deliveryTypes.delivery || settings.deliveryTypes.pickup) && (
-          <div style={{ background: 'white', borderRadius: 14, padding: '12px 14px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#0F172A', marginBottom: 10 }}>Tipo de entrega</div>
+        {/* ── Tipo de entrega ── */}
+        {bothTypes && (
+          <div style={sec}>
+            <div style={secTitle}>Tipo de entrega</div>
             <div style={{ display: 'flex', gap: 8 }}>
-              {settings.deliveryTypes.delivery && (
-                <button
-                  type="button"
-                  onClick={() => setPreviewType('delivery')}
-                  style={{
-                    flex: 1, padding: '8px 6px', borderRadius: 10, border: 'none', cursor: 'pointer',
-                    background: previewType === 'delivery' ? '#EDE9FE' : '#F8FAFC',
-                    outline: `2px solid ${previewType === 'delivery' ? '#7C3AED' : '#E2E8F0'}`,
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
-                  }}
-                >
-                  <svg viewBox="0 0 20 20" fill={previewType === 'delivery' ? '#7C3AED' : '#94A3B8'} width="16" height="16">
-                    <path fillRule="evenodd" clipRule="evenodd" d="M5 10.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5zm0 1a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm10-1a2.5 2.5 0 100 5 2.5 2.5 0 000-5zm0 1a1.5 1.5 0 110 3 1.5 1.5 0 010-3z"/>
-                    <path d="M5.5 10.5L8 7h1.5L10 5.5h2.5L13 7.5l1.5-1.5h2v2L14.5 10.5H5.5z"/>
-                  </svg>
-                  <span style={{ fontSize: 9, fontWeight: previewType === 'delivery' ? 700 : 500, color: previewType === 'delivery' ? '#7C3AED' : '#64748B' }}>Domicilio</span>
+              {(['delivery', 'pickup'] as const).map(t => (
+                <button key={t} type="button" onClick={() => setPreviewType(t)} style={{
+                  flex: 1, padding: '9px 6px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                  background: previewType === t ? '#EDE9FE' : '#F8FAFC',
+                  outline: `2px solid ${previewType === t ? '#7C3AED' : '#E2E8F0'}`,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, transition: 'all 0.15s',
+                }}>
+                  {t === 'delivery'
+                    ? <svg viewBox="0 0 20 20" fill={previewType === t ? '#7C3AED' : '#94A3B8'} width="16" height="16"><path fillRule="evenodd" clipRule="evenodd" d="M5 10.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5zm0 1a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm10-1a2.5 2.5 0 100 5 2.5 2.5 0 000-5zm0 1a1.5 1.5 0 110 3 1.5 1.5 0 010-3z"/><path d="M5.5 10.5L8 7h1.5L10 5.5h2.5L13 7.5l1.5-1.5h2v2L14.5 10.5H5.5z"/></svg>
+                    : <svg viewBox="0 0 20 20" fill={previewType === t ? '#7C3AED' : '#94A3B8'} width="16" height="16"><path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zm14 4H2v7a2 2 0 002 2h12a2 2 0 002-2V8zm-8 3a1 1 0 011 1v2a1 1 0 01-2 0v-2a1 1 0 011-1z" clipRule="evenodd"/></svg>
+                  }
+                  <span style={{ fontSize: 9, fontWeight: previewType === t ? 700 : 500, color: previewType === t ? '#7C3AED' : '#64748B' }}>
+                    {t === 'delivery' ? 'Domicilio' : 'Retiro en tienda'}
+                  </span>
                 </button>
-              )}
-              {settings.deliveryTypes.pickup && (
-                <button
-                  type="button"
-                  onClick={() => setPreviewType('pickup')}
-                  style={{
-                    flex: 1, padding: '8px 6px', borderRadius: 10, border: 'none', cursor: 'pointer',
-                    background: previewType === 'pickup' ? '#EDE9FE' : '#F8FAFC',
-                    outline: `2px solid ${previewType === 'pickup' ? '#7C3AED' : '#E2E8F0'}`,
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
-                  }}
-                >
-                  <svg viewBox="0 0 20 20" fill={previewType === 'pickup' ? '#7C3AED' : '#94A3B8'} width="16" height="16">
-                    <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zm14 4H2v7a2 2 0 002 2h12a2 2 0 002-2V8zm-8 3a1 1 0 011 1v2a1 1 0 01-2 0v-2a1 1 0 011-1z" clipRule="evenodd"/>
-                  </svg>
-                  <span style={{ fontSize: 9, fontWeight: previewType === 'pickup' ? 700 : 500, color: previewType === 'pickup' ? '#7C3AED' : '#64748B' }}>Retiro en tienda</span>
-                </button>
-              )}
+              ))}
             </div>
           </div>
         )}
 
-        {/* Customer info section */}
-        <div style={{ background: 'white', borderRadius: 14, padding: '12px 14px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#0F172A', marginBottom: 10 }}>Tus datos</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {settings.requireName && (
-              <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 10px' }}>
-                <div style={{ fontSize: 8, color: '#94A3B8', marginBottom: 2 }}>Nombre completo</div>
-                <div style={{ height: 8, width: '60%', background: '#E2E8F0', borderRadius: 3 }} />
+        {/* ── Ubicacion de entrega ── */}
+        {previewType === 'delivery' && (
+          <div style={sec}>
+            <div style={secTitle}>Ubicacion de entrega <span style={{ color: '#EF4444' }}>*</span></div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, background: '#7C3AED', color: 'white', borderRadius: 8, padding: '9px 12px', marginBottom: 8, fontSize: 10, fontWeight: 600 }}>
+              <svg viewBox="0 0 20 20" fill="currentColor" width="11" height="11"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/></svg>
+              Compartir mi ubicacion GPS
+            </div>
+            <PvField label="Direccion de entrega" width="70%" />
+          </div>
+        )}
+
+        {/* ── Tus datos ── */}
+        <div style={sec}>
+          <div style={secTitle}>Tus datos</div>
+          {settings.requireName && <PvField label="Nombre completo" width="60%" />}
+          {settings.requirePhone && <PvField label="Telefono" width="45%" />}
+          {settings.allowNotes && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 0 }}>
+              <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(15,23,42,0.4)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Notas <span style={{ fontWeight: 500, textTransform: 'none', color: '#94A3B8' }}>· Opcional</span></div>
+              <div style={{ background: '#F8F7F4', border: '1px solid rgba(15,23,42,0.1)', borderRadius: 8, padding: '9px 10px' }}>
+                <div style={{ height: 8, width: '80%', background: '#E2E8F0', borderRadius: 3, marginBottom: 5 }} />
+                <div style={{ height: 8, width: '50%', background: '#E2E8F0', borderRadius: 3 }} />
               </div>
-            )}
-            {settings.requirePhone && (
-              <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 10px' }}>
-                <div style={{ fontSize: 8, color: '#94A3B8', marginBottom: 2 }}>Telefono</div>
-                <div style={{ height: 8, width: '40%', background: '#E2E8F0', borderRadius: 3 }} />
+            </div>
+          )}
+        </div>
+
+        {/* ── Metodo de pago ── */}
+        <div style={sec}>
+          <div style={secTitle}>Metodo de pago</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+            {MOCK_PAYMENTS.map(pm => (
+              <div key={pm} onClick={() => setSelPayment(pm)} style={{
+                border: `1.5px solid ${selPayment === pm ? '#7C3AED' : 'rgba(15,23,42,0.1)'}`,
+                borderRadius: 11, padding: '10px 12px', cursor: 'pointer',
+                background: selPayment === pm ? 'rgba(124,58,237,0.06)' : 'white',
+                display: 'flex', alignItems: 'center', gap: 8, transition: 'all 0.15s',
+              }}>
+                <div style={{
+                  width: 13, height: 13, borderRadius: '50%', flexShrink: 0, position: 'relative',
+                  border: `2px solid ${selPayment === pm ? '#7C3AED' : '#CBD5E1'}`,
+                  background: selPayment === pm ? '#7C3AED' : 'white',
+                }}>
+                  {selPayment === pm && <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 5, height: 5, borderRadius: '50%', background: 'white' }} />}
+                </div>
+                <span style={{ fontSize: 10, fontWeight: 600, color: '#0F172A' }}>{pm}</span>
               </div>
-            )}
-            {settings.requireAddress && previewType === 'delivery' && (
-              <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 10px' }}>
-                <div style={{ fontSize: 8, color: '#94A3B8', marginBottom: 2 }}>Direccion de entrega</div>
-                <div style={{ height: 8, width: '70%', background: '#E2E8F0', borderRadius: 3 }} />
-              </div>
-            )}
-            {settings.allowNotes && (
-              <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 10px' }}>
-                <div style={{ fontSize: 8, color: '#94A3B8', marginBottom: 2 }}>Notas <span style={{ color: '#CBD5E1' }}>· Opcional</span></div>
-                <div style={{ height: 18, width: '80%', background: '#E2E8F0', borderRadius: 3 }} />
-              </div>
-            )}
+            ))}
           </div>
         </div>
 
-        {/* Submit button */}
-        <div style={{ background: '#0F172A', borderRadius: 12, padding: '10px 14px', textAlign: 'center' }}>
+        {/* ── Confirmar ── */}
+        <div style={{ background: '#7C3AED', borderRadius: 11, padding: '13px 14px', textAlign: 'center', cursor: 'pointer' }}>
           <span style={{ fontSize: 11, fontWeight: 700, color: 'white' }}>Confirmar pedido · ${total.toFixed(2)}</span>
         </div>
 

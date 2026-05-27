@@ -649,6 +649,7 @@ export default function DeliveryPage() {
               }))}
               driverLocations={driverLocations}
               drivers={drivers.map(d => ({ id: d.id, name: d.name }))}
+              mapboxToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
             />
           </div>
 

@@ -142,10 +142,12 @@ export default function TrackingClient({
   initialDelivery,
   token,
   trackingConfig,
+  mapboxToken = '',
 }: {
   initialDelivery: Delivery | null
   token: string
   trackingConfig?: TrackingConfig | null
+  mapboxToken?: string
 }) {
   const [delivery, setDelivery] = useState<Delivery | null>(initialDelivery)
   const [driverLoc, setDriverLoc] = useState<{ lat: number; lng: number } | null>(null)
@@ -284,6 +286,8 @@ export default function TrackingClient({
               driverLng={driverLoc?.lng ?? delivery.driver_lng}
               customerLat={delivery.customer_lat}
               customerLng={delivery.customer_lng}
+              height="100%"
+              mapboxToken={mapboxToken}
             />
           ) : (
             <svg viewBox="0 0 480 320" preserveAspectRatio="xMidYMid slice" style={{ width: '100%', height: '100%' }}>
@@ -433,6 +437,7 @@ export default function TrackingClient({
             driverLng={driverLoc?.lng ?? delivery.driver_lng}
             customerLat={delivery.customer_lat}
             customerLng={delivery.customer_lng}
+            mapboxToken={mapboxToken}
           />
         </div>
       )}

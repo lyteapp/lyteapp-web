@@ -29,5 +29,12 @@ export default async function TrackingPage({
     if (cfg?.trackingConfig) trackingConfig = cfg.trackingConfig as Record<string, string>
   }
 
-  return <TrackingClient initialDelivery={delivery} token={token} trackingConfig={trackingConfig} />
+  return (
+    <TrackingClient
+      initialDelivery={delivery}
+      token={token}
+      trackingConfig={trackingConfig}
+      mapboxToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
+    />
+  )
 }

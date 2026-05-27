@@ -1,28 +1,71 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { useT } from '../lib/LocaleProvider'
 import './home.css'
 
+type ActiveOrder = {
+  id: string
+  customer_name: string
+  status: string
+  created_at: string
+  total: number
+}
+
+const STATUS_ORDER = ['pending', 'confirmed', 'processing', 'ready']
+const STATUS_LABEL: Record<string, string> = {
+  pending: 'Por confirmar', confirmed: 'Confirmado', processing: 'En proceso', ready: 'Listo',
+}
+
+function elapsed(iso: string) {
+  const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
+  if (m < 1) return 'ahora'
+  if (m < 60) return `${m} min`
+  return `${Math.floor(m / 60)}h ${m % 60}m`
+}
+
 export default function Dashboard() {
   const { user } = useAuth()
   const t = useT()
   const [storeSlug, setStoreSlug] = useState('')
+  const [storeId, setStoreId] = useState<string | null>(null)
   const [orderCount, setOrderCount] = useState(0)
   const [productCount, setProductCount] = useState(0)
+  const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([])
+  const [, setTick] = useState(0)
+
+  const loadActiveOrders = useCallback(async (sid: string) => {
+    const { data } = await supabase
+      .from('orders')
+      .select('id, customer_name, status, created_at, total')
+      .eq('store_id', sid)
+      .not('status', 'in', '(delivered,cancelled,completed)')
+      .order('created_at', { ascending: true })
+    setActiveOrders((data ?? []) as ActiveOrder[])
+  }, [])
 
   useEffect(() => {
     if (!user) return
     supabase.from('stores').select('id,name,slug').eq('owner_id', user.id).maybeSingle().then(({ data }) => {
       if (!data) return
       setStoreSlug(data.slug ?? '')
+      setStoreId(data.id)
       supabase.from('orders').select('id', { count: 'exact' }).eq('store_id', data.id).then(({ count }) => setOrderCount(count ?? 0))
       supabase.from('products').select('id', { count: 'exact' }).eq('store_id', data.id).then(({ count }) => setProductCount(count ?? 0))
+      loadActiveOrders(data.id)
     })
-  }, [user])
+  }, [user, loadActiveOrders])
+
+  // Refresh active orders every 30s and re-render elapsed times every minute
+  useEffect(() => {
+    if (!storeId) return
+    const orderInterval = setInterval(() => loadActiveOrders(storeId), 30000)
+    const tickInterval  = setInterval(() => setTick(t => t + 1), 60000)
+    return () => { clearInterval(orderInterval); clearInterval(tickInterval) }
+  }, [storeId, loadActiveOrders])
 
   const firstName = user?.email?.split('@')[0] ?? ''
   const today = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
@@ -126,28 +169,46 @@ export default function Dashboard() {
           </div>
 
           <div className="dh-pipeline">
-            {([
-              'dash.pipe.toConfirm',
-              'dash.pipe.confirmed',
-              'dash.pipe.ready',
-              'dash.pipe.onWay',
-              'dash.pipe.delivered',
-            ] as const).map((key, i) => (
-              <div key={i} className="dh-pipe-stage">
-                <div className="dh-pipe-count">0</div>
-                <div className="dh-pipe-label">{t(key)}</div>
-                {i < 4 && <svg className="dh-pipe-arrow" width="8" height="12" viewBox="0 0 8 12" fill="currentColor"><path d="M0 0 L8 6 L0 12 Z"/></svg>}
-              </div>
-            ))}
+            {STATUS_ORDER.map((st, i) => {
+              const count = activeOrders.filter(o => o.status === st).length
+              return (
+                <div key={st} className="dh-pipe-stage">
+                  <div className="dh-pipe-count">{count}</div>
+                  <div className="dh-pipe-label">{STATUS_LABEL[st]}</div>
+                  {i < STATUS_ORDER.length - 1 && <svg className="dh-pipe-arrow" width="8" height="12" viewBox="0 0 8 12" fill="currentColor"><path d="M0 0 L8 6 L0 12 Z"/></svg>}
+                </div>
+              )
+            })}
           </div>
 
-          <div className="dh-order-empty">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-            </svg>
-            <p>{t('dash.noOrders')}</p>
-            {storeSlug && <Link href={`/${storeSlug}`} target="_blank">{t('dash.viewStore')}</Link>}
-          </div>
+          {activeOrders.length === 0 ? (
+            <div className="dh-order-empty">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+              </svg>
+              <p>{t('dash.noOrders')}</p>
+              {storeSlug && <Link href={`/${storeSlug}`} target="_blank">{t('dash.viewStore')}</Link>}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
+              {activeOrders.map(order => {
+                const mins = Math.floor((Date.now() - new Date(order.created_at).getTime()) / 60000)
+                const isUrgent = mins >= 20
+                return (
+                  <div key={order.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 10, background: isUrgent ? '#FEF2F2' : '#F8FAFC', border: `1px solid ${isUrgent ? '#FECACA' : '#E2E8F0'}` }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{order.customer_name}</div>
+                      <div style={{ fontSize: 11, color: '#64748B', marginTop: 1 }}>{STATUS_LABEL[order.status] ?? order.status}</div>
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: isUrgent ? '#DC2626' : '#475569' }}>{elapsed(order.created_at)}</div>
+                      <div style={{ fontSize: 11, color: '#94A3B8' }}>${Number(order.total).toFixed(2)}</div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         {/* Side column */}

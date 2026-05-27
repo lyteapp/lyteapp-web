@@ -296,8 +296,24 @@ export default function TrackingClient({
       { label: 'Entregado',  idx: 4 },
     ]
     const hasGps = driverLoc != null || (delivery.driver_lat != null && delivery.driver_lng != null)
-    const statusDot = isCancelled ? '#EF4444' : isDone ? '#10B981' : '#1D9E75'
-    const statusLabel = isCancelled ? 'cancelado' : isDone ? 'entregado' : 'en camino'
+    const STATUS_LABELS: Record<string, string> = {
+      pending:   'recibido',
+      preparing: 'en preparacion',
+      ready:     'siendo empacado',
+      picked_up: 'en camino',
+      delivered: 'entregado',
+      cancelled: 'cancelado',
+    }
+    const STATUS_DOTS: Record<string, string> = {
+      pending:   '#94A3B8',
+      preparing: '#F59E0B',
+      ready:     '#7C3AED',
+      picked_up: '#1D9E75',
+      delivered: '#10B981',
+      cancelled: '#EF4444',
+    }
+    const statusDot   = STATUS_DOTS[delivery.status]  ?? '#1D9E75'
+    const statusLabel = STATUS_LABELS[delivery.status] ?? 'en camino'
     const font = FONT_STACKS[trackingConfig.fontFamily ?? 'system'] ?? FONT_STACKS.system
 
     return (
@@ -391,8 +407,8 @@ export default function TrackingClient({
             })}
           </div>
 
-          {/* Driver card */}
-          {driver && delivery.status !== 'pending' && delivery.status !== 'preparing' && (
+          {/* Driver card — visible once order is en camino */}
+          {driver && (delivery.status === 'picked_up' || delivery.status === 'delivered') && (
             <div style={{ margin: '0 16px 10px', background: 'white', borderRadius: 14, padding: '12px 16px', border: '0.5px solid rgba(15,23,42,0.08)' }}>
               <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 8 }}>Tu despachador</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

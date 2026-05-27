@@ -167,21 +167,6 @@ export default function Dashboard() {
 
         {/* Side column */}
         <div className="dh-side-col">
-          {/* Payments */}
-          <div className="dh-card dh-payments">
-            <div className="dh-payments-head">
-              <div className="dh-section-title">{t('dash.paymentsVerify')}</div>
-              <p>{t('dash.paymentsDesc')}</p>
-            </div>
-            <div className="dh-payments-empty">
-              {t('dash.noPayments')}
-            </div>
-            <div className="dh-payments-foot">
-              <span>{t('dash.pendingCount', { n: '0' })}</span>
-              <Link href="/dashboard/pedidos">{t('dash.viewOrdersLink')}</Link>
-            </div>
-          </div>
-
           {/* Quick actions */}
           <div className="dh-card" style={{ padding: '20px' }}>
             <div className="dh-section-title" style={{ marginBottom: 14 }}>{t('dash.quickActions')}</div>

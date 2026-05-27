@@ -129,6 +129,9 @@ export default function DeliveryPage() {
   type QueueEntry = { driverId: string; driverName: string; since: string }
   const [availableQueue, setAvailableQueue] = useState<QueueEntry[]>([])
 
+  // Mobile fullscreen map
+  const [showMap, setShowMap] = useState(false)
+
   // QR modals
   const [qrDel, setQrDel]       = useState<Delivery | null>(null)
   const [qrDriver, setQrDriver] = useState<Driver | null>(null)
@@ -517,6 +520,42 @@ export default function DeliveryPage() {
             </div>
           </div>
         </div>
+
+        {/* Mobile map button */}
+        <button className="dv-map-mobile-btn" onClick={() => setShowMap(true)}>
+          <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15">
+            <path fillRule="evenodd" d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM17.707 5.293L14 1.586v12.828l2.293 2.293A1 1 0 0018 16V6a1 1 0 00-.293-.707z" clipRule="evenodd"/>
+          </svg>
+          Ver mapa en vivo
+        </button>
+
+        {/* Fullscreen map overlay (mobile) */}
+        {showMap && (
+          <div className="dv-map-fullscreen">
+            <div className="dv-map-fullscreen-header">
+              <div className="dv-map-fullscreen-title">
+                {inRoute.length > 0 ? `${inRoute.length} en ruta` : 'Mapa en vivo'}
+              </div>
+              <button className="dv-map-fullscreen-close" onClick={() => setShowMap(false)}>
+                <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/>
+                </svg>
+              </button>
+            </div>
+            <MapView
+              inRoute={inRoute.map(del => ({
+                id: del.id,
+                customer_name: del.customer_name,
+                driver_name: (del.driver as Driver | null)?.name ?? null,
+                driver_id: del.driver_id,
+                picked_up_at: del.picked_up_at,
+              }))}
+              driverLocations={driverLocations}
+              drivers={drivers.map(d => ({ id: d.id, name: d.name }))}
+              mapboxToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
+            />
+          </div>
+        )}
 
         {/* Three-column grid */}
         <div className="dv-live-grid">

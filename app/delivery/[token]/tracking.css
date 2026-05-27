@@ -145,9 +145,24 @@
 
 .tr-connector {
   width: 2px; flex: 1; min-height: 28px; background: #E2E8F0;
-  margin: 3px 0; transition: background 0.5s;
+  margin: 3px 0;
+  position: relative; overflow: hidden;
 }
-.tr-connector.done { background: #10B981; }
+
+.tr-connector-fill {
+  position: absolute; inset: 0;
+  background: #10B981;
+  transform: scaleY(0);
+  transform-origin: top center;
+}
+.tr-connector-fill.done {
+  animation: trSlideDown 0.52s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes trSlideDown {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
+}
 
 .tr-step-body {
   padding: 2px 0 28px; flex: 1;

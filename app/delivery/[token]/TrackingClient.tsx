@@ -558,7 +558,12 @@ export default function TrackingClient({
                     {!done && !current && <span className="tr-dot-num">{i + 1}</span>}
                   </div>
                   {i < STEPS.length - 1 && (
-                    <div className={`tr-connector${done ? ' done' : ''}`} />
+                    <div className="tr-connector">
+                      <div
+                        className={`tr-connector-fill${done ? ' done' : ''}`}
+                        style={done ? { animationDelay: `${i * 0.09}s` } : undefined}
+                      />
+                    </div>
                   )}
                 </div>
                 <div className="tr-step-body">

@@ -359,7 +359,7 @@ export default function TrackingClient({
     }
 
     return (
-      <div style={{ ...cssVars, position: 'relative', height: '100dvh', overflow: 'hidden', background: '#E4EAF1', fontFamily: font }}>
+      <div style={{ ...cssVars, position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden', background: '#E4EAF1', fontFamily: font }}>
 
         {/* Map area — full screen, sheet overlays on top */}
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
@@ -375,7 +375,6 @@ export default function TrackingClient({
             mapboxToken={mapboxToken}
             mapStyle={trackingConfig?.mapStyle}
             accent={accent}
-            locked
           />
         </div>
 

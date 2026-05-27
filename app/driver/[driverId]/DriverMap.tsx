@@ -40,16 +40,18 @@ interface Props {
   driverLng: number | null
   routeCoords?: [number, number][]
   followDriver?: boolean
+  heading?: number | null
   mapboxToken: string
 }
 
 export default function DriverMap({
   customerLat, customerLng, customerName,
   driverLat, driverLng,
-  routeCoords, followDriver, mapboxToken,
+  routeCoords, followDriver, heading, mapboxToken,
 }: Props) {
   const mapRef = useRef<MapRef>(null)
   const [loaded, setLoaded] = useState(false)
+  const [mapBearing, setMapBearing] = useState(0)
   const driverPos: [number, number] | null = driverLat && driverLng ? [driverLat, driverLng] : null
 
   useEffect(() => {
@@ -110,6 +112,7 @@ export default function DriverMap({
       dragRotate={false}
       attributionControl={false}
       onLoad={() => setLoaded(true)}
+      onMove={e => setMapBearing(e.viewState.bearing)}
     >
       <NavigationControl position="top-right" showCompass={false} />
 
@@ -146,14 +149,29 @@ export default function DriverMap({
         </div>
       </Marker>
 
-      {/* Driver dot */}
+      {/* Driver arrow */}
       {driverPos && (
         <Marker longitude={driverPos[1]} latitude={driverPos[0]} anchor="center">
           <div style={{
-            width: 22, height: 22, borderRadius: '50%',
-            background: '#3B82F6', border: '3px solid white',
-            boxShadow: '0 2px 12px rgba(59,130,246,0.7)',
-          }} />
+            transform: `rotate(${((heading ?? 0) - mapBearing + 360) % 360}deg)`,
+            transition: 'transform 0.5s ease-out',
+            filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.4))',
+            width: 36, height: 45,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <svg viewBox="0 0 32 40" width="32" height="40" style={{ overflow: 'visible' }}>
+              {/* shadow */}
+              <ellipse cx="16" cy="39" rx="9" ry="2.5" fill="rgba(0,0,0,0.22)" />
+              {/* left face — lit */}
+              <path d="M16 2 L3 36 L16 29 Z" fill="#60A5FA" />
+              {/* right face — shadow */}
+              <path d="M16 2 L29 36 L16 29 Z" fill="#1D4ED8" />
+              {/* bottom concave strip */}
+              <path d="M3 36 Q16 41 29 36 L16 29 Z" fill="#2563EB" />
+              {/* center highlight ridge */}
+              <line x1="16" y1="2" x2="16" y2="29" stroke="rgba(255,255,255,0.42)" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </div>
         </Marker>
       )}
 

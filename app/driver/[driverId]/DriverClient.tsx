@@ -144,6 +144,8 @@ export default function DriverClient({
   const [accuracy, setAccuracy]         = useState<number | null>(null)
   const [lastUpdate, setLastUpdate]     = useState<Date | null>(null)
   const [driverPos, setDriverPos]       = useState<[number, number] | null>(null)
+  const [heading, setHeading]           = useState<number | null>(null)
+  const [compassActive, setCompassActive] = useState(false)
   const [installState, setInstallState] = useState<InstallState>('hidden')
   const [showIosHint, setShowIosHint]   = useState(false)
   const installPrompt = useRef<BeforeInstallPromptEvent | null>(null)
@@ -162,6 +164,45 @@ export default function DriverClient({
   const wakeLock         = useRef<WakeLockSentinel | null>(null)
   const lockRelease      = useRef<(() => void) | null>(null)
   const audioEl          = useRef<HTMLAudioElement | null>(null)
+  const compassOff       = useRef<(() => void) | null>(null)
+
+  // ── Compass ───────────────────────────────────────────────────────
+  function initCompass() {
+    if (compassOff.current) return // already active
+
+    type DOEC = typeof DeviceOrientationEvent & { requestPermission?: () => Promise<string> }
+
+    const handler = (e: DeviceOrientationEvent) => {
+      const webkit = (e as DeviceOrientationEvent & { webkitCompassHeading?: number }).webkitCompassHeading
+      if (webkit != null && !Number.isNaN(webkit)) {
+        setHeading(webkit)
+        setCompassActive(true)
+      } else if (e.alpha != null && !Number.isNaN(e.alpha)) {
+        setHeading((360 - e.alpha + 360) % 360)
+        setCompassActive(true)
+      }
+    }
+
+    const attach = () => {
+      window.addEventListener('deviceorientationabsolute', handler as EventListener, true)
+      window.addEventListener('deviceorientation', handler as EventListener, true)
+      compassOff.current = () => {
+        window.removeEventListener('deviceorientationabsolute', handler as EventListener, true)
+        window.removeEventListener('deviceorientation', handler as EventListener, true)
+        compassOff.current = null
+      }
+    }
+
+    if (typeof DeviceOrientationEvent !== 'undefined' &&
+        typeof (DeviceOrientationEvent as DOEC).requestPermission === 'function') {
+      // iOS 13+ — must be called from a user gesture
+      ;(DeviceOrientationEvent as DOEC).requestPermission!()
+        .then(p => { if (p === 'granted') attach() })
+        .catch(() => {})
+    } else {
+      attach()
+    }
+  }
 
   // ── GPS ──────────────────────────────────────────────────────────
   const sendLocation = useCallback(async (lat: number, lng: number) => {
@@ -213,11 +254,18 @@ export default function DriverClient({
 
     const opts: PositionOptions = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
 
+    // Start compass (no-op on iOS until user gesture in markPickedUp)
+    initCompass()
+
     watchId.current = navigator.geolocation.watchPosition(
       pos => {
         sendLocation(pos.coords.latitude, pos.coords.longitude)
         setAccuracy(Math.round(pos.coords.accuracy))
         setGpsStatus('active')
+        // Use GPS heading as fallback when compass isn't active
+        if (!compassActive && pos.coords.heading != null && !Number.isNaN(pos.coords.heading)) {
+          setHeading(pos.coords.heading)
+        }
       },
       () => setGpsStatus('error'),
       opts
@@ -349,6 +397,7 @@ export default function DriverClient({
     if (watchId.current !== null) navigator.geolocation.clearWatch(watchId.current)
     if (fallbackInterval.current) clearInterval(fallbackInterval.current)
     lockRelease.current?.()
+    compassOff.current?.()
     try { audioEl.current?.pause() } catch { /* ignore */ }
     wakeLock.current?.release().catch(() => {})
   }, [])
@@ -432,6 +481,7 @@ export default function DriverClient({
   // ── Mark picked up ────────────────────────────────────────────────
   async function markPickedUp() {
     if (!delivery || delivery.status !== 'ready') return
+    initCompass() // iOS 13+ permission request — must run inside user gesture
     await supabase.from('deliveries')
       .update({ status: 'picked_up', picked_up_at: new Date().toISOString() })
       .eq('id', delivery.id)
@@ -633,6 +683,7 @@ export default function DriverClient({
                   driverLng={driverPos?.[1] ?? null}
                   routeCoords={routeCoords}
                   followDriver={navMode}
+                  heading={heading}
                   mapboxToken={mapboxToken}
                 />
               ) : (

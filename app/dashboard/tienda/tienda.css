@@ -141,6 +141,23 @@
 
 .ts-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .ts-field { display: flex; flex-direction: column; gap: 6px; }
+.ts-field-header { display: flex; align-items: center; justify-content: space-between; }
+.ts-toggle { display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
+.ts-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+.ts-toggle-track {
+  width: 36px; height: 20px; border-radius: 100px;
+  background: #D1D5DB; transition: background 0.2s;
+  position: relative; flex-shrink: 0;
+}
+.ts-toggle-track::after {
+  content: ''; position: absolute;
+  top: 3px; left: 3px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: white; transition: transform 0.2s;
+}
+.ts-toggle input:checked + .ts-toggle-track { background: #7C3AED; }
+.ts-toggle input:checked + .ts-toggle-track::after { transform: translateX(16px); }
+.ts-toggle-label-text { font-size: 11px; font-weight: 600; color: #64748B; letter-spacing: 0.04em; }
 .ts-label {
   font-size: 11px; font-weight: 600;
   color: rgba(15,23,42,0.45);

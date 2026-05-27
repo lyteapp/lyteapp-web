@@ -68,6 +68,8 @@ type TemplateConfig = {
   photoSize?: 'small' | 'medium' | 'large'
   categoryPhotoShapes?: Record<string, string>
   categoryNavStyle?: string
+  showWhatsapp?: boolean
+  showInstagram?: boolean
 }
 type Store = {
   id: string; name: string; slug: string
@@ -1285,7 +1287,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
             {store.logo_url && <img src={store.logo_url} alt={store.name} className="sf-nav-logo" />}
             <span className="sf-nav-name">{store.name}</span>
           </div>
-          {store.whatsapp && (
+          {store.whatsapp && cfg.showWhatsapp !== false && (
             <a href={`https://wa.me/${store.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="sf-nav-wa">
               {WA_ICON} {t('store.contact')}
             </a>
@@ -1297,12 +1299,12 @@ export default function StoreShell({ store, products, categories = [] }: { store
         <div className="sf-banner"><img src={store.banner_url} alt="Banner" className="sf-banner-img" /></div>
       )}
 
-      {(store.description || store.instagram) && (
+      {(store.description || (store.instagram && cfg.showInstagram !== false)) && (
         <div className="sf-header">
           <div className="sf-header-inner sf-header-inner-compact">
             <div className="sf-header-info">
               {store.description && <p className="sf-store-desc">{store.description}</p>}
-              {store.instagram && (
+              {store.instagram && cfg.showInstagram !== false && (
                 <div className="sf-social">
                   <a href={`https://instagram.com/${store.instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="sf-social-btn ig">{IG_ICON} Instagram</a>
                 </div>

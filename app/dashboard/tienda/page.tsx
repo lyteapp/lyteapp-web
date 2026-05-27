@@ -22,6 +22,7 @@ type Store = {
   store_address: string | null
   store_lat: number | null
   store_lng: number | null
+  template_config?: Record<string, unknown> | null
 }
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''
@@ -66,6 +67,8 @@ export default function TiendaPage() {
   const [description, setDescription] = useState('')
   const [whatsapp, setWhatsapp] = useState('')
   const [instagram, setInstagram] = useState('')
+  const [showWhatsapp, setShowWhatsapp] = useState(true)
+  const [showInstagram, setShowInstagram] = useState(true)
   const [logoUrl, setLogoUrl] = useState('')
   const [bannerUrl, setBannerUrl] = useState('')
   const [logoUploading, setLogoUploading]   = useState(false)
@@ -89,6 +92,8 @@ export default function TiendaPage() {
         setDescription(data.description ?? '')
         setWhatsapp(data.whatsapp ?? '')
         setInstagram(data.instagram ?? '')
+        setShowWhatsapp(data.template_config?.showWhatsapp !== false)
+        setShowInstagram(data.template_config?.showInstagram !== false)
         setLogoUrl(data.logo_url ?? '')
         setBannerUrl(data.banner_url ?? '')
         setStoreAddress(data.store_address ?? '')
@@ -175,6 +180,11 @@ export default function TiendaPage() {
       store_address: storeAddress.trim() || null,
       store_lat: storeLat,
       store_lng: storeLng,
+      template_config: {
+        ...(store?.template_config && typeof store.template_config === 'object' ? store.template_config : {}),
+        showWhatsapp,
+        showInstagram,
+      },
     }
     const { error: err, data } = store
       ? await supabase.from('stores').update(payload).eq('id', store.id).select().single()
@@ -363,11 +373,25 @@ export default function TiendaPage() {
           <div className="ts-section-title">Contacto y redes</div>
           <div className="ts-two-col">
             <div className="ts-field">
-              <label className="ts-label">WhatsApp</label>
+              <div className="ts-field-header">
+                <label className="ts-label">WhatsApp</label>
+                <label className="ts-toggle">
+                  <input type="checkbox" checked={showWhatsapp} onChange={e => setShowWhatsapp(e.target.checked)} />
+                  <span className="ts-toggle-track" />
+                  <span className="ts-toggle-label-text">{showWhatsapp ? 'Visible' : 'Oculto'}</span>
+                </label>
+              </div>
               <PhoneInput value={whatsapp} onChange={setWhatsapp} />
             </div>
             <div className="ts-field">
-              <label className="ts-label">Instagram</label>
+              <div className="ts-field-header">
+                <label className="ts-label">Instagram</label>
+                <label className="ts-toggle">
+                  <input type="checkbox" checked={showInstagram} onChange={e => setShowInstagram(e.target.checked)} />
+                  <span className="ts-toggle-track" />
+                  <span className="ts-toggle-label-text">{showInstagram ? 'Visible' : 'Oculto'}</span>
+                </label>
+              </div>
               <div className="ts-prefix-wrap">
                 <span className="ts-prefix">@</span>
                 <input type="text" className="ts-input" placeholder="mi_tienda" value={instagram} onChange={e => setInstagram(e.target.value)} />

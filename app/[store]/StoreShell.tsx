@@ -571,50 +571,6 @@ export default function StoreShell({ store, products, categories = [] }: { store
           </div>
         )}
 
-        <div className="sf-co-section">
-          <h3 className="sf-co-section-title">{t('store.yourInfo')}</h3>
-          <div className="sf-co-field">
-            <label>{t('store.fullName')}</label>
-            <input type="text" placeholder={t('store.namePlaceholder')} value={customerName} onChange={e => setCustomerName(e.target.value)} />
-          </div>
-          <div className="sf-co-field">
-            <label>{t('store.phone')}</label>
-            <input type="tel" placeholder={t('store.phonePlaceholder')} value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} />
-          </div>
-          <div className="sf-co-field">
-            <label>{t('store.notes')} <span className="sf-optional">{t('store.optional')}</span></label>
-            <textarea placeholder={t('store.notesPlaceholder')} rows={2} value={customerNotes} onChange={e => setCustomerNotes(e.target.value)} />
-          </div>
-        </div>
-
-        <div className="sf-co-section">
-          <h3 className="sf-co-section-title">{t('store.paymentMethod')}</h3>
-          {enabledMethods.length > 0 ? (
-            <div className="sf-payment-list">
-              {enabledMethods.map(m => (
-                <div key={m.type} className={`sf-payment-opt${selectedPayment === m.type ? ' selected' : ''}`} onClick={() => setSelectedPayment(m.type)}>
-                  <div className="sf-payment-opt-top">
-                    <div className={`sf-payment-radio${selectedPayment === m.type ? ' on' : ''}`} />
-                    <span className="sf-payment-label">{m.label}</span>
-                  </div>
-                  {selectedPayment === m.type && Object.keys(m.details ?? {}).length > 0 && (
-                    <div className="sf-payment-info">
-                      {Object.entries(m.details).map(([k, v]) => (
-                        <div key={k} className="sf-payment-detail-row"><span>{k}</span><strong>{v}</strong></div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="sf-co-field">
-              <label>{t('store.howPay')}</label>
-              <input type="text" placeholder={t('store.howPayPlaceholder')} value={paymentFreeText} onChange={e => setPaymentFreeText(e.target.value)} />
-            </div>
-          )}
-        </div>
-
         {/* Ubicacion de entrega — solo para domicilio */}
         {deliveryType === 'delivery' && (
           <div className="sf-co-section">
@@ -794,6 +750,51 @@ export default function StoreShell({ store, products, categories = [] }: { store
             )}
           </div>
         )}
+
+        <div className="sf-co-section">
+          <h3 className="sf-co-section-title">{t('store.yourInfo')}</h3>
+          <div className="sf-co-field">
+            <label>{t('store.fullName')}</label>
+            <input type="text" placeholder={t('store.namePlaceholder')} value={customerName} onChange={e => setCustomerName(e.target.value)} />
+          </div>
+          <div className="sf-co-field">
+            <label>{t('store.phone')}</label>
+            <input type="tel" placeholder={t('store.phonePlaceholder')} value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} />
+          </div>
+          <div className="sf-co-field">
+            <label>{t('store.notes')} <span className="sf-optional">{t('store.optional')}</span></label>
+            <textarea placeholder={t('store.notesPlaceholder')} rows={2} value={customerNotes} onChange={e => setCustomerNotes(e.target.value)} />
+          </div>
+        </div>
+
+        <div className="sf-co-section">
+          <h3 className="sf-co-section-title">{t('store.paymentMethod')}</h3>
+          {enabledMethods.length > 0 ? (
+            <div className="sf-payment-list">
+              {enabledMethods.map(m => (
+                <div key={m.type} className={`sf-payment-opt${selectedPayment === m.type ? ' selected' : ''}`} onClick={() => setSelectedPayment(m.type)}>
+                  <div className="sf-payment-opt-top">
+                    <div className={`sf-payment-radio${selectedPayment === m.type ? ' on' : ''}`} />
+                    <span className="sf-payment-label">{m.label}</span>
+                  </div>
+                  {selectedPayment === m.type && Object.keys(m.details ?? {}).length > 0 && (
+                    <div className="sf-payment-info">
+                      {Object.entries(m.details).map(([k, v]) => (
+                        <div key={k} className="sf-payment-detail-row"><span>{k}</span><strong>{v}</strong></div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="sf-co-field">
+              <label>{t('store.howPay')}</label>
+              <input type="text" placeholder={t('store.howPayPlaceholder')} value={paymentFreeText} onChange={e => setPaymentFreeText(e.target.value)} />
+            </div>
+          )}
+        </div>
+
 
         {error && <div className="sf-co-error">{error}</div>}
         <button className="sf-submit-btn" onClick={handleSubmit} disabled={submitting || cartItems.length === 0}>

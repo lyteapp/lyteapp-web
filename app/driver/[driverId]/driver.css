@@ -280,50 +280,66 @@
   flex-shrink: 0;
 }
 
-/* ── Active delivery (full-width map layout) ── */
+/* ── Active delivery — fullscreen map layout ── */
+.dsp-body--active {
+  padding-bottom: 0;
+}
+
 .dsp-active-wrap {
-  background: #fff;
-  border-bottom: 1px solid #E2E8F0;
-  display: flex;
-  flex-direction: column;
-}
-
-.dsp-active-info {
-  padding: 0 16px 12px;
-}
-
-.dsp-active-map {
+  flex: 1;
   position: relative;
-  height: 300px;
   background: #E8EEF4;
 }
 
-.dsp-nav-btn {
+.dsp-active-map {
   position: absolute;
-  bottom: 12px;
-  right: 12px;
+  inset: 0;
+  background: #E8EEF4;
+}
+
+/* Customer info frosted overlay at top of map */
+.dsp-active-info {
+  position: absolute;
+  top: 0; left: 0; right: 0;
   z-index: 1000;
+  background: rgba(255,255,255,0.97);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 12px 16px 14px;
+  border-bottom: 1px solid rgba(226,232,240,0.8);
+}
+
+/* Action buttons overlay at bottom of map */
+.dsp-active-actions {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  z-index: 1001;
+  display: flex;
+  gap: 8px;
+  padding: 24px 16px 20px;
+  background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.08) 65%, transparent 100%);
+}
+
+/* Navigation button (Como llegar) */
+.dsp-btn-nav {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #fff;
+  padding: 13px 16px;
+  border-radius: 12px;
   border: none;
-  border-radius: 10px;
-  padding: 8px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #0F172A;
+  background: #DBEAFE;
+  color: #1D4ED8;
+  font-size: 14px;
+  font-weight: 700;
   cursor: pointer;
-  text-decoration: none;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
   font-family: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s;
 }
 
-.dsp-active-actions {
-  display: flex;
-  gap: 8px;
-  padding: 12px 16px 16px;
-}
+.dsp-btn-nav:hover { background: #BFDBFE; }
 
 .dsp-btn-call {
   display: flex;

@@ -383,35 +383,11 @@ export default function DriverClient({
         </div>
       )}
 
-      <div className="dsp-body">
+      <div className={`dsp-body${delivery ? ' dsp-body--active' : ''}`}>
 
-        {/* ── ACTIVE DELIVERY ── */}
+        {/* ── ACTIVE DELIVERY ── fullscreen map with overlaid controls */}
         {delivery && (
           <div className="dsp-active-wrap">
-            {/* Title bar */}
-            <div className="dsp-section-title" style={{ padding: '14px 16px 8px' }}>
-              <span className="dsp-pulse-dot" />
-              Pedido activo
-            </div>
-
-            {/* Customer info strip */}
-            <div className="dsp-active-info">
-              <div className="dsp-delivery-customer" style={{ marginBottom: 4 }}>{delivery.customer_name}</div>
-              {delivery.delivery_address && (
-                <div className="dsp-delivery-address" style={{ marginBottom: 4 }}>
-                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="12" height="12" style={{ flexShrink: 0 }}>
-                    <path strokeLinecap="round" d="M8 1.5C5.515 1.5 3.5 3.515 3.5 6c0 3.938 4.5 8.5 4.5 8.5S12.5 9.938 12.5 6c0-2.485-2.015-4.5-4.5-4.5z"/>
-                    <circle cx="8" cy="6" r="1.5"/>
-                  </svg>
-                  {delivery.delivery_address}
-                </div>
-              )}
-              {delivery.notes && (
-                <div className="dsp-delivery-notes" style={{ margin: 0 }}>{delivery.notes}</div>
-              )}
-            </div>
-
-            {/* Big map */}
             <div className="dsp-active-map">
               {delivery.customer_lat && delivery.customer_lng ? (
                 <DriverMap
@@ -431,46 +407,65 @@ export default function DriverClient({
                 </div>
               )}
 
-              {/* Navigate overlay button */}
-              {delivery.customer_lat && delivery.customer_lng && (
-                <a
-                  href={`https://www.google.com/maps/dir/?api=1&destination=${delivery.customer_lat},${delivery.customer_lng}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="dsp-nav-btn"
-                >
-                  <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15">
-                    <path fillRule="evenodd" d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 103 9c0 3.492 1.698 5.988 3.355 7.584a13.731 13.731 0 002.273 1.765 11.842 11.842 0 00.976.544l.062.029.018.008.006.003zM10 11.25a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z" clipRule="evenodd"/>
-                  </svg>
-                  Como llegar
-                </a>
-              )}
-            </div>
+              {/* Customer info overlay — top of map */}
+              <div className="dsp-active-info">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                  <span className="dsp-pulse-dot" />
+                  <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#64748B' }}>Pedido activo</span>
+                </div>
+                <div className="dsp-delivery-customer" style={{ marginBottom: 4 }}>{delivery.customer_name}</div>
+                {delivery.delivery_address && (
+                  <div className="dsp-delivery-address" style={{ marginBottom: 4 }}>
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="12" height="12" style={{ flexShrink: 0 }}>
+                      <path strokeLinecap="round" d="M8 1.5C5.515 1.5 3.5 3.515 3.5 6c0 3.938 4.5 8.5 4.5 8.5S12.5 9.938 12.5 6c0-2.485-2.015-4.5-4.5-4.5z"/>
+                      <circle cx="8" cy="6" r="1.5"/>
+                    </svg>
+                    {delivery.delivery_address}
+                  </div>
+                )}
+                {delivery.notes && (
+                  <div className="dsp-delivery-notes" style={{ margin: 0 }}>{delivery.notes}</div>
+                )}
+              </div>
 
-            {/* Action buttons */}
-            <div className="dsp-active-actions">
-              {delivery.customer_phone && (
-                <a href={`tel:${delivery.customer_phone}`} className="dsp-btn-call">
-                  <svg viewBox="0 0 20 20" fill="currentColor" width="17" height="17">
-                    <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.042 11.042 0 005.516 5.516l.773-1.548a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-1C7.82 18 2 8.18 2 3z"/>
-                  </svg>
-                  Llamar
-                </a>
-              )}
-              {delivery.status === 'ready' && (
-                <button className="dsp-btn-pickup" style={{ flex: 1 }} onClick={markPickedUp}>
-                  Recogi el pedido
+              {/* Action buttons overlay — bottom of map */}
+              <div className="dsp-active-actions">
+                {delivery.customer_phone && (
+                  <a href={`tel:${delivery.customer_phone}`} className="dsp-btn-call">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="17" height="17">
+                      <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.042 11.042 0 005.516 5.516l.773-1.548a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-1C7.82 18 2 8.18 2 3z"/>
+                    </svg>
+                    Llamar
+                  </a>
+                )}
+                {delivery.customer_lat && delivery.customer_lng && (
+                  <a
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${delivery.customer_lat},${delivery.customer_lng}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="dsp-btn-nav"
+                  >
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+                      <path fillRule="evenodd" d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 103 9c0 3.492 1.698 5.988 3.355 7.584a13.731 13.731 0 002.273 1.765 11.842 11.842 0 00.976.544l.062.029.018.008.006.003zM10 11.25a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z" clipRule="evenodd"/>
+                    </svg>
+                    Como llegar
+                  </a>
+                )}
+                {delivery.status === 'ready' && (
+                  <button className="dsp-btn-pickup" style={{ flex: 1 }} onClick={markPickedUp}>
+                    Recogi el pedido
+                  </button>
+                )}
+                <button className="dsp-btn-done" style={{ flex: 1 }} onClick={completeDelivery} disabled={completing}>
+                  {completing ? 'Guardando...' : 'Entregado'}
                 </button>
-              )}
-              <button className="dsp-btn-done" style={{ flex: 1 }} onClick={completeDelivery} disabled={completing}>
-                {completing ? 'Guardando...' : 'Entregado'}
-              </button>
+              </div>
             </div>
           </div>
         )}
 
-        {/* ── AVAILABLE ORDERS ── */}
-        <div className="dsp-section">
+        {/* ── AVAILABLE ORDERS ── hidden while a delivery is active */}
+        {!delivery && <div className="dsp-section">
           <div className="dsp-section-title">
             Pedidos disponibles
             {orders.length > 0 && <span className="dsp-count">{orders.length}</span>}
@@ -521,10 +516,10 @@ export default function DriverClient({
               ))}
             </div>
           )}
-        </div>
+        </div>}
 
-        {/* GPS toggle at bottom */}
-        {isActive && (
+        {/* GPS toggle at bottom — hidden when delivery active (status shown in header pill) */}
+        {isActive && !delivery && (
           <>
             <div className="dsp-gps-bar">
               <div className="dsp-gps-info">

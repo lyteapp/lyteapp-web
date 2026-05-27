@@ -106,6 +106,7 @@ export default function Apariencia() {
   const [categories, setCategories]         = useState<Category[]>([])
   const [categoryShapes, setCategoryShapes] = useState<Record<string, string>>({})
   const [trConfig, setTrConfig]             = useState<TrackingConfig>(DEFAULT_TR_CONFIG)
+  const [storeLogo, setStoreLogo]           = useState<string | null>(null)
   const [saving, setSaving]                 = useState(false)
   const [success, setSuccess]               = useState(false)
   const [error, setError]                   = useState('')
@@ -124,13 +125,14 @@ export default function Apariencia() {
     if (!user) return
     supabase
       .from('stores')
-      .select('id,template,brand_color,template_config')
+      .select('id,template,brand_color,template_config,logo_url')
       .eq('owner_id', user.id)
       .maybeSingle()
       .then(async ({ data }) => {
         if (!data) return
         if (data.template)    setTemplate(data.template)
         if (data.brand_color) setColor(data.brand_color)
+        if (data.logo_url)    setStoreLogo(data.logo_url as string)
         const cfg = (data.template_config ?? {}) as Record<string, unknown>
         setBaseConfig(cfg)
         if (cfg.categoryPhotoShapes) setCategoryShapes(cfg.categoryPhotoShapes as Record<string, string>)
@@ -351,6 +353,84 @@ export default function Apariencia() {
                 <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
               </svg>
               Av. Libertador 1234, Caracas
+            </div>
+          </div>
+
+          {/* Map card — simulates tr-map-card showing store location while preparing */}
+          <div style={{
+            width: '100%', borderRadius: 15, overflow: 'hidden',
+            boxShadow: '0 2px 12px rgba(15,23,42,0.06)', marginBottom: 9,
+            height: 138, position: 'relative', flexShrink: 0,
+          }}>
+            {/* SVG fake map */}
+            <svg viewBox="0 0 280 138" preserveAspectRatio="xMidYMid slice"
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+              <rect width="280" height="138" fill={mapPreset.bg}/>
+              <polygon points="0,75 55,65 95,95 38,115" fill={mapPreset.terrain} opacity="0.45"/>
+              <polygon points="155,15 265,5 280,58 195,55" fill={mapPreset.terrain} opacity="0.4"/>
+              <path d="M -10 52 L 75 47 L 155 57 L 280 47" stroke={mapPreset.road1} strokeWidth="13" fill="none" strokeLinecap="round"/>
+              <path d="M -10 90 L 85 85 L 195 96 L 280 88" stroke={mapPreset.road2} strokeWidth="10" fill="none" strokeLinecap="round"/>
+              <path d="M 72 -5 L 76 52 L 80 138" stroke={mapPreset.road1} strokeWidth="10" fill="none" strokeLinecap="round"/>
+              <path d="M 170 -5 L 173 48 L 175 138" stroke={mapPreset.road2} strokeWidth="9" fill="none" strokeLinecap="round"/>
+              <rect x="8" y="8" width="28" height="20" rx="2" fill={mapPreset.building} opacity="0.7"/>
+              <rect x="90" y="8" width="38" height="22" rx="2" fill={mapPreset.building} opacity="0.65"/>
+              <rect x="188" y="6" width="32" height="19" rx="2" fill={mapPreset.building} opacity="0.7"/>
+              <rect x="8" y="104" width="32" height="24" rx="2" fill={mapPreset.building} opacity="0.65"/>
+              <rect x="93" y="106" width="38" height="20" rx="2" fill={mapPreset.building} opacity="0.6"/>
+              <rect x="188" y="100" width="30" height="24" rx="2" fill={mapPreset.building} opacity="0.65"/>
+            </svg>
+
+            {/* Store marker: logo circle + 3D building */}
+            <div style={{
+              position: 'absolute', top: 14, left: '34%', transform: 'translateX(-50%)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.22))', zIndex: 2,
+            }}>
+              <div style={{
+                width: 28, height: 28, borderRadius: '50%',
+                border: '2px solid white', overflow: 'hidden',
+                background: '#F1F5F9', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                {storeLogo
+                  ? <img src={storeLogo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : <svg viewBox="0 0 20 20" fill={trConfig.accentColor} width="15" height="15">
+                      <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zm14 4H2v7a2 2 0 002 2h12a2 2 0 002-2V8zm-8 3a1 1 0 011 1v2a1 1 0 01-2 0v-2a1 1 0 011-1z" clipRule="evenodd"/>
+                    </svg>
+                }
+              </div>
+              <svg viewBox="0 0 44 36" width="28" height="23" style={{ display: 'block', marginTop: -5 }}>
+                <polygon points="2,14 30,14 42,6 14,6" fill={trConfig.accentColor} />
+                <polygon points="2,14 30,14 42,6 14,6" fill="rgba(255,255,255,0.22)" />
+                <polygon points="30,14 42,6 42,30 30,36" fill={trConfig.accentColor} />
+                <polygon points="30,14 42,6 42,30 30,36" fill="rgba(0,0,0,0.28)" />
+                <rect x="2" y="14" width="28" height="22" fill={trConfig.accentColor} />
+                <rect x="5" y="18" width="9" height="7" rx="1.5" fill="rgba(255,255,255,0.65)" />
+                <rect x="16" y="18" width="9" height="7" rx="1.5" fill="rgba(255,255,255,0.65)" />
+                <rect x="10" y="28" width="9" height="8" rx="1" fill="rgba(0,0,0,0.25)" />
+              </svg>
+            </div>
+
+            {/* Customer destination marker */}
+            <div style={{
+              position: 'absolute', top: 58, left: '82%', transform: 'translateX(-50%)',
+              width: 20, height: 20, borderRadius: '50%',
+              background: '#10B981', border: '2px solid white',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 2px 8px rgba(16,185,129,0.4)', zIndex: 2,
+            }}>
+              <svg viewBox="0 0 20 20" fill="white" width="10" height="10">
+                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"/>
+              </svg>
+            </div>
+
+            {/* Zoom controls (decorative) */}
+            <div style={{ position: 'absolute', top: 7, right: 7, display: 'flex', flexDirection: 'column', gap: 2, zIndex: 3 }}>
+              {['+', '−'].map(sign => (
+                <div key={sign} style={{ width: 16, height: 16, background: 'white', borderRadius: 3, boxShadow: '0 1px 4px rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#64748B', fontWeight: 700 }}>
+                  {sign}
+                </div>
+              ))}
             </div>
           </div>
 

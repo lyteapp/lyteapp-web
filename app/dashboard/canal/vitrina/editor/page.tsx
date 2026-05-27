@@ -174,9 +174,10 @@ export default function EditorPage() {
   const [saving, setSaving]         = useState(false)
   const [toolSaved, setToolSaved]   = useState(false)
 
-  const bgPickerRef   = useRef<HTMLInputElement>(null)
-  const cardPickerRef = useRef<HTMLInputElement>(null)
-  const acPickerRef   = useRef<HTMLInputElement>(null)
+  const bgPickerRef       = useRef<HTMLInputElement>(null)
+  const cardPickerRef     = useRef<HTMLInputElement>(null)
+  const acPickerRef       = useRef<HTMLInputElement>(null)
+  const acPickerColorsRef = useRef<HTMLInputElement>(null)
 
   // ── Load saved config ──────────────────────────────────
   useEffect(() => {
@@ -715,6 +716,37 @@ export default function EditorPage() {
                 type="color"
                 value={isCustomCard ? cardBg : '#FFFFFF'}
                 onChange={e => setCardBg(e.target.value)}
+                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
+              />
+            </div>
+
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Color de acento</div>
+            <div className="ed-tp-swatches" style={{ position: 'relative' }}>
+              {ACCENT_COLORS.map(c => (
+                <button
+                  key={c}
+                  className={`ed-tp-swatch${accentColor === c ? ' ed-tp-active' : ''}`}
+                  style={{ background: c }}
+                  onClick={() => setAccentColor(c)}
+                />
+              ))}
+              <button
+                className={`ed-tp-swatch ed-tp-custom${isCustomAc ? ' ed-tp-active' : ''}`}
+                style={isCustomAc ? { background: accentColor } : undefined}
+                title="Personalizado"
+                onClick={() => acPickerColorsRef.current?.click()}
+              >
+                {!isCustomAc && (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                )}
+              </button>
+              <input
+                ref={acPickerColorsRef}
+                type="color"
+                value={isCustomAc ? accentColor : '#7C3AED'}
+                onChange={e => setAccentColor(e.target.value)}
                 style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
               />
             </div>

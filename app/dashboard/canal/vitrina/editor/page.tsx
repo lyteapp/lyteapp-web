@@ -1117,7 +1117,7 @@ export default function EditorPage() {
               <input
                 type="range"
                 min={20}
-                max={60}
+                max={100}
                 step={2}
                 value={logoSizePx}
                 onChange={e => setLogoSizePx(Number(e.target.value))}

@@ -45,8 +45,7 @@ const canalSubItems: { href: string; tKey: TranslationKey }[] = [
 ]
 
 const settingsSubItems: { href: string; tKey: TranslationKey }[] = [
-  { href: '/dashboard/configuracion?section=general',  tKey: 'nav.general' },
-  { href: '/dashboard/configuracion?section=delivery', tKey: 'nav.delivery' },
+  { href: '/dashboard/configuracion?section=general', tKey: 'nav.general' },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

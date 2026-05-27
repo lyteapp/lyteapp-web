@@ -67,14 +67,6 @@ function ConfiguracionInner() {
   const [savingGeneral, setSavingGeneral] = useState(false)
   const [savedGeneral, setSavedGeneral] = useState(false)
 
-  // Delivery
-  const [deliveryEnabled, setDeliveryEnabled] = useState(false)
-  const [deliveryFee, setDeliveryFee] = useState('')
-  const [deliveryTime, setDeliveryTime] = useState('')
-  const [deliveryZone, setDeliveryZone] = useState('')
-  const [savingDelivery, setSavingDelivery] = useState(false)
-  const [savedDelivery, setSavedDelivery] = useState(false)
-
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -86,7 +78,7 @@ function ConfiguracionInner() {
     if (!user) return
     async function load() {
       const { data: store, error: storeErr } = await supabase
-        .from('stores').select('id,name,slug,city,email,map_url,whatsapp,whatsapp2,country,store_language,operating_hours,social_links,checkout_settings')
+        .from('stores').select('id,name,slug,city,email,map_url,whatsapp,whatsapp2,country,store_language,operating_hours,social_links')
         .eq('owner_id', user!.id).maybeSingle()
 
       if (storeErr) { setError(storeErr.message); setLoading(false); return }
@@ -107,11 +99,6 @@ function ConfiguracionInner() {
         const sl = (store as any).social_links
         if (sl && typeof sl === 'object') setSocialLinks(prev => ({ ...prev, ...sl }))
 
-        const cs = store.checkout_settings ?? {}
-        setDeliveryEnabled(cs.deliveryEnabled ?? false)
-        setDeliveryFee(cs.deliveryFee ? String(cs.deliveryFee) : '')
-        setDeliveryTime(cs.deliveryTime ?? '')
-        setDeliveryZone(cs.deliveryZone ?? '')
       }
       setLoading(false)
     }
@@ -141,17 +128,6 @@ function ConfiguracionInner() {
     setSavingGeneral(false)
     if (err) { setError(err.message); return }
     flash(setSavedGeneral)
-  }
-
-  async function saveDelivery() {
-    if (!storeId) return
-    setSavingDelivery(true); setError('')
-    const { data: store } = await supabase.from('stores').select('checkout_settings').eq('id', storeId).maybeSingle()
-    const cs = { ...(store?.checkout_settings ?? {}), deliveryEnabled, deliveryFee: deliveryFee ? parseFloat(deliveryFee) : null, deliveryTime: deliveryTime.trim() || null, deliveryZone: deliveryZone.trim() || null }
-    const { error: err } = await supabase.from('stores').update({ checkout_settings: cs }).eq('id', storeId)
-    setSavingDelivery(false)
-    if (err) { setError(err.message); return }
-    flash(setSavedDelivery)
   }
 
   function toggleSection(s: string) { setOpenSection(prev => prev === s ? '' : s) }
@@ -315,37 +291,6 @@ function ConfiguracionInner() {
         )}
       </div>
 
-      {/* ── DELIVERY ── */}
-      <div className="cf-card">
-        <SectionHeader title="Delivery" desc="Configura el envío y entrega a domicilio" open={openSection === 'delivery'} onToggle={() => toggleSection('delivery')} saved={savedDelivery} />
-        {openSection === 'delivery' && (
-          <div className="cf-card-body">
-            <div className="cf-toggle-row">
-              <span className="cf-toggle-label">Activar delivery</span>
-              <button className={`cf-toggle${deliveryEnabled ? ' on' : ''}`} onClick={() => setDeliveryEnabled(!deliveryEnabled)}><div className="cf-toggle-knob" /></button>
-            </div>
-            {deliveryEnabled && (
-              <>
-                <div className="cf-two-col">
-                  <div className="cf-field">
-                    <label className="cf-label">Costo de delivery (USD)</label>
-                    <input className="cf-input" type="number" min="0" step="0.01" placeholder="Ej: 2.00" value={deliveryFee} onChange={e => setDeliveryFee(e.target.value)} />
-                  </div>
-                  <div className="cf-field">
-                    <label className="cf-label">Tiempo estimado</label>
-                    <input className="cf-input" placeholder="Ej: 30-45 min" value={deliveryTime} onChange={e => setDeliveryTime(e.target.value)} />
-                  </div>
-                </div>
-                <div className="cf-field">
-                  <label className="cf-label">Zona de cobertura</label>
-                  <textarea className="cf-input" rows={2} style={{ resize: 'vertical', lineHeight: 1.6 }} placeholder="Ej: Las Mercedes, Chacao, El Rosal..." value={deliveryZone} onChange={e => setDeliveryZone(e.target.value)} />
-                </div>
-              </>
-            )}
-            <SaveBtn saving={savingDelivery} onClick={saveDelivery} />
-          </div>
-        )}
-      </div>
     </div>
   )
 }

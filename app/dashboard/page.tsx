@@ -33,6 +33,7 @@ export default function Dashboard() {
   const [storeSlug, setStoreSlug] = useState('')
   const [storeId, setStoreId] = useState<string | null>(null)
   const [orderCount, setOrderCount] = useState(0)
+  const [totalSales, setTotalSales] = useState(0)
   const [avgTicket, setAvgTicket] = useState(0)
   const [productCount, setProductCount] = useState(0)
   const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([])
@@ -58,10 +59,9 @@ export default function Dashboard() {
       supabase.from('orders').select('id, total').eq('store_id', data.id).gte('created_at', todayStart.toISOString()).then(({ data: orders }) => {
         const count = orders?.length ?? 0
         setOrderCount(count)
-        if (count > 0) {
-          const sum = (orders ?? []).reduce((acc, o) => acc + Number(o.total ?? 0), 0)
-          setAvgTicket(sum / count)
-        }
+        const sum = (orders ?? []).reduce((acc, o) => acc + Number(o.total ?? 0), 0)
+        setTotalSales(sum)
+        if (count > 0) setAvgTicket(sum / count)
       })
       supabase.from('products').select('id', { count: 'exact' }).eq('store_id', data.id).then(({ count }) => setProductCount(count ?? 0))
       loadActiveOrders(data.id)
@@ -124,7 +124,7 @@ export default function Dashboard() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
             </span>
           </div>
-          <div className="dh-kpi-value">$0<span className="dh-kpi-unit">.00</span></div>
+          <div className="dh-kpi-value">${Math.floor(totalSales)}<span className="dh-kpi-unit">.{String(Math.round((totalSales % 1) * 100)).padStart(2, '0')}</span></div>
           <svg className="dh-spark" viewBox="0 0 200 28" preserveAspectRatio="none">
             <path d="M0,24 L40,22 L80,20 L120,16 L160,12 L200,8" stroke="#7C3AED" strokeWidth="1.8" fill="none" strokeLinecap="round"/>
             <path d="M0,24 L40,22 L80,20 L120,16 L160,12 L200,8 L200,28 L0,28 Z" fill="url(#sf)" opacity="0.12"/>

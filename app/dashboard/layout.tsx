@@ -60,6 +60,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [storeName, setStoreName] = useState('')
   const [storeSlug, setStoreSlug] = useState('')
   const [storeId, setStoreId] = useState<string | null>(null)
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [orderNotif, setOrderNotif] = useState<{ name: string; total: number } | null>(null)
   const notifTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [canalOpen, setCanalOpen]         = useState(false)
@@ -80,8 +81,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     if (!user) return
-    supabase.from('stores').select('id, name, slug').eq('owner_id', user.id).maybeSingle().then(({ data }) => {
-      if (data) { setStoreId(data.id); setStoreName(data.name); setStoreSlug(data.slug) }
+    supabase.from('stores').select('id, name, slug, logo_url').eq('owner_id', user.id).maybeSingle().then(({ data }) => {
+      if (data) { setStoreId(data.id); setStoreName(data.name); setStoreSlug(data.slug); setLogoUrl(data.logo_url ?? null) }
     })
   }, [user])
 
@@ -166,7 +167,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Store name */}
         <Link href="/dashboard/tienda" className="db-store-block">
-          <div className="db-store-avatar">{storeName.slice(0, 1).toUpperCase()}</div>
+          <div className="db-store-avatar" style={logoUrl ? { background: 'transparent', padding: 0, overflow: 'hidden' } : {}}>
+            {logoUrl
+              ? <img src={logoUrl} alt={storeName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : storeName.slice(0, 1).toUpperCase()
+            }
+          </div>
           <div>
             <div className="db-store-name">{storeName}</div>
             {storeSlug && <div className="db-store-url">lyte-app.com/{storeSlug}</div>}

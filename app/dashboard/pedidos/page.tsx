@@ -98,6 +98,7 @@ export default function PedidosPage() {
   const [displayUpdating, setDisplayUpdating] = useState<string | null>(null)
   const [displayLoading, setDisplayLoading] = useState(false)
   const displayModeRef = useRef(false)
+  const displayDateRef = useRef('')
   const bcChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
 
   const loadOrders = useCallback(async (sid: string) => {
@@ -131,6 +132,17 @@ export default function PedidosPage() {
   useEffect(() => { displayModeRef.current = displayMode }, [displayMode])
 
   useEffect(() => {
+    if (!displayMode) return
+    const id = setInterval(() => {
+      if (new Date().toDateString() !== displayDateRef.current) {
+        setDisplayOrders([])
+        displayDateRef.current = new Date().toDateString()
+      }
+    }, 60_000)
+    return () => clearInterval(id)
+  }, [displayMode])
+
+  useEffect(() => {
     const ch = supabase.channel('kitchen-updates')
     ch.subscribe()
     bcChannelRef.current = ch
@@ -148,15 +160,18 @@ export default function PedidosPage() {
           const newOrder = payload.new as Order
           setOrders(prev => [newOrder, ...prev])
           if (displayModeRef.current) {
-            await new Promise(r => setTimeout(r, 700))
-            const { data: items } = await supabase
-              .from('order_items')
-              .select('product_name, quantity, subtotal')
-              .eq('order_id', newOrder.id)
-            setDisplayOrders(prev => [
-              { ...newOrder, order_items: items ?? [] } as DisplayOrder,
-              ...prev,
-            ])
+            const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
+            if (new Date(newOrder.created_at) >= todayStart) {
+              await new Promise(r => setTimeout(r, 700))
+              const { data: items } = await supabase
+                .from('order_items')
+                .select('product_name, quantity, subtotal')
+                .eq('order_id', newOrder.id)
+              setDisplayOrders(prev => [
+                { ...newOrder, order_items: items ?? [] } as DisplayOrder,
+                ...prev,
+              ])
+            }
           }
         }
       )
@@ -301,13 +316,16 @@ export default function PedidosPage() {
 
   async function openDisplay() {
     if (!storeId) return
+    displayDateRef.current = new Date().toDateString()
     setDisplayMode(true)
     setDisplayLoading(true)
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
     const { data } = await supabase
       .from('orders')
       .select('id, created_at, customer_name, customer_phone, customer_notes, payment_method, total, status, order_items(product_name, quantity, subtotal)')
       .eq('store_id', storeId)
       .not('status', 'in', '(delivered,cancelled,completed)')
+      .gte('created_at', todayStart.toISOString())
       .order('created_at', { ascending: true })
     setDisplayOrders((data ?? []) as DisplayOrder[])
     setDisplayLoading(false)
@@ -516,63 +534,79 @@ export default function PedidosPage() {
             <div className="pd-display-loading"><div className="pd-spinner" /></div>
           ) : displayOrders.length === 0 ? (
             <div className="pd-display-empty">Sin comandas activas</div>
-          ) : (
-            <div className="pd-display-grid">
-              {displayOrders.map(order => {
-                const timeStr = new Date(order.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })
-                return (
-                  <div key={order.id} className={`pd-comanda pd-cs-${order.status}`}>
-                    <div className="pd-comanda-head">
-                      <div className="pd-comanda-id">#{order.id.slice(0, 8).toUpperCase()}</div>
-                      <div className="pd-comanda-time">{timeStr}</div>
-                      <span className="pd-comanda-badge">{DISPLAY_STATUS[order.status] ?? order.status}</span>
-                    </div>
-                    <div className="pd-comanda-customer">
-                      <div className="pd-comanda-name">{order.customer_name}</div>
-                      <div className="pd-comanda-phone">{order.customer_phone}</div>
-                    </div>
-                    <div className="pd-comanda-items">
-                      {order.order_items.map((item, i) => (
-                        <div key={i} className="pd-comanda-item">
-                          <span className="pd-comanda-qty">{item.quantity}x</span>
-                          <span className="pd-comanda-pname">{item.product_name}</span>
-                          <span className="pd-comanda-price">${Number(item.subtotal).toFixed(2)}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="pd-comanda-total">${Number(order.total).toFixed(2)}</div>
-                    {order.customer_notes && (
-                      <div className="pd-comanda-notes">{order.customer_notes}</div>
-                    )}
-                    <div className="pd-comanda-actions">
-                      {order.status === 'pending' && (
-                        <button className="pd-comanda-btn confirm" disabled={displayUpdating === order.id} onClick={() => updateDisplayStatus(order.id, 'confirmed')}>
-                          {displayUpdating === order.id ? '...' : 'Recibido'}
-                        </button>
-                      )}
-                      {order.status === 'confirmed' && (
-                        <button className="pd-comanda-btn process" disabled={displayUpdating === order.id} onClick={() => updateDisplayStatus(order.id, 'processing')}>
-                          {displayUpdating === order.id ? '...' : 'En proceso'}
-                        </button>
-                      )}
-                      {order.status === 'processing' && (
-                        <button className="pd-comanda-btn ready" disabled={displayUpdating === order.id} onClick={() => updateDisplayStatus(order.id, 'ready')}>
-                          {displayUpdating === order.id ? '...' : 'Listo'}
-                        </button>
-                      )}
-                      <button className="pd-comanda-btn wa" onClick={() => sendComanda(order)}>
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12">
-                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
-                          <path d="M11.999 2C6.477 2 2 6.477 2 12c0 1.89.522 3.66 1.432 5.168L2 22l4.975-1.395A9.944 9.944 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z" />
-                        </svg>
-                        WhatsApp
-                      </button>
-                    </div>
+          ) : (() => {
+            const inProgress = displayOrders.filter(o => ['pending', 'confirmed', 'processing'].includes(o.status))
+            const ready = displayOrders.filter(o => o.status === 'ready')
+            const renderCard = (order: DisplayOrder) => {
+              const timeStr = new Date(order.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })
+              return (
+                <div key={order.id} className={`pd-comanda pd-cs-${order.status}`}>
+                  <div className="pd-comanda-head">
+                    <div className="pd-comanda-id">#{order.id.slice(0, 8).toUpperCase()}</div>
+                    <div className="pd-comanda-time">{timeStr}</div>
+                    <span className="pd-comanda-badge">{DISPLAY_STATUS[order.status] ?? order.status}</span>
                   </div>
-                )
-              })}
-            </div>
-          )}
+                  <div className="pd-comanda-customer">
+                    <div className="pd-comanda-name">{order.customer_name}</div>
+                    <div className="pd-comanda-phone">{order.customer_phone}</div>
+                  </div>
+                  <div className="pd-comanda-items">
+                    {order.order_items.map((item, i) => (
+                      <div key={i} className="pd-comanda-item">
+                        <span className="pd-comanda-qty">{item.quantity}x</span>
+                        <span className="pd-comanda-pname">{item.product_name}</span>
+                        <span className="pd-comanda-price">${Number(item.subtotal).toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="pd-comanda-total">${Number(order.total).toFixed(2)}</div>
+                  {order.customer_notes && (
+                    <div className="pd-comanda-notes">{order.customer_notes}</div>
+                  )}
+                  <div className="pd-comanda-actions">
+                    {order.status === 'pending' && (
+                      <button className="pd-comanda-btn confirm" disabled={displayUpdating === order.id} onClick={() => updateDisplayStatus(order.id, 'confirmed')}>
+                        {displayUpdating === order.id ? '...' : 'Recibido'}
+                      </button>
+                    )}
+                    {order.status === 'confirmed' && (
+                      <button className="pd-comanda-btn process" disabled={displayUpdating === order.id} onClick={() => updateDisplayStatus(order.id, 'processing')}>
+                        {displayUpdating === order.id ? '...' : 'En proceso'}
+                      </button>
+                    )}
+                    {order.status === 'processing' && (
+                      <button className="pd-comanda-btn ready" disabled={displayUpdating === order.id} onClick={() => updateDisplayStatus(order.id, 'ready')}>
+                        {displayUpdating === order.id ? '...' : 'Listo'}
+                      </button>
+                    )}
+                    <button className="pd-comanda-btn wa" onClick={() => sendComanda(order)}>
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+                        <path d="M11.999 2C6.477 2 2 6.477 2 12c0 1.89.522 3.66 1.432 5.168L2 22l4.975-1.395A9.944 9.944 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z" />
+                      </svg>
+                      WhatsApp
+                    </button>
+                  </div>
+                </div>
+              )
+            }
+            return (
+              <div className="pd-display-body">
+                {inProgress.length > 0 && (
+                  <div className="pd-display-section">
+                    <div className="pd-display-section-title">En preparacion</div>
+                    <div className="pd-display-grid">{inProgress.map(renderCard)}</div>
+                  </div>
+                )}
+                {ready.length > 0 && (
+                  <div className="pd-display-section pd-display-section--ready">
+                    <div className="pd-display-section-title">Listos</div>
+                    <div className="pd-display-grid">{ready.map(renderCard)}</div>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
         </div>
       )}
 

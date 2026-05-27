@@ -1372,83 +1372,83 @@ export default function DeliveryPage() {
           VISTA: AJUSTES
       ══════════════════════════════════════════════ */}
       <div className={`dv-view${tab === 'settings' ? ' active' : ''}`}>
-        <div className="dv-settings-wrap">
+        <div className="dv-settings-view">
+          <div className="dv-settings-wrap">
 
-          {/* Delivery general */}
-          <div className="dv-settings-section">
-            <div className="dv-settings-section-head">
-              <div>
+            {/* Delivery general */}
+            <div className="dv-settings-section">
+              <div className="dv-settings-section-head">
                 <div className="dv-settings-section-title">Delivery</div>
                 <div className="dv-settings-section-sub">Configura las opciones generales de tu servicio de delivery</div>
               </div>
-            </div>
-            <div className="dv-settings-body">
-              <div className="dv-settings-toggle-row">
-                <div>
-                  <div className="dv-settings-toggle-label">Activar delivery</div>
-                  <div className="dv-settings-toggle-hint">Los clientes pueden pedir delivery desde tu tienda</div>
+              <div className="dv-settings-body">
+                <div className="dv-settings-toggle-row">
+                  <div>
+                    <div className="dv-settings-toggle-label">Activar delivery</div>
+                    <div className="dv-settings-toggle-hint">Los clientes pueden pedir delivery desde tu tienda</div>
+                  </div>
+                  <label className="dv-settings-toggle">
+                    <input type="checkbox" checked={stDeliveryEnabled} onChange={() => setStDeliveryEnabled(v => !v)} />
+                    <span className="dv-settings-toggle-track" />
+                  </label>
                 </div>
-                <label className="dv-settings-toggle">
-                  <input type="checkbox" checked={stDeliveryEnabled} onChange={() => setStDeliveryEnabled(v => !v)} />
-                  <span className="dv-settings-toggle-track" />
-                </label>
-              </div>
 
-              <div className="dv-settings-toggle-row">
-                <div>
-                  <div className="dv-settings-toggle-label">Distribucion automatica</div>
-                  <div className="dv-settings-toggle-hint">Asigna pedidos listos al despachador disponible mas antiguo en cola</div>
+                <div className="dv-settings-toggle-row">
+                  <div>
+                    <div className="dv-settings-toggle-label">Distribucion automatica</div>
+                    <div className="dv-settings-toggle-hint">Asigna pedidos listos al despachador disponible mas antiguo en cola</div>
+                  </div>
+                  <label className="dv-settings-toggle">
+                    <input type="checkbox" checked={stAutoAssign} onChange={() => setStAutoAssign(v => !v)} />
+                    <span className="dv-settings-toggle-track" />
+                  </label>
                 </div>
-                <label className="dv-settings-toggle">
-                  <input type="checkbox" checked={stAutoAssign} onChange={() => setStAutoAssign(v => !v)} />
-                  <span className="dv-settings-toggle-track" />
-                </label>
-              </div>
 
-              <div className="dv-settings-field">
-                <label className="dv-settings-label">Tarifa base de delivery ($)</label>
-                <input
-                  className="dv-settings-input"
-                  type="number"
-                  min="0"
-                  step="0.50"
-                  value={stDeliveryFee}
-                  onChange={e => setStDeliveryFee(e.target.value)}
-                  placeholder="0.00"
-                />
-              </div>
+                <div className="dv-settings-field">
+                  <div className="dv-settings-field-label">Tarifa base de delivery ($)</div>
+                  <input
+                    className="dv-settings-input"
+                    type="number"
+                    min="0"
+                    step="0.50"
+                    value={stDeliveryFee}
+                    onChange={e => setStDeliveryFee(e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
 
-              <div className="dv-settings-field">
-                <label className="dv-settings-label">Tiempo estimado de entrega</label>
-                <input
-                  className="dv-settings-input"
-                  type="text"
-                  value={stDeliveryTime}
-                  onChange={e => setStDeliveryTime(e.target.value)}
-                  placeholder="Ej. 30-45 min"
-                />
-              </div>
+                <div className="dv-settings-field">
+                  <div className="dv-settings-field-label">Tiempo estimado de entrega</div>
+                  <input
+                    className="dv-settings-input"
+                    type="text"
+                    value={stDeliveryTime}
+                    onChange={e => setStDeliveryTime(e.target.value)}
+                    placeholder="Ej. 30-45 min"
+                  />
+                </div>
 
-              <div className="dv-settings-field">
-                <label className="dv-settings-label">Zona de cobertura (descripcion)</label>
-                <textarea
-                  className="dv-settings-input dv-settings-textarea"
-                  value={stDeliveryZone}
-                  onChange={e => setStDeliveryZone(e.target.value)}
-                  placeholder="Ej. Municipio Chacao, Las Mercedes, El Hatillo..."
-                  rows={3}
-                />
+                <div className="dv-settings-field">
+                  <div className="dv-settings-field-label">Zona de cobertura (descripcion)</div>
+                  <textarea
+                    className="dv-settings-input dv-settings-textarea"
+                    value={stDeliveryZone}
+                    onChange={e => setStDeliveryZone(e.target.value)}
+                    placeholder="Ej. Municipio Chacao, Las Mercedes, El Hatillo..."
+                    rows={3}
+                  />
+                </div>
               </div>
             </div>
-          </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button className="dv-settings-save-btn" onClick={saveSettings} disabled={savingSettings}>
-              {savingSettings ? 'Guardando...' : 'Guardar ajustes'}
-            </button>
-            {savedSettings && <span className="dv-settings-saved">Guardado</span>}
-          </div>
+            <div className="dv-settings-save-row">
+              <button className="dv-settings-save-btn" onClick={saveSettings} disabled={savingSettings}>
+                {savingSettings ? 'Guardando...' : 'Guardar ajustes'}
+              </button>
+              {savedSettings && <span className="dv-settings-saved">Guardado</span>}
+            </div>
 
+          </div>
         </div>
       </div>
 

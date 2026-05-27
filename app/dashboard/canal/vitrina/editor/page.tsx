@@ -143,6 +143,7 @@ export default function EditorPage() {
   const [storeSlug, setStoreSlug] = useState<string | null>(null)
 
   const [pageBg, setPageBg]         = useState('#FFFFFF')
+  const [cardBg, setCardBg]         = useState('')
   const [pageFont, setPageFont]     = useState('geist')
   const [fontSizePx, setFontSizePx] = useState(15)
   const [textAlign, setTextAlign]   = useState<'left' | 'center'>('left')
@@ -173,8 +174,9 @@ export default function EditorPage() {
   const [saving, setSaving]         = useState(false)
   const [toolSaved, setToolSaved]   = useState(false)
 
-  const bgPickerRef = useRef<HTMLInputElement>(null)
-  const acPickerRef = useRef<HTMLInputElement>(null)
+  const bgPickerRef   = useRef<HTMLInputElement>(null)
+  const cardPickerRef = useRef<HTMLInputElement>(null)
+  const acPickerRef   = useRef<HTMLInputElement>(null)
 
   // ── Load saved config ──────────────────────────────────
   useEffect(() => {
@@ -191,7 +193,8 @@ export default function EditorPage() {
       if ((store as { template?: string }).template) setTemplate((store as { template: string }).template)
       const cfg = (store as { template_config?: Record<string, unknown> }).template_config ?? {}
       setBaseConfig(cfg)
-      if (cfg.pageBg)     setPageBg(cfg.pageBg as string)
+      if (cfg.pageBg)  setPageBg(cfg.pageBg as string)
+      if ((cfg as Record<string,unknown>).cardBg !== undefined) setCardBg((cfg as Record<string,unknown>).cardBg as string)
       if (cfg.pageFont)   setPageFont(cfg.pageFont as string)
       if (cfg.fontSizePx) setFontSizePx(Number(cfg.fontSizePx))
       else if (cfg.fontSize) setFontSizePx(cfg.fontSize === 'small' ? 13 : cfg.fontSize === 'large' ? 18 : 15)
@@ -298,6 +301,7 @@ export default function EditorPage() {
     ` : ''
 
     return `
+      ${cardBg ? `.sf-card, .sf-esc-row, .sf-cat-card { background: ${cardBg} !important; }` : ''}
       .sf-page {
         ${pageBg ? `background: ${pageBg} !important;` : ''}
         ${font  ? `font-family: ${font} !important;` : ''}
@@ -377,7 +381,7 @@ export default function EditorPage() {
   useEffect(() => {
     applyPreview()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageBg, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceSize, priceFont, categoryNavStyle, logoShape, logoSizePx])
+  }, [pageBg, cardBg, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceSize, priceFont, categoryNavStyle, logoShape, logoSizePx])
 
   // ── Auto-save template (reloads iframe immediately) ───
   async function handleTemplateSelect(t: string) {
@@ -427,7 +431,7 @@ export default function EditorPage() {
     setSaving(true)
     const template_config = {
       ...baseConfig,
-      pageBg, pageFont, fontSizePx, textAlign,
+      pageBg, cardBg: cardBg || undefined, pageFont, fontSizePx, textAlign,
       photoShape, photoSize,
       priceColor: accentColor, priceFont: priceFont || pageFont, priceSize,
       categoryNavStyle, showCatNav,
@@ -450,8 +454,9 @@ export default function EditorPage() {
     setTimeout(() => setToolSaved(false), 2000)
   }
 
-  const isCustomBg = !BG_COLORS.some(c => c.value === pageBg)
-  const isCustomAc = !ACCENT_COLORS.includes(accentColor)
+  const isCustomBg   = !BG_COLORS.some(c => c.value === pageBg)
+  const isCustomCard = cardBg !== '' && cardBg !== 'transparent' && !BG_COLORS.some(c => c.value === cardBg)
+  const isCustomAc   = !ACCENT_COLORS.includes(accentColor)
 
   function PanelSave() {
     return (
@@ -634,7 +639,9 @@ export default function EditorPage() {
         {/* Panel — Color de fondo */}
         {activeTool === 'colors' && (
           <div className="ed-tool-panel">
-            <div className="ed-tp-title">Color de fondo</div>
+            <div className="ed-tp-title">Colores</div>
+
+            <div className="ed-tp-subtitle">Fondo de la pagina</div>
             <div className="ed-tp-swatches">
               {BG_COLORS.map(c => (
                 <button
@@ -665,6 +672,53 @@ export default function EditorPage() {
                 style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
               />
             </div>
+
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Cuadros de productos</div>
+            <div className="ed-tp-swatches" style={{ position: 'relative' }}>
+              <button
+                className={`ed-tp-swatch ed-tp-light${cardBg === '' ? ' ed-tp-active' : ''}`}
+                style={{ background: 'white', fontSize: 9, fontWeight: 700, color: '#94A3B8', letterSpacing: 0 }}
+                title="Auto"
+                onClick={() => setCardBg('')}
+              >
+                Auto
+              </button>
+              <button
+                className={`ed-tp-swatch${cardBg === 'transparent' ? ' ed-tp-active' : ''}`}
+                style={{ background: 'transparent', border: '2px dashed #CBD5E1' }}
+                title="Transparente"
+                onClick={() => setCardBg('transparent')}
+              />
+              {BG_COLORS.map(c => (
+                <button
+                  key={c.value}
+                  className={`ed-tp-swatch${cardBg === c.value ? ' ed-tp-active' : ''}${c.light ? ' ed-tp-light' : ''}`}
+                  style={{ background: c.value }}
+                  title={c.label}
+                  onClick={() => setCardBg(c.value)}
+                />
+              ))}
+              <button
+                className={`ed-tp-swatch ed-tp-custom${isCustomCard ? ' ed-tp-active' : ''}`}
+                style={isCustomCard ? { background: cardBg } : undefined}
+                title="Personalizado"
+                onClick={() => cardPickerRef.current?.click()}
+              >
+                {!isCustomCard && (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                )}
+              </button>
+              <input
+                ref={cardPickerRef}
+                type="color"
+                value={isCustomCard ? cardBg : '#FFFFFF'}
+                onChange={e => setCardBg(e.target.value)}
+                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
+              />
+            </div>
+
             <PanelSave />
           </div>
         )}

@@ -78,6 +78,7 @@ type TemplateConfig = {
   showWhatsapp?: boolean
   showInstagram?: boolean
   showMenuButton?: boolean
+  cardBg?: string
   logoShape?: string
   logoSize?: string
   logoSizePx?: number
@@ -298,6 +299,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
     ...(cfgFontSizePx ? { fontSize: `${cfgFontSizePx}px` } : {}),
     '--sf-price-color': cfgPriceColor,
     ...(cfgPriceFontFamily ? { '--sf-price-font': cfgPriceFontFamily } : {}),
+    ...(cfg.cardBg ? { '--sf-card-bg': cfg.cardBg } : {}),
   } as React.CSSProperties
 
   function renderContentBlocks(afterId: string) {

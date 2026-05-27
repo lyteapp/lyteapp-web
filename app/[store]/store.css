@@ -185,7 +185,7 @@ html, body { overflow-x: hidden; }
 .sf-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 
 .sf-card {
-  background: white; border: 1px solid rgba(15,23,42,0.07);
+  background: var(--sf-card-bg, white); border: 1px solid rgba(15,23,42,0.07);
   border-radius: 18px; overflow: hidden;
   transition: box-shadow 0.2s, transform 0.2s;
   display: flex; flex-direction: column;
@@ -509,7 +509,7 @@ html, body { overflow-x: hidden; }
 }
 .sf-esc-row {
   display: flex; align-items: center; gap: 14px;
-  background: white; border: 1px solid rgba(15,23,42,0.07);
+  background: var(--sf-card-bg, white); border: 1px solid rgba(15,23,42,0.07);
   border-radius: 14px; padding: 12px; overflow: hidden;
 }
 .sf-esc-img-wrap {
@@ -547,7 +547,7 @@ html, body { overflow-x: hidden; }
 .sf-cat-list { display: flex; flex-direction: column; gap: 10px; }
 .sf-cat-card {
   display: flex; align-items: center; gap: 14px;
-  background: white; border: 1px solid rgba(15,23,42,0.07);
+  background: var(--sf-card-bg, white); border: 1px solid rgba(15,23,42,0.07);
   border-radius: 14px; padding: 12px; overflow: hidden;
 }
 .sf-cat-img-wrap {

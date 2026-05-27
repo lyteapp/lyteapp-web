@@ -85,6 +85,7 @@ export default function PedidosPage() {
   const t = useT()
   const [loading, setLoading] = useState(true)
   const [storeId, setStoreId] = useState<string | null>(null)
+  const [storeName, setStoreName] = useState<string>('')
   const [whatsapp, setWhatsapp] = useState<string>('')
   const [orders, setOrders] = useState<Order[]>([])
   const [filter, setFilter] = useState<'all' | OrderStatus>('all')
@@ -112,11 +113,12 @@ export default function PedidosPage() {
     async function init() {
       const { data: store } = await supabase
         .from('stores')
-        .select('id, whatsapp')
+        .select('id, name, whatsapp')
         .eq('owner_id', user!.id)
         .maybeSingle()
       if (store) {
         setStoreId(store.id)
+        setStoreName(store.name ?? '')
         setWhatsapp(store.whatsapp ?? '')
         await loadOrders(store.id)
       }
@@ -216,7 +218,7 @@ export default function PedidosPage() {
     fetch('/api/sms-customer', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, status, customerName }),
+      body: JSON.stringify({ phone, status, customerName, businessName: storeName }),
     })
       .then(r => r.json())
       .then(d => { if (!d.sent) console.warn('[sms]', d.error ?? d.reason) })

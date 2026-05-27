@@ -83,6 +83,7 @@ export default function DeliveryPage() {
   const { user } = useAuth()
   const [loading, setLoading]       = useState(true)
   const [storeId, setStoreId]       = useState<string | null>(null)
+  const [storeName, setStoreName]   = useState<string>('')
   const [tab, setTab]               = useState<Tab>('live')
   const [deliveries, setDeliveries]         = useState<Delivery[]>([])
   const [drivers, setDrivers]               = useState<Driver[]>([])
@@ -164,8 +165,8 @@ export default function DeliveryPage() {
 
   useEffect(() => {
     if (!user) return
-    supabase.from('stores').select('id').eq('owner_id', user.id).maybeSingle().then(({ data }) => {
-      if (data) { setStoreId(data.id); loadData(data.id) }
+    supabase.from('stores').select('id, name').eq('owner_id', user.id).maybeSingle().then(({ data }) => {
+      if (data) { setStoreId(data.id); setStoreName(data.name ?? ''); loadData(data.id) }
       setLoading(false)
     })
   }, [user, loadData])
@@ -282,7 +283,7 @@ export default function DeliveryPage() {
       fetch('/api/sms-customer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: del.customer_phone, status, customerName: del.customer_name }),
+        body: JSON.stringify({ phone: del.customer_phone, status, customerName: del.customer_name, businessName: storeName }),
       }).catch(() => {})
     }
     showToast(status === 'delivered' ? 'Entrega confirmada' : 'Estado actualizado')

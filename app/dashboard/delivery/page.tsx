@@ -32,7 +32,6 @@ type TodayFilter = 'all' | 'ongoing' | 'delivered' | 'cancelled'
 
 type Driver = { id: string; name: string; phone: string | null; is_active: boolean; created_at: string; avatar_url: string | null }
 type DriverLocation = { driver_id: string; lat: number; lng: number; is_sharing: boolean; updated_at: string }
-type Order = { id: string; customer_name: string; customer_phone: string; customer_notes: string | null; payment_method: string | null; total: number; status: string; created_at: string }
 type Delivery = {
   id: string; store_id: string; order_id: string | null; driver_id: string | null
   customer_name: string; customer_phone: string; delivery_address: string
@@ -87,17 +86,7 @@ export default function DeliveryPage() {
   const [tab, setTab]               = useState<Tab>('live')
   const [deliveries, setDeliveries]         = useState<Delivery[]>([])
   const [drivers, setDrivers]               = useState<Driver[]>([])
-  const [readyOrders, setReadyOrders]       = useState<Order[]>([])
   const [driverLocations, setDriverLocations] = useState<DriverLocation[]>([])
-
-  // Live tab
-  const [selectedOrderId, setSelectedOrderId]     = useState<string | null>(null)
-  const [selectedDeliveryId, setSelectedDeliveryId] = useState<string | null>(null)
-  const [dAddress, setDAddress] = useState('')
-  const [dDriverId, setDDriverId] = useState('')
-  const [dFee, setDFee]         = useState('')
-  const [dNotes, setDNotes]     = useState('')
-  const [dSaving, setDSaving]   = useState(false)
 
   // Today tab
   const [todayFilter, setTodayFilter] = useState<TodayFilter>('all')
@@ -135,10 +124,6 @@ export default function DeliveryPage() {
   const [savingSettings,    setSavingSettings]     = useState(false)
   const [savedSettings,     setSavedSettings]      = useState(false)
 
-  // Available driver queue (realtime presence)
-  type QueueEntry = { driverId: string; driverName: string; since: string }
-  const [availableQueue, setAvailableQueue] = useState<QueueEntry[]>([])
-
   // Mobile fullscreen map
   const [showMap, setShowMap] = useState(false)
 
@@ -164,19 +149,15 @@ export default function DeliveryPage() {
   }
 
   const loadData = useCallback(async (sid: string) => {
-    const [{ data: dels }, { data: drvs }, { data: orders }, { data: dispatched }, { data: locs }, { data: zns }, { data: storeRow }] = await Promise.all([
+    const [{ data: dels }, { data: drvs }, { data: locs }, { data: zns }, { data: storeRow }] = await Promise.all([
       supabase.from('deliveries').select('*, driver:driver_id(id,name,phone,is_active)').eq('store_id', sid).order('created_at', { ascending: false }).limit(300),
       supabase.from('delivery_drivers').select('*').eq('store_id', sid).order('name'),
-      supabase.from('orders').select('id,customer_name,customer_phone,customer_notes,payment_method,total,status,created_at,delivery_type').eq('store_id', sid).eq('status', 'ready').eq('delivery_type', 'delivery').order('created_at', { ascending: false }),
-      supabase.from('deliveries').select('order_id').eq('store_id', sid).not('order_id', 'is', null),
       supabase.from('driver_locations').select('*').eq('store_id', sid),
       supabase.from('delivery_zones').select('*').eq('store_id', sid).order('created_at'),
       supabase.from('stores').select('checkout_settings').eq('id', sid).maybeSingle(),
     ])
-    const dispatchedIds = new Set((dispatched ?? []).map((d: { order_id: string }) => d.order_id))
     setDeliveries((dels as Delivery[]) ?? [])
     setDrivers(drvs ?? [])
-    setReadyOrders((orders ?? []).filter((o: Order) => !dispatchedIds.has(o.id)))
     setDriverLocations((locs as DriverLocation[]) ?? [])
     setZones((zns as Zone[]) ?? [])
     const cs = (storeRow as { checkout_settings?: Record<string, unknown> } | null)?.checkout_settings ?? {}
@@ -194,34 +175,6 @@ export default function DeliveryPage() {
       setLoading(false)
     })
   }, [user, loadData])
-
-  // Available driver queue — read from DB so it persists when drivers close app
-  const loadQueue = useCallback(async (sid: string) => {
-    const { data } = await supabase
-      .from('delivery_drivers')
-      .select('id, name, available_since')
-      .eq('store_id', sid)
-      .eq('is_available', true)
-      .order('available_since', { ascending: true, nullsFirst: false })
-    setAvailableQueue(
-      (data ?? []).map(d => ({
-        driverId: d.id,
-        driverName: d.name,
-        since: d.available_since ?? new Date().toISOString(),
-      }))
-    )
-  }, [])
-
-  useEffect(() => {
-    if (!storeId) return
-    loadQueue(storeId)
-    const ch = supabase
-      .channel(`driver-queue-db-${storeId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'delivery_drivers', filter: `store_id=eq.${storeId}` },
-        () => loadQueue(storeId))
-      .subscribe()
-    return () => { supabase.removeChannel(ch) }
-  }, [storeId, loadQueue])
 
   useEffect(() => {
     if (!storeId) return
@@ -262,74 +215,6 @@ export default function DeliveryPage() {
     if (tab === 'live' && window.innerWidth <= 900) setShowMap(true)
     if (tab !== 'live') setShowMap(false)
   }, [tab])
-
-  function selectOrder(order: Order) {
-    setSelectedOrderId(order.id)
-    setSelectedDeliveryId(null)
-    setDAddress(''); setDDriverId(''); setDFee(order.total > 0 ? '' : ''); setDNotes('')
-  }
-
-  function selectDelivery(del: Delivery) {
-    setSelectedDeliveryId(del.id)
-    setSelectedOrderId(null)
-    setDAddress(del.delivery_address || '')
-    setDDriverId(del.driver_id || '')
-    setDFee(del.driver_fee > 0 ? String(del.driver_fee) : '')
-    setDNotes(del.notes || '')
-  }
-
-  async function notifyDriver(driverId: string, customerName: string, driverUrl: string) {
-    try {
-      await fetch('/api/push-driver', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          driverId,
-          title: 'Nuevo pedido asignado',
-          body: `Pedido para ${customerName}`,
-          url: driverUrl,
-        }),
-      })
-    } catch { /* non-critical */ }
-  }
-
-  async function createDelivery() {
-    if (!storeId || !selectedOrderId) return
-    const order = readyOrders.find(o => o.id === selectedOrderId)
-    if (!order) return
-    setDSaving(true)
-    const { data: newDel } = await supabase.from('deliveries').insert({
-      store_id: storeId, order_id: order.id,
-      customer_name: order.customer_name, customer_phone: order.customer_phone,
-      delivery_address: dAddress.trim(), driver_id: dDriverId || null,
-      driver_fee: parseFloat(dFee) || 0, notes: dNotes.trim() || null, status: 'ready',
-    }).select('id').single()
-    setSelectedOrderId(null); setDSaving(false)
-    showToast('Entrega despachada')
-    if (dDriverId && newDel?.id) {
-      notifyDriver(dDriverId, order.customer_name, `${BASE_URL}/driver/${dDriverId}`)
-    }
-    await loadData(storeId)
-  }
-
-  async function dispatchCustomerDelivery() {
-    if (!storeId || !selectedDeliveryId) return
-    setDSaving(true)
-    await supabase.from('deliveries').update({
-      driver_id: dDriverId || null,
-      delivery_address: dAddress.trim(),
-      driver_fee: parseFloat(dFee) || 0,
-      notes: dNotes.trim() || null,
-    }).eq('id', selectedDeliveryId)
-    const del = deliveries.find(d => d.id === selectedDeliveryId)
-    setSelectedDeliveryId(null)
-    setDSaving(false)
-    showToast('Despachador asignado')
-    if (dDriverId && del) {
-      notifyDriver(dDriverId, del.customer_name, `${BASE_URL}/driver/${dDriverId}`)
-    }
-    await loadData(storeId)
-  }
 
   async function updateStatus(del: Delivery, status: DeliveryStatus) {
     const patch: Record<string, unknown> = { status }
@@ -377,13 +262,6 @@ export default function DeliveryPage() {
     setDrSaving(false); setDrError(''); setDrAvatarFile(null); setDrAvatarPreview(null)
     showToast(editDriver ? 'Despachador actualizado' : 'Despachador agregado')
     await loadData(storeId)
-  }
-
-  async function removeFromQueue(driverId: string) {
-    await supabase.from('delivery_drivers')
-      .update({ is_available: false, available_since: null })
-      .eq('id', driverId)
-    // realtime subscription on delivery_drivers refreshes the queue automatically
   }
 
   async function toggleDriver(drv: Driver) {
@@ -467,9 +345,7 @@ export default function DeliveryPage() {
   }
 
   // Derived data
-  const inRoute     = deliveries.filter(d => d.status === 'picked_up')
-  const needsDriver = deliveries.filter(d => d.status === 'ready' && !d.driver_id)
-  const waiting     = deliveries.filter(d => d.status === 'ready' && !!d.driver_id)
+  const inRoute       = deliveries.filter(d => d.status === 'picked_up')
   const activeDrivers = drivers.filter(d => d.is_active !== false)
   const todayDels = deliveries.filter(d => isToday(d.created_at))
 
@@ -498,9 +374,6 @@ export default function DeliveryPage() {
   const totalToPay   = settlements.reduce((s, x) => s + x.pending, 0)
   const totalRevenue = deliveries.filter(d => d.status !== 'cancelled').reduce((s, d) => s + Number(d.driver_fee), 0)
 
-  const selectedOrder    = readyOrders.find(o => o.id === selectedOrderId) ?? null
-  const selectedDelivery = deliveries.find(d => d.id === selectedDeliveryId) ?? null
-
   if (loading) return <div className="dv-spinner-wrap"><div className="dv-spinner" /></div>
 
   if (!storeId) return (
@@ -517,8 +390,8 @@ export default function DeliveryPage() {
       <nav className="dv-tabs">
         <button className={`dv-tab${tab === 'live' ? ' active' : ''}`} onClick={() => setTab('live')}>
           En vivo
-          {(inRoute.length + needsDriver.length + waiting.length) > 0 && (
-            <span className="dv-tab-count">{inRoute.length + needsDriver.length + waiting.length}</span>
+          {inRoute.length > 0 && (
+            <span className="dv-tab-count">{inRoute.length}</span>
           )}
         </button>
         <button className={`dv-tab${tab === 'today' ? ' active' : ''}`} onClick={() => setTab('today')}>
@@ -553,13 +426,6 @@ export default function DeliveryPage() {
             <div className="dv-kpi-value">
               <span className="dv-kpi-num">{inRoute.length}</span>
               <span className="dv-kpi-sub" style={{ color: 'var(--dv-violet)' }}>pedidos</span>
-            </div>
-          </div>
-          <div className={`dv-kpi${(needsDriver.length + waiting.length) > 0 ? ' warn' : ''}`}>
-            <div className="dv-kpi-label">Esperando despachador</div>
-            <div className="dv-kpi-value">
-              <span className="dv-kpi-num">{needsDriver.length + waiting.length + readyOrders.length}</span>
-              <span className="dv-kpi-sub">{needsDriver.length + waiting.length + readyOrders.length > 0 ? 'pendientes' : 'ninguno'}</span>
             </div>
           </div>
           <div className="dv-kpi">
@@ -621,300 +487,22 @@ export default function DeliveryPage() {
           </div>
         )}
 
-        {/* Three-column grid */}
-        <div className="dv-live-grid">
-
-          {/* ── QUEUE PANEL ── */}
-          <div className="dv-panel">
-            <div className="dv-panel-header">
-              <div>
-                <h3>Cola de despacho</h3>
-                <p>Pedidos listos esperando despachador</p>
-              </div>
-              {(readyOrders.length + needsDriver.length) > 0 && (
-                <span className="dv-header-badge warn">{readyOrders.length + needsDriver.length}</span>
-              )}
-            </div>
-            <div className="dv-panel-body">
-              {/* Available driver queue */}
-              {availableQueue.length > 0 && (
-                <div className="dv-drv-queue">
-                  <div style={{ fontSize: 10, fontWeight: 600, color: '#15803D', textTransform: 'uppercase', letterSpacing: '0.08em', paddingBottom: 4 }}>
-                    Despachadores disponibles · {availableQueue.length}
-                  </div>
-                  {availableQueue.map((entry, i) => (
-                    <div key={entry.driverId} className="dv-drv-queue-row">
-                      <div className="dv-drv-queue-num">{i + 1}</div>
-                      <span className="dv-drv-queue-name">{entry.driverName}</span>
-                      <span className="dv-drv-queue-since">{timeAgo(entry.since)}</span>
-                      <button
-                        className="dv-drv-queue-remove"
-                        onClick={() => removeFromQueue(entry.driverId)}
-                        title="Sacar de la cola"
-                      >
-                        Sacar
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {readyOrders.length === 0 && needsDriver.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--dv-ink-soft)', fontSize: 12 }}>
-                  Sin pedidos en cola
-                </div>
-              ) : (
-                <>
-                  {needsDriver.length > 0 && (
-                    <>
-                      <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--dv-ink-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '4px 0 4px' }}>
-                        Pedidos de clientes · listos
-                      </div>
-                      {needsDriver.map(del => (
-                        <div
-                          key={del.id}
-                          className={`dv-order-card${selectedDeliveryId === del.id ? ' selected' : ''}`}
-                          onClick={() => selectDelivery(del)}
-                        >
-                          <div className="dv-order-row">
-                            <span className="dv-order-name">{del.customer_name}</span>
-                            <span className="dv-order-pill ready">listo · {timeAgo(del.created_at)}</span>
-                          </div>
-                          <div className="dv-order-meta">
-                            {del.customer_phone && <span>{del.customer_phone}</span>}
-                            {del.delivery_address && <span> · {del.delivery_address}</span>}
-                          </div>
-                          {del.notes && (
-                            <div className="dv-order-meta" style={{ fontStyle: 'italic', marginBottom: 0 }}>{del.notes}</div>
-                          )}
-                          <div className="dv-order-actions">
-                            <button className="dv-btn-assign" onClick={e => { e.stopPropagation(); selectDelivery(del) }}>
-                              Asignar despachador
-                            </button>
-                            <button className="dv-btn-outline-sm" onClick={e => { e.stopPropagation(); setQrDel(del) }}>QR</button>
-                          </div>
-                        </div>
-                      ))}
-                    </>
-                  )}
-                  {readyOrders.length > 0 && (
-                    <>
-                      {needsDriver.length > 0 && (
-                        <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--dv-ink-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '8px 0 4px' }}>
-                          Pedidos manuales · listos
-                        </div>
-                      )}
-                      {readyOrders.map(order => (
-                        <div
-                          key={order.id}
-                          className={`dv-order-card${selectedOrderId === order.id ? ' selected' : ''}`}
-                          onClick={() => selectOrder(order)}
-                        >
-                          <div className="dv-order-row">
-                            <span className="dv-order-name">{order.customer_name}</span>
-                            <span className="dv-order-pill ready">listo · {timeAgo(order.created_at)}</span>
-                          </div>
-                          <div className="dv-order-meta">
-                            {order.customer_phone && <span>{order.customer_phone}</span>}
-                            {order.total > 0 && <span> · ${Number(order.total).toFixed(2)}</span>}
-                            {order.payment_method && <span> · {order.payment_method}</span>}
-                          </div>
-                          {order.customer_notes && (
-                            <div className="dv-order-meta" style={{ fontStyle: 'italic', marginBottom: 0 }}>
-                              {order.customer_notes}
-                            </div>
-                          )}
-                          <div className="dv-order-actions">
-                            <button className="dv-btn-assign" onClick={e => { e.stopPropagation(); selectOrder(order) }}>
-                              Asignar
-                            </button>
-                            <button className="dv-btn-outline-sm" onClick={e => { e.stopPropagation(); const d = deliveries.find(x => x.order_id === order.id); if (d) setQrDel(d) }}>
-                              QR
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </>
-                  )}
-                </>
-              )}
-
-              {/* Dispatched, waiting for pickup */}
-              {waiting.length > 0 && (
-                <>
-                  <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--dv-ink-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '8px 0 4px' }}>
-                    Despachados · en espera de recogida
-                  </div>
-                  {waiting.map(del => (
-                    <div key={del.id} className="dv-order-card" style={{ borderColor: '#FDE68A' }}>
-                      <div className="dv-order-row">
-                        <span className="dv-order-name">{del.customer_name}</span>
-                        <span className="dv-order-pill urgent">esperando</span>
-                      </div>
-                      <div className="dv-order-meta">{del.delivery_address || 'Sin direccion'}</div>
-                      <div className="dv-order-actions">
-                        <button className="dv-btn-assign" style={{ background: '#7C3AED' }} onClick={() => updateStatus(del, 'picked_up')}>
-                          Marcar recogido
-                        </button>
-                        <button className="dv-btn-outline-sm" onClick={() => setQrDel(del)}>QR</button>
-                      </div>
-                    </div>
-                  ))}
-                </>
-              )}
-            </div>
-
-          </div>
-
-          {/* ── MAP PANEL ── */}
-          <div className="dv-panel dv-map-panel" style={{ position: 'relative' }}>
-            <MapView
-              inRoute={inRoute.map(del => ({
-                id: del.id,
-                customer_name: del.customer_name,
-                driver_name: (del.driver as Driver | null)?.name ?? null,
-                driver_id: del.driver_id,
-                picked_up_at: del.picked_up_at,
-              }))}
-              driverLocations={driverLocations}
-              drivers={drivers.map(d => ({ id: d.id, name: d.name }))}
-              mapboxToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
-            />
-          </div>
-
-          {/* ── DETAIL PANEL ── */}
-          <div className="dv-panel" style={{ overflowY: 'auto' }}>
-            {!selectedOrder && !selectedDelivery ? (
-              <div className="dv-empty-detail">
-                <svg viewBox="0 0 64 64" fill="none" stroke="#CBD5E1" strokeWidth="1.5" width="48" height="48" style={{ marginBottom: 12 }}>
-                  <circle cx="32" cy="32" r="26" strokeDasharray="4 3"/>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M22 32h20M32 22v20"/>
-                </svg>
-                <h4>Sin pedido seleccionado</h4>
-                <p>Elige un pedido de la cola para asignar un despachador.</p>
-              </div>
-            ) : (() => {
-              const name  = selectedOrder?.customer_name  ?? selectedDelivery!.customer_name
-              const phone = selectedOrder?.customer_phone ?? selectedDelivery!.customer_phone
-              const isCustomerOrder = !!selectedDelivery
-              return (
-                <>
-                  {/* Header */}
-                  <div className="dv-detail-section">
-                    <div className="dv-detail-id-row">
-                      <div>
-                        <div className="dv-detail-label accent">
-                          {isCustomerOrder ? 'Pedido de cliente · listo' : 'Pedido seleccionado'}
-                        </div>
-                        <div className="dv-detail-num">{name}</div>
-                      </div>
-                      <button className="dv-close-btn" onClick={() => { setSelectedOrderId(null); setSelectedDeliveryId(null) }}>✕</button>
-                    </div>
-                    <div className="dv-customer-row">
-                      <div className="dv-customer-avatar">{name[0].toUpperCase()}</div>
-                      <div className="dv-customer-info">
-                        <h4>{name}</h4>
-                        <p>{phone}</p>
-                      </div>
-                      <button className="dv-wa-btn" onClick={() => window.open(`https://wa.me/${phone.replace(/\D/g, '')}`, '_blank')}>
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Suggested drivers */}
-                  <div className="dv-detail-section">
-                    <div className="dv-detail-label">Despachadores disponibles</div>
-                    <div className="dv-driver-suggest">
-                      {activeDrivers.length === 0 ? (
-                        <div style={{ fontSize: 12, color: 'var(--dv-ink-muted)' }}>Sin despachadores activos</div>
-                      ) : (
-                        activeDrivers.map((drv, i) => {
-                          const busyWithDelivery = inRoute.find(d => d.driver_id === drv.id)
-                          const loc = driverLocations.find(d => d.driver_id === drv.id)
-                          const gpsOn = loc?.is_sharing && (Date.now() - new Date(loc.updated_at).getTime()) < 300_000
-                          return (
-                            <div
-                              key={drv.id}
-                              className={`dv-driver-row${i === 0 && !busyWithDelivery ? ' recommended' : ''}`}
-                              onClick={() => setDDriverId(drv.id)}
-                              style={{ outline: dDriverId === drv.id ? '2px solid #7C3AED' : undefined }}
-                            >
-                              {drv.avatar_url
-                                ? <img src={drv.avatar_url} alt={drv.name} className="dv-driver-row-av" style={{ objectFit: 'cover' }} />
-                                : <div className="dv-driver-row-av">{drv.name[0]}</div>
-                              }
-                              <div className="dv-driver-row-info">
-                                <div className="dv-driver-row-name">
-                                  {drv.name}
-                                  {gpsOn && (
-                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginLeft: 6, background: '#DCFCE7', color: '#15803D', fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 100 }}>
-                                      <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#15803D', display: 'inline-block' }} />
-                                      GPS
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="dv-driver-row-meta">{busyWithDelivery ? 'en ruta' : 'disponible'}{drv.phone ? ` · ${drv.phone}` : ''}</div>
-                              </div>
-                              <button
-                                className={`dv-driver-action${i === 0 && !busyWithDelivery ? '' : ' outline'}`}
-                                onClick={e => { e.stopPropagation(); setDDriverId(drv.id) }}
-                              >
-                                {dDriverId === drv.id ? 'Seleccionado' : 'Seleccionar'}
-                              </button>
-                            </div>
-                          )
-                        })
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Dispatch form */}
-                  <div className="dv-detail-section">
-                    <div className="dv-detail-label">Detalles de entrega</div>
-                    <div className="dv-dispatch-form">
-                      <div className="dv-form-field">
-                        <label className="dv-form-label">Direccion</label>
-                        <input className="dv-input" value={dAddress} onChange={e => setDAddress(e.target.value)} placeholder="Calle, Edificio, Apto..." />
-                      </div>
-                      <div className="dv-form-row2">
-                        <div className="dv-form-field">
-                          <label className="dv-form-label">Despachador</label>
-                          <select className="dv-select" value={dDriverId} onChange={e => setDDriverId(e.target.value)}>
-                            <option value="">Sin asignar</option>
-                            {activeDrivers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                          </select>
-                        </div>
-                        <div className="dv-form-field">
-                          <label className="dv-form-label">Fee ($)</label>
-                          <input className="dv-input" value={dFee} onChange={e => setDFee(e.target.value)} type="number" min="0" step="0.50" placeholder="0.00" />
-                        </div>
-                      </div>
-                      <button className="dv-dispatch-btn" onClick={isCustomerOrder ? dispatchCustomerDelivery : createDelivery} disabled={dSaving}>
-                        {dSaving ? 'Guardando...' : isCustomerOrder ? 'Asignar despachador' : 'Despachar pedido'}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Money summary — only for manual orders with a total */}
-                  {selectedOrder && selectedOrder.total > 0 && (
-                    <div className="dv-detail-section">
-                      <div className="dv-money-box">
-                        <div className="dv-money-row"><span>Total del pedido</span><span>${Number(selectedOrder.total).toFixed(2)}</span></div>
-                        <div className="dv-money-row"><span>Fee al despachador</span><span>${parseFloat(dFee) > 0 ? parseFloat(dFee).toFixed(2) : '—'}</span></div>
-                        <div className="dv-money-total"><span>Total cobrado al cliente</span><span>${Number(selectedOrder.total).toFixed(2)}</span></div>
-                        {selectedOrder.payment_method && (
-                          <div className="dv-money-footer"><span>✓ {selectedOrder.payment_method}</span></div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </>
-              )
-            })()}
-          </div>
-
+        {/* Map — full width */}
+        <div className="dv-panel dv-map-panel" style={{ position: 'relative' }}>
+          <MapView
+            inRoute={inRoute.map(del => ({
+              id: del.id,
+              customer_name: del.customer_name,
+              driver_name: (del.driver as Driver | null)?.name ?? null,
+              driver_id: del.driver_id,
+              picked_up_at: del.picked_up_at,
+            }))}
+            driverLocations={driverLocations}
+            drivers={drivers.map(d => ({ id: d.id, name: d.name }))}
+            mapboxToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
+          />
         </div>
+
       </div>
 
       {/* ══════════════════════════════════════════════

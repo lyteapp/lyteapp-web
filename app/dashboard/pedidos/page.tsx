@@ -568,7 +568,7 @@ export default function PedidosPage() {
               const timeStr = new Date(order.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })
               const { label: elapsed, level } = elapsedLabel(order.created_at, now, warnMins, alertMins)
               return (
-                <div key={order.id} className={`pd-comanda pd-cs-${order.status}`}>
+                <div key={order.id} className={`pd-comanda pd-cs-${order.status} pd-comanda-${level}`}>
                   <div className="pd-comanda-head">
                     <div className="pd-comanda-id">#{order.id.slice(0, 8).toUpperCase()}</div>
                     <div className="pd-comanda-time">{timeStr}</div>

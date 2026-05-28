@@ -143,6 +143,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const [error, setError]           = useState('')
   const [orderId, setOrderId]       = useState('')
   const [deliveryTrackId, setDeliveryTrackId] = useState('')
+  const [pickupTrackId, setPickupTrackId]     = useState('')
   const [locationState, setLocationState] = useState<'idle' | 'requesting' | 'granted' | 'denied'>('idle')
   const [customerLat, setCustomerLat] = useState<number | null>(null)
   const [customerLng, setCustomerLng] = useState<number | null>(null)
@@ -490,6 +491,8 @@ export default function StoreShell({ store, products, categories = [] }: { store
 
       const shortId = newOrderId.slice(0, 8).toUpperCase()
       setOrderId(shortId); setCart({})
+      if (isPickup) setPickupTrackId(newOrderId)
+      else setPickupTrackId('')
 
       if (store.whatsapp) {
         const num = store.whatsapp.replace(/\D/g, '')
@@ -525,7 +528,22 @@ export default function StoreShell({ store, products, categories = [] }: { store
             Rastrear mi pedido
           </a>
         )}
-        <button className="sf-confirm-btn" onClick={() => { setView('catalog'); setCustomerName(''); setCustomerPhone(''); setCustomerNotes(''); setSelectedPayment(''); setPaymentFreeText(''); setDeliveryTrackId(''); setLocationState('idle') }}>
+        {pickupTrackId && (
+          <a
+            href={`/order/${pickupTrackId}`}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center',
+              background: '#7C3AED', color: 'white', borderRadius: 12, padding: '13px 20px',
+              textDecoration: 'none', fontWeight: 600, fontSize: 14, marginBottom: 12,
+            }}
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+              <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+            </svg>
+            Rastrear mi pedido
+          </a>
+        )}
+        <button className="sf-confirm-btn" onClick={() => { setView('catalog'); setCustomerName(''); setCustomerPhone(''); setCustomerNotes(''); setSelectedPayment(''); setPaymentFreeText(''); setDeliveryTrackId(''); setPickupTrackId(''); setLocationState('idle') }}>
           {t('store.confirmed.continue')}
         </button>
         <Link href="/" className="sf-confirm-link">{t('store.confirmed.link')}</Link>

@@ -436,7 +436,11 @@ export default function DriverClient({
       .select('id,customer_name,customer_phone,delivery_address,notes,status,picked_up_at,order_id,customer_lat,customer_lng')
       .eq('driver_id', driverId).in('status', ['ready', 'picked_up'])
       .order('created_at', { ascending: false }).limit(1).maybeSingle()
-    setDelivery(data as ActiveDelivery | null)
+    setDelivery(current => {
+      // Don't wipe a locally-set delivery while the DB claim is still in flight
+      if (!data && current?.id?.startsWith('local-')) return current
+      return data as ActiveDelivery | null
+    })
   }, [driverId])
 
   // ── New-order alert (in-app beep + flash when orders count increases) ──
@@ -522,7 +526,7 @@ export default function DriverClient({
 
   // ── Broadcast channel: instant order-claimed sync across all dispatchers ──
   useEffect(() => {
-    const ch = supabase.channel(`store-orders-${storeId}`)
+    const ch = supabase.channel(`store-orders-${storeId}`, { config: { broadcast: { self: false } } })
       .on('broadcast', { event: 'order_claimed' }, ({ payload }) => {
         setOrders(prev => prev.filter(o => o.id !== (payload as { orderId: string }).orderId))
       })

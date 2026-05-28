@@ -421,14 +421,10 @@ export default function DriverClient({
 
   // ── Load available orders ─────────────────────────────────────────
   const loadOrders = useCallback(async () => {
-    const [{ data: ready }, { data: claimed }] = await Promise.all([
-      supabase.from('orders').select('id,customer_name,customer_phone,customer_notes,payment_method,total,created_at')
-        .eq('store_id', storeId).eq('status', 'ready').eq('delivery_type', 'delivery').order('created_at', { ascending: true }),
-      supabase.from('deliveries').select('order_id')
-        .eq('store_id', storeId).not('order_id', 'is', null).not('status', 'eq', 'cancelled').not('driver_id', 'is', null),
-    ])
-    const claimedIds = new Set((claimed ?? []).map(d => d.order_id))
-    setOrders((ready ?? []).filter(o => !claimedIds.has(o.id)) as AvailableOrder[])
+    const res = await fetch(`/api/available-orders?storeId=${storeId}`)
+    if (!res.ok) return
+    const { orders } = await res.json()
+    setOrders(orders as AvailableOrder[])
   }, [storeId])
 
   const loadDelivery = useCallback(async () => {

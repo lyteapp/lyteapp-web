@@ -209,17 +209,20 @@ body { background: #F1F5F9; }
   color: white;
   text-decoration: none;
   font-size: 13px;
-  font-weight: 600;
-  padding: 10px 18px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 13px 24px;
   border-radius: 100px;
   box-shadow: 0 2px 8px rgba(22,163,74,0.3);
-  transition: background 0.15s, transform 0.15s;
-  max-width: 100%;
-  text-align: center;
-  word-break: break-word;
+  animation: ot-btn-pulse 1.8s ease-in-out infinite;
 }
 
-.ot-map-btn:hover { background: #15803D; transform: translateY(-1px); }
+.ot-map-btn:hover { background: #15803D; animation: none; transform: translateY(-1px); }
+
+@keyframes ot-btn-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(22,163,74,0.5), 0 2px 8px rgba(22,163,74,0.3); transform: scale(1); }
+  50%       { box-shadow: 0 0 0 10px rgba(22,163,74,0), 0 2px 8px rgba(22,163,74,0.3); transform: scale(1.03); }
+}
 
 /* Icon & error */
 .ot-icon {

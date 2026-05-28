@@ -462,7 +462,19 @@
 
 .dsp-btn-call:hover { background: #BBF7D0; }
 
-/* ── Active delivery card (legacy, kept for reference) ── */
+/* ── Active delivery card ── */
+.dsp-delivery-card--new {
+  animation: dsp-delivery-arrive 3s ease-out forwards;
+}
+
+@keyframes dsp-delivery-arrive {
+  0%   { box-shadow: 0 0 0 0 rgba(124,58,237,0.6), 0 4px 20px rgba(124,58,237,0.12); border-color: #7C3AED; }
+  15%  { box-shadow: 0 0 0 10px rgba(124,58,237,0.25), 0 4px 20px rgba(124,58,237,0.2); border-color: #7C3AED; }
+  35%  { box-shadow: 0 0 0 18px rgba(124,58,237,0), 0 4px 20px rgba(124,58,237,0.12); border-color: #7C3AED; }
+  55%  { box-shadow: 0 0 0 10px rgba(124,58,237,0.2), 0 4px 20px rgba(124,58,237,0.2); border-color: #7C3AED; }
+  100% { box-shadow: 0 4px 20px rgba(124,58,237,0.12); border-color: #7C3AED; }
+}
+
 .dsp-delivery-card {
   background: #fff;
   border-radius: 16px;

@@ -170,8 +170,10 @@ export default function DriverClient({
   const audioEl          = useRef<HTMLAudioElement | null>(null)
   const compassOff       = useRef<(() => void) | null>(null)
   const availChannel     = useRef<ReturnType<typeof supabase.channel> | null>(null)
-  const prevOrderCount   = useRef<number>(initialOrders.length)
-  const [newOrderFlash, setNewOrderFlash] = useState(false)
+  const prevOrderCount    = useRef<number>(initialOrders.length)
+  const prevDelivery      = useRef<ActiveDelivery | null>(initialDelivery)
+  const [newOrderFlash, setNewOrderFlash]       = useState(false)
+  const [newDeliveryFlash, setNewDeliveryFlash] = useState(false)
 
   // ── Compass ───────────────────────────────────────────────────────
   function initCompass() {
@@ -458,6 +460,31 @@ export default function DriverClient({
     }
     prevOrderCount.current = orders.length
   }, [orders.length])  // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── New-delivery alert (beep + flash when auto-dispatch assigns an order) ──
+  useEffect(() => {
+    const prev = prevDelivery.current
+    if (!prev && delivery?.status === 'ready') {
+      try {
+        const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.connect(gain); gain.connect(ctx.destination)
+        osc.frequency.setValueAtTime(660, ctx.currentTime)
+        osc.frequency.setValueAtTime(990, ctx.currentTime + 0.15)
+        osc.frequency.setValueAtTime(1320, ctx.currentTime + 0.3)
+        gain.gain.setValueAtTime(0.4, ctx.currentTime)
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6)
+        osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.6)
+      } catch { /* AudioContext blocked */ }
+      if (navigator.vibrate) navigator.vibrate([200, 80, 200, 80, 200])
+      setNewDeliveryFlash(true)
+      const t = setTimeout(() => setNewDeliveryFlash(false), 3000)
+      prevDelivery.current = delivery
+      return () => clearTimeout(t)
+    }
+    prevDelivery.current = delivery
+  }, [delivery])  // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Realtime subscriptions ────────────────────────────────────────
   useEffect(() => {
@@ -765,7 +792,7 @@ export default function DriverClient({
               <span className="dsp-pulse-dot" />
               Pedido asignado
             </div>
-            <div className="dsp-delivery-card">
+            <div className={`dsp-delivery-card${newDeliveryFlash ? ' dsp-delivery-card--new' : ''}`}>
               <div className="dsp-delivery-customer">{delivery.customer_name}</div>
               {delivery.delivery_address && (
                 <div className="dsp-delivery-address">

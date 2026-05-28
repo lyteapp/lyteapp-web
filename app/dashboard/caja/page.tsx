@@ -60,6 +60,7 @@ export default function CajaPage() {
   const [lightbox, setLightbox] = useState<string | null>(null)
   const [verifying, setVerifying] = useState<string | null>(null)
   const [toast, setToast]       = useState<string | null>(null)
+  const [copied, setCopied]     = useState(false)
   const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function showToast(msg: string) {
@@ -141,10 +142,76 @@ export default function CajaPage() {
   const todayTotal   = todayOrders.filter(o => o.status !== 'cancelled').reduce((s, o) => s + Number(o.total), 0)
   const approvedTotal = todayOrders.filter(o => o.payment_status === 'approved').reduce((s, o) => s + Number(o.total), 0)
 
+  const cajeroUrl = storeId ? `https://lyte-app.com/cajero/${storeId}` : ''
+
+  function copyCajeroLink() {
+    if (!cajeroUrl) return
+    navigator.clipboard.writeText(cajeroUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+    showToast('Link copiado')
+  }
+
   if (loading) return <div className="cx-spinner-wrap"><div className="cx-spinner" /></div>
 
   return (
     <div className="cx-root">
+
+      {/* ── ACCESO CAJERO ── */}
+      {storeId && (
+        <div style={{
+          margin: '14px 14px 0',
+          background: 'white',
+          border: '1.5px solid #E2E8F0',
+          borderRadius: 14,
+          padding: '14px 16px',
+        }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+            App de cajero
+          </div>
+          <div style={{ fontSize: 13, color: '#64748B', marginBottom: 10 }}>
+            Comparte este link con tus cajeros. No requiere contrasena — guardalo solo con tu equipo.
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div style={{
+              flex: 1, background: '#F8FAFC', border: '1px solid #E2E8F0',
+              borderRadius: 8, padding: '8px 10px',
+              fontSize: 12, color: '#475569', fontFamily: 'monospace',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              {cajeroUrl}
+            </div>
+            <button
+              onClick={copyCajeroLink}
+              style={{
+                flexShrink: 0, background: copied ? '#10B981' : '#7C3AED',
+                color: 'white', border: 'none', borderRadius: 8,
+                padding: '8px 14px', fontSize: 13, fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'inherit', transition: 'background 0.2s',
+              }}
+            >
+              {copied ? 'Copiado' : 'Copiar'}
+            </button>
+            <a
+              href={cajeroUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                flexShrink: 0, background: '#F1F5F9', color: '#0F172A',
+                border: '1px solid #E2E8F0', borderRadius: 8,
+                padding: '8px 12px', fontSize: 13, fontWeight: 500,
+                textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5,
+              }}
+            >
+              <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13">
+                <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"/>
+                <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z"/>
+              </svg>
+              Abrir
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* ── TABS ── */}
       <nav className="cx-tabs">

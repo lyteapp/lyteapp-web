@@ -623,14 +623,6 @@ export default function DriverClient({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [delivery, driverId, storeId])
 
-  // ── Auto-claim: dispatcher #1 in queue claims oldest ready order automatically ──
-  useEffect(() => {
-    if (!delivery && !claiming && queue.length > 0 && queue[0].id === driverId && orders.length > 0) {
-      claimOrder(orders[0])
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orders, queue, delivery, claiming])
-
   // ── Mark delivered ────────────────────────────────────────────────
   async function completeDelivery() {
     if (!delivery) return

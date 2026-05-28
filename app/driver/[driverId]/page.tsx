@@ -59,66 +59,27 @@ export default async function DriverPage(
 
   if (!driver) notFound()
 
-  const storeId = driver.store_id
-
-  const [
-    { data: activeDelivery },
-    { data: readyOrders },
-    { data: claimedDeliveries },
-  ] = await Promise.all([
-    // Active delivery: assigned to this driver and still in progress
-    supa
-      .from('deliveries')
-      .select('id, customer_name, customer_phone, delivery_address, notes, status, picked_up_at, order_id, customer_lat, customer_lng')
-      .eq('driver_id', driverId)
-      .in('status', ['ready', 'picked_up'])
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    // All ready delivery orders for this store
-    supa
-      .from('orders')
-      .select('id, customer_name, customer_phone, customer_notes, payment_method, total, created_at')
-      .eq('store_id', storeId)
-      .eq('status', 'ready')
-      .eq('delivery_type', 'delivery')
-      .order('created_at', { ascending: true }),
-    // Orders already assigned to a driver (exclude unassigned customer deliveries)
-    supa
-      .from('deliveries')
-      .select('order_id')
-      .eq('store_id', storeId)
-      .not('order_id', 'is', null)
-      .not('status', 'eq', 'cancelled')
-      .not('driver_id', 'is', null),
-  ])
-
-  const claimedIds = new Set((claimedDeliveries ?? []).map(d => d.order_id))
-  const availableOrders = (readyOrders ?? []).filter(o => !claimedIds.has(o.id))
+  const { data: activeDelivery } = await supa
+    .from('deliveries')
+    .select('id, customer_name, customer_phone, delivery_address, notes, status, picked_up_at, order_id, customer_lat, customer_lng')
+    .eq('driver_id', driverId)
+    .in('status', ['ready', 'picked_up'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   return (
     <DriverClient
       driverId={driver.id}
       driverName={driver.name}
       driverAvatar={(driver as unknown as { avatar_url: string | null }).avatar_url ?? null}
-      storeId={storeId}
+      storeId={driver.store_id}
       storeName={(driver.stores as unknown as { name: string; logo_url: string | null } | null)?.name ?? ''}
       storeLogo={(driver.stores as unknown as { name: string; logo_url: string | null } | null)?.logo_url ?? null}
-      initialOrders={availableOrders as AvailableOrder[]}
       initialDelivery={activeDelivery as ActiveDelivery | null}
       mapboxToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
     />
   )
-}
-
-export type AvailableOrder = {
-  id: string
-  customer_name: string
-  customer_phone: string
-  customer_notes: string | null
-  payment_method: string | null
-  total: number
-  created_at: string
 }
 
 export type ActiveDelivery = {

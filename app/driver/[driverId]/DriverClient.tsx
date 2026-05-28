@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import { supabase } from '../../lib/supabase'
-import type { AvailableOrder, ActiveDelivery } from './page'
+import type { ActiveDelivery } from './page'
 
 const DriverMap = dynamic(() => import('./DriverMap'), { ssr: false, loading: () => (
   <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#E8EEF4' }}>
@@ -18,7 +18,6 @@ type Props = {
   storeId: string
   storeName: string
   storeLogo: string | null
-  initialOrders: AvailableOrder[]
   initialDelivery: ActiveDelivery | null
   mapboxToken: string
 }
@@ -54,12 +53,12 @@ function buildInstruction(type: string, modifier: string, name: string): string 
   if (type === 'depart')   return `Inicia la ruta${via}`
   if (type === 'arrive')   return 'Llegaste al destino'
   if (type === 'turn' || type === 'end of road') {
-    if (modifier === 'uturn')       return `Da vuelta en U${via}`
-    if (modifier === 'sharp left')  return `Gira fuerte a la izquierda${via}`
-    if (modifier === 'sharp right') return `Gira fuerte a la derecha${via}`
-    if (modifier === 'left')        return `Gira a la izquierda${via}`
-    if (modifier === 'right')       return `Gira a la derecha${via}`
-    if (modifier === 'slight left') return `Leve a la izquierda${via}`
+    if (modifier === 'uturn')        return `Da vuelta en U${via}`
+    if (modifier === 'sharp left')   return `Gira fuerte a la izquierda${via}`
+    if (modifier === 'sharp right')  return `Gira fuerte a la derecha${via}`
+    if (modifier === 'left')         return `Gira a la izquierda${via}`
+    if (modifier === 'right')        return `Gira a la derecha${via}`
+    if (modifier === 'slight left')  return `Leve a la izquierda${via}`
     if (modifier === 'slight right') return `Leve a la derecha${via}`
     return `Continua${via}`
   }
@@ -107,7 +106,6 @@ function NavArrow({ modifier }: { modifier: string }) {
       <path d="M12 19V8m0 0l4 4m-4-4L8 12M16 4v5a5 5 0 005 5h-1"/>
     </svg>
   )
-  // straight / default
   return (
     <svg {...style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 19V5m0 0l-4 4m4-4l4 4"/>
@@ -124,18 +122,10 @@ function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   return arr.buffer
 }
 
-function timeAgo(iso: string) {
-  const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
-  if (m < 1) return 'Ahora mismo'
-  if (m < 60) return `Hace ${m} min`
-  return `Hace ${Math.floor(m / 60)}h`
-}
-
 export default function DriverClient({
   driverId, driverName, driverAvatar, storeId, storeName, storeLogo,
-  initialOrders, initialDelivery, mapboxToken,
+  initialDelivery, mapboxToken,
 }: Props) {
-  const [orders, setOrders]             = useState<AvailableOrder[]>(initialOrders)
   const [delivery, setDelivery]         = useState<ActiveDelivery | null>(initialDelivery)
   const [completing, setCompleting]     = useState(false)
   const [gpsStatus, setGpsStatus]       = useState<GpsStatus>('requesting')
@@ -149,16 +139,13 @@ export default function DriverClient({
   const installPrompt = useRef<BeforeInstallPromptEvent | null>(null)
 
   // ── Navigation ────────────────────────────────────────────────────
-  const [navMode, setNavMode]       = useState(false)
+  const [navMode, setNavMode]         = useState(false)
   const [routeCoords, setRouteCoords] = useState<[number, number][]>([])
-  const [navSteps, setNavSteps]     = useState<NavStep[]>([])
-  const [navStepIdx, setNavStepIdx] = useState(0)
-  const [navLoading, setNavLoading] = useState(false)
-  const [totalDist, setTotalDist]   = useState(0)
-
-  const [isAvailable, setIsAvailable] = useState(false)
-  const [availSince, setAvailSince]   = useState<string | null>(null)
-  const [queue, setQueue]             = useState<{ id: string; name: string; avatar_url: string | null; available_since: string }[]>([])
+  const [navSteps, setNavSteps]       = useState<NavStep[]>([])
+  const [navStepIdx, setNavStepIdx]   = useState(0)
+  const [navLoading, setNavLoading]   = useState(false)
+  const [totalDist, setTotalDist]     = useState(0)
+  const [newDeliveryFlash, setNewDeliveryFlash] = useState(false)
 
   const watchId          = useRef<number | null>(null)
   const fallbackInterval = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -167,18 +154,13 @@ export default function DriverClient({
   const lockRelease      = useRef<(() => void) | null>(null)
   const audioEl          = useRef<HTMLAudioElement | null>(null)
   const compassOff       = useRef<(() => void) | null>(null)
-  const availChannel         = useRef<ReturnType<typeof supabase.channel> | null>(null)
-  const storeOrdersChannel  = useRef<ReturnType<typeof supabase.channel> | null>(null)
-  const prevOrderCount    = useRef<number>(initialOrders.length)
-  const prevDelivery      = useRef<ActiveDelivery | null>(initialDelivery)
-  const autoPickedUpRef   = useRef<string | null>(null)
-  const autoNavRef        = useRef<string | null>(null)
-  const [newOrderFlash, setNewOrderFlash]       = useState(false)
-  const [newDeliveryFlash, setNewDeliveryFlash] = useState(false)
+  const prevDelivery     = useRef<ActiveDelivery | null>(initialDelivery)
+  const autoPickedUpRef  = useRef<string | null>(null)
+  const autoNavRef       = useRef<string | null>(null)
 
   // ── Compass ───────────────────────────────────────────────────────
   function initCompass() {
-    if (compassOff.current) return // already active
+    if (compassOff.current) return
 
     type DOEC = typeof DeviceOrientationEvent & { requestPermission?: () => Promise<string> }
 
@@ -205,7 +187,6 @@ export default function DriverClient({
 
     if (typeof DeviceOrientationEvent !== 'undefined' &&
         typeof (DeviceOrientationEvent as DOEC).requestPermission === 'function') {
-      // iOS 13+ — must be called from a user gesture
       ;(DeviceOrientationEvent as DOEC).requestPermission!()
         .then(p => { if (p === 'granted') attach() })
         .catch(() => {})
@@ -216,14 +197,10 @@ export default function DriverClient({
 
   // ── GPS ──────────────────────────────────────────────────────────
   const sendLocation = useCallback(async (lat: number, lng: number) => {
-    // Always update local position immediately for smooth map animation
     setDriverPos([lat, lng])
-
-    // Throttle Supabase uploads to max once per 3 s — reduces network and battery load
     const now = Date.now()
     if (now - lastSentAt.current < 3000) return
     lastSentAt.current = now
-
     await supabase.from('driver_locations').upsert({
       driver_id: driverId, store_id: storeId,
       lat, lng, is_sharing: true,
@@ -235,14 +212,11 @@ export default function DriverClient({
   const startGps = useCallback(async () => {
     if (!navigator.geolocation) { setGpsStatus('error'); return }
 
-    // 1. Screen wake lock — prevents display timeout
     try {
       if ('wakeLock' in navigator)
         wakeLock.current = await (navigator as Navigator & { wakeLock: { request(t: string): Promise<WakeLockSentinel> } }).wakeLock.request('screen')
     } catch { /* not critical */ }
 
-    // 2. Web Locks — tells Chrome this tab has active work; prevents background
-    //    JS throttling even with screen locked (Chrome 69+, no user gesture needed)
     if ('locks' in navigator) {
       (navigator as Navigator & { locks: { request(name: string, opts: unknown, cb: () => Promise<void>): void } })
         .locks.request(`gps-${driverId}`, { mode: 'exclusive' }, () =>
@@ -250,9 +224,6 @@ export default function DriverClient({
         )
     }
 
-    // 3. Silent audio loop — secondary signal to Android that tab is "active".
-    //    Uses a real audio file (not a synthesized oscillator Chrome can detect).
-    //    Started on first user interaction to satisfy autoplay policy.
     const startAudio = () => {
       if (audioEl.current) return
       const el = new Audio('/silent.wav')
@@ -265,12 +236,9 @@ export default function DriverClient({
     }
     document.addEventListener('touchstart', startAudio, { once: true })
     document.addEventListener('click', startAudio, { once: true })
-    // Also try immediately — succeeds if there was already a gesture
     startAudio()
 
     const opts: PositionOptions = { enableHighAccuracy: true, timeout: 10000, maximumAge: 500 }
-
-    // Start compass (no-op on iOS until user gesture in markPickedUp)
     initCompass()
 
     watchId.current = navigator.geolocation.watchPosition(
@@ -278,7 +246,6 @@ export default function DriverClient({
         sendLocation(pos.coords.latitude, pos.coords.longitude)
         setAccuracy(Math.round(pos.coords.accuracy))
         setGpsStatus('active')
-        // Use GPS heading as fallback when compass isn't active
         if (!compassActive && pos.coords.heading != null && !Number.isNaN(pos.coords.heading)) {
           setHeading(pos.coords.heading)
         }
@@ -287,7 +254,6 @@ export default function DriverClient({
       opts
     )
 
-    // 4. Fallback poll every 15 s — fires if watchPosition stalls
     if (fallbackInterval.current) clearInterval(fallbackInterval.current)
     fallbackInterval.current = setInterval(() => {
       if (Date.now() - lastSentAt.current < 14000) return
@@ -354,7 +320,6 @@ export default function DriverClient({
     setShowIosHint(false)
   }
 
-  // Auto-start GPS on mount
   useEffect(() => { startGps() }, [startGps])
 
   // Register service worker + push notifications
@@ -367,26 +332,19 @@ export default function DriverClient({
       try {
         const reg = await navigator.serviceWorker.register('/sw.js')
         await navigator.serviceWorker.ready
-
-        // Don't re-subscribe if already active
         const existing = await reg.pushManager.getSubscription()
         const sub = existing ?? await reg.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(vapidKey!),
         })
-
-        // Save subscription endpoint to Supabase (upsert by endpoint)
         await supabase.from('driver_push_subscriptions').upsert({
           driver_id: driverId,
           endpoint: sub.endpoint,
           subscription: JSON.parse(JSON.stringify(sub)),
         }, { onConflict: 'driver_id,endpoint' })
-      } catch {
-        // Push blocked by user or not supported — silent fail
-      }
+      } catch { /* push not supported or blocked */ }
     }
 
-    // Ask for permission on first interaction to satisfy browser policy
     if (Notification.permission === 'granted') {
       registerPush()
     } else if (Notification.permission !== 'denied') {
@@ -416,53 +374,18 @@ export default function DriverClient({
     compassOff.current?.()
     try { audioEl.current?.pause() } catch { /* ignore */ }
     wakeLock.current?.release().catch(() => {})
-    availChannel.current?.untrack().catch(() => {})
   }, [])
 
-  // ── Load available orders ─────────────────────────────────────────
-  const loadOrders = useCallback(async () => {
-    const res = await fetch(`/api/available-orders?storeId=${storeId}`)
-    if (!res.ok) return
-    const { orders } = await res.json()
-    setOrders(orders as AvailableOrder[])
-  }, [storeId])
-
+  // ── Load active delivery ──────────────────────────────────────────
   const loadDelivery = useCallback(async () => {
     const { data } = await supabase.from('deliveries')
       .select('id,customer_name,customer_phone,delivery_address,notes,status,picked_up_at,order_id,customer_lat,customer_lng')
       .eq('driver_id', driverId).in('status', ['ready', 'picked_up'])
       .order('created_at', { ascending: false }).limit(1).maybeSingle()
-    setDelivery(current => {
-      // Don't wipe a locally-set delivery while the DB claim is still in flight
-      if (!data && current?.id?.startsWith('local-')) return current
-      return data as ActiveDelivery | null
-    })
+    setDelivery(data as ActiveDelivery | null)
   }, [driverId])
 
-  // ── New-order alert (in-app beep + flash when orders count increases) ──
-  useEffect(() => {
-    if (orders.length > prevOrderCount.current) {
-      // Web Audio beep — two rising tones
-      try {
-        const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-        osc.connect(gain); gain.connect(ctx.destination)
-        osc.frequency.setValueAtTime(880, ctx.currentTime)
-        osc.frequency.setValueAtTime(1320, ctx.currentTime + 0.12)
-        gain.gain.setValueAtTime(0.35, ctx.currentTime)
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
-        osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.4)
-      } catch { /* AudioContext blocked */ }
-      if (navigator.vibrate) navigator.vibrate([120, 60, 120])
-      setNewOrderFlash(true)
-      const t = setTimeout(() => setNewOrderFlash(false), 2000)
-      return () => clearTimeout(t)
-    }
-    prevOrderCount.current = orders.length
-  }, [orders.length])  // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── New-delivery alert (beep + flash when auto-dispatch assigns an order) ──
+  // ── New-delivery alert (beep + flash when a delivery is assigned) ──
   useEffect(() => {
     const prev = prevDelivery.current
     if (!prev && delivery?.status === 'ready') {
@@ -498,7 +421,7 @@ export default function DriverClient({
       .then(() => setDelivery(d => d ? { ...d, status: 'picked_up', picked_up_at: new Date().toISOString() } : d))
   }, [delivery])  // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Auto-start in-app navigation when delivery has coords + driver has GPS fix ──
+  // ── Auto-start navigation when delivery has coords + driver has GPS fix ──
   useEffect(() => {
     if (navMode || !delivery?.customer_lat || !delivery?.customer_lng || !driverPos) return
     if (autoNavRef.current === delivery.id) return
@@ -507,163 +430,29 @@ export default function DriverClient({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [delivery?.id, delivery?.customer_lat, delivery?.customer_lng, driverPos, navMode])
 
-  // ── Realtime subscriptions + initial load ────────────────────────
+  // ── Realtime subscription ────────────────────────────────────────
   useEffect(() => {
-    loadOrders()
     loadDelivery()
     const ch = supabase.channel(`dispatcher-${driverId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `store_id=eq.${storeId}` },
-        () => loadOrders())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'deliveries', filter: `store_id=eq.${storeId}` },
-        () => { loadOrders(); loadDelivery() })
+        () => loadDelivery())
       .subscribe()
     return () => { supabase.removeChannel(ch) }
-  }, [storeId, driverId, loadOrders, loadDelivery])
-
-  // ── Broadcast channel: instant order-claimed sync across all dispatchers ──
-  useEffect(() => {
-    const ch = supabase.channel(`store-orders-${storeId}`, { config: { broadcast: { self: false } } })
-      .on('broadcast', { event: 'order_claimed' }, ({ payload }) => {
-        setOrders(prev => prev.filter(o => o.id !== (payload as { orderId: string }).orderId))
-      })
-      .subscribe()
-    storeOrdersChannel.current = ch
-    return () => { supabase.removeChannel(ch); storeOrdersChannel.current = null }
-  }, [storeId])
-
-  // ── Driver queue list (realtime) ─────────────────────────────────
-  const loadQueue = useCallback(async () => {
-    const { data } = await supabase
-      .from('delivery_drivers')
-      .select('id, name, avatar_url, available_since')
-      .eq('store_id', storeId)
-      .eq('is_available', true)
-      .order('available_since', { ascending: true, nullsFirst: false })
-    setQueue((data ?? []) as { id: string; name: string; avatar_url: string | null; available_since: string }[])
-  }, [storeId])
-
-  useEffect(() => {
-    loadQueue()
-    const ch = supabase
-      .channel(`driver-queue-list-${storeId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'delivery_drivers', filter: `store_id=eq.${storeId}` },
-        () => loadQueue())
-      .subscribe()
-    return () => { supabase.removeChannel(ch) }
-  }, [storeId, loadQueue])
-
-  // ── Availability queue ───────────────────────────────────────────
-
-  function joinPresence(since: string) {
-    if (availChannel.current) return
-    const ch = supabase.channel(`driver-queue-${storeId}`, {
-      config: { presence: { key: driverId } },
-    })
-    ch.subscribe(async (status) => {
-      if (status === 'SUBSCRIBED') {
-        await ch.track({ driverName, since })
-        setIsAvailable(true)
-        setAvailSince(since)
-      }
-    })
-    availChannel.current = ch
-  }
-
-  // On mount: restore availability from DB
-  useEffect(() => {
-    supabase.from('delivery_drivers')
-      .select('is_available, available_since')
-      .eq('id', driverId)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.is_available) {
-          joinPresence(data.available_since ?? new Date().toISOString())
-        }
-      })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  async function toggleAvailable() {
-    if (isAvailable) return // only leave via leaveQueue (explicit logout)
-    const since = new Date().toISOString()
-    await supabase.from('delivery_drivers')
-      .update({ is_available: true, available_since: since })
-      .eq('id', driverId)
-    joinPresence(since)
-  }
-
-  async function leaveQueue() {
-    if (!availChannel.current) return
-    await availChannel.current.untrack()
-    supabase.removeChannel(availChannel.current)
-    availChannel.current = null
-    setIsAvailable(false)
-    setAvailSince(null)
-    supabase.from('delivery_drivers')
-      .update({ is_available: false, available_since: null })
-      .eq('id', driverId).then(() => {})
-  }
-
-  // ── Claim an order ────────────────────────────────────────────────
-  const claimOrder = useCallback((order: AvailableOrder) => {
-    if (delivery) return
-
-    // Show delivery locally right away — no DB wait
-    const localDelivery: ActiveDelivery = {
-      id: `local-${order.id}`,
-      customer_name: order.customer_name,
-      customer_phone: order.customer_phone,
-      delivery_address: order.customer_notes ?? '',
-      notes: null,
-      status: 'picked_up',
-      picked_up_at: new Date().toISOString(),
-      order_id: order.id,
-      customer_lat: null,
-      customer_lng: null,
-    }
-    setOrders(prev => prev.filter(o => o.id !== order.id))
-    // Notify all other dispatchers on this store to remove the order immediately
-    storeOrdersChannel.current?.send({
-      type: 'broadcast',
-      event: 'order_claimed',
-      payload: { orderId: order.id },
-    })
-    leaveQueue()
-    setDelivery(localDelivery)
-
-    // Persist to DB in background — update delivery state if it succeeds
-    fetch('/api/claim-order', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        orderId: order.id, driverId, storeId,
-        customerName: order.customer_name,
-        customerPhone: order.customer_phone,
-        deliveryAddress: order.customer_notes ?? '',
-      }),
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(result => { if (result?.delivery) setDelivery(result.delivery as ActiveDelivery) })
-      .catch(() => {})
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [delivery, driverId, storeId])
+  }, [storeId, driverId, loadDelivery])
 
   // ── Mark delivered ────────────────────────────────────────────────
   async function completeDelivery() {
     if (!delivery) return
     setCompleting(true)
-    if (!delivery.id.startsWith('local-')) {
-      await supabase.from('deliveries')
-        .update({ status: 'delivered', delivered_at: new Date().toISOString() })
-        .eq('id', delivery.id)
-    }
+    await supabase.from('deliveries')
+      .update({ status: 'delivered', delivered_at: new Date().toISOString() })
+      .eq('id', delivery.id)
     if (delivery.order_id) {
       await supabase.from('orders').update({ status: 'delivered' }).eq('id', delivery.order_id)
     }
     stopNavigation()
     setDelivery(null)
     setCompleting(false)
-    await loadOrders()
   }
 
   // ── Navigation ────────────────────────────────────────────────────
@@ -672,34 +461,24 @@ export default function DriverClient({
     setNavLoading(true)
     try {
       const [dLat, dLng] = driverPos
-      const cLat = delivery.customer_lat
-      const cLng = delivery.customer_lng
       const res = await fetch(
-        `https://router.project-osrm.org/route/v1/driving/${dLng},${dLat};${cLng},${cLat}?steps=true&overview=full&geometries=geojson`
+        `https://router.project-osrm.org/route/v1/driving/${dLng},${dLat};${delivery.customer_lng},${delivery.customer_lat}?steps=true&overview=full&geometries=geojson`
       )
       const data = await res.json()
       if (data.code !== 'Ok' || !data.routes?.length) throw new Error('no route')
-
       const route = data.routes[0]
-      const coords: [number, number][] = route.geometry.coordinates.map(
-        ([lng, lat]: [number, number]) => [lat, lng]
-      )
-      setRouteCoords(coords)
+      setRouteCoords(route.geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]))
       setTotalDist(route.distance)
-
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const steps: NavStep[] = route.legs[0].steps.map((s: any) => ({
+      setNavSteps(route.legs[0].steps.map((s: any) => ({
         instruction: buildInstruction(s.maneuver.type, s.maneuver.modifier ?? '', s.name ?? ''),
         distanceM:   s.distance,
         maneuverPos: [s.maneuver.location[1], s.maneuver.location[0]] as [number, number],
         modifier:    s.maneuver.modifier ?? s.maneuver.type ?? 'straight',
-      }))
-      setNavSteps(steps)
+      })))
       setNavStepIdx(0)
       setNavMode(true)
-    } catch {
-      // silently fall back to current view — no route drawn
-    }
+    } catch { /* fall back to static map */ }
     setNavLoading(false)
   }
 
@@ -711,14 +490,11 @@ export default function DriverClient({
     setTotalDist(0)
   }
 
-  // Advance step when driver is within 40 m of the current maneuver point
   useEffect(() => {
     if (!navMode || !driverPos || navSteps.length === 0) return
     const step = navSteps[navStepIdx]
     if (!step || navStepIdx >= navSteps.length - 1) return
-    if (haversineDistance(driverPos, step.maneuverPos) < 40) {
-      setNavStepIdx(i => i + 1)
-    }
+    if (haversineDistance(driverPos, step.maneuverPos) < 40) setNavStepIdx(i => i + 1)
   }, [driverPos, navMode, navSteps, navStepIdx])
 
   const isActive = gpsStatus === 'active'
@@ -740,18 +516,6 @@ export default function DriverClient({
           <div className="dsp-store">{storeName}</div>
           <div className="dsp-name">{driverName}</div>
         </div>
-        {/* Orders in process badge */}
-        {orders.length > 0 && (
-          <div className="dsp-orders-badge">
-            <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13">
-              <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
-              <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd"/>
-            </svg>
-            {orders.length}
-          </div>
-        )}
-
-        {/* GPS pill */}
         <div className={`dsp-gps-pill${isActive ? ' on' : gpsStatus === 'error' ? ' err' : ''}`}>
           <span className="dsp-gps-dot" />
           {gpsStatus === 'requesting' && 'GPS...'}
@@ -761,7 +525,7 @@ export default function DriverClient({
         </div>
       </div>
 
-      {/* ── INSTALL BANNER ── */}
+      {/* Install banner */}
       {installState === 'android' && (
         <div className="dsp-install-bar">
           <div className="dsp-install-text">
@@ -806,11 +570,8 @@ export default function DriverClient({
         </div>
       )}
 
-      {/* GPS stop/start bar */}
       {gpsStatus === 'stopped' && (
-        <button className="dsp-gps-restart" onClick={startGps}>
-          Reactivar GPS
-        </button>
+        <button className="dsp-gps-restart" onClick={startGps}>Reactivar GPS</button>
       )}
       {gpsStatus === 'error' && (
         <div className="dsp-gps-error">
@@ -821,7 +582,7 @@ export default function DriverClient({
 
       <div className={`dsp-body${delivery ? ' dsp-body--active' : ''}`}>
 
-        {/* ── ACTIVE DELIVERY: fullscreen GPS map (auto-transitions to picked_up) ── */}
+        {/* Active delivery — fullscreen GPS map */}
         {delivery && (
           <div className={`dsp-active-wrap${newDeliveryFlash ? ' dsp-delivery-card--new' : ''}`}>
             <div className="dsp-active-map">
@@ -847,19 +608,14 @@ export default function DriverClient({
                 </div>
               )}
 
-              {/* Top overlay — nav instruction or customer info */}
               <div className="dsp-active-info">
                 {navMode && currentStep ? (
                   <div className="dsp-nav-instruction">
-                    <div className="dsp-nav-arrow">
-                      <NavArrow modifier={currentStep.modifier} />
-                    </div>
+                    <div className="dsp-nav-arrow"><NavArrow modifier={currentStep.modifier} /></div>
                     <div className="dsp-nav-text">
                       <div className="dsp-nav-dist">{fmtDist(currentStep.distanceM)}</div>
                       <div className="dsp-nav-instr">{currentStep.instruction}</div>
-                      {totalDist > 0 && (
-                        <div className="dsp-nav-total">Total: {fmtDist(totalDist)}</div>
-                      )}
+                      {totalDist > 0 && <div className="dsp-nav-total">Total: {fmtDist(totalDist)}</div>}
                     </div>
                   </div>
                 ) : (
@@ -882,9 +638,7 @@ export default function DriverClient({
                 )}
               </div>
 
-              {/* Action buttons overlay — bottom of map */}
               <div className="dsp-active-actions">
-                {/* Secondary row: call + navigation (only when at least one is available) */}
                 {(delivery.customer_phone || (delivery.customer_lat && delivery.customer_lng)) && (
                   <div className="dsp-actions-row">
                     {delivery.customer_phone && (
@@ -906,7 +660,6 @@ export default function DriverClient({
                     )}
                   </div>
                 )}
-                {/* Primary action: always full width */}
                 <button className="dsp-btn-done" onClick={completeDelivery} disabled={completing}>
                   {completing ? 'Guardando...' : 'Entregado'}
                 </button>
@@ -915,121 +668,22 @@ export default function DriverClient({
           </div>
         )}
 
-        {/* ── QUEUE — always visible ── */}
-        <div className="dsp-section">
-          {isAvailable ? (
-            <div className="dsp-avail-row">
-              <div className="dsp-avail-status">
-                <span className="dsp-avail-dot" />
-                <span className="dsp-avail-label">
-                  EN COLA
-                  {availSince && ` · desde ${new Date(availSince).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}`}
-                </span>
-              </div>
-              <button className="dsp-btn-leave-queue" onClick={leaveQueue}>
-                Salir
-              </button>
-            </div>
-          ) : (
-            <button className="dsp-btn-available" onClick={toggleAvailable}>
-              DISPONIBLE
-            </button>
-          )}
-
-          <div className="dsp-queue-wrap">
-            <div className="dsp-queue-label">
-              Cola de despachadores
-              {queue.length > 0 && <span className="dsp-queue-count">{queue.length}</span>}
-            </div>
-            {queue.length === 0 ? (
-              <div className="dsp-queue-empty">Sin despachadores en cola</div>
-            ) : (
-              <div className="dsp-queue-list">
-                {queue.map((d, i) => (
-                  <div key={d.id} className={`dsp-queue-card${d.id === driverId ? ' dsp-queue-card--me' : ''}`}>
-                    <div className="dsp-queue-pos">{i + 1}</div>
-                    {d.avatar_url
-                      ? <img src={d.avatar_url} alt={d.name} className="dsp-queue-avatar" />
-                      : <div className="dsp-queue-initials">{d.name.slice(0, 2).toUpperCase()}</div>
-                    }
-                    <div className="dsp-queue-info">
-                      <div className="dsp-queue-name">{d.id === driverId ? 'Tu' : d.name}</div>
-                      <div className="dsp-queue-since">{timeAgo(d.available_since)}</div>
-                    </div>
-                    {d.id === driverId && <div className="dsp-queue-me-badge">Yo</div>}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* ── AVAILABLE ORDERS ── only visible to #1 in queue, hidden while delivery active */}
-        {!delivery && (() => {
-          const isFirst = queue.length > 0 && queue[0].id === driverId
-          const myPosition = queue.findIndex(d => d.id === driverId)
-          return (
+        {/* Idle state */}
+        {!delivery && (
           <div className="dsp-section">
-
-            <div className={`dsp-section-title${newOrderFlash ? ' dsp-new-order-flash' : ''}`}>
-              Pedidos disponibles
-              {isFirst && orders.length > 0 && <span className="dsp-count">{orders.length}</span>}
-            </div>
-
-            {!isFirst ? (
-              <div className="dsp-queue-waiting">
-                {myPosition > 0
-                  ? `Eres #${myPosition + 1} en la cola. Los pedidos le salen al despachador #1.`
-                  : 'Unete a la cola para recibir pedidos.'
-                }
+            <div className="dsp-empty">
+              <div className="dsp-empty-icon">
+                <svg viewBox="0 0 40 40" fill="none" stroke="#CBD5E1" strokeWidth="1.5" width="40" height="40">
+                  <circle cx="20" cy="20" r="16" strokeDasharray="4 3"/>
+                  <path strokeLinecap="round" d="M14 20h12M20 14v12"/>
+                </svg>
               </div>
-            ) : (
-              <>
-                {orders.length === 0 ? (
-                  <div className="dsp-empty">
-                    <div className="dsp-empty-icon">
-                      <svg viewBox="0 0 40 40" fill="none" stroke="#CBD5E1" strokeWidth="1.5" width="40" height="40">
-                        <circle cx="20" cy="20" r="16" strokeDasharray="4 3"/>
-                        <path strokeLinecap="round" d="M14 20h12M20 14v12"/>
-                      </svg>
-                    </div>
-                    <div className="dsp-empty-text">Sin pedidos disponibles</div>
-                    <div className="dsp-empty-sub">Apareceran aqui cuando cocina los marque como listos</div>
-                  </div>
-                ) : (
-            <div className="dsp-order-list">
-              {orders.map(order => (
-                <div key={order.id} className="dsp-order-card">
-                  <div className="dsp-order-top">
-                    <div className="dsp-order-name">{order.customer_name}</div>
-                    <div className="dsp-order-time">{timeAgo(order.created_at)}</div>
-                  </div>
-                  {order.customer_notes && (
-                    <div className="dsp-order-notes">{order.customer_notes}</div>
-                  )}
-                  <div className="dsp-order-meta">
-                    {order.total > 0 && <span>${Number(order.total).toFixed(2)}</span>}
-                    {order.payment_method && <span>{order.payment_method}</span>}
-                    {order.customer_phone && <span>{order.customer_phone}</span>}
-                  </div>
-                  <button
-                    className="dsp-btn-claim"
-                    onClick={() => claimOrder(order)}
-                    disabled={!!delivery}
-                  >
-                    {delivery ? 'Ya tienes un pedido' : 'Tomar pedido'}
-                  </button>
-                </div>
-              ))}
-                  </div>
-                )}
-              </>
-            )}
+              <div className="dsp-empty-text">Sin pedido activo</div>
+              <div className="dsp-empty-sub">Aqui apareceran los pedidos asignados</div>
+            </div>
           </div>
-          )
-        })()}
+        )}
 
-        {/* GPS toggle at bottom — hidden when delivery active (status shown in header pill) */}
         {isActive && !delivery && (
           <>
             <div className="dsp-gps-bar">
@@ -1043,7 +697,7 @@ export default function DriverClient({
               <button className="dsp-gps-stop" onClick={stopGps}>Detener</button>
             </div>
             <div style={{ background: '#FFFBEB', borderTop: '1px solid #FDE68A', padding: '8px 18px', fontSize: 11, color: '#92400E', textAlign: 'center' }}>
-              Android: puedes bloquear la pantalla · iOS: mantén Safari abierto
+              Android: puedes bloquear la pantalla · iOS: manten Safari abierto
             </div>
           </>
         )}

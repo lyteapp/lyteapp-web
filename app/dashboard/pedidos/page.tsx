@@ -268,19 +268,8 @@ export default function PedidosPage() {
     }).catch(() => {})
   }
 
-  async function notifyDrivers(customerName: string | null | undefined) {
-    if (!storeId) return
-    try {
-      const res = await fetch('/api/auto-dispatch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storeId }),
-      })
-      const { assigned } = await res.json()
-      if (!assigned) broadcastDrivers(customerName)
-    } catch {
-      broadcastDrivers(customerName)
-    }
+  function notifyDrivers(customerName: string | null | undefined) {
+    broadcastDrivers(customerName)
   }
 
   async function updateStatus(orderId: string, status: OrderStatus) {

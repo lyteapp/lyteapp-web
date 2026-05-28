@@ -169,6 +169,8 @@ export default function DriverClient({
   const audioEl          = useRef<HTMLAudioElement | null>(null)
   const compassOff       = useRef<(() => void) | null>(null)
   const availChannel     = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  const prevOrderCount   = useRef<number>(initialOrders.length)
+  const [newOrderFlash, setNewOrderFlash] = useState(false)
 
   // ── Compass ───────────────────────────────────────────────────────
   function initCompass() {
@@ -432,6 +434,29 @@ export default function DriverClient({
       .order('created_at', { ascending: false }).limit(1).maybeSingle()
     setDelivery(data as ActiveDelivery | null)
   }, [driverId])
+
+  // ── New-order alert (in-app beep + flash when orders count increases) ──
+  useEffect(() => {
+    if (orders.length > prevOrderCount.current) {
+      // Web Audio beep — two rising tones
+      try {
+        const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.connect(gain); gain.connect(ctx.destination)
+        osc.frequency.setValueAtTime(880, ctx.currentTime)
+        osc.frequency.setValueAtTime(1320, ctx.currentTime + 0.12)
+        gain.gain.setValueAtTime(0.35, ctx.currentTime)
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
+        osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.4)
+      } catch { /* AudioContext blocked */ }
+      if (navigator.vibrate) navigator.vibrate([120, 60, 120])
+      setNewOrderFlash(true)
+      const t = setTimeout(() => setNewOrderFlash(false), 2000)
+      return () => clearTimeout(t)
+    }
+    prevOrderCount.current = orders.length
+  }, [orders.length])  // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Realtime subscriptions ────────────────────────────────────────
   useEffect(() => {
@@ -829,7 +854,7 @@ export default function DriverClient({
             )}
           </button>
 
-          <div className="dsp-section-title">
+          <div className={`dsp-section-title${newOrderFlash ? ' dsp-new-order-flash' : ''}`}>
             Pedidos disponibles
             {orders.length > 0 && <span className="dsp-count">{orders.length}</span>}
           </div>

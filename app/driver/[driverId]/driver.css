@@ -257,6 +257,16 @@
   letter-spacing: 0.08em;
   color: #64748B;
   margin-bottom: 10px;
+  transition: color 0.2s;
+}
+.dsp-new-order-flash {
+  color: #7C3AED;
+  animation: dsp-flash 2s ease-out forwards;
+}
+@keyframes dsp-flash {
+  0%   { color: #7C3AED; }
+  40%  { color: #7C3AED; }
+  100% { color: #64748B; }
 }
 
 .dsp-count {

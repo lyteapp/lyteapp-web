@@ -826,48 +826,47 @@ export default function PedidosPage() {
       {showTimerSettings && (
         <div className="pd-modal-overlay" onClick={() => setShowTimerSettings(false)}>
           <div className="pd-modal" onClick={e => e.stopPropagation()}>
-            <div className="pd-modal-title">Tiempos de alerta del display</div>
-            <div className="pd-modal-desc">Define cuantos minutos tarda un pedido en cambiar de color en el display de cocina.</div>
 
-            <div className="pd-modal-field">
-              <div className="pd-modal-field-label">
-                <span className="pd-modal-dot warn" />
-                Advertencia (amarillo)
+            {/* Header */}
+            <div className="pd-modal-header">
+              <div>
+                <div className="pd-modal-title">Tiempos del display</div>
+                <div className="pd-modal-desc">Minutos para cambiar el color del pedido</div>
               </div>
-              <div className="pd-modal-input-row">
-                <input
-                  className="pd-modal-input"
-                  type="number" min={1} max={alertMins - 1} value={warnMins}
-                  onChange={e => {
-                    const v = Math.max(1, Math.min(alertMins - 1, Number(e.target.value)))
-                    setWarnMins(v)
-                    localStorage.setItem('pd-warn-mins', String(v))
-                  }}
-                />
-                <span className="pd-modal-unit">min</span>
-              </div>
+              <button className="pd-modal-x" onClick={() => setShowTimerSettings(false)}>
+                <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/>
+                </svg>
+              </button>
             </div>
 
-            <div className="pd-modal-field">
-              <div className="pd-modal-field-label">
-                <span className="pd-modal-dot alert" />
-                Alerta (rojo)
+            {/* Threshold rows */}
+            {([
+              { key: 'warn',  label: 'Advertencia', color: '#F59E0B', val: warnMins,  min: 1,            max: alertMins - 1,
+                set: (v: number) => { setWarnMins(v);  localStorage.setItem('pd-warn-mins',  String(v)) } },
+              { key: 'alert', label: 'Alerta',       color: '#EF4444', val: alertMins, min: warnMins + 1, max: 120,
+                set: (v: number) => { setAlertMins(v); localStorage.setItem('pd-alert-mins', String(v)) } },
+            ] as const).map(row => (
+              <div key={row.key} className="pd-modal-row">
+                <div className="pd-modal-row-left">
+                  <span className="pd-modal-swatch" style={{ background: row.color }} />
+                  <span className="pd-modal-row-label">{row.label}</span>
+                </div>
+                <div className="pd-modal-stepper">
+                  <button className="pd-modal-step-btn" onClick={() => row.set(Math.max(row.min, row.val - 1))}>−</button>
+                  <span className="pd-modal-step-val">{row.val} min</span>
+                  <button className="pd-modal-step-btn" onClick={() => row.set(Math.min(row.max, row.val + 1))}>+</button>
+                </div>
               </div>
-              <div className="pd-modal-input-row">
-                <input
-                  className="pd-modal-input"
-                  type="number" min={warnMins + 1} max={120} value={alertMins}
-                  onChange={e => {
-                    const v = Math.max(warnMins + 1, Math.min(120, Number(e.target.value)))
-                    setAlertMins(v)
-                    localStorage.setItem('pd-alert-mins', String(v))
-                  }}
-                />
-                <span className="pd-modal-unit">min</span>
-              </div>
+            ))}
+
+            {/* Visual summary */}
+            <div className="pd-modal-summary">
+              <div className="pd-modal-summary-item ok">Verde hasta {warnMins} min</div>
+              <div className="pd-modal-summary-item warn">{warnMins}–{alertMins} min amarillo</div>
+              <div className="pd-modal-summary-item alert">Rojo desde {alertMins} min</div>
             </div>
 
-            <button className="pd-modal-close-btn" onClick={() => setShowTimerSettings(false)}>Listo</button>
           </div>
         </div>
       )}

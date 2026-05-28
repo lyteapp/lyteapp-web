@@ -892,7 +892,6 @@ export default function DriverClient({
                   {availSince && ` · desde ${new Date(availSince).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}`}
                 </span>
               </div>
-              <button className="dsp-leave-btn" onClick={leaveQueue}>Salir de cola</button>
             </div>
           ) : (
             <button className="dsp-btn-available" onClick={toggleAvailable}>

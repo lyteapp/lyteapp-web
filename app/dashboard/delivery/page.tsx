@@ -195,24 +195,33 @@ export default function DeliveryPage() {
     })
   }, [user, loadData])
 
-  // Presence: available driver queue
+  // Available driver queue — read from DB so it persists when drivers close app
+  const loadQueue = useCallback(async (sid: string) => {
+    const { data } = await supabase
+      .from('delivery_drivers')
+      .select('id, name, available_since')
+      .eq('store_id', sid)
+      .eq('is_available', true)
+      .order('available_since', { ascending: true, nullsFirst: false })
+    setAvailableQueue(
+      (data ?? []).map(d => ({
+        driverId: d.id,
+        driverName: d.name,
+        since: d.available_since ?? new Date().toISOString(),
+      }))
+    )
+  }, [])
+
   useEffect(() => {
     if (!storeId) return
-    const ch = supabase.channel(`driver-queue-${storeId}`)
-      .on('presence', { event: 'sync' }, () => {
-        const state = ch.presenceState<{ driverName: string; since: string }>()
-        const queue = Object.entries(state)
-          .map(([driverId, presences]) => ({
-            driverId,
-            driverName: presences[0]?.driverName ?? 'Despachador',
-            since: presences[0]?.since ?? new Date().toISOString(),
-          }))
-          .sort((a, b) => new Date(a.since).getTime() - new Date(b.since).getTime())
-        setAvailableQueue(queue)
-      })
+    loadQueue(storeId)
+    const ch = supabase
+      .channel(`driver-queue-db-${storeId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'delivery_drivers', filter: `store_id=eq.${storeId}` },
+        () => loadQueue(storeId))
       .subscribe()
     return () => { supabase.removeChannel(ch) }
-  }, [storeId])
+  }, [storeId, loadQueue])
 
   useEffect(() => {
     if (!storeId) return

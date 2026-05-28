@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { useT } from '../../lib/LocaleProvider'
@@ -823,7 +824,7 @@ export default function PedidosPage() {
         </div>
       )}
 
-      {showTimerSettings && (
+      {showTimerSettings && createPortal(
         <div className="pd-modal-overlay" onClick={() => setShowTimerSettings(false)}>
           <div className="pd-modal" onClick={e => e.stopPropagation()}>
 
@@ -869,7 +870,7 @@ export default function PedidosPage() {
 
           </div>
         </div>
-      )}
+      , document.body)}
     </div>
   )
 }

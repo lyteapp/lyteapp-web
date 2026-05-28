@@ -15,7 +15,6 @@ export async function POST(req: NextRequest) {
   const { storeId } = await req.json()
   if (!storeId) return NextResponse.json({ error: 'missing storeId' }, { status: 400 })
 
-  // Check autoAssign setting
   const { data: store } = await supabase
     .from('stores')
     .select('checkout_settings')
@@ -23,8 +22,6 @@ export async function POST(req: NextRequest) {
     .maybeSingle()
 
   const cs = (store?.checkout_settings as Record<string, unknown>) ?? {}
-  if (!cs.autoAssign) return NextResponse.json({ skipped: true, assigned: 0 })
-
   const defaultFee = Number(cs.deliveryFee) || 0
 
   // Get available dispatchers sorted by time in queue (oldest first)

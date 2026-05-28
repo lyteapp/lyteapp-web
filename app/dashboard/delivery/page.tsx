@@ -456,7 +456,7 @@ export default function DeliveryPage() {
         )}
 
         {/* Map — full width */}
-        <div className="dv-panel dv-map-panel" style={{ position: 'relative' }}>
+        <div className="dv-panel dv-map-panel" style={{ position: 'relative', flex: 1, border: 'none' }}>
           <MapView
             inRoute={inRoute.map(del => ({
               id: del.id,

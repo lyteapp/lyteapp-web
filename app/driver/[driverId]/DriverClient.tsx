@@ -525,22 +525,12 @@ export default function DriverClient({
   }, [])
 
   async function toggleAvailable() {
-    if (isAvailable) {
-      await availChannel.current?.untrack()
-      supabase.removeChannel(availChannel.current!)
-      availChannel.current = null
-      setIsAvailable(false)
-      setAvailSince(null)
-      supabase.from('delivery_drivers')
-        .update({ is_available: false, available_since: null })
-        .eq('id', driverId).then(() => {})
-    } else {
-      const since = new Date().toISOString()
-      await supabase.from('delivery_drivers')
-        .update({ is_available: true, available_since: since })
-        .eq('id', driverId)
-      joinPresence(since)
-    }
+    if (isAvailable) return // only leave via leaveQueue (explicit logout)
+    const since = new Date().toISOString()
+    await supabase.from('delivery_drivers')
+      .update({ is_available: true, available_since: since })
+      .eq('id', driverId)
+    joinPresence(since)
   }
 
   async function leaveQueue() {
@@ -892,18 +882,23 @@ export default function DriverClient({
         {/* ── AVAILABLE ORDERS ── hidden while a delivery is active */}
         {!delivery && <div className="dsp-section">
 
-          {/* DISPONIBLE toggle */}
-          <button
-            className={`dsp-btn-available${isAvailable ? ' active' : ''}`}
-            onClick={toggleAvailable}
-          >
-            {isAvailable ? 'EN COLA · DISPONIBLE' : 'DISPONIBLE'}
-            {isAvailable && availSince && (
-              <span className="dsp-available-since">
-                {`Esperando desde ${new Date(availSince).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}`}
-              </span>
-            )}
-          </button>
+          {/* DISPONIBLE / status row */}
+          {isAvailable ? (
+            <div className="dsp-avail-row">
+              <div className="dsp-avail-status">
+                <span className="dsp-avail-dot" />
+                <span className="dsp-avail-label">
+                  EN COLA
+                  {availSince && ` · desde ${new Date(availSince).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}`}
+                </span>
+              </div>
+              <button className="dsp-leave-btn" onClick={leaveQueue}>Salir de cola</button>
+            </div>
+          ) : (
+            <button className="dsp-btn-available" onClick={toggleAvailable}>
+              DISPONIBLE
+            </button>
+          )}
 
           {/* Queue cards */}
           {queue.length > 0 && (

@@ -636,8 +636,60 @@
   display: flex; flex-direction: column; align-items: center; gap: 3px;
 }
 .dsp-btn-available:hover { border-color: #22C55E; color: #16A34A; }
-.dsp-btn-available.active { background: #22C55E; border-color: #22C55E; color: white; }
-.dsp-available-since { font-size: 11px; font-weight: 500; opacity: 0.75; letter-spacing: 0; }
+
+.dsp-avail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #F0FDF4;
+  border: 2px solid #22C55E;
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+
+.dsp-avail-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.dsp-avail-dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: #22C55E;
+  flex-shrink: 0;
+  animation: dspBlink 1.4s ease-in-out infinite;
+}
+
+.dsp-avail-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #15803D;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dsp-leave-btn {
+  background: none;
+  border: 1.5px solid rgba(239,68,68,0.3);
+  color: #EF4444;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+.dsp-leave-btn:hover { background: #FEE2E2; border-color: #EF4444; }
 
 /* ── Empty state ── */
 .dsp-empty {

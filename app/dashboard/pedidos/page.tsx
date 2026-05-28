@@ -290,7 +290,7 @@ export default function PedidosPage() {
     const deliveryStatus = isPickupOrder ? undefined : DELIVERY_STATUS_MAP[status]
     const readyAt = status === 'ready' ? new Date().toISOString() : undefined
     await supabase.from('orders').update({ status, ...(readyAt ? { ready_at: readyAt } : {}) }).eq('id', orderId)
-    if (deliveryStatus) syncDelivery(orderId, deliveryStatus).catch(() => {})
+    if (deliveryStatus) await syncDelivery(orderId, deliveryStatus).catch(() => {})
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o))
     if (['delivered', 'cancelled', 'completed'].includes(status)) {
       setDisplayOrders(prev => prev.filter(o => o.id !== orderId))
@@ -381,7 +381,7 @@ export default function PedidosPage() {
       const deliveryStatus = isPickupOrder ? undefined : DELIVERY_STATUS_MAP[status]
       const readyAt = status === 'ready' ? new Date().toISOString() : undefined
       await supabase.from('orders').update({ status, ...(readyAt ? { ready_at: readyAt } : {}) }).eq('id', orderId)
-      if (deliveryStatus) syncDelivery(orderId, deliveryStatus).catch(() => {})
+      if (deliveryStatus) await syncDelivery(orderId, deliveryStatus).catch(() => {})
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: status as OrderStatus } : o))
       if (['completed', 'cancelled', 'delivered'].includes(status)) {
         setDisplayOrders(prev => prev.filter(o => o.id !== orderId))

@@ -472,6 +472,36 @@ export default function DriverClient({
   }, [storeId, driverId, loadOrders, loadDelivery])
 
   // ── Availability queue ───────────────────────────────────────────
+
+  function joinPresence(since: string) {
+    if (availChannel.current) return
+    const ch = supabase.channel(`driver-queue-${storeId}`, {
+      config: { presence: { key: driverId } },
+    })
+    ch.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await ch.track({ driverName, since })
+        setIsAvailable(true)
+        setAvailSince(since)
+      }
+    })
+    availChannel.current = ch
+  }
+
+  // On mount: restore availability from DB
+  useEffect(() => {
+    supabase.from('delivery_drivers')
+      .select('is_available, available_since')
+      .eq('id', driverId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.is_available) {
+          joinPresence(data.available_since ?? new Date().toISOString())
+        }
+      })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   async function toggleAvailable() {
     if (isAvailable) {
       await availChannel.current?.untrack()
@@ -479,19 +509,15 @@ export default function DriverClient({
       availChannel.current = null
       setIsAvailable(false)
       setAvailSince(null)
+      supabase.from('delivery_drivers')
+        .update({ is_available: false, available_since: null })
+        .eq('id', driverId).then(() => {})
     } else {
       const since = new Date().toISOString()
-      const ch = supabase.channel(`driver-queue-${storeId}`, {
-        config: { presence: { key: driverId } },
-      })
-      ch.subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          await ch.track({ driverName, since })
-          setIsAvailable(true)
-          setAvailSince(since)
-        }
-      })
-      availChannel.current = ch
+      await supabase.from('delivery_drivers')
+        .update({ is_available: true, available_since: since })
+        .eq('id', driverId)
+      joinPresence(since)
     }
   }
 
@@ -502,6 +528,9 @@ export default function DriverClient({
     availChannel.current = null
     setIsAvailable(false)
     setAvailSince(null)
+    supabase.from('delivery_drivers')
+      .update({ is_available: false, available_since: null })
+      .eq('id', driverId).then(() => {})
   }
 
   // ── Claim an order ────────────────────────────────────────────────

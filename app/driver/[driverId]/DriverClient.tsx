@@ -598,6 +598,21 @@ export default function DriverClient({
         .is('driver_id', null) // race guard
         .select(sel).single())
     } else {
+      // No unassigned customer delivery — check if auto-dispatch already assigned it to us
+      const { data: alreadyMine } = await supabase.from('deliveries')
+        .select(sel)
+        .eq('order_id', order.id)
+        .eq('driver_id', driverId)
+        .in('status', ['ready', 'picked_up'])
+        .maybeSingle()
+
+      if (alreadyMine) {
+        leaveQueue()
+        setDelivery(alreadyMine as ActiveDelivery)
+        setClaiming(null)
+        return
+      }
+
       ;({ data, error } = await supabase.from('deliveries').insert({
         store_id: storeId,
         order_id: order.id,
@@ -612,11 +627,10 @@ export default function DriverClient({
     }
 
     if (error) {
-      // Revert: put the order back — dispatcher stays in queue
       setOrders(prev => [order, ...prev])
       setErrorMsg('Este pedido ya fue tomado. Actualiza la lista.')
     } else {
-      leaveQueue() // only leave queue once delivery is confirmed
+      leaveQueue()
       setDelivery(data as ActiveDelivery)
     }
     setClaiming(null)

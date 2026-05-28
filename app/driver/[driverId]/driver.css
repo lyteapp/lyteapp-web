@@ -65,6 +65,21 @@
   margin-top: 1px;
 }
 
+/* Orders in process badge */
+.dsp-orders-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 800;
+  background: #7C3AED;
+  color: white;
+  flex-shrink: 0;
+  animation: dspBlink 1.4s ease-in-out infinite;
+}
+
 /* GPS pill in header */
 .dsp-gps-pill {
   display: flex;

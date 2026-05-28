@@ -167,7 +167,8 @@ export default function DriverClient({
   const lockRelease      = useRef<(() => void) | null>(null)
   const audioEl          = useRef<HTMLAudioElement | null>(null)
   const compassOff       = useRef<(() => void) | null>(null)
-  const availChannel     = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  const availChannel         = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  const storeOrdersChannel  = useRef<ReturnType<typeof supabase.channel> | null>(null)
   const prevOrderCount    = useRef<number>(initialOrders.length)
   const prevDelivery      = useRef<ActiveDelivery | null>(initialDelivery)
   const autoPickedUpRef   = useRef<string | null>(null)
@@ -519,6 +520,17 @@ export default function DriverClient({
     return () => { supabase.removeChannel(ch) }
   }, [storeId, driverId, loadOrders, loadDelivery])
 
+  // ── Broadcast channel: instant order-claimed sync across all dispatchers ──
+  useEffect(() => {
+    const ch = supabase.channel(`store-orders-${storeId}`)
+      .on('broadcast', { event: 'order_claimed' }, ({ payload }) => {
+        setOrders(prev => prev.filter(o => o.id !== (payload as { orderId: string }).orderId))
+      })
+      .subscribe()
+    storeOrdersChannel.current = ch
+    return () => { supabase.removeChannel(ch); storeOrdersChannel.current = null }
+  }, [storeId])
+
   // ── Driver queue list (realtime) ─────────────────────────────────
   const loadQueue = useCallback(async () => {
     const { data } = await supabase
@@ -610,6 +622,12 @@ export default function DriverClient({
       customer_lng: null,
     }
     setOrders(prev => prev.filter(o => o.id !== order.id))
+    // Notify all other dispatchers on this store to remove the order immediately
+    storeOrdersChannel.current?.send({
+      type: 'broadcast',
+      event: 'order_claimed',
+      payload: { orderId: order.id },
+    })
     leaveQueue()
     setDelivery(localDelivery)
 

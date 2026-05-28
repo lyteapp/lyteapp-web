@@ -139,6 +139,8 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const [customerNotes, setCustomerNotes] = useState('')
   const [selectedPayment, setSelectedPayment]   = useState('')
   const [paymentFreeText, setPaymentFreeText]   = useState('')
+  const [paymentProofFile, setPaymentProofFile]       = useState<File | null>(null)
+  const [paymentProofPreview, setPaymentProofPreview] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError]           = useState('')
   const [orderId, setOrderId]       = useState('')
@@ -420,12 +422,27 @@ export default function StoreShell({ store, products, categories = [] }: { store
 
     try {
       const newOrderId = crypto.randomUUID()
+
+      let proofUrl: string | null = null
+      if (paymentProofFile) {
+        const ext = paymentProofFile.name.split('.').pop() ?? 'jpg'
+        const path = `orders/proofs/${store.id}/${newOrderId}.${ext}`
+        const { error: upErr } = await supabase.storage
+          .from('store-assets')
+          .upload(path, paymentProofFile, { upsert: true })
+        if (!upErr) {
+          const { data: urlData } = supabase.storage.from('store-assets').getPublicUrl(path)
+          proofUrl = urlData.publicUrl
+        }
+      }
+
       const { error: oErr } = await supabase.from('orders').insert({
         id: newOrderId, store_id: store.id,
         customer_name: customerName.trim(), customer_phone: customerPhone.trim(),
         customer_notes: customerNotes.trim() || null,
         payment_method: paymentLabel || null, total: orderTotal, status: 'pending',
         delivery_type: isPickup ? 'pickup' : 'delivery',
+        payment_proof_url: proofUrl,
       })
       if (oErr) throw new Error(oErr.message)
 
@@ -466,6 +483,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
         '', `*Subtotal: $${cartTotal.toFixed(2)}*`,
         ...(deliveryFeeAmt > 0 ? [`*Envio: $${deliveryFeeAmt.toFixed(2)}*`] : []),
         `*Total: $${orderTotal.toFixed(2)}*`,
+        ...(proofUrl ? ['', `*Comprobante:* ${proofUrl}`] : []),
         ...(customerNotes ? ['', `*Notas:* ${customerNotes}`] : []),
         ...(!isPickup && newDeliveryId ? ['', 'Rastrea tu pedido en tiempo real:', `https://lyte-app.com/delivery/${newDeliveryId}`] : []),
         ...(isPickup ? ['', 'Sigue el estado de tu pedido:', `https://lyte-app.com/order/${newOrderId}`] : []),
@@ -890,6 +908,45 @@ export default function StoreShell({ store, products, categories = [] }: { store
             <div className="sf-co-field">
               <label>{t('store.howPay')}</label>
               <input type="text" placeholder={t('store.howPayPlaceholder')} value={paymentFreeText} onChange={e => setPaymentFreeText(e.target.value)} />
+            </div>
+          )}
+
+          {(selectedPayment || paymentFreeText) && (
+            <div className="sf-proof-upload">
+              <label className="sf-proof-label" htmlFor="sf-proof-input">
+                Comprobante de pago <span className="sf-optional">(opcional)</span>
+              </label>
+              <input
+                id="sf-proof-input"
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={e => {
+                  const f = e.target.files?.[0]
+                  if (!f) return
+                  setPaymentProofFile(f)
+                  setPaymentProofPreview(URL.createObjectURL(f))
+                }}
+              />
+              {paymentProofPreview ? (
+                <div className="sf-proof-preview-wrap">
+                  <img src={paymentProofPreview} alt="Comprobante" className="sf-proof-preview" />
+                  <button
+                    type="button"
+                    className="sf-proof-remove"
+                    onClick={() => { setPaymentProofFile(null); setPaymentProofPreview(null) }}
+                  >
+                    Quitar
+                  </button>
+                </div>
+              ) : (
+                <label htmlFor="sf-proof-input" className="sf-proof-drop">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" width="22" height="22">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v1.25A1.25 1.25 0 004.25 19h11.5A1.25 1.25 0 0017 17.75V16.5M10 3v10m0 0l-3-3m3 3l3-3" />
+                  </svg>
+                  <span>Subir foto del pago</span>
+                </label>
+              )}
             </div>
           )}
         </div>

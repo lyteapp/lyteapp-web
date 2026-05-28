@@ -362,6 +362,22 @@ html, body { overflow-x: hidden; }
 }
 .sf-payment-detail-row strong { color: #0F172A; }
 
+.sf-proof-upload { margin-top: 12px; }
+.sf-proof-label {
+  display: block; font-size: 11px; font-weight: 700; color: rgba(15,23,42,0.45);
+  letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px;
+}
+.sf-proof-drop {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 20px 16px; border-radius: 12px;
+  border: 1.5px dashed rgba(15,23,42,0.15); background: rgba(15,23,42,0.02);
+  cursor: pointer; font-size: 13px; color: #64748B; transition: border-color 0.15s, background 0.15s;
+}
+.sf-proof-drop:hover { border-color: var(--sf-accent-color, #7C3AED); background: color-mix(in srgb, var(--sf-accent-color, #7C3AED) 5%, white); }
+.sf-proof-preview-wrap { display: flex; align-items: flex-start; gap: 12px; }
+.sf-proof-preview { width: 80px; height: 80px; object-fit: cover; border-radius: 10px; border: 1px solid rgba(15,23,42,0.1); }
+.sf-proof-remove { font-size: 12px; color: #DC2626; background: none; border: none; cursor: pointer; padding: 0; font-family: inherit; }
+
 .sf-co-error {
   background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
   color: #DC2626; border-radius: 12px; padding: 12px 16px; font-size: 13px;

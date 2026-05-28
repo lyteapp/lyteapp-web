@@ -379,6 +379,13 @@ export default function DeliveryPage() {
     await loadData(storeId)
   }
 
+  async function removeFromQueue(driverId: string) {
+    await supabase.from('delivery_drivers')
+      .update({ is_available: false, available_since: null })
+      .eq('id', driverId)
+    // realtime subscription on delivery_drivers refreshes the queue automatically
+  }
+
   async function toggleDriver(drv: Driver) {
     await supabase.from('delivery_drivers').update({ is_active: !drv.is_active }).eq('id', drv.id)
     setDrivers(p => p.map(d => d.id === drv.id ? { ...d, is_active: !drv.is_active } : d))
@@ -640,6 +647,13 @@ export default function DeliveryPage() {
                       <div className="dv-drv-queue-num">{i + 1}</div>
                       <span className="dv-drv-queue-name">{entry.driverName}</span>
                       <span className="dv-drv-queue-since">{timeAgo(entry.since)}</span>
+                      <button
+                        className="dv-drv-queue-remove"
+                        onClick={() => removeFromQueue(entry.driverId)}
+                        title="Sacar de la cola"
+                      >
+                        Sacar
+                      </button>
                     </div>
                   ))}
                 </div>

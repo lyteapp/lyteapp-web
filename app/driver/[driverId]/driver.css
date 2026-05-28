@@ -741,3 +741,111 @@
 }
 
 .dsp-gps-stop:hover { border-color: #EF4444; color: #EF4444; }
+
+/* ── Driver queue list ─────────────────────────────── */
+.dsp-queue-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.dsp-queue-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748B;
+}
+
+.dsp-queue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dsp-queue-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #F8FAFC;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  transition: border-color 0.15s;
+}
+
+.dsp-queue-card--me {
+  background: #EDE9FE;
+  border-color: #7C3AED;
+}
+
+.dsp-queue-pos {
+  font-size: 12px;
+  font-weight: 700;
+  color: #94A3B8;
+  min-width: 18px;
+  text-align: center;
+}
+
+.dsp-queue-card--me .dsp-queue-pos { color: #7C3AED; }
+
+.dsp-queue-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.dsp-queue-initials {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #E2E8F0;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.dsp-queue-card--me .dsp-queue-initials {
+  background: #7C3AED;
+  color: white;
+}
+
+.dsp-queue-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.dsp-queue-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0F172A;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dsp-queue-card--me .dsp-queue-name { color: #4C1D95; }
+
+.dsp-queue-since {
+  font-size: 11px;
+  color: #94A3B8;
+  margin-top: 1px;
+}
+
+.dsp-queue-me-badge {
+  font-size: 10px;
+  font-weight: 700;
+  background: #7C3AED;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 100px;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}

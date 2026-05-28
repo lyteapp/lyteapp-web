@@ -160,6 +160,7 @@ export default function DriverClient({
 
   const [isAvailable, setIsAvailable] = useState(false)
   const [availSince, setAvailSince]   = useState<string | null>(null)
+  const [queue, setQueue]             = useState<{ id: string; name: string; avatar_url: string | null; available_since: string }[]>([])
 
   const watchId          = useRef<number | null>(null)
   const fallbackInterval = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -470,6 +471,27 @@ export default function DriverClient({
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, [storeId, driverId, loadOrders, loadDelivery])
+
+  // ── Driver queue list (realtime) ─────────────────────────────────
+  const loadQueue = useCallback(async () => {
+    const { data } = await supabase
+      .from('delivery_drivers')
+      .select('id, name, avatar_url, available_since')
+      .eq('store_id', storeId)
+      .eq('is_available', true)
+      .order('available_since', { ascending: true, nullsFirst: false })
+    setQueue((data ?? []) as { id: string; name: string; avatar_url: string | null; available_since: string }[])
+  }, [storeId])
+
+  useEffect(() => {
+    loadQueue()
+    const ch = supabase
+      .channel(`driver-queue-list-${storeId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'delivery_drivers', filter: `store_id=eq.${storeId}` },
+        () => loadQueue())
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
+  }, [storeId, loadQueue])
 
   // ── Availability queue ───────────────────────────────────────────
 
@@ -882,6 +904,29 @@ export default function DriverClient({
               </span>
             )}
           </button>
+
+          {/* Queue cards */}
+          {queue.length > 0 && (
+            <div className="dsp-queue-wrap">
+              <div className="dsp-queue-label">Cola de despachadores</div>
+              <div className="dsp-queue-list">
+                {queue.map((d, i) => (
+                  <div key={d.id} className={`dsp-queue-card${d.id === driverId ? ' dsp-queue-card--me' : ''}`}>
+                    <div className="dsp-queue-pos">{i + 1}</div>
+                    {d.avatar_url
+                      ? <img src={d.avatar_url} alt={d.name} className="dsp-queue-avatar" />
+                      : <div className="dsp-queue-initials">{d.name.slice(0, 2).toUpperCase()}</div>
+                    }
+                    <div className="dsp-queue-info">
+                      <div className="dsp-queue-name">{d.id === driverId ? 'Tu' : d.name}</div>
+                      <div className="dsp-queue-since">{timeAgo(d.available_since)}</div>
+                    </div>
+                    {d.id === driverId && <div className="dsp-queue-me-badge">Yo</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className={`dsp-section-title${newOrderFlash ? ' dsp-new-order-flash' : ''}`}>
             Pedidos disponibles

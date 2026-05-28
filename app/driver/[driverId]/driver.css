@@ -692,6 +692,21 @@
   animation: dspBlink 1.4s ease-in-out infinite;
 }
 
+.dsp-btn-leave-queue {
+  background: none;
+  border: 1px solid rgba(220,38,38,0.25);
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #DC2626;
+  cursor: pointer;
+  font-family: inherit;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+.dsp-btn-leave-queue:hover { background: #FEF2F2; border-color: #DC2626; }
+
 .dsp-avail-label {
   font-size: 13px;
   font-weight: 700;

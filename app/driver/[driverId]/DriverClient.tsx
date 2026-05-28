@@ -424,7 +424,7 @@ export default function DriverClient({
       supabase.from('orders').select('id,customer_name,customer_phone,customer_notes,payment_method,total,created_at')
         .eq('store_id', storeId).eq('status', 'ready').eq('delivery_type', 'delivery').order('created_at', { ascending: true }),
       supabase.from('deliveries').select('order_id')
-        .eq('store_id', storeId).not('order_id', 'is', null).not('status', 'eq', 'cancelled'),
+        .eq('store_id', storeId).not('order_id', 'is', null).not('status', 'eq', 'cancelled').not('driver_id', 'is', null),
     ])
     const claimedIds = new Set((claimed ?? []).map(d => d.order_id))
     setOrders((ready ?? []).filter(o => !claimedIds.has(o.id)) as AvailableOrder[])
@@ -626,11 +626,11 @@ export default function DriverClient({
 
   // ── Auto-claim: dispatcher #1 in queue claims oldest ready order automatically ──
   useEffect(() => {
-    if (!delivery && queue.length > 0 && queue[0].id === driverId && orders.length > 0) {
+    if (!delivery && !claiming && queue.length > 0 && queue[0].id === driverId && orders.length > 0) {
       claimOrder(orders[0])
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orders, queue, delivery])
+  }, [orders, queue, delivery, claiming])
 
   // ── Mark delivered ────────────────────────────────────────────────
   async function completeDelivery() {

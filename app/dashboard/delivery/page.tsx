@@ -419,38 +419,6 @@ export default function DeliveryPage() {
       ══════════════════════════════════════════════ */}
       <div className={`dv-view${tab === 'live' ? ' active' : ''}`}>
 
-        {/* KPI bar */}
-        <div className="dv-kpi-bar">
-          <div className="dv-kpi">
-            <div className="dv-kpi-label">En ruta ahora</div>
-            <div className="dv-kpi-value">
-              <span className="dv-kpi-num">{inRoute.length}</span>
-              <span className="dv-kpi-sub" style={{ color: 'var(--dv-violet)' }}>pedidos</span>
-            </div>
-          </div>
-          <div className="dv-kpi">
-            <div className="dv-kpi-label">Despachadores activos</div>
-            <div className="dv-kpi-value">
-              <span className="dv-kpi-num">{activeDrivers.length}</span>
-              <span className="dv-kpi-sub">de {drivers.length}</span>
-            </div>
-          </div>
-          <div className="dv-kpi">
-            <div className="dv-kpi-label">Tiempo prom. entrega</div>
-            <div className="dv-kpi-value">
-              <span className="dv-kpi-num">{avgMinutes ?? '—'}</span>
-              <span className="dv-kpi-sub">{avgMinutes ? 'min' : 'sin datos'}</span>
-            </div>
-          </div>
-          <div className="dv-kpi featured">
-            <div className="dv-kpi-label">Delivery facturado hoy</div>
-            <div className="dv-kpi-value">
-              <span className="dv-kpi-num">${todayRevenue.toFixed(0)}</span>
-              <span className="dv-kpi-sub">· {todayDels.filter(d => d.status === 'delivered').length} entregas</span>
-            </div>
-          </div>
-        </div>
-
         {/* Mobile map button */}
         <button className="dv-map-mobile-btn" onClick={() => setShowMap(true)}>
           <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15">

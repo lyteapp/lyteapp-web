@@ -253,7 +253,7 @@ export default function PedidosPage() {
     })
   }
 
-  function notifyDrivers(customerName: string | null | undefined) {
+  function broadcastDrivers(customerName: string | null | undefined) {
     if (!storeId) return
     const body = customerName ? `Pedido de ${customerName}` : 'Nuevo pedido disponible'
     fetch('/api/push-driver', {
@@ -266,6 +266,21 @@ export default function PedidosPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ storeId, customerName, businessName: storeName }),
     }).catch(() => {})
+  }
+
+  async function notifyDrivers(customerName: string | null | undefined) {
+    if (!storeId) return
+    try {
+      const res = await fetch('/api/auto-dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storeId }),
+      })
+      const { assigned } = await res.json()
+      if (!assigned) broadcastDrivers(customerName)
+    } catch {
+      broadcastDrivers(customerName)
+    }
   }
 
   async function updateStatus(orderId: string, status: OrderStatus) {
@@ -284,7 +299,7 @@ export default function PedidosPage() {
     }
     if (status === 'ready') {
       const order = orders.find(o => o.id === orderId)
-      if (order?.delivery_type !== 'pickup') notifyDrivers(order?.customer_name)
+      if (order?.delivery_type !== 'pickup') await notifyDrivers(order?.customer_name)
     }
     setUpdating(null)
   }
@@ -377,7 +392,7 @@ export default function PedidosPage() {
         const order = orders.find(o => o.id === orderId)
         const displayOrder = displayOrders.find(o => o.id === orderId)
         const isPickup = (displayOrder?.delivery_type ?? order?.delivery_type) === 'pickup'
-        if (!isPickup) notifyDrivers(displayOrder?.customer_name ?? order?.customer_name)
+        if (!isPickup) await notifyDrivers(displayOrder?.customer_name ?? order?.customer_name)
       }
     } finally {
       setDisplayUpdating(null)

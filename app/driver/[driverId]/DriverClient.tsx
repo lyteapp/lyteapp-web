@@ -22,6 +22,16 @@ type Props = {
   mapboxToken: string
 }
 
+type AvailableOrder = {
+  id: string
+  customer_name: string
+  customer_phone: string | null
+  customer_notes: string | null
+  payment_method: string | null
+  total: number
+  created_at: string
+}
+
 type GpsStatus  = 'requesting' | 'active' | 'error' | 'stopped'
 type InstallState = 'hidden' | 'ios' | 'android' | 'installed'
 
@@ -146,17 +156,19 @@ export default function DriverClient({
   const [navLoading, setNavLoading]   = useState(false)
   const [totalDist, setTotalDist]     = useState(0)
   const [newDeliveryFlash, setNewDeliveryFlash] = useState(false)
+  const [orders, setOrders] = useState<AvailableOrder[]>([])
 
-  const watchId          = useRef<number | null>(null)
+  const watchId              = useRef<number | null>(null)
   const fallbackInterval = useRef<ReturnType<typeof setInterval> | null>(null)
   const lastSentAt       = useRef<number>(0)
   const wakeLock         = useRef<WakeLockSentinel | null>(null)
   const lockRelease      = useRef<(() => void) | null>(null)
   const audioEl          = useRef<HTMLAudioElement | null>(null)
   const compassOff       = useRef<(() => void) | null>(null)
-  const prevDelivery     = useRef<ActiveDelivery | null>(initialDelivery)
-  const autoPickedUpRef  = useRef<string | null>(null)
-  const autoNavRef       = useRef<string | null>(null)
+  const prevDelivery        = useRef<ActiveDelivery | null>(initialDelivery)
+  const autoPickedUpRef     = useRef<string | null>(null)
+  const autoNavRef          = useRef<string | null>(null)
+  const storeOrdersChannel  = useRef<ReturnType<typeof supabase.channel> | null>(null)
 
   // ── Compass ───────────────────────────────────────────────────────
   function initCompass() {
@@ -376,6 +388,24 @@ export default function DriverClient({
     wakeLock.current?.release().catch(() => {})
   }, [])
 
+  // ── Load available orders ─────────────────────────────────────────
+  const loadOrders = useCallback(async () => {
+    const [{ data: ready }, { data: claimed }] = await Promise.all([
+      supabase.from('orders')
+        .select('id,customer_name,customer_phone,customer_notes,payment_method,total,created_at')
+        .eq('store_id', storeId).eq('status', 'ready').eq('delivery_type', 'delivery')
+        .order('created_at', { ascending: true }),
+      supabase.from('deliveries')
+        .select('order_id')
+        .eq('store_id', storeId)
+        .not('order_id', 'is', null)
+        .not('status', 'eq', 'cancelled')
+        .not('driver_id', 'is', null),
+    ])
+    const claimedIds = new Set((claimed ?? []).map((d: { order_id: string }) => d.order_id))
+    setOrders((ready ?? []).filter((o: { id: string }) => !claimedIds.has(o.id)) as AvailableOrder[])
+  }, [storeId])
+
   // ── Load active delivery ──────────────────────────────────────────
   const loadDelivery = useCallback(async () => {
     const { data } = await supabase.from('deliveries')
@@ -430,15 +460,48 @@ export default function DriverClient({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [delivery?.id, delivery?.customer_lat, delivery?.customer_lng, driverPos, navMode])
 
+  // ── Claim an order ────────────────────────────────────────────────
+  const claimOrder = useCallback(async (order: AvailableOrder) => {
+    if (delivery) return
+    const sel = 'id,customer_name,customer_phone,delivery_address,notes,status,picked_up_at,order_id,customer_lat,customer_lng'
+    const { data } = await supabase.from('deliveries')
+      .update({ driver_id: driverId, status: 'picked_up', picked_up_at: new Date().toISOString() })
+      .eq('order_id', order.id)
+      .is('driver_id', null)
+      .not('status', 'eq', 'cancelled')
+      .select(sel)
+    if (!data?.length) return // race lost
+    setOrders(prev => prev.filter(o => o.id !== order.id))
+    setDelivery(data[0] as ActiveDelivery)
+    storeOrdersChannel.current?.send({
+      type: 'broadcast', event: 'order_claimed',
+      payload: { orderId: order.id },
+    })
+  }, [delivery, driverId])
+
+  // ── Broadcast: instant order removal on all dispatcher screens ────
+  useEffect(() => {
+    const ch = supabase.channel(`store-orders-${storeId}`, { config: { broadcast: { self: false } } })
+      .on('broadcast', { event: 'order_claimed' }, ({ payload }) => {
+        setOrders(prev => prev.filter(o => o.id !== (payload as { orderId: string }).orderId))
+      })
+      .subscribe()
+    storeOrdersChannel.current = ch
+    return () => { supabase.removeChannel(ch); storeOrdersChannel.current = null }
+  }, [storeId])
+
   // ── Realtime subscription ────────────────────────────────────────
   useEffect(() => {
+    loadOrders()
     loadDelivery()
     const ch = supabase.channel(`dispatcher-${driverId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `store_id=eq.${storeId}` },
+        () => loadOrders())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'deliveries', filter: `store_id=eq.${storeId}` },
-        () => loadDelivery())
+        () => { loadOrders(); loadDelivery() })
       .subscribe()
     return () => { supabase.removeChannel(ch) }
-  }, [storeId, driverId, loadDelivery])
+  }, [storeId, driverId, loadOrders, loadDelivery])
 
   // ── Mark delivered ────────────────────────────────────────────────
   async function completeDelivery() {
@@ -668,6 +731,36 @@ export default function DriverClient({
           </div>
         )}
 
+
+        {/* Available orders — only shown when no active delivery */}
+        {!delivery && orders.length > 0 && (
+          <div className="dsp-order-list">
+            {orders.map(order => (
+              <div key={order.id} className="dsp-order-card">
+                <div className="dsp-order-name">{order.customer_name}</div>
+                {order.customer_notes && (
+                  <div className="dsp-order-address">{order.customer_notes}</div>
+                )}
+                {order.customer_phone && (
+                  <div className="dsp-order-phone">{order.customer_phone}</div>
+                )}
+                {(order.total > 0 || order.payment_method) && (
+                  <div className="dsp-order-meta">
+                    {order.total > 0 && <span>${Number(order.total).toFixed(2)}</span>}
+                    {order.payment_method && <span>{order.payment_method}</span>}
+                  </div>
+                )}
+                <button
+                  className="dsp-btn-claim"
+                  onClick={() => claimOrder(order)}
+                  disabled={!!delivery}
+                >
+                  Tomar pedido
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {isActive && !delivery && (
           <>

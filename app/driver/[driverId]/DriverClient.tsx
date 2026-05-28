@@ -578,8 +578,6 @@ export default function DriverClient({
     setClaiming(order.id)
     setErrorMsg('')
 
-    leaveQueue()
-
     // Optimistic removal
     setOrders(prev => prev.filter(o => o.id !== order.id))
 
@@ -614,10 +612,11 @@ export default function DriverClient({
     }
 
     if (error) {
-      // Revert: put the order back
+      // Revert: put the order back — dispatcher stays in queue
       setOrders(prev => [order, ...prev])
       setErrorMsg('Este pedido ya fue tomado. Actualiza la lista.')
     } else {
+      leaveQueue() // only leave queue once delivery is confirmed
       setDelivery(data as ActiveDelivery)
     }
     setClaiming(null)

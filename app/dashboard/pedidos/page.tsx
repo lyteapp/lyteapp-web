@@ -87,10 +87,10 @@ function fmt(n: number) {
   return '$' + n.toFixed(2)
 }
 
-function elapsedLabel(createdAt: string, now: number): { label: string; level: 'ok' | 'warn' | 'alert' } {
+function elapsedLabel(createdAt: string, now: number, warnMins: number, alertMins: number): { label: string; level: 'ok' | 'warn' | 'alert' } {
   const mins = Math.floor((now - new Date(createdAt).getTime()) / 60_000)
   const label = mins < 1 ? '< 1 min' : mins < 60 ? `${mins} min` : `${Math.floor(mins / 60)}h ${mins % 60}m`
-  const level = mins >= 20 ? 'alert' : mins >= 10 ? 'warn' : 'ok'
+  const level = mins >= alertMins ? 'alert' : mins >= warnMins ? 'warn' : 'ok'
   return { label, level }
 }
 
@@ -113,6 +113,9 @@ export default function PedidosPage() {
   const [displayUpdating, setDisplayUpdating] = useState<string | null>(null)
   const [displayLoading, setDisplayLoading] = useState(false)
   const [now, setNow] = useState(() => Date.now())
+  const [warnMins, setWarnMins]   = useState(() => Number(typeof window !== 'undefined' ? (localStorage.getItem('pd-warn-mins') ?? '10') : '10'))
+  const [alertMins, setAlertMins] = useState(() => Number(typeof window !== 'undefined' ? (localStorage.getItem('pd-alert-mins') ?? '20') : '20'))
+  const [showTimerSettings, setShowTimerSettings] = useState(false)
   const displayModeRef = useRef(false)
   const displayDateRef = useRef('')
   const bcChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
@@ -529,13 +532,20 @@ export default function PedidosPage() {
             </button>
           ))}
         </div>
-        <button className="pd-display-btn" onClick={openDisplay}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
-            <rect x="2" y="3" width="20" height="14" rx="2"/>
-            <path d="M8 21h8M12 17v4"/>
-          </svg>
-          Display
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="pd-timer-settings-btn" onClick={() => setShowTimerSettings(true)} title="Ajustes de tiempos">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+              <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd"/>
+            </svg>
+          </button>
+          <button className="pd-display-btn" onClick={openDisplay}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
+              <rect x="2" y="3" width="20" height="14" rx="2"/>
+              <path d="M8 21h8M12 17v4"/>
+            </svg>
+            Display
+          </button>
+        </div>
       </div>
 
       {displayMode && (
@@ -556,7 +566,7 @@ export default function PedidosPage() {
             const ready = displayOrders.filter(o => o.status === 'ready')
             const renderCard = (order: DisplayOrder) => {
               const timeStr = new Date(order.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })
-              const { label: elapsed, level } = elapsedLabel(order.created_at, now)
+              const { label: elapsed, level } = elapsedLabel(order.created_at, now, warnMins, alertMins)
               return (
                 <div key={order.id} className={`pd-comanda pd-cs-${order.status}`}>
                   <div className="pd-comanda-head">
@@ -810,6 +820,55 @@ export default function PedidosPage() {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {showTimerSettings && (
+        <div className="pd-modal-overlay" onClick={() => setShowTimerSettings(false)}>
+          <div className="pd-modal" onClick={e => e.stopPropagation()}>
+            <div className="pd-modal-title">Tiempos de alerta del display</div>
+            <div className="pd-modal-desc">Define cuantos minutos tarda un pedido en cambiar de color en el display de cocina.</div>
+
+            <div className="pd-modal-field">
+              <div className="pd-modal-field-label">
+                <span className="pd-modal-dot warn" />
+                Advertencia (amarillo)
+              </div>
+              <div className="pd-modal-input-row">
+                <input
+                  className="pd-modal-input"
+                  type="number" min={1} max={alertMins - 1} value={warnMins}
+                  onChange={e => {
+                    const v = Math.max(1, Math.min(alertMins - 1, Number(e.target.value)))
+                    setWarnMins(v)
+                    localStorage.setItem('pd-warn-mins', String(v))
+                  }}
+                />
+                <span className="pd-modal-unit">min</span>
+              </div>
+            </div>
+
+            <div className="pd-modal-field">
+              <div className="pd-modal-field-label">
+                <span className="pd-modal-dot alert" />
+                Alerta (rojo)
+              </div>
+              <div className="pd-modal-input-row">
+                <input
+                  className="pd-modal-input"
+                  type="number" min={warnMins + 1} max={120} value={alertMins}
+                  onChange={e => {
+                    const v = Math.max(warnMins + 1, Math.min(120, Number(e.target.value)))
+                    setAlertMins(v)
+                    localStorage.setItem('pd-alert-mins', String(v))
+                  }}
+                />
+                <span className="pd-modal-unit">min</span>
+              </div>
+            </div>
+
+            <button className="pd-modal-close-btn" onClick={() => setShowTimerSettings(false)}>Listo</button>
+          </div>
         </div>
       )}
     </div>

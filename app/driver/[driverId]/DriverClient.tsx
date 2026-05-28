@@ -879,10 +879,8 @@ export default function DriverClient({
           </div>
         )}
 
-        {/* ── AVAILABLE ORDERS ── hidden while a delivery is active */}
-        {!delivery && <div className="dsp-section">
-
-          {/* DISPONIBLE / status row */}
+        {/* ── QUEUE — always visible ── */}
+        <div className="dsp-section">
           {isAvailable ? (
             <div className="dsp-avail-row">
               <div className="dsp-avail-status">
@@ -899,10 +897,14 @@ export default function DriverClient({
             </button>
           )}
 
-          {/* Queue cards */}
-          {queue.length > 0 && (
-            <div className="dsp-queue-wrap">
-              <div className="dsp-queue-label">Cola de despachadores</div>
+          <div className="dsp-queue-wrap">
+            <div className="dsp-queue-label">
+              Cola de despachadores
+              {queue.length > 0 && <span className="dsp-queue-count">{queue.length}</span>}
+            </div>
+            {queue.length === 0 ? (
+              <div className="dsp-queue-empty">Sin despachadores en cola</div>
+            ) : (
               <div className="dsp-queue-list">
                 {queue.map((d, i) => (
                   <div key={d.id} className={`dsp-queue-card${d.id === driverId ? ' dsp-queue-card--me' : ''}`}>
@@ -919,8 +921,12 @@ export default function DriverClient({
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+          </div>
+        </div>
+
+        {/* ── AVAILABLE ORDERS ── hidden while a delivery is active */}
+        {!delivery && <div className="dsp-section">
 
           <div className={`dsp-section-title${newOrderFlash ? ' dsp-new-order-flash' : ''}`}>
             Pedidos disponibles

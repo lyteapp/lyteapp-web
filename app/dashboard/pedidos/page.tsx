@@ -567,7 +567,8 @@ export default function PedidosPage() {
             const ready = displayOrders.filter(o => o.status === 'ready')
             const renderCard = (order: DisplayOrder) => {
               const timeStr = new Date(order.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })
-              const { label: elapsed, level } = elapsedLabel(order.created_at, now, warnMins, alertMins)
+              const { label: elapsed, level: rawLevel } = elapsedLabel(order.created_at, now, warnMins, alertMins)
+              const level = order.status === 'ready' ? 'ok' : rawLevel
               return (
                 <div key={order.id} className={`pd-comanda pd-cs-${order.status} pd-comanda-${level}`}>
                   <div className="pd-comanda-head">

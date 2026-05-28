@@ -467,6 +467,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
         `*Total: $${orderTotal.toFixed(2)}*`,
         ...(customerNotes ? ['', `*Notas:* ${customerNotes}`] : []),
         ...(!isPickup && newDeliveryId ? ['', 'Rastrea tu pedido en tiempo real:', `https://lyte-app.com/delivery/${newDeliveryId}`] : []),
+        ...(isPickup ? ['', 'Sigue el estado de tu pedido:', `https://lyte-app.com/order/${newOrderId}`] : []),
       ]
 
       // Create delivery record only for domicilio

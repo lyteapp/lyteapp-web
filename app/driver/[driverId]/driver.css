@@ -718,6 +718,19 @@
 }
 
 
+/* ── Queue waiting message ── */
+.dsp-queue-waiting {
+  font-size: 13px;
+  color: #94A3B8;
+  background: #F8FAFC;
+  border: 1px dashed #E2E8F0;
+  border-radius: 12px;
+  padding: 18px 16px;
+  text-align: center;
+  line-height: 1.5;
+  margin-bottom: 6px;
+}
+
 /* ── Empty state ── */
 .dsp-empty {
   background: #fff;

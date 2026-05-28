@@ -966,33 +966,46 @@ export default function DriverClient({
           </div>
         </div>
 
-        {/* ── AVAILABLE ORDERS ── hidden while a delivery is active */}
-        {!delivery && <div className="dsp-section">
+        {/* ── AVAILABLE ORDERS ── only visible to #1 in queue, hidden while delivery active */}
+        {!delivery && (() => {
+          const isFirst = queue.length > 0 && queue[0].id === driverId
+          const myPosition = queue.findIndex(d => d.id === driverId)
+          return (
+          <div className="dsp-section">
 
-          <div className={`dsp-section-title${newOrderFlash ? ' dsp-new-order-flash' : ''}`}>
-            Pedidos disponibles
-            {orders.length > 0 && <span className="dsp-count">{orders.length}</span>}
-          </div>
-
-          {errorMsg && (
-            <div className="dsp-error-bar">
-              {errorMsg}
-              <button onClick={() => { setErrorMsg(''); loadOrders() }}>Actualizar</button>
+            <div className={`dsp-section-title${newOrderFlash ? ' dsp-new-order-flash' : ''}`}>
+              Pedidos disponibles
+              {isFirst && orders.length > 0 && <span className="dsp-count">{orders.length}</span>}
             </div>
-          )}
 
-          {orders.length === 0 ? (
-            <div className="dsp-empty">
-              <div className="dsp-empty-icon">
-                <svg viewBox="0 0 40 40" fill="none" stroke="#CBD5E1" strokeWidth="1.5" width="40" height="40">
-                  <circle cx="20" cy="20" r="16" strokeDasharray="4 3"/>
-                  <path strokeLinecap="round" d="M14 20h12M20 14v12"/>
-                </svg>
+            {!isFirst ? (
+              <div className="dsp-queue-waiting">
+                {myPosition > 0
+                  ? `Eres #${myPosition + 1} en la cola. Los pedidos le salen al despachador #1.`
+                  : 'Unete a la cola para recibir pedidos.'
+                }
               </div>
-              <div className="dsp-empty-text">Sin pedidos disponibles</div>
-              <div className="dsp-empty-sub">Apareceran aqui cuando cocina los marque como listos</div>
-            </div>
-          ) : (
+            ) : (
+              <>
+                {errorMsg && (
+                  <div className="dsp-error-bar">
+                    {errorMsg}
+                    <button onClick={() => { setErrorMsg(''); loadOrders() }}>Actualizar</button>
+                  </div>
+                )}
+
+                {orders.length === 0 ? (
+                  <div className="dsp-empty">
+                    <div className="dsp-empty-icon">
+                      <svg viewBox="0 0 40 40" fill="none" stroke="#CBD5E1" strokeWidth="1.5" width="40" height="40">
+                        <circle cx="20" cy="20" r="16" strokeDasharray="4 3"/>
+                        <path strokeLinecap="round" d="M14 20h12M20 14v12"/>
+                      </svg>
+                    </div>
+                    <div className="dsp-empty-text">Sin pedidos disponibles</div>
+                    <div className="dsp-empty-sub">Apareceran aqui cuando cocina los marque como listos</div>
+                  </div>
+                ) : (
             <div className="dsp-order-list">
               {orders.map(order => (
                 <div key={order.id} className="dsp-order-card">
@@ -1017,9 +1030,13 @@ export default function DriverClient({
                   </button>
                 </div>
               ))}
-            </div>
-          )}
-        </div>}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+          )
+        })()}
 
         {/* GPS toggle at bottom — hidden when delivery active (status shown in header pill) */}
         {isActive && !delivery && (

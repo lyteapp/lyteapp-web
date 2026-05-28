@@ -419,7 +419,7 @@ export default function DriverClient({
   const loadOrders = useCallback(async () => {
     const [{ data: ready }, { data: claimed }] = await Promise.all([
       supabase.from('orders').select('id,customer_name,customer_phone,customer_notes,payment_method,total,created_at')
-        .eq('store_id', storeId).eq('status', 'ready').order('created_at', { ascending: true }),
+        .eq('store_id', storeId).eq('status', 'ready').eq('delivery_type', 'delivery').order('created_at', { ascending: true }),
       supabase.from('deliveries').select('order_id')
         .eq('store_id', storeId).not('order_id', 'is', null).not('status', 'eq', 'cancelled'),
     ])

@@ -424,6 +424,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
         customer_name: customerName.trim(), customer_phone: customerPhone.trim(),
         customer_notes: customerNotes.trim() || null,
         payment_method: paymentLabel || null, total: orderTotal, status: 'pending',
+        delivery_type: isPickup ? 'pickup' : 'delivery',
       })
       if (oErr) throw new Error(oErr.message)
 

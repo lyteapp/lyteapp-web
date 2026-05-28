@@ -27,6 +27,7 @@ interface Order {
   status: OrderStatus
   total: number
   created_at: string
+  delivery_type?: string | null
   items?: OrderItem[]
 }
 
@@ -34,6 +35,7 @@ interface DisplayOrder {
   id: string
   created_at: string
   ready_at?: string | null
+  delivery_type?: string | null
   customer_name: string
   customer_phone: string
   customer_notes: string | null
@@ -268,7 +270,9 @@ export default function PedidosPage() {
 
   async function updateStatus(orderId: string, status: OrderStatus) {
     setUpdating(orderId)
-    const deliveryStatus = DELIVERY_STATUS_MAP[status]
+    const order = orders.find(o => o.id === orderId)
+    const isPickupOrder = order?.delivery_type === 'pickup'
+    const deliveryStatus = isPickupOrder ? undefined : DELIVERY_STATUS_MAP[status]
     const readyAt = status === 'ready' ? new Date().toISOString() : undefined
     await supabase.from('orders').update({ status, ...(readyAt ? { ready_at: readyAt } : {}) }).eq('id', orderId)
     if (deliveryStatus) syncDelivery(orderId, deliveryStatus).catch(() => {})
@@ -280,7 +284,7 @@ export default function PedidosPage() {
     }
     if (status === 'ready') {
       const order = orders.find(o => o.id === orderId)
-      notifyDrivers(order?.customer_name)
+      if (order?.delivery_type !== 'pickup') notifyDrivers(order?.customer_name)
     }
     setUpdating(null)
   }
@@ -345,7 +349,7 @@ export default function PedidosPage() {
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
     const { data } = await supabase
       .from('orders')
-      .select('id, created_at, ready_at, customer_name, customer_phone, customer_notes, payment_method, total, status, order_items(product_name, quantity, subtotal, selected_options)')
+      .select('id, created_at, ready_at, delivery_type, customer_name, customer_phone, customer_notes, payment_method, total, status, order_items(product_name, quantity, subtotal, selected_options)')
       .eq('store_id', storeId)
       .not('status', 'in', '(delivered,cancelled,completed)')
       .gte('created_at', todayStart.toISOString())
@@ -357,7 +361,9 @@ export default function PedidosPage() {
   async function updateDisplayStatus(orderId: string, status: string) {
     setDisplayUpdating(orderId)
     try {
-      const deliveryStatus = DELIVERY_STATUS_MAP[status]
+      const displayOrder = displayOrders.find(o => o.id === orderId)
+      const isPickupOrder = displayOrder?.delivery_type === 'pickup'
+      const deliveryStatus = isPickupOrder ? undefined : DELIVERY_STATUS_MAP[status]
       const readyAt = status === 'ready' ? new Date().toISOString() : undefined
       await supabase.from('orders').update({ status, ...(readyAt ? { ready_at: readyAt } : {}) }).eq('id', orderId)
       if (deliveryStatus) syncDelivery(orderId, deliveryStatus).catch(() => {})
@@ -370,8 +376,8 @@ export default function PedidosPage() {
       if (status === 'ready') {
         const order = orders.find(o => o.id === orderId)
         const displayOrder = displayOrders.find(o => o.id === orderId)
-        const name = displayOrder?.customer_name ?? order?.customer_name
-        notifyDrivers(name)
+        const isPickup = (displayOrder?.delivery_type ?? order?.delivery_type) === 'pickup'
+        if (!isPickup) notifyDrivers(displayOrder?.customer_name ?? order?.customer_name)
       }
     } finally {
       setDisplayUpdating(null)

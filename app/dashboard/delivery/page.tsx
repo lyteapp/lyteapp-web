@@ -167,7 +167,7 @@ export default function DeliveryPage() {
     const [{ data: dels }, { data: drvs }, { data: orders }, { data: dispatched }, { data: locs }, { data: zns }, { data: storeRow }] = await Promise.all([
       supabase.from('deliveries').select('*, driver:driver_id(id,name,phone,is_active)').eq('store_id', sid).order('created_at', { ascending: false }).limit(300),
       supabase.from('delivery_drivers').select('*').eq('store_id', sid).order('name'),
-      supabase.from('orders').select('id,customer_name,customer_phone,customer_notes,payment_method,total,status,created_at').eq('store_id', sid).eq('status', 'ready').order('created_at', { ascending: false }),
+      supabase.from('orders').select('id,customer_name,customer_phone,customer_notes,payment_method,total,status,created_at,delivery_type').eq('store_id', sid).eq('status', 'ready').eq('delivery_type', 'delivery').order('created_at', { ascending: false }),
       supabase.from('deliveries').select('order_id').eq('store_id', sid).not('order_id', 'is', null),
       supabase.from('driver_locations').select('*').eq('store_id', sid),
       supabase.from('delivery_zones').select('*').eq('store_id', sid).order('created_at'),

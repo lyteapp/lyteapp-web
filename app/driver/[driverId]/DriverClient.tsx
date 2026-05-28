@@ -172,6 +172,7 @@ export default function DriverClient({
   const availChannel     = useRef<ReturnType<typeof supabase.channel> | null>(null)
   const prevOrderCount    = useRef<number>(initialOrders.length)
   const prevDelivery      = useRef<ActiveDelivery | null>(initialDelivery)
+  const autoPickedUpRef   = useRef<string | null>(null)
   const [newOrderFlash, setNewOrderFlash]       = useState(false)
   const [newDeliveryFlash, setNewDeliveryFlash] = useState(false)
 
@@ -486,6 +487,17 @@ export default function DriverClient({
     prevDelivery.current = delivery
   }, [delivery])  // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Auto-transition ready → picked_up so GPS map opens immediately ──
+  useEffect(() => {
+    if (!delivery || delivery.status !== 'ready' || delivery.id === autoPickedUpRef.current) return
+    autoPickedUpRef.current = delivery.id
+    initCompass()
+    supabase.from('deliveries')
+      .update({ status: 'picked_up', picked_up_at: new Date().toISOString() })
+      .eq('id', delivery.id)
+      .then(() => setDelivery(d => d ? { ...d, status: 'picked_up', picked_up_at: new Date().toISOString() } : d))
+  }, [delivery])  // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Realtime subscriptions + initial load ────────────────────────
   useEffect(() => {
     loadOrders()
@@ -663,16 +675,6 @@ export default function DriverClient({
     await loadOrders()
   }
 
-  // ── Mark picked up ────────────────────────────────────────────────
-  async function markPickedUp() {
-    if (!delivery || delivery.status !== 'ready') return
-    initCompass() // iOS 13+ permission request — must run inside user gesture
-    await supabase.from('deliveries')
-      .update({ status: 'picked_up', picked_up_at: new Date().toISOString() })
-      .eq('id', delivery.id)
-    setDelivery(d => d ? { ...d, status: 'picked_up', picked_up_at: new Date().toISOString() } : d)
-  }
-
   // ── Navigation ────────────────────────────────────────────────────
   async function startNavigation() {
     if (!driverPos || !delivery?.customer_lat || !delivery?.customer_lng) return
@@ -826,49 +828,11 @@ export default function DriverClient({
         </div>
       )}
 
-      <div className={`dsp-body${delivery?.status === 'picked_up' ? ' dsp-body--active' : ''}`}>
+      <div className={`dsp-body${delivery ? ' dsp-body--active' : ''}`}>
 
-        {/* ── ACTIVE DELIVERY: ready — card with info, no map yet ── */}
-        {delivery && delivery.status === 'ready' && (
-          <div className="dsp-section" style={{ paddingTop: 18 }}>
-            <div className="dsp-section-title">
-              <span className="dsp-pulse-dot" />
-              Pedido asignado
-            </div>
-            <div className={`dsp-delivery-card${newDeliveryFlash ? ' dsp-delivery-card--new' : ''}`}>
-              <div className="dsp-delivery-customer">{delivery.customer_name}</div>
-              {delivery.delivery_address && (
-                <div className="dsp-delivery-address">
-                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="13" height="13" style={{ flexShrink: 0 }}>
-                    <path strokeLinecap="round" d="M8 1.5C5.515 1.5 3.5 3.515 3.5 6c0 3.938 4.5 8.5 4.5 8.5S12.5 9.938 12.5 6c0-2.485-2.015-4.5-4.5-4.5z"/>
-                    <circle cx="8" cy="6" r="1.5"/>
-                  </svg>
-                  {delivery.delivery_address}
-                </div>
-              )}
-              {delivery.notes && (
-                <div className="dsp-delivery-notes">{delivery.notes}</div>
-              )}
-              {delivery.customer_phone && (
-                <a href={`tel:${delivery.customer_phone}`} className="dsp-delivery-phone">
-                  <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
-                    <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.042 11.042 0 005.516 5.516l.773-1.548a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-1C7.82 18 2 8.18 2 3z"/>
-                  </svg>
-                  {delivery.customer_phone}
-                </a>
-              )}
-              <div className="dsp-delivery-actions">
-                <button className="dsp-btn-pickup" style={{ flex: 1 }} onClick={markPickedUp}>
-                  Ya recogi el pedido
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── ACTIVE DELIVERY: picked_up — fullscreen satellite map ── */}
-        {delivery && delivery.status === 'picked_up' && (
-          <div className="dsp-active-wrap">
+        {/* ── ACTIVE DELIVERY: fullscreen GPS map (auto-transitions to picked_up) ── */}
+        {delivery && (
+          <div className={`dsp-active-wrap${newDeliveryFlash ? ' dsp-delivery-card--new' : ''}`}>
             <div className="dsp-active-map">
               {delivery.customer_lat && delivery.customer_lng ? (
                 <DriverMap

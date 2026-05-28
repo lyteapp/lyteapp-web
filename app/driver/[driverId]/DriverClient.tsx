@@ -574,20 +574,34 @@ export default function DriverClient({
 
   // ── Claim an order ────────────────────────────────────────────────
   const claimOrder = useCallback(async (order: AvailableOrder) => {
-    if (delivery) return // already has one
+    if (delivery) return
     setClaiming(order.id)
     setErrorMsg('')
-
-    // Optimistic removal
     setOrders(prev => prev.filter(o => o.id !== order.id))
 
-    // Try to take over the existing customer-created delivery (avoids duplicate records)
     const sel = 'id,customer_name,customer_phone,delivery_address,notes,status,picked_up_at,order_id,customer_lat,customer_lng'
+
+    // Step 1: auto-dispatch may have already assigned it to us — accept silently
+    const { data: mine } = await supabase.from('deliveries')
+      .select(sel)
+      .eq('order_id', order.id)
+      .eq('driver_id', driverId)
+      .not('status', 'eq', 'cancelled')
+      .maybeSingle()
+
+    if (mine) {
+      leaveQueue()
+      setDelivery(mine as ActiveDelivery)
+      setClaiming(null)
+      return
+    }
+
+    // Step 2: find any unassigned delivery for this order (any origin)
     const { data: existing } = await supabase.from('deliveries')
       .select(sel)
       .eq('order_id', order.id)
-      .eq('is_customer_order', true)
       .is('driver_id', null)
+      .not('status', 'eq', 'cancelled')
       .maybeSingle()
 
     let data, error
@@ -598,21 +612,6 @@ export default function DriverClient({
         .is('driver_id', null) // race guard
         .select(sel).single())
     } else {
-      // No unassigned customer delivery — check if auto-dispatch already assigned it to us
-      const { data: alreadyMine } = await supabase.from('deliveries')
-        .select(sel)
-        .eq('order_id', order.id)
-        .eq('driver_id', driverId)
-        .in('status', ['ready', 'picked_up'])
-        .maybeSingle()
-
-      if (alreadyMine) {
-        leaveQueue()
-        setDelivery(alreadyMine as ActiveDelivery)
-        setClaiming(null)
-        return
-      }
-
       ;({ data, error } = await supabase.from('deliveries').insert({
         store_id: storeId,
         order_id: order.id,
@@ -627,8 +626,20 @@ export default function DriverClient({
     }
 
     if (error) {
-      setOrders(prev => [order, ...prev])
-      setErrorMsg('Este pedido ya fue tomado. Actualiza la lista.')
+      // Last resort: a concurrent write may have assigned it to us
+      const { data: mineNow } = await supabase.from('deliveries')
+        .select(sel)
+        .eq('order_id', order.id)
+        .eq('driver_id', driverId)
+        .not('status', 'eq', 'cancelled')
+        .maybeSingle()
+      if (mineNow) {
+        leaveQueue()
+        setDelivery(mineNow as ActiveDelivery)
+      } else {
+        setOrders(prev => [order, ...prev])
+        setErrorMsg('Este pedido ya fue tomado. Actualiza la lista.')
+      }
     } else {
       leaveQueue()
       setDelivery(data as ActiveDelivery)

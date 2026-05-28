@@ -38,7 +38,15 @@ interface DisplayOrder {
   payment_method: string | null
   total: number
   status: string
-  order_items: { product_name: string; quantity: number; subtotal: number }[]
+  order_items: {
+    product_name: string; quantity: number; subtotal: number
+    selected_options?: {
+      variables?: Record<string, string>
+      color?: string
+      additionals?: { name: string; price: number }[]
+      notes?: string
+    } | null
+  }[]
 }
 
 const DISPLAY_STATUS: Record<string, string> = {
@@ -165,7 +173,7 @@ export default function PedidosPage() {
               await new Promise(r => setTimeout(r, 700))
               const { data: items } = await supabase
                 .from('order_items')
-                .select('product_name, quantity, subtotal')
+                .select('product_name, quantity, subtotal, selected_options')
                 .eq('order_id', newOrder.id)
               setDisplayOrders(prev => [
                 { ...newOrder, order_items: items ?? [] } as DisplayOrder,
@@ -322,7 +330,7 @@ export default function PedidosPage() {
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
     const { data } = await supabase
       .from('orders')
-      .select('id, created_at, customer_name, customer_phone, customer_notes, payment_method, total, status, order_items(product_name, quantity, subtotal)')
+      .select('id, created_at, customer_name, customer_phone, customer_notes, payment_method, total, status, order_items(product_name, quantity, subtotal, selected_options)')
       .eq('store_id', storeId)
       .not('status', 'in', '(delivered,cancelled,completed)')
       .gte('created_at', todayStart.toISOString())
@@ -551,13 +559,32 @@ export default function PedidosPage() {
                     <div className="pd-comanda-phone">{order.customer_phone}</div>
                   </div>
                   <div className="pd-comanda-items">
-                    {order.order_items.map((item, i) => (
-                      <div key={i} className="pd-comanda-item">
-                        <span className="pd-comanda-qty">{item.quantity}x</span>
-                        <span className="pd-comanda-pname">{item.product_name}</span>
-                        <span className="pd-comanda-price">${Number(item.subtotal).toFixed(2)}</span>
-                      </div>
-                    ))}
+                    {order.order_items.map((item, i) => {
+                      const opts = item.selected_options
+                      return (
+                        <div key={i} className="pd-comanda-item">
+                          <span className="pd-comanda-qty">{item.quantity}x</span>
+                          <div className="pd-comanda-item-body">
+                            <div className="pd-comanda-item-row">
+                              <span className="pd-comanda-pname">{item.product_name}</span>
+                              <span className="pd-comanda-price">${Number(item.subtotal).toFixed(2)}</span>
+                            </div>
+                            {opts && (
+                              <div className="pd-comanda-item-opts">
+                                {opts.variables && Object.entries(opts.variables).map(([k, v]) => (
+                                  <span key={k} className="pd-comanda-opt-tag">{k}: {v}</span>
+                                ))}
+                                {opts.color && <span className="pd-comanda-opt-tag">Color: {opts.color}</span>}
+                                {opts.additionals?.map((a, j) => (
+                                  <span key={j} className="pd-comanda-opt-add">+ {a.name}  ${Number(a.price).toFixed(2)}</span>
+                                ))}
+                                {opts.notes && <span className="pd-comanda-opt-note">{opts.notes}</span>}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                   <div className="pd-comanda-total">${Number(order.total).toFixed(2)}</div>
                   {order.customer_notes && (

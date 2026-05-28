@@ -350,19 +350,23 @@
 .pd-comanda-items { display: flex; flex-direction: column; gap: 5px; }
 
 .pd-comanda-item {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: flex-start; gap: 8px;
 }
 .pd-comanda-qty {
   font-size: 11px; font-weight: 700; color: #A78BFA;
   background: rgba(124,58,237,0.15);
   min-width: 26px; height: 22px; border-radius: 5px;
   display: flex; align-items: center; justify-content: center;
-  padding: 0 4px; flex-shrink: 0;
+  padding: 0 4px; flex-shrink: 0; margin-top: 1px;
 }
+.pd-comanda-item-body { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.pd-comanda-item-row  { display: flex; align-items: center; gap: 8px; }
 .pd-comanda-pname  { flex: 1; font-size: 13px; color: rgba(255,255,255,0.75); }
-.pd-comanda-price  {
-  font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.4);
-}
+.pd-comanda-price  { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.4); flex-shrink: 0; }
+.pd-comanda-item-opts { display: flex; flex-direction: column; gap: 2px; padding-left: 1px; }
+.pd-comanda-opt-tag  { font-size: 11px; color: rgba(255,255,255,0.4); }
+.pd-comanda-opt-add  { font-size: 11px; color: rgba(134,239,172,0.65); }
+.pd-comanda-opt-note { font-size: 11px; color: rgba(251,191,36,0.65); font-style: italic; }
 
 .pd-comanda-total {
   font-size: 18px; font-weight: 700; color: white;

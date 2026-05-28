@@ -33,6 +33,7 @@ interface Order {
 interface DisplayOrder {
   id: string
   created_at: string
+  ready_at?: string | null
   customer_name: string
   customer_phone: string
   customer_notes: string | null
@@ -268,13 +269,14 @@ export default function PedidosPage() {
   async function updateStatus(orderId: string, status: OrderStatus) {
     setUpdating(orderId)
     const deliveryStatus = DELIVERY_STATUS_MAP[status]
-    await supabase.from('orders').update({ status }).eq('id', orderId)
+    const readyAt = status === 'ready' ? new Date().toISOString() : undefined
+    await supabase.from('orders').update({ status, ...(readyAt ? { ready_at: readyAt } : {}) }).eq('id', orderId)
     if (deliveryStatus) syncDelivery(orderId, deliveryStatus).catch(() => {})
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o))
     if (['delivered', 'cancelled', 'completed'].includes(status)) {
       setDisplayOrders(prev => prev.filter(o => o.id !== orderId))
     } else {
-      setDisplayOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o))
+      setDisplayOrders(prev => prev.map(o => o.id === orderId ? { ...o, status, ...(readyAt ? { ready_at: readyAt } : {}) } : o))
     }
     if (status === 'ready') {
       const order = orders.find(o => o.id === orderId)
@@ -343,7 +345,7 @@ export default function PedidosPage() {
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
     const { data } = await supabase
       .from('orders')
-      .select('id, created_at, customer_name, customer_phone, customer_notes, payment_method, total, status, order_items(product_name, quantity, subtotal, selected_options)')
+      .select('id, created_at, ready_at, customer_name, customer_phone, customer_notes, payment_method, total, status, order_items(product_name, quantity, subtotal, selected_options)')
       .eq('store_id', storeId)
       .not('status', 'in', '(delivered,cancelled,completed)')
       .gte('created_at', todayStart.toISOString())
@@ -356,13 +358,14 @@ export default function PedidosPage() {
     setDisplayUpdating(orderId)
     try {
       const deliveryStatus = DELIVERY_STATUS_MAP[status]
-      await supabase.from('orders').update({ status }).eq('id', orderId)
+      const readyAt = status === 'ready' ? new Date().toISOString() : undefined
+      await supabase.from('orders').update({ status, ...(readyAt ? { ready_at: readyAt } : {}) }).eq('id', orderId)
       if (deliveryStatus) syncDelivery(orderId, deliveryStatus).catch(() => {})
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: status as OrderStatus } : o))
       if (['completed', 'cancelled', 'delivered'].includes(status)) {
         setDisplayOrders(prev => prev.filter(o => o.id !== orderId))
       } else {
-        setDisplayOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o))
+        setDisplayOrders(prev => prev.map(o => o.id === orderId ? { ...o, status, ...(readyAt ? { ready_at: readyAt } : {}) } : o))
       }
       if (status === 'ready') {
         const order = orders.find(o => o.id === orderId)
@@ -569,12 +572,18 @@ export default function PedidosPage() {
               const timeStr = new Date(order.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })
               const { label: elapsed, level: rawLevel } = elapsedLabel(order.created_at, now, warnMins, alertMins)
               const level = order.status === 'ready' ? 'ok' : rawLevel
+              const kitchenMins = order.status === 'ready' && order.ready_at
+                ? Math.round((new Date(order.ready_at).getTime() - new Date(order.created_at).getTime()) / 60_000)
+                : null
               return (
                 <div key={order.id} className={`pd-comanda pd-cs-${order.status} pd-comanda-${level}`}>
                   <div className="pd-comanda-head">
                     <div className="pd-comanda-id">#{order.id.slice(0, 8).toUpperCase()}</div>
                     <div className="pd-comanda-time">{timeStr}</div>
-                    <span className={`pd-comanda-elapsed pd-elapsed-${level}`}>{elapsed}</span>
+                    {kitchenMins !== null
+                      ? <span className="pd-comanda-elapsed pd-elapsed-ok pd-kitchen-time">Cocina: {kitchenMins} min</span>
+                      : <span className={`pd-comanda-elapsed pd-elapsed-${level}`}>{elapsed}</span>
+                    }
                     <span className="pd-comanda-badge">{DISPLAY_STATUS[order.status] ?? order.status}</span>
                   </div>
                   <div className="pd-comanda-customer">

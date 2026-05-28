@@ -435,6 +435,7 @@
 .pd-elapsed-ok    { background: rgba(22,163,74,0.18);  color: #86EFAC; }
 .pd-elapsed-warn  { background: rgba(245,158,11,0.2);  color: #FCD34D; }
 .pd-elapsed-alert { background: rgba(239,68,68,0.2);   color: #FCA5A5; animation: dvPulse 1.8s infinite; }
+.pd-kitchen-time  { background: rgba(148,163,184,0.15); color: #94A3B8; font-weight: 600; }
 
 .pd-comanda-badge {
   margin-left: auto;

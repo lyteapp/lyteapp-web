@@ -239,10 +239,12 @@ export default function StoreShell({ store, products, categories = [] }: { store
 
   useEffect(() => {
     if (view !== 'checkout' || bcvRate !== null) return
-    fetch('/api/bcv-rate')
-      .then(r => r.json())
-      .then(d => { if (d.rate) setBcvRate(Number(d.rate)) })
-      .catch(() => {})
+    supabase
+      .from('exchange_rates')
+      .select('rate')
+      .eq('currency', 'USD')
+      .maybeSingle()
+      .then(({ data }) => { if (data?.rate) setBcvRate(Number(data.rate)) })
   }, [view, bcvRate])
 
   const cartItems  = Object.values(cart).filter(i => i.quantity > 0)

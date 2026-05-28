@@ -329,6 +329,14 @@
   font-size: 12px; color: rgba(255,255,255,0.35);
 }
 
+.pd-comanda-elapsed {
+  font-size: 12px; font-weight: 700;
+  padding: 2px 8px; border-radius: 100px;
+}
+.pd-elapsed-ok    { background: rgba(22,163,74,0.18);  color: #86EFAC; }
+.pd-elapsed-warn  { background: rgba(245,158,11,0.2);  color: #FCD34D; }
+.pd-elapsed-alert { background: rgba(239,68,68,0.2);   color: #FCA5A5; animation: dvPulse 1.8s infinite; }
+
 .pd-comanda-badge {
   margin-left: auto;
   font-size: 11px; font-weight: 700;

@@ -87,6 +87,13 @@ function fmt(n: number) {
   return '$' + n.toFixed(2)
 }
 
+function elapsedLabel(createdAt: string, now: number): { label: string; level: 'ok' | 'warn' | 'alert' } {
+  const mins = Math.floor((now - new Date(createdAt).getTime()) / 60_000)
+  const label = mins < 1 ? '< 1 min' : mins < 60 ? `${mins} min` : `${Math.floor(mins / 60)}h ${mins % 60}m`
+  const level = mins >= 20 ? 'alert' : mins >= 10 ? 'warn' : 'ok'
+  return { label, level }
+}
+
 export default function PedidosPage() {
   const { user } = useAuth()
   const t = useT()
@@ -105,6 +112,7 @@ export default function PedidosPage() {
   const [displayOrders, setDisplayOrders] = useState<DisplayOrder[]>([])
   const [displayUpdating, setDisplayUpdating] = useState<string | null>(null)
   const [displayLoading, setDisplayLoading] = useState(false)
+  const [now, setNow] = useState(() => Date.now())
   const displayModeRef = useRef(false)
   const displayDateRef = useRef('')
   const bcChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
@@ -142,11 +150,12 @@ export default function PedidosPage() {
   useEffect(() => {
     if (!displayMode) return
     const id = setInterval(() => {
+      setNow(Date.now())
       if (new Date().toDateString() !== displayDateRef.current) {
         setDisplayOrders([])
         displayDateRef.current = new Date().toDateString()
       }
-    }, 60_000)
+    }, 30_000)
     return () => clearInterval(id)
   }, [displayMode])
 
@@ -547,11 +556,13 @@ export default function PedidosPage() {
             const ready = displayOrders.filter(o => o.status === 'ready')
             const renderCard = (order: DisplayOrder) => {
               const timeStr = new Date(order.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })
+              const { label: elapsed, level } = elapsedLabel(order.created_at, now)
               return (
                 <div key={order.id} className={`pd-comanda pd-cs-${order.status}`}>
                   <div className="pd-comanda-head">
                     <div className="pd-comanda-id">#{order.id.slice(0, 8).toUpperCase()}</div>
                     <div className="pd-comanda-time">{timeStr}</div>
+                    <span className={`pd-comanda-elapsed pd-elapsed-${level}`}>{elapsed}</span>
                     <span className="pd-comanda-badge">{DISPLAY_STATUS[order.status] ?? order.status}</span>
                   </div>
                   <div className="pd-comanda-customer">

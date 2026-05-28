@@ -139,6 +139,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const [customerNotes, setCustomerNotes] = useState('')
   const [selectedPayment, setSelectedPayment]   = useState('')
   const [paymentFreeText, setPaymentFreeText]   = useState('')
+  const [bcvRate, setBcvRate] = useState<number | null>(null)
   const [paymentProofFile, setPaymentProofFile]       = useState<File | null>(null)
   const [paymentProofPreview, setPaymentProofPreview] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -236,6 +237,14 @@ export default function StoreShell({ store, products, categories = [] }: { store
     try { localStorage.setItem(`cart-${store.slug}`, JSON.stringify(cart)) } catch {}
   }, [cart, store.slug])
 
+  useEffect(() => {
+    if (view !== 'checkout' || bcvRate !== null) return
+    fetch('/api/bcv-rate')
+      .then(r => r.json())
+      .then(d => { if (d.rate) setBcvRate(Number(d.rate)) })
+      .catch(() => {})
+  }, [view, bcvRate])
+
   const cartItems  = Object.values(cart).filter(i => i.quantity > 0)
   const cartCount  = cartItems.reduce((s, i) => s + i.quantity, 0)
   const cartTotal  = cartItems.reduce((s, i) => s + (i.price + i.extraPrice) * i.quantity, 0)
@@ -257,6 +266,10 @@ export default function StoreShell({ store, products, categories = [] }: { store
   }
   const enabledMethods = parsePaymentMethods(store.payment_methods)
   const showInstallBtn = !installed && (isIos || !!installPrompt)
+
+  const VES_METHODS = new Set(['pago_movil', 'efectivo_bs', 'transferencia', 'punto_venta'])
+  const selectedMethodIsVES = VES_METHODS.has(selectedPayment)
+  const vesAmount = selectedMethodIsVES && bcvRate ? orderTotal * bcvRate : null
 
   // ── Template config ──
   const FONT_MAP: Record<string, string> = {
@@ -484,6 +497,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
         '', `*Subtotal: $${cartTotal.toFixed(2)}*`,
         ...(deliveryFeeAmt > 0 ? [`*Envio: $${deliveryFeeAmt.toFixed(2)}*`] : []),
         `*Total: $${orderTotal.toFixed(2)}*`,
+        ...(vesAmount ? [`*Total Bs: ${vesAmount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (BCV ${bcvRate!.toFixed(4)})*`] : []),
         ...(proofUrl ? ['', `*Comprobante:* ${proofUrl}`] : []),
         ...(customerNotes ? ['', `*Notas:* ${customerNotes}`] : []),
         ...(!isPickup && newDeliveryId ? ['', 'Rastrea tu pedido en tiempo real:', `https://lyte-app.com/delivery/${newDeliveryId}`] : []),
@@ -952,6 +966,22 @@ export default function StoreShell({ store, products, categories = [] }: { store
           )}
         </div>
 
+
+        {vesAmount && (
+          <div className="sf-ves-box">
+            <div className="sf-ves-row">
+              <span>Total USD</span>
+              <span>${orderTotal.toFixed(2)}</span>
+            </div>
+            <div className="sf-ves-row sf-ves-main">
+              <span>Total Bs</span>
+              <span>Bs {vesAmount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+            <div className="sf-ves-rate">
+              Tasa BCV: Bs {bcvRate!.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} / $1
+            </div>
+          </div>
+        )}
 
         {error && <div className="sf-co-error">{error}</div>}
         <button className="sf-submit-btn" onClick={handleSubmit} disabled={submitting || cartItems.length === 0}>

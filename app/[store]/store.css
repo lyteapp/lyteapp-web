@@ -378,6 +378,39 @@ html, body { overflow-x: hidden; }
 .sf-proof-preview { width: 80px; height: 80px; object-fit: cover; border-radius: 10px; border: 1px solid rgba(15,23,42,0.1); }
 .sf-proof-remove { font-size: 12px; color: #DC2626; background: none; border: none; cursor: pointer; padding: 0; font-family: inherit; }
 
+.sf-ves-box {
+  background: rgba(15,23,42,0.04);
+  border: 1px solid rgba(15,23,42,0.08);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sf-ves-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: rgba(15,23,42,0.55);
+}
+.sf-ves-row span:last-child { font-weight: 600; }
+.sf-ves-main {
+  font-size: 17px;
+  color: #0F172A;
+  font-weight: 700;
+  padding-top: 4px;
+  border-top: 1px solid rgba(15,23,42,0.08);
+  margin-top: 2px;
+}
+.sf-ves-main span:last-child { font-weight: 800; letter-spacing: -0.3px; }
+.sf-ves-rate {
+  font-size: 10px;
+  color: rgba(15,23,42,0.35);
+  text-align: right;
+  margin-top: 2px;
+}
+
 .sf-co-error {
   background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
   color: #DC2626; border-radius: 12px; padding: 12px 16px; font-size: 13px;

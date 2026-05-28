@@ -486,13 +486,13 @@ export default function DriverClient({
     prevDelivery.current = delivery
   }, [delivery])  // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Realtime subscriptions ────────────────────────────────────────
+  // ── Realtime subscriptions + initial load ────────────────────────
   useEffect(() => {
+    loadOrders()
+    loadDelivery()
     const ch = supabase.channel(`dispatcher-${driverId}`)
-      // Any order change in this store → refresh available list
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `store_id=eq.${storeId}` },
         () => loadOrders())
-      // Any delivery change in this store → refresh both (someone else may have claimed)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'deliveries', filter: `store_id=eq.${storeId}` },
         () => { loadOrders(); loadDelivery() })
       .subscribe()

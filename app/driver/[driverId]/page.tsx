@@ -75,20 +75,22 @@ export default async function DriverPage(
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
-    // All ready orders for this store
+    // All ready delivery orders for this store
     supa
       .from('orders')
       .select('id, customer_name, customer_phone, customer_notes, payment_method, total, created_at')
       .eq('store_id', storeId)
       .eq('status', 'ready')
+      .eq('delivery_type', 'delivery')
       .order('created_at', { ascending: true }),
-    // Orders already claimed (have a delivery with a driver)
+    // Orders already assigned to a driver (exclude unassigned customer deliveries)
     supa
       .from('deliveries')
       .select('order_id')
       .eq('store_id', storeId)
       .not('order_id', 'is', null)
-      .not('status', 'eq', 'cancelled'),
+      .not('status', 'eq', 'cancelled')
+      .not('driver_id', 'is', null),
   ])
 
   const claimedIds = new Set((claimedDeliveries ?? []).map(d => d.order_id))

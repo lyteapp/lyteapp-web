@@ -93,6 +93,7 @@ type Store = {
   logo_url: string | null; banner_url: string | null
   description: string | null; whatsapp: string | null; instagram: string | null
   payment_methods: unknown; template: string | null
+  store_currency?: string | null
   template_config?: TemplateConfig | null
   checkout_settings?: {
     requireName?: boolean; requirePhone?: boolean; requireAddress?: boolean
@@ -184,6 +185,9 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const lightboxStripRef        = useRef<HTMLDivElement | null>(null)
   const lightboxDragStartIdxRef = useRef<number>(0)
 
+  const storeCurrency = (store.store_currency ?? 'USD') as 'USD' | 'EUR'
+  const currencySymbol = storeCurrency === 'EUR' ? '€' : '$'
+
   useEffect(() => {
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !(window.navigator as Navigator & { standalone?: boolean }).standalone
     setIsIos(ios)
@@ -242,10 +246,10 @@ export default function StoreShell({ store, products, categories = [] }: { store
     supabase
       .from('exchange_rates')
       .select('rate')
-      .eq('currency', 'USD')
+      .eq('currency', storeCurrency)
       .maybeSingle()
       .then(({ data }) => { if (data?.rate) setBcvRate(Number(data.rate)) })
-  }, [view, bcvRate])
+  }, [view, bcvRate, storeCurrency])
 
   const cartItems  = Object.values(cart).filter(i => i.quantity > 0)
   const cartCount  = cartItems.reduce((s, i) => s + i.quantity, 0)
@@ -488,7 +492,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
         '', '*Productos:*',
         ...cartItems.flatMap(i => {
           const unitTotal = (i.price + i.extraPrice) * i.quantity
-          const rows = [`  - ${i.quantity}x ${i.name}  $${unitTotal.toFixed(2)}`]
+          const rows = [`  - ${i.quantity}x ${i.name}  ${currencySymbol}${unitTotal.toFixed(2)}`]
           const so = i.selectedOptions
           if (so?.variables) Object.entries(so.variables).forEach(([k, v]) => rows.push(`    ${k}: ${v}`))
           if (so?.color)     rows.push(`    Color: ${so.color}`)
@@ -496,9 +500,9 @@ export default function StoreShell({ store, products, categories = [] }: { store
           if (so?.notes)     rows.push(`    Nota: ${so.notes}`)
           return rows
         }),
-        '', `*Subtotal: $${cartTotal.toFixed(2)}*`,
-        ...(deliveryFeeAmt > 0 ? [`*Envio: $${deliveryFeeAmt.toFixed(2)}*`] : []),
-        `*Total: $${orderTotal.toFixed(2)}*`,
+        '', `*Subtotal: ${currencySymbol}${cartTotal.toFixed(2)}*`,
+        ...(deliveryFeeAmt > 0 ? [`*Envio: ${currencySymbol}${deliveryFeeAmt.toFixed(2)}*`] : []),
+        `*Total: ${currencySymbol}${orderTotal.toFixed(2)}*`,
         ...(vesAmount ? [`*Total Bs: ${vesAmount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (BCV ${bcvRate!.toFixed(4)})*`] : []),
         ...(proofUrl ? ['', `*Comprobante:* ${proofUrl}`] : []),
         ...(customerNotes ? ['', `*Notas:* ${customerNotes}`] : []),
@@ -642,7 +646,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
                     {item.selectedOptions.notes && <span className="sf-co-opt-note">{item.selectedOptions.notes}</span>}
                   </div>
                 )}
-                <div className="sf-co-price">${((item.price + item.extraPrice) * item.quantity).toFixed(2)}</div>
+                <div className="sf-co-price">{currencySymbol}{((item.price + item.extraPrice) * item.quantity).toFixed(2)}</div>
               </div>
               <div className="sf-qty">
                 <button onClick={() => updateQty(item.id, -1)}>−</button>
@@ -654,12 +658,12 @@ export default function StoreShell({ store, products, categories = [] }: { store
           {deliveryFeeAmt > 0 && (
             <div className="sf-co-total" style={{ fontWeight: 400, fontSize: 13, color: '#64748B', borderTop: 'none', paddingTop: 0 }}>
               <span>Envio</span>
-              <span>${deliveryFeeAmt.toFixed(2)}</span>
+              <span>{currencySymbol}{deliveryFeeAmt.toFixed(2)}</span>
             </div>
           )}
           <div className="sf-co-total">
             <span>{t('store.total')}</span>
-            <span className="sf-co-total-amt">${orderTotal.toFixed(2)}</span>
+            <span className="sf-co-total-amt">{currencySymbol}{orderTotal.toFixed(2)}</span>
           </div>
         </div>
 
@@ -972,22 +976,22 @@ export default function StoreShell({ store, products, categories = [] }: { store
         {vesAmount && (
           <div className="sf-ves-box">
             <div className="sf-ves-row">
-              <span>Total USD</span>
-              <span>${orderTotal.toFixed(2)}</span>
+              <span>Total {storeCurrency}</span>
+              <span>{currencySymbol}{orderTotal.toFixed(2)}</span>
             </div>
             <div className="sf-ves-row sf-ves-main">
               <span>Total Bs</span>
               <span>Bs {vesAmount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             <div className="sf-ves-rate">
-              Tasa BCV: Bs {bcvRate!.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} / $1
+              Tasa BCV: Bs {bcvRate!.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} / {currencySymbol}1
             </div>
           </div>
         )}
 
         {error && <div className="sf-co-error">{error}</div>}
         <button className="sf-submit-btn" onClick={handleSubmit} disabled={submitting || cartItems.length === 0}>
-          {submitting ? t('store.sending') : `${t('store.confirmOrder')} · $${orderTotal.toFixed(2)}`}
+          {submitting ? t('store.sending') : `${t('store.confirmOrder')} · ${currencySymbol}${orderTotal.toFixed(2)}`}
         </button>
       </div>
 
@@ -1008,7 +1012,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
               <div className="sf-modal-product-info">
                 <div className="sf-modal-name">{modalProduct.name}</div>
                 {modalProduct.description && <div className="sf-modal-desc">{modalProduct.description}</div>}
-                <div className="sf-modal-base-price">${Number(modalProduct.price).toFixed(2)}</div>
+                <div className="sf-modal-base-price">{currencySymbol}{Number(modalProduct.price).toFixed(2)}</div>
               </div>
             </div>
 
@@ -1081,7 +1085,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
                     >
                       <div className={`sf-modal-extra-check${modalAdditionals.has(i) ? ' on' : ''}`} />
                       <span className="sf-modal-extra-name">{a.name}</span>
-                      {a.price > 0 && <span className="sf-modal-extra-price">+${a.price.toFixed(2)}</span>}
+                      {a.price > 0 && <span className="sf-modal-extra-price">+{currencySymbol}{a.price.toFixed(2)}</span>}
                     </div>
                   ))}
                 </div>
@@ -1108,7 +1112,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
                 <button onClick={() => setModalQty(q => q + 1)}>+</button>
               </div>
 <button className="sf-modal-confirm" onClick={confirmModal}>
-                Agregar · ${((modalProduct.price + modalExtraPrice) * modalQty).toFixed(2)}
+                Agregar · {currencySymbol}{((modalProduct.price + modalExtraPrice) * modalQty).toFixed(2)}
               </button>
             </div>
           </div>
@@ -1286,7 +1290,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
             </div>
           ) : null}
           <div className="sf-card-footer">
-            <div className="sf-card-price">${Number(product.price).toFixed(2)}</div>
+            <div className="sf-card-price">{currencySymbol}{Number(product.price).toFixed(2)}</div>
           </div>
         </div>
       </div>
@@ -1372,7 +1376,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
               ))}
             </div>
           ) : null}
-          <div className="sf-esc-price">${Number(product.price).toFixed(2)}</div>
+          <div className="sf-esc-price">{currencySymbol}{Number(product.price).toFixed(2)}</div>
         </div>
       </div>
     )
@@ -1460,7 +1464,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
           ) : null}
         </div>
         <div className="sf-cat-action">
-          <div className="sf-cat-price">${Number(product.price).toFixed(2)}</div>
+          <div className="sf-cat-price">{currencySymbol}{Number(product.price).toFixed(2)}</div>
         </div>
       </div>
     )
@@ -1617,7 +1621,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
                     <div className="sf-vit-hero-name">{vitHero.name}</div>
                     {vitHero.description && <div className="sf-vit-hero-desc">{vitHero.description}</div>}
                     <div className="sf-vit-hero-footer">
-                      <div className="sf-vit-hero-price">${Number(vitHero.price).toFixed(2)}</div>
+                      <div className="sf-vit-hero-price">{currencySymbol}{Number(vitHero.price).toFixed(2)}</div>
                     </div>
                   </div>
                 </div>
@@ -1720,7 +1724,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
         <button className="sf-cart-bar" onClick={() => setView('checkout')}>
           <span className="sf-cart-badge">{cartCount}</span>
           <span className="sf-cart-label">{t('store.viewOrder')}</span>
-          <span className="sf-cart-total">${cartTotal.toFixed(2)}</span>
+          <span className="sf-cart-total">{currencySymbol}{cartTotal.toFixed(2)}</span>
         </button>
       )}
 
@@ -1759,7 +1763,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
               <div className="sf-modal-product-info">
                 <div className="sf-modal-name">{modalProduct.name}</div>
                 {modalProduct.description && <div className="sf-modal-desc">{modalProduct.description}</div>}
-                <div className="sf-modal-base-price">${Number(modalProduct.price).toFixed(2)}</div>
+                <div className="sf-modal-base-price">{currencySymbol}{Number(modalProduct.price).toFixed(2)}</div>
               </div>
             </div>
 
@@ -1832,7 +1836,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
                     >
                       <div className={`sf-modal-extra-check${modalAdditionals.has(i) ? ' on' : ''}`} />
                       <span className="sf-modal-extra-name">{a.name}</span>
-                      {a.price > 0 && <span className="sf-modal-extra-price">+${a.price.toFixed(2)}</span>}
+                      {a.price > 0 && <span className="sf-modal-extra-price">+{currencySymbol}{a.price.toFixed(2)}</span>}
                     </div>
                   ))}
                 </div>
@@ -1859,7 +1863,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
                 <button onClick={() => setModalQty(q => q + 1)}>+</button>
               </div>
 <button className="sf-modal-confirm" onClick={confirmModal}>
-                Agregar · ${((modalProduct.price + modalExtraPrice) * modalQty).toFixed(2)}
+                Agregar · {currencySymbol}{((modalProduct.price + modalExtraPrice) * modalQty).toFixed(2)}
               </button>
             </div>
           </div>

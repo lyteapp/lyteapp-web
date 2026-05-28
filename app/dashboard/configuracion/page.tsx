@@ -57,6 +57,7 @@ function ConfiguracionInner() {
   const [whatsapp2, setWhatsapp2] = useState('')
   const [country, setCountry] = useState('')
   const [storeLanguage, setStoreLanguage] = useState('default')
+  const [storeCurrency, setStoreCurrency] = useState('USD')
   const [operatingHours, setOperatingHours] = useState<Record<string, { open: boolean; start: string; end: string }>>(() => {
     const days = ['mon','tue','wed','thu','fri','sat','sun']
     return Object.fromEntries(days.map(d => [d, { open: false, start: '09:00', end: '18:00' }]))
@@ -94,6 +95,7 @@ function ConfiguracionInner() {
         setWhatsapp2((store as any).whatsapp2 ?? '')
         setCountry((store as any).country ?? '')
         setStoreLanguage((store as any).store_language ?? 'default')
+        setStoreCurrency((store as any).store_currency ?? 'USD')
         const oh = (store as any).operating_hours
         if (oh && typeof oh === 'object') setOperatingHours(oh)
         const sl = (store as any).social_links
@@ -122,6 +124,7 @@ function ConfiguracionInner() {
       whatsapp2: whatsapp2 || null,
       country: country.trim() || null,
       store_language: storeLanguage,
+      store_currency: storeCurrency,
       operating_hours: operatingHours,
       social_links: socialLinks,
     }).eq('id', storeId)
@@ -215,6 +218,21 @@ function ConfiguracionInner() {
                   <option value="es">Español</option>
                   <option value="en">English</option>
                 </select>
+              </div>
+            </div>
+
+            {/* Currency */}
+            <div className="cf-group-label" style={{ marginTop: 6 }}>Moneda de venta</div>
+            <div className="cf-two-col">
+              <div className="cf-field">
+                <label className="cf-label">Moneda</label>
+                <select className="cf-input cf-select" value={storeCurrency} onChange={e => setStoreCurrency(e.target.value)}>
+                  <option value="USD">Dólar americano (USD $)</option>
+                  <option value="EUR">Euro (EUR €)</option>
+                </select>
+                <span style={{ fontSize: 11, color: '#94A3B8', marginTop: 4 }}>
+                  Los precios de la tienda se muestran en esta moneda. En el checkout se muestra la equivalencia en Bs según la tasa BCV del dia.
+                </span>
               </div>
             </div>
 

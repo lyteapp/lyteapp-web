@@ -171,6 +171,7 @@ export default function DriverClient({
   const prevOrderCount    = useRef<number>(initialOrders.length)
   const prevDelivery      = useRef<ActiveDelivery | null>(initialDelivery)
   const autoPickedUpRef   = useRef<string | null>(null)
+  const autoNavRef        = useRef<string | null>(null)
   const [newOrderFlash, setNewOrderFlash]       = useState(false)
   const [newDeliveryFlash, setNewDeliveryFlash] = useState(false)
 
@@ -496,6 +497,15 @@ export default function DriverClient({
       .then(() => setDelivery(d => d ? { ...d, status: 'picked_up', picked_up_at: new Date().toISOString() } : d))
   }, [delivery])  // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Auto-start in-app navigation when delivery has coords + driver has GPS fix ──
+  useEffect(() => {
+    if (navMode || !delivery?.customer_lat || !delivery?.customer_lng || !driverPos) return
+    if (autoNavRef.current === delivery.id) return
+    autoNavRef.current = delivery.id
+    startNavigation()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [delivery?.id, delivery?.customer_lat, delivery?.customer_lng, driverPos, navMode])
+
   // ── Realtime subscriptions + initial load ────────────────────────
   useEffect(() => {
     loadOrders()
@@ -586,12 +596,6 @@ export default function DriverClient({
   const claimOrder = useCallback((order: AvailableOrder) => {
     if (delivery) return
 
-    // Open customer address in device maps app immediately
-    const address = order.customer_notes || order.customer_name
-    if (address) {
-      window.open(`https://maps.google.com/maps?q=${encodeURIComponent(address)}`, '_blank')
-    }
-
     // Show delivery locally right away — no DB wait
     const localDelivery: ActiveDelivery = {
       id: `local-${order.id}`,
@@ -638,6 +642,7 @@ export default function DriverClient({
     if (delivery.order_id) {
       await supabase.from('orders').update({ status: 'delivered' }).eq('id', delivery.order_id)
     }
+    stopNavigation()
     setDelivery(null)
     setCompleting(false)
     await loadOrders()

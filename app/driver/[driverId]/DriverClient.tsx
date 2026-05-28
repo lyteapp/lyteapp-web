@@ -573,7 +573,7 @@ export default function DriverClient({
   }
 
   // ── Claim an order ────────────────────────────────────────────────
-  async function claimOrder(order: AvailableOrder) {
+  const claimOrder = useCallback(async (order: AvailableOrder) => {
     if (delivery) return // already has one
     setClaiming(order.id)
     setErrorMsg('')
@@ -583,17 +583,35 @@ export default function DriverClient({
     // Optimistic removal
     setOrders(prev => prev.filter(o => o.id !== order.id))
 
-    const { data, error } = await supabase.from('deliveries').insert({
-      store_id: storeId,
-      order_id: order.id,
-      driver_id: driverId,
-      customer_name: order.customer_name,
-      customer_phone: order.customer_phone,
-      delivery_address: order.customer_notes ?? '',
-      status: 'ready',
-      driver_fee: 0,
-      fee_paid: false,
-    }).select('id,customer_name,customer_phone,delivery_address,notes,status,picked_up_at,order_id').single()
+    // Try to take over the existing customer-created delivery (avoids duplicate records)
+    const sel = 'id,customer_name,customer_phone,delivery_address,notes,status,picked_up_at,order_id,customer_lat,customer_lng'
+    const { data: existing } = await supabase.from('deliveries')
+      .select(sel)
+      .eq('order_id', order.id)
+      .eq('is_customer_order', true)
+      .is('driver_id', null)
+      .maybeSingle()
+
+    let data, error
+    if (existing) {
+      ;({ data, error } = await supabase.from('deliveries')
+        .update({ driver_id: driverId, status: 'ready' })
+        .eq('id', existing.id)
+        .is('driver_id', null) // race guard
+        .select(sel).single())
+    } else {
+      ;({ data, error } = await supabase.from('deliveries').insert({
+        store_id: storeId,
+        order_id: order.id,
+        driver_id: driverId,
+        customer_name: order.customer_name,
+        customer_phone: order.customer_phone,
+        delivery_address: order.customer_notes ?? '',
+        status: 'ready',
+        driver_fee: 0,
+        fee_paid: false,
+      }).select(sel).single())
+    }
 
     if (error) {
       // Revert: put the order back
@@ -603,7 +621,16 @@ export default function DriverClient({
       setDelivery(data as ActiveDelivery)
     }
     setClaiming(null)
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [delivery, driverId, storeId])
+
+  // ── Auto-claim: dispatcher #1 in queue claims oldest ready order automatically ──
+  useEffect(() => {
+    if (!delivery && queue.length > 0 && queue[0].id === driverId && orders.length > 0) {
+      claimOrder(orders[0])
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orders, queue, delivery])
 
   // ── Mark delivered ────────────────────────────────────────────────
   async function completeDelivery() {

@@ -668,21 +668,6 @@ export default function DriverClient({
           </div>
         )}
 
-        {/* Idle state */}
-        {!delivery && (
-          <div className="dsp-section">
-            <div className="dsp-empty">
-              <div className="dsp-empty-icon">
-                <svg viewBox="0 0 40 40" fill="none" stroke="#CBD5E1" strokeWidth="1.5" width="40" height="40">
-                  <circle cx="20" cy="20" r="16" strokeDasharray="4 3"/>
-                  <path strokeLinecap="round" d="M14 20h12M20 14v12"/>
-                </svg>
-              </div>
-              <div className="dsp-empty-text">Sin pedido activo</div>
-              <div className="dsp-empty-sub">Aqui apareceran los pedidos asignados</div>
-            </div>
-          </div>
-        )}
 
         {isActive && !delivery && (
           <>

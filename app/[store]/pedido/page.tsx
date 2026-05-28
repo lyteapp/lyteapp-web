@@ -1,9 +1,15 @@
 'use client'
 
-import { Suspense } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { createClient } from '@supabase/supabase-js'
 import '../store.css'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
+)
 
 const WA_ICON = (
   <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
@@ -20,6 +26,27 @@ function PedidoContent() {
   const deliveryId = searchParams.get('delivery')
   const pickupId = searchParams.get('pickup')
 
+  const [showWhatsappBtn, setShowWhatsappBtn] = useState(true)
+  const [showTrackBtn, setShowTrackBtn] = useState(true)
+  const [showMapBtn, setShowMapBtn] = useState(false)
+  const [mapUrl, setMapUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    supabase
+      .from('stores')
+      .select('map_url, checkout_settings')
+      .eq('slug', storeSlug)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!data) return
+        const cs = (data.checkout_settings as Record<string, unknown>) ?? {}
+        setShowWhatsappBtn(cs.showWhatsappBtn !== false)
+        setShowTrackBtn(cs.showTrackBtn !== false)
+        setShowMapBtn(Boolean(cs.showMapBtn))
+        setMapUrl((data.map_url as string | null) ?? null)
+      })
+  }, [storeSlug])
+
   return (
     <div className="sf-confirm-screen">
       <div className="sf-confirm-card">
@@ -31,9 +58,10 @@ function PedidoContent() {
         <h1 className="sf-confirm-title">Pedido confirmado</h1>
         <p className="sf-confirm-sub">
           {orderId ? `Pedido #${orderId} recibido.` : 'Tu pedido fue recibido.'}{' '}
-          {waParam ? 'Toca el boton para enviarlo por WhatsApp.' : ''}
+          {waParam && showWhatsappBtn ? 'Toca el boton para enviarlo por WhatsApp.' : ''}
         </p>
-        {(deliveryId || pickupId) && (
+
+        {showTrackBtn && (deliveryId || pickupId) && (
           <a
             href={pickupId ? `/order/${pickupId}` : `/delivery/${deliveryId}`}
             style={{
@@ -48,12 +76,33 @@ function PedidoContent() {
             Rastrear mi pedido
           </a>
         )}
-        {waParam && (
+
+        {showWhatsappBtn && waParam && (
           <a href={waParam} className="sf-confirm-wa">
             {WA_ICON}
             Enviar pedido por WhatsApp
           </a>
         )}
+
+        {showMapBtn && mapUrl && (
+          <a
+            href={mapUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center',
+              background: '#F1F5F9', color: '#0F172A', borderRadius: 12, padding: '13px 20px',
+              textDecoration: 'none', fontWeight: 600, fontSize: 14, marginBottom: 12,
+              border: '1.5px solid #E2E8F0',
+            }}
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+              <path fillRule="evenodd" d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM17.707 5.293L14 1.586v12.828l2.293 2.293A1 1 0 0018 16V6a1 1 0 00-.293-.707z" clipRule="evenodd" />
+            </svg>
+            Como llegar a la tienda
+          </a>
+        )}
+
         <Link href={`/${storeSlug}`} className="sf-confirm-link" style={{ display: 'block', marginTop: 16 }}>
           Volver a la tienda
         </Link>

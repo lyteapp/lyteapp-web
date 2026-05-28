@@ -68,6 +68,12 @@ function ConfiguracionInner() {
   const [savingGeneral, setSavingGeneral] = useState(false)
   const [savedGeneral, setSavedGeneral] = useState(false)
 
+  // Confirmation buttons
+  const [checkoutSettings, setCheckoutSettings] = useState<Record<string, unknown>>({})
+  const [showWhatsappBtn, setShowWhatsappBtn] = useState(true)
+  const [showTrackBtn, setShowTrackBtn] = useState(true)
+  const [showMapBtn, setShowMapBtn] = useState(false)
+
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -79,7 +85,7 @@ function ConfiguracionInner() {
     if (!user) return
     async function load() {
       const { data: store, error: storeErr } = await supabase
-        .from('stores').select('id,name,slug,city,email,map_url,whatsapp,whatsapp2,country,store_language,operating_hours,social_links')
+        .from('stores').select('id,name,slug,city,email,map_url,whatsapp,whatsapp2,country,store_language,operating_hours,social_links,checkout_settings')
         .eq('owner_id', user!.id).maybeSingle()
 
       if (storeErr) { setError(storeErr.message); setLoading(false); return }
@@ -100,7 +106,11 @@ function ConfiguracionInner() {
         if (oh && typeof oh === 'object') setOperatingHours(oh)
         const sl = (store as any).social_links
         if (sl && typeof sl === 'object') setSocialLinks(prev => ({ ...prev, ...sl }))
-
+        const cs = (store as any).checkout_settings ?? {}
+        setCheckoutSettings(cs)
+        setShowWhatsappBtn(cs.showWhatsappBtn !== false)
+        setShowTrackBtn(cs.showTrackBtn !== false)
+        setShowMapBtn(Boolean(cs.showMapBtn))
       }
       setLoading(false)
     }
@@ -127,6 +137,12 @@ function ConfiguracionInner() {
       store_currency: storeCurrency,
       operating_hours: operatingHours,
       social_links: socialLinks,
+      checkout_settings: {
+        ...checkoutSettings,
+        showWhatsappBtn,
+        showTrackBtn,
+        showMapBtn,
+      },
     }).eq('id', storeId)
     setSavingGeneral(false)
     if (err) { setError(err.message); return }
@@ -301,6 +317,28 @@ function ConfiguracionInner() {
                   onChange={e => setSocialLinks(prev => ({ ...prev, [key]: e.target.value }))}
                   placeholder={placeholder}
                 />
+              </div>
+            ))}
+
+            {/* Confirmation buttons */}
+            <div className="cf-group-label" style={{ marginTop: 6 }}>Botones de confirmacion de pedido</div>
+
+            {[
+              { key: 'whatsapp', label: 'Boton de WhatsApp', val: showWhatsappBtn, set: setShowWhatsappBtn },
+              { key: 'track',    label: 'Link de rastreo del pedido', val: showTrackBtn, set: setShowTrackBtn },
+              { key: 'map',      label: 'Link de ubicacion de la tienda', val: showMapBtn, set: setShowMapBtn },
+            ].map(({ key, label, val, set }) => (
+              <div key={key} className={`cf-hours-row${val ? ' cf-hours-open' : ''}`} style={{ cursor: 'pointer' }} onClick={() => set(v => !v)}>
+                <button
+                  className={`cf-toggle${val ? ' on' : ''}`}
+                  onClick={e => { e.stopPropagation(); set(v => !v) }}
+                >
+                  <div className="cf-toggle-knob" />
+                </button>
+                <span className="cf-hours-day" style={{ flex: 1 }}>{label}</span>
+                <span style={{ fontSize: 11, color: val ? '#7C3AED' : '#94A3B8', fontWeight: 500 }}>
+                  {val ? 'Visible' : 'Oculto'}
+                </span>
               </div>
             ))}
 

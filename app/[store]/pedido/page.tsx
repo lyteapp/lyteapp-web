@@ -18,6 +18,7 @@ function PedidoContent() {
   const waParam = searchParams.get('wa')
   const orderId = searchParams.get('id')
   const deliveryId = searchParams.get('delivery')
+  const pickupId = searchParams.get('pickup')
 
   return (
     <div className="sf-confirm-screen">
@@ -32,9 +33,9 @@ function PedidoContent() {
           {orderId ? `Pedido #${orderId} recibido.` : 'Tu pedido fue recibido.'}{' '}
           {waParam ? 'Toca el boton para enviarlo por WhatsApp.' : ''}
         </p>
-        {deliveryId && (
+        {(deliveryId || pickupId) && (
           <a
-            href={`/delivery/${deliveryId}`}
+            href={pickupId ? `/order/${pickupId}` : `/delivery/${deliveryId}`}
             style={{
               display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center',
               background: '#7C3AED', color: 'white', borderRadius: 12, padding: '13px 20px',

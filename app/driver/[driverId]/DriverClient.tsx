@@ -608,7 +608,8 @@ export default function DriverClient({
 
     if (!res.ok) {
       setOrders(prev => [order, ...prev])
-      setErrorMsg('Este pedido ya fue tomado. Actualiza la lista.')
+      const dbg = result?.debug ? ` (${result.debug.stage}: ${result.debug.msg})` : ''
+      setErrorMsg(`Este pedido ya fue tomado.${dbg}`)
     } else {
       leaveQueue()
       setDelivery(result.delivery as ActiveDelivery)

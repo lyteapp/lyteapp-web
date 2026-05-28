@@ -12,6 +12,8 @@ const supabase = createClient(
 
 const sel = 'id,customer_name,customer_phone,delivery_address,notes,status,picked_up_at,order_id,customer_lat,customer_lng'
 
+type DeliveryRow = Record<string, unknown>
+
 export async function POST(req: NextRequest) {
   const { orderId, driverId, storeId, customerName, customerPhone, deliveryAddress } = await req.json()
 
@@ -19,48 +21,56 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'missing fields' }, { status: 400 })
   }
 
-  // Already assigned to this driver?
-  const { data: mine } = await supabase.from('deliveries')
+  // Already assigned to this driver? Use limit(1) to avoid error when multiple rows exist
+  const { data: mineRows } = await supabase.from('deliveries')
     .select(sel)
     .eq('order_id', orderId)
     .eq('driver_id', driverId)
     .not('status', 'eq', 'cancelled')
-    .maybeSingle()
+    .limit(1)
 
+  const mine = (mineRows as DeliveryRow[] | null)?.[0] ?? null
   if (mine) return NextResponse.json({ delivery: mine })
 
-  // Find any unassigned delivery for this order
-  const { data: existing } = await supabase.from('deliveries')
+  // Find any unassigned delivery for this order (limit 1 handles duplicate records)
+  const { data: existingRows } = await supabase.from('deliveries')
     .select('id')
     .eq('order_id', orderId)
     .is('driver_id', null)
     .not('status', 'eq', 'cancelled')
-    .maybeSingle()
+    .limit(1)
+
+  const existing = (existingRows as { id: string }[] | null)?.[0] ?? null
 
   if (existing) {
-    const { data, error } = await supabase.from('deliveries')
+    const { data: updRows, error: updateError } = await supabase.from('deliveries')
       .update({ driver_id: driverId, status: 'ready' })
       .eq('id', existing.id)
-      .is('driver_id', null) // race guard
+      .is('driver_id', null)
       .select(sel)
-      .single()
 
-    if (!error && data) return NextResponse.json({ delivery: data })
+    const updated = (updRows as DeliveryRow[] | null)?.[0] ?? null
+    if (!updateError && updated) return NextResponse.json({ delivery: updated })
 
-    // Race lost — check if it ended up ours anyway
-    const { data: mineNow } = await supabase.from('deliveries')
+    // Race lost — did it end up ours?
+    const { data: raceRows } = await supabase.from('deliveries')
       .select(sel)
       .eq('order_id', orderId)
       .eq('driver_id', driverId)
       .not('status', 'eq', 'cancelled')
-      .maybeSingle()
+      .limit(1)
 
-    if (mineNow) return NextResponse.json({ delivery: mineNow })
-    return NextResponse.json({ error: 'taken' }, { status: 409 })
+    const raceWin = (raceRows as DeliveryRow[] | null)?.[0] ?? null
+    if (raceWin) return NextResponse.json({ delivery: raceWin })
+
+    return NextResponse.json(
+      { error: 'taken', debug: { stage: 'update', msg: updateError?.message } },
+      { status: 409 }
+    )
   }
 
   // No delivery record — create one
-  const { data, error } = await supabase.from('deliveries').insert({
+  const { data: insRows, error: insertError } = await supabase.from('deliveries').insert({
     store_id: storeId,
     order_id: orderId,
     driver_id: driverId,
@@ -70,20 +80,24 @@ export async function POST(req: NextRequest) {
     status: 'ready',
     driver_fee: 0,
     fee_paid: false,
-  }).select(sel).single()
+  }).select(sel)
 
-  if (error) {
-    // Insert failed — another record may have appeared; last-resort check
-    const { data: mineNow } = await supabase.from('deliveries')
-      .select(sel)
-      .eq('order_id', orderId)
-      .eq('driver_id', driverId)
-      .not('status', 'eq', 'cancelled')
-      .maybeSingle()
+  const inserted = (insRows as DeliveryRow[] | null)?.[0] ?? null
+  if (!insertError && inserted) return NextResponse.json({ delivery: inserted })
 
-    if (mineNow) return NextResponse.json({ delivery: mineNow })
-    return NextResponse.json({ error: 'taken' }, { status: 409 })
-  }
+  // Insert failed — last-resort check
+  const { data: lastRows } = await supabase.from('deliveries')
+    .select(sel)
+    .eq('order_id', orderId)
+    .eq('driver_id', driverId)
+    .not('status', 'eq', 'cancelled')
+    .limit(1)
 
-  return NextResponse.json({ delivery: data })
+  const lastResort = (lastRows as DeliveryRow[] | null)?.[0] ?? null
+  if (lastResort) return NextResponse.json({ delivery: lastResort })
+
+  return NextResponse.json(
+    { error: 'taken', debug: { stage: 'insert', msg: insertError?.message } },
+    { status: 409 }
+  )
 }

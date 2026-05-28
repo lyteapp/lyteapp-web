@@ -137,9 +137,7 @@ export default function DriverClient({
 }: Props) {
   const [orders, setOrders]             = useState<AvailableOrder[]>(initialOrders)
   const [delivery, setDelivery]         = useState<ActiveDelivery | null>(initialDelivery)
-  const [claiming, setClaiming]         = useState<string | null>(null)
   const [completing, setCompleting]     = useState(false)
-  const [errorMsg, setErrorMsg]         = useState('')
   const [gpsStatus, setGpsStatus]       = useState<GpsStatus>('requesting')
   const [accuracy, setAccuracy]         = useState<number | null>(null)
   const [lastUpdate, setLastUpdate]     = useState<Date | null>(null)
@@ -584,37 +582,47 @@ export default function DriverClient({
       .eq('id', driverId).then(() => {})
   }
 
-  // ── Claim an order (via server route — bypasses RLS) ─────────────
-  const claimOrder = useCallback(async (order: AvailableOrder) => {
+  // ── Claim an order ────────────────────────────────────────────────
+  const claimOrder = useCallback((order: AvailableOrder) => {
     if (delivery) return
-    setClaiming(order.id)
-    setErrorMsg('')
-    setOrders(prev => prev.filter(o => o.id !== order.id))
 
-    const res = await fetch('/api/claim-order', {
+    // Open customer address in device maps app immediately
+    const address = order.customer_notes || order.customer_name
+    if (address) {
+      window.open(`https://maps.google.com/maps?q=${encodeURIComponent(address)}`, '_blank')
+    }
+
+    // Show delivery locally right away — no DB wait
+    const localDelivery: ActiveDelivery = {
+      id: `local-${order.id}`,
+      customer_name: order.customer_name,
+      customer_phone: order.customer_phone,
+      delivery_address: order.customer_notes ?? '',
+      notes: null,
+      status: 'picked_up',
+      picked_up_at: new Date().toISOString(),
+      order_id: order.id,
+      customer_lat: null,
+      customer_lng: null,
+    }
+    setOrders(prev => prev.filter(o => o.id !== order.id))
+    leaveQueue()
+    setDelivery(localDelivery)
+
+    // Persist to DB in background — update delivery state if it succeeds
+    fetch('/api/claim-order', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        orderId: order.id,
-        driverId,
-        storeId,
+        orderId: order.id, driverId, storeId,
         customerName: order.customer_name,
         customerPhone: order.customer_phone,
         deliveryAddress: order.customer_notes ?? '',
       }),
     })
-
-    const result = await res.json()
-
-    if (!res.ok) {
-      setOrders(prev => [order, ...prev])
-      const dbg = result?.debug ? ` (${result.debug.stage}: ${result.debug.msg})` : ''
-      setErrorMsg(`Este pedido ya fue tomado.${dbg}`)
-    } else {
-      leaveQueue()
-      setDelivery(result.delivery as ActiveDelivery)
-    }
-    setClaiming(null)
+      .then(r => r.ok ? r.json() : null)
+      .then(result => { if (result?.delivery) setDelivery(result.delivery as ActiveDelivery) })
+      .catch(() => {})
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [delivery, driverId, storeId])
 
@@ -622,9 +630,11 @@ export default function DriverClient({
   async function completeDelivery() {
     if (!delivery) return
     setCompleting(true)
-    await supabase.from('deliveries')
-      .update({ status: 'delivered', delivered_at: new Date().toISOString() })
-      .eq('id', delivery.id)
+    if (!delivery.id.startsWith('local-')) {
+      await supabase.from('deliveries')
+        .update({ status: 'delivered', delivered_at: new Date().toISOString() })
+        .eq('id', delivery.id)
+    }
     if (delivery.order_id) {
       await supabase.from('orders').update({ status: 'delivered' }).eq('id', delivery.order_id)
     }
@@ -952,13 +962,6 @@ export default function DriverClient({
               </div>
             ) : (
               <>
-                {errorMsg && (
-                  <div className="dsp-error-bar">
-                    {errorMsg}
-                    <button onClick={() => { setErrorMsg(''); loadOrders() }}>Actualizar</button>
-                  </div>
-                )}
-
                 {orders.length === 0 ? (
                   <div className="dsp-empty">
                     <div className="dsp-empty-icon">
@@ -989,9 +992,9 @@ export default function DriverClient({
                   <button
                     className="dsp-btn-claim"
                     onClick={() => claimOrder(order)}
-                    disabled={claiming === order.id || !!delivery}
+                    disabled={!!delivery}
                   >
-                    {claiming === order.id ? 'Tomando...' : delivery ? 'Ya tienes un pedido' : 'Tomar pedido'}
+                    {delivery ? 'Ya tienes un pedido' : 'Tomar pedido'}
                   </button>
                 </div>
               ))}

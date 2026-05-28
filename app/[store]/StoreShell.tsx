@@ -443,6 +443,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
         payment_method: paymentLabel || null, total: orderTotal, status: 'pending',
         delivery_type: isPickup ? 'pickup' : 'delivery',
         payment_proof_url: proofUrl,
+        payment_status: proofUrl ? 'pending' : null,
       })
       if (oErr) throw new Error(oErr.message)
 

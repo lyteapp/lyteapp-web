@@ -571,12 +571,18 @@ export default function PedidosPage() {
                             </div>
                             {opts && (
                               <div className="pd-comanda-item-opts">
-                                {opts.variables && Object.entries(opts.variables).map(([k, v]) => (
-                                  <span key={k} className="pd-comanda-opt-tag">{k}: {v}</span>
+                                {opts.variables && Object.entries(opts.variables).map(([k, v], idx) => (
+                                  <span key={k} className={`pd-comanda-opt-tag pd-comanda-opt-c${idx % 6}`}>
+                                    <span className="pd-comanda-opt-tag-key">{k}:</span>{v}
+                                  </span>
                                 ))}
-                                {opts.color && <span className="pd-comanda-opt-tag">Color: {opts.color}</span>}
+                                {opts.color && (
+                                  <span className={`pd-comanda-opt-tag pd-comanda-opt-c${Object.keys(opts.variables ?? {}).length % 6}`}>
+                                    <span className="pd-comanda-opt-tag-key">Color:</span>{opts.color}
+                                  </span>
+                                )}
                                 {opts.additionals?.map((a, j) => (
-                                  <span key={j} className="pd-comanda-opt-add">+ {a.name}  ${Number(a.price).toFixed(2)}</span>
+                                  <span key={j} className="pd-comanda-opt-add">+ {a.name} ${Number(a.price).toFixed(2)}</span>
                                 ))}
                                 {opts.notes && <span className="pd-comanda-opt-note">{opts.notes}</span>}
                               </div>

@@ -347,7 +347,7 @@
 .pd-comanda-name  { font-size: 15px; font-weight: 600; color: white; }
 .pd-comanda-phone { font-size: 12px; color: rgba(255,255,255,0.35); margin-top: 2px; }
 
-.pd-comanda-items { display: flex; flex-direction: column; gap: 5px; }
+.pd-comanda-items { display: flex; flex-direction: column; gap: 10px; }
 
 .pd-comanda-item {
   display: flex; align-items: flex-start; gap: 8px;
@@ -357,16 +357,26 @@
   background: rgba(124,58,237,0.15);
   min-width: 26px; height: 22px; border-radius: 5px;
   display: flex; align-items: center; justify-content: center;
-  padding: 0 4px; flex-shrink: 0; margin-top: 1px;
+  padding: 0 4px; flex-shrink: 0; margin-top: 2px;
 }
-.pd-comanda-item-body { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.pd-comanda-item-body { flex: 1; display: flex; flex-direction: column; gap: 6px; }
 .pd-comanda-item-row  { display: flex; align-items: center; gap: 8px; }
-.pd-comanda-pname  { flex: 1; font-size: 13px; color: rgba(255,255,255,0.75); }
+.pd-comanda-pname  { flex: 1; font-size: 14px; font-weight: 600; color: white; }
 .pd-comanda-price  { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.4); flex-shrink: 0; }
-.pd-comanda-item-opts { display: flex; flex-direction: column; gap: 2px; padding-left: 1px; }
-.pd-comanda-opt-tag  { font-size: 11px; color: rgba(255,255,255,0.4); }
-.pd-comanda-opt-add  { font-size: 11px; color: rgba(134,239,172,0.65); }
-.pd-comanda-opt-note { font-size: 11px; color: rgba(251,191,36,0.65); font-style: italic; }
+.pd-comanda-item-opts { display: flex; flex-wrap: wrap; gap: 4px; }
+.pd-comanda-opt-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 700; border-radius: 5px; padding: 2px 8px;
+}
+.pd-comanda-opt-tag-key { font-weight: 400; opacity: 0.7; }
+.pd-comanda-opt-c0 { background: rgba(124,58,237,0.22);  color: #C4B5FD; }
+.pd-comanda-opt-c1 { background: rgba(37,99,235,0.22);   color: #93C5FD; }
+.pd-comanda-opt-c2 { background: rgba(16,185,129,0.22);  color: #6EE7B7; }
+.pd-comanda-opt-c3 { background: rgba(245,158,11,0.22);  color: #FCD34D; }
+.pd-comanda-opt-c4 { background: rgba(239,68,68,0.22);   color: #FCA5A5; }
+.pd-comanda-opt-c5 { background: rgba(236,72,153,0.22);  color: #F9A8D4; }
+.pd-comanda-opt-add  { font-size: 11px; font-weight: 700; color: rgba(134,239,172,0.8); }
+.pd-comanda-opt-note { font-size: 12px; color: rgba(251,191,36,0.7); font-style: italic; width: 100%; }
 
 .pd-comanda-total {
   font-size: 18px; font-weight: 700; color: white;

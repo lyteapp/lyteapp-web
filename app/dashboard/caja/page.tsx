@@ -7,7 +7,7 @@ import { useAuth } from '../../lib/auth'
 import './caja.css'
 
 type PaymentStatus = 'pending' | 'approved' | 'rejected'
-type Tab = 'comprobantes' | 'cierre' | 'config'
+type Tab = 'comprobantes' | 'config'
 type ProofFilter = 'pending' | 'approved' | 'rejected'
 
 type Order = {
@@ -21,25 +21,6 @@ type Order = {
   status: string
   created_at: string
   delivery_type: string | null
-}
-
-const METHOD_CURRENCY: Record<string, { label: string; currency: string; symbol: string }> = {
-  'pago movil':       { label: 'Pago Movil',       currency: 'VES',  symbol: 'Bs' },
-  'pago móvil':       { label: 'Pago Movil',       currency: 'VES',  symbol: 'Bs' },
-  'transferencia':    { label: 'Transferencia',    currency: 'VES',  symbol: 'Bs' },
-  'transferencia bs': { label: 'Transferencia Bs', currency: 'VES',  symbol: 'Bs' },
-  'zelle':            { label: 'Zelle',            currency: 'USD',  symbol: '$'  },
-  'efectivo usd':     { label: 'Efectivo USD',     currency: 'USD',  symbol: '$'  },
-  'efectivo':         { label: 'Efectivo USD',     currency: 'USD',  symbol: '$'  },
-  'cash':             { label: 'Efectivo USD',     currency: 'USD',  symbol: '$'  },
-  'usdt':             { label: 'USDT',             currency: 'USDT', symbol: '₮'  },
-  'binance':          { label: 'Binance Pay',      currency: 'USDT', symbol: '₮'  },
-}
-
-function getCurrencyInfo(method: string | null) {
-  if (!method) return { label: 'Otro', currency: 'USD', symbol: '$' }
-  const key = method.toLowerCase().trim()
-  return METHOD_CURRENCY[key] ?? { label: method, currency: 'USD', symbol: '$' }
 }
 
 function fmtTime(iso: string) {
@@ -161,28 +142,6 @@ export default function CajaPage() {
     return o.payment_status === 'rejected'
   })
 
-  const methodTotals = (() => {
-    const map: Record<string, { label: string; currency: string; symbol: string; total: number; count: number }> = {}
-    for (const o of todayOrders) {
-      if (o.status === 'cancelled') continue
-      const info = getCurrencyInfo(o.payment_method)
-      if (!map[info.label]) map[info.label] = { ...info, total: 0, count: 0 }
-      map[info.label].total += Number(o.total)
-      map[info.label].count += 1
-    }
-    return Object.values(map).sort((a, b) => b.total - a.total)
-  })()
-
-  const currencyTotals = (() => {
-    const map: Record<string, { currency: string; symbol: string; total: number }> = {}
-    for (const m of methodTotals) {
-      if (!map[m.currency]) map[m.currency] = { currency: m.currency, symbol: m.symbol, total: 0 }
-      map[m.currency].total += m.total
-    }
-    return Object.values(map)
-  })()
-
-  const todayTotal    = todayOrders.filter(o => o.status !== 'cancelled').reduce((s, o) => s + Number(o.total), 0)
   const approvedTotal = todayOrders.filter(o => o.payment_status === 'approved').reduce((s, o) => s + Number(o.total), 0)
   const cajeroUrl     = storeId ? `https://lyte-app.com/cajero/${storeId}` : ''
 
@@ -196,9 +155,6 @@ export default function CajaPage() {
         <button className={`cx-tab${tab === 'comprobantes' ? ' active' : ''}`} onClick={() => setTab('comprobantes')}>
           Comprobantes
           {pending.length > 0 && <span className="cx-tab-badge">{pending.length}</span>}
-        </button>
-        <button className={`cx-tab${tab === 'cierre' ? ' active' : ''}`} onClick={() => setTab('cierre')}>
-          Cierre de caja
         </button>
         <button className={`cx-tab${tab === 'config' ? ' active' : ''}`} onClick={() => setTab('config')}>
           Configuracion
@@ -288,103 +244,6 @@ export default function CajaPage() {
               })}
             </div>
           )}
-        </div>
-      )}
-
-      {/* ══ CIERRE ══ */}
-      {tab === 'cierre' && (
-        <div className="cx-view cx-cierre-view">
-          <div className="cx-cierre-date">
-            {new Date().toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-          </div>
-
-          <div className="cx-currency-grid">
-            {currencyTotals.length === 0 ? (
-              <div className="cx-empty" style={{ gridColumn: '1/-1' }}><p>Sin movimientos hoy</p></div>
-            ) : currencyTotals.map(c => (
-              <div key={c.currency} className="cx-currency-card">
-                <div className="cx-currency-label">{c.currency}</div>
-                <div className="cx-currency-amount">{c.symbol}{c.total.toFixed(2)}</div>
-                <div className="cx-currency-sub">total del dia</div>
-              </div>
-            ))}
-          </div>
-
-          <div className="cx-breakdown-section">
-            <div className="cx-breakdown-title">Desglose por metodo</div>
-            {methodTotals.length === 0 ? (
-              <div className="cx-empty"><p>Sin pedidos hoy</p></div>
-            ) : (
-              <table className="cx-breakdown-table">
-                <thead>
-                  <tr>
-                    <th>Metodo</th>
-                    <th>Moneda</th>
-                    <th>Pedidos</th>
-                    <th style={{ textAlign: 'right' }}>Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {methodTotals.map(m => (
-                    <tr key={m.label}>
-                      <td style={{ fontWeight: 500 }}>{m.label}</td>
-                      <td><span className="cx-currency-chip">{m.currency}</span></td>
-                      <td>{m.count}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 600 }}>{m.symbol}{m.total.toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td colSpan={2} style={{ fontWeight: 700, paddingTop: 12 }}>Total general</td>
-                    <td style={{ fontWeight: 700, paddingTop: 12 }}>{todayOrders.filter(o => o.status !== 'cancelled').length}</td>
-                    <td style={{ textAlign: 'right', fontWeight: 700, paddingTop: 12, fontSize: 15 }}>${todayTotal.toFixed(2)}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            )}
-          </div>
-
-          <div className="cx-breakdown-section">
-            <div className="cx-breakdown-title">Pedidos del dia</div>
-            {todayOrders.length === 0 ? (
-              <div className="cx-empty"><p>Sin pedidos hoy</p></div>
-            ) : (
-              <table className="cx-breakdown-table">
-                <thead>
-                  <tr>
-                    <th>Cliente</th>
-                    <th>Metodo</th>
-                    <th>Comprobante</th>
-                    <th>Estado pago</th>
-                    <th style={{ textAlign: 'right' }}>Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {todayOrders.map(o => (
-                    <tr key={o.id} style={{ opacity: o.status === 'cancelled' ? 0.45 : 1 }}>
-                      <td style={{ fontWeight: 500 }}>{o.customer_name}</td>
-                      <td>{o.payment_method ?? '—'}</td>
-                      <td>
-                        {o.payment_proof_url
-                          ? <button className="cx-proof-thumb-btn" onClick={() => setLightbox(o.payment_proof_url!)}>
-                              <img src={o.payment_proof_url} alt="" className="cx-proof-thumb" />
-                            </button>
-                          : <span style={{ color: '#94A3B8', fontSize: 12 }}>—</span>}
-                      </td>
-                      <td>
-                        {o.payment_status === 'approved' ? <span className="cx-status-chip approved">Aprobado</span>
-                         : o.payment_status === 'rejected' ? <span className="cx-status-chip rejected">Rechazado</span>
-                         : o.payment_status === 'pending'  ? <span className="cx-status-chip pending">Pendiente</span>
-                         : <span className="cx-status-chip none">—</span>}
-                      </td>
-                      <td style={{ textAlign: 'right', fontWeight: 600 }}>${Number(o.total).toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
         </div>
       )}
 

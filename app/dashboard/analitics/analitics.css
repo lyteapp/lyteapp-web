@@ -1,0 +1,149 @@
+/* ── ANALYTICS ── */
+.an-spinner {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid rgba(124,58,237,0.2);
+  border-top-color: #7C3AED;
+  animation: anSpin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes anSpin { to { transform: rotate(360deg); } }
+
+/* ── PRESET BAR ── */
+.an-presets {
+  display: flex; gap: 4px;
+  background: #F1F5F9; border-radius: 8px; padding: 3px;
+}
+.an-preset {
+  padding: 4px 13px; border-radius: 6px; border: none; cursor: pointer;
+  font-size: 12px; font-weight: 600;
+  background: transparent; color: #64748B;
+  transition: all 0.15s; font-family: inherit;
+}
+.an-preset.active {
+  background: white; color: #0F172A;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+/* ── KPI STRIP ── */
+.an-kpi-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 1px;
+  background: #E2E8F0;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.an-kpi {
+  background: white; padding: 16px 20px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.an-kpi-label {
+  font-size: 10px; font-weight: 700; color: #94A3B8;
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+.an-kpi-value {
+  font-size: 26px; font-weight: 700;
+  color: #0F172A; letter-spacing: -0.5px; line-height: 1;
+}
+.an-delta {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 600;
+  padding: 3px 8px; border-radius: 100px; align-self: flex-start; margin-top: 4px;
+}
+.an-delta--up   { background: #DCFCE7; color: #15803D; }
+.an-delta--down { background: #FEE2E2; color: #DC2626; }
+
+/* ── CURRENCY CARDS ── */
+.an-currency-row {
+  display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 4px;
+}
+.an-currency-card {
+  flex: 1; min-width: 110px;
+  background: #F8FAFC; border: 1px solid #E2E8F0;
+  border-radius: 10px; padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.an-currency-label {
+  font-size: 10px; font-weight: 700; color: #94A3B8;
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+.an-currency-amount {
+  font-size: 17px; font-weight: 800; color: #0F172A;
+  letter-spacing: -0.3px; line-height: 1.2;
+}
+.an-currency-sub { font-size: 11px; color: #94A3B8; margin-top: 2px; }
+
+/* ── SECTION LABEL ── */
+.an-section-label {
+  font-size: 10px; font-weight: 700; color: #94A3B8;
+  text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px;
+}
+
+/* ── METHOD LIST ── */
+.an-method-list { display: flex; flex-direction: column; gap: 10px; }
+.an-method-row {
+  display: grid;
+  grid-template-columns: 140px 1fr 50px 130px;
+  align-items: center; gap: 10px;
+}
+.an-method-name {
+  font-size: 13px; font-weight: 500; color: #0F172A;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.an-method-bar-wrap {
+  background: #F1F5F9; border-radius: 4px; height: 8px; overflow: hidden;
+}
+.an-method-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #7C3AED, #9F67FA);
+  border-radius: 4px; transition: width 0.4s ease; min-width: 4px;
+}
+.an-method-pct {
+  font-size: 12px; font-weight: 700; color: #475569; text-align: right;
+}
+.an-method-amt {
+  font-size: 13px; font-weight: 600; color: #0F172A; text-align: right;
+}
+
+/* ── CHART ── */
+.an-chart-wrap {
+  background: #F8FAFC; border: 1px solid #E2E8F0;
+  border-radius: 10px; padding: 14px 14px 0; overflow: hidden;
+}
+.an-chart-bars {
+  display: flex; align-items: flex-end; gap: 3px;
+  height: 80px;
+}
+.an-chart-col {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-end;
+  gap: 0; height: 100%;
+}
+.an-chart-bar {
+  width: 100%; background: #7C3AED;
+  border-radius: 3px 3px 0 0; min-height: 0;
+  transition: height 0.35s ease;
+}
+.an-chart-bar--empty { background: #E2E8F0; }
+.an-chart-label {
+  font-size: 9px; color: #94A3B8;
+  white-space: nowrap; padding: 5px 0 8px;
+}
+
+/* ── EMPTY ── */
+.an-empty {
+  text-align: center; padding: 32px 0;
+  color: #94A3B8; font-size: 13px;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 860px) {
+  .an-kpi-row { grid-template-columns: 1fr 1fr; }
+  .an-method-row { grid-template-columns: 1fr auto auto; }
+  .an-method-bar-wrap { display: none; }
+}
+@media (max-width: 600px) {
+  .an-method-pct { display: none; }
+}

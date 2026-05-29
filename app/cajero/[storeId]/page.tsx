@@ -9,6 +9,7 @@ type Order = {
   customer_name: string
   customer_phone: string
   payment_method: string | null
+  payment_proof_url: string | null
   total: number
   status: string
   created_at: string
@@ -61,6 +62,7 @@ export default function CajeroPage() {
   const [orders, setOrders]         = useState<Order[]>([])
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
   const [bcvRate, setBcvRate]       = useState<number>(0)
+  const [lightbox, setLightbox]     = useState<string | null>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const doFetch = useCallback(async (pin: string): Promise<{ ok: boolean; requiresPin?: boolean; notFound?: boolean; error?: boolean }> => {
@@ -294,14 +296,26 @@ export default function CajeroPage() {
               const displayAmount = isVES
                 ? bcvRate > 0 ? `Bs ${(amount * bcvRate).toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'Bs ...'
                 : `${info.symbol}${amount.toFixed(2)}`
+              const hasProof = !!order.payment_proof_url
               return (
-                <div key={order.id} className="cj-card">
+                <div
+                  key={order.id}
+                  className={`cj-card${hasProof ? ' cj-card--proof' : ''}`}
+                  onClick={() => hasProof && setLightbox(order.payment_proof_url!)}
+                >
                   <div className="cj-card-row">
                     <div className="cj-card-left">
                       <div className="cj-card-name">{order.customer_name}</div>
                       <span className="cj-method-tag">{info.label}</span>
                     </div>
-                    <div className="cj-card-amount-main">{displayAmount}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      {hasProof && (
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" style={{ color: '#94A3B8', flexShrink: 0 }}>
+                          <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd"/>
+                        </svg>
+                      )}
+                      <div className="cj-card-amount-main">{displayAmount}</div>
+                    </div>
                   </div>
                 </div>
               )
@@ -309,6 +323,23 @@ export default function CajeroPage() {
           </div>
         )}
       </div>
+
+      {/* LIGHTBOX */}
+      {lightbox && (
+        <div className="cj-lightbox" onClick={() => setLightbox(null)}>
+          <img
+            src={lightbox}
+            className="cj-lightbox-img"
+            onClick={e => e.stopPropagation()}
+            alt="Comprobante"
+          />
+          <button className="cj-lightbox-close" onClick={() => setLightbox(null)}>
+            <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/>
+            </svg>
+          </button>
+        </div>
+      )}
     </div>
   )
 }

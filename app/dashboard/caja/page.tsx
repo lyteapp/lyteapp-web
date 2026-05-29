@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { QRCodeSVG } from 'qrcode.react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import './caja.css'
@@ -61,6 +62,7 @@ export default function CajaPage() {
   const [verifying, setVerifying] = useState<string | null>(null)
   const [toast, setToast]       = useState<string | null>(null)
   const [copied, setCopied]     = useState(false)
+  const [showQr, setShowQr]     = useState(false)
   const [checkoutSettings, setCheckoutSettings] = useState<Record<string, unknown>>({})
   const [pinInput, setPinInput] = useState('')
   const [pinSaving, setPinSaving] = useState(false)
@@ -211,6 +213,22 @@ export default function CajaPage() {
             >
               {copied ? 'Copiado' : 'Copiar'}
             </button>
+            <button
+              onClick={() => setShowQr(true)}
+              title="Ver QR"
+              style={{
+                flexShrink: 0, background: '#F1F5F9', color: '#0F172A',
+                border: '1px solid #E2E8F0', borderRadius: 8,
+                padding: '8px 10px', fontSize: 13, fontWeight: 500,
+                cursor: 'pointer', fontFamily: 'inherit',
+                display: 'flex', alignItems: 'center',
+              }}
+            >
+              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+                <path fillRule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 2V5h1v1H5zM3 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm2 2v-1h1v1H5zM13 3a1 1 0 00-1 1v3a1 1 0 001 1h3a1 1 0 001-1V4a1 1 0 00-1-1h-3zm1 2v1h1V5h-1z" clipRule="evenodd"/>
+                <path d="M11 4a1 1 0 10-2 0v1a1 1 0 002 0V4zM10 7a1 1 0 011 1v1h2a1 1 0 110 2h-3a1 1 0 01-1-1V8a1 1 0 011-1zM16 9a1 1 0 100 2 1 1 0 000-2zM9 13a1 1 0 011-1h1a1 1 0 110 2v2a1 1 0 11-2 0v-3zM15 13a1 1 0 10-2 0v3a1 1 0 102 0v-3zM11 19a1 1 0 110-2h2a1 1 0 110 2h-2z"/>
+              </svg>
+            </button>
             <a
               href={cajeroUrl}
               target="_blank"
@@ -228,6 +246,43 @@ export default function CajaPage() {
               </svg>
               Abrir
             </a>
+          </div>
+        </div>
+      )}
+
+      {/* ── QR MODAL ── */}
+      {showQr && cajeroUrl && (
+        <div
+          onClick={() => setShowQr(false)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+            zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 20,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'white', borderRadius: 20, padding: '28px 28px 24px',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16,
+              maxWidth: 320, width: '100%',
+            }}
+          >
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#0F172A' }}>App de cajero</div>
+            <QRCodeSVG value={cajeroUrl} size={220} bgColor="#ffffff" fgColor="#0F172A" />
+            <div style={{ fontSize: 11, color: '#94A3B8', textAlign: 'center', wordBreak: 'break-all' }}>
+              {cajeroUrl}
+            </div>
+            <button
+              onClick={() => setShowQr(false)}
+              style={{
+                width: '100%', background: '#F1F5F9', color: '#0F172A', border: 'none',
+                borderRadius: 10, padding: '10px', fontSize: 13, fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Cerrar
+            </button>
           </div>
         </div>
       )}

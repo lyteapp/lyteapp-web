@@ -32,27 +32,13 @@ const METHOD_CURRENCY: Record<string, { label: string; currency: string; symbol:
 }
 
 function getCurrencyInfo(method: string | null) {
-  if (!method) return { label: 'Otro', currency: 'USD', symbol: '$' }
-  return METHOD_CURRENCY[method.toLowerCase().trim()] ?? { label: method, currency: 'USD', symbol: '$' }
-}
-
-function fmtTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })
-}
-
-function fmtDate(iso: string) {
-  const d = new Date(iso), n = new Date()
-  if (d.toDateString() === n.toDateString()) return fmtTime(iso)
-  return d.toLocaleDateString('es', { day: 'numeric', month: 'short' }) + ' ' + fmtTime(iso)
+  if (!method) return { label: 'Otro', symbol: '$' }
+  return METHOD_CURRENCY[method.toLowerCase().trim()] ?? { label: method, symbol: '$' }
 }
 
 function isToday(iso: string) {
   const d = new Date(iso), n = new Date()
   return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate()
-}
-
-function fmtBs(amount: number, rate: number) {
-  return (amount * rate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 const SESSION_KEY    = (id: string) => `cajero-pin-${id}`
@@ -73,7 +59,6 @@ export default function CajeroPage() {
   const [storeName, setStoreName]   = useState('')
   const [cajeraName, setCajeraName] = useState('')
   const [orders, setOrders]         = useState<Order[]>([])
-  const [bcvRate, setBcvRate]       = useState<number | null>(null)
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -153,13 +138,6 @@ export default function CajeroPage() {
       if (pollRef.current) clearInterval(pollRef.current)
     }
   }, [authState, storeId, doFetch])
-
-  // BCV rate
-  useEffect(() => {
-    fetch('/api/bcv-rate').then(r => r.json()).then(d => {
-      setBcvRate(d?.rates?.USD ?? null)
-    }).catch(() => {})
-  }, [])
 
   // Focus PIN input
   useEffect(() => {
@@ -258,8 +236,7 @@ export default function CajeroPage() {
   )
 
   // ── MAIN APP ──
-  const allActive   = orders.filter(o => o.status !== 'cancelled')
-  const todayCount  = allActive.filter(o => isToday(o.created_at)).length
+  const todayOrders = orders.filter(o => o.status !== 'cancelled' && isToday(o.created_at))
 
   return (
     <div className="cj-root" onContextMenu={e => e.preventDefault()} style={{ userSelect: 'none' }}>
@@ -287,50 +264,30 @@ export default function CajeroPage() {
       {/* ORDER LIST */}
       <div className="cj-view">
         <div className="cj-list-header">
-          {todayCount} pedido{todayCount !== 1 ? 's' : ''} hoy · {allActive.length} activos
+          {todayOrders.length} pedido{todayOrders.length !== 1 ? 's' : ''} hoy
         </div>
 
-        {allActive.length === 0 ? (
+        {todayOrders.length === 0 ? (
           <div className="cj-empty">
             <svg viewBox="0 0 48 48" fill="none" stroke="#CBD5E1" strokeWidth="1.5" width="44" height="44">
               <rect x="6" y="10" width="36" height="28" rx="3"/>
               <path strokeLinecap="round" d="M14 20h20M14 26h12"/>
             </svg>
-            <p>Sin pedidos activos</p>
+            <p>Sin pedidos hoy</p>
           </div>
         ) : (
           <div className="cj-proof-list">
-            {allActive.map(order => {
+            {todayOrders.map(order => {
               const info   = getCurrencyInfo(order.payment_method)
               const amount = Number(order.total)
-              const isVES  = info.currency === 'VES'
               return (
                 <div key={order.id} className="cj-card">
-                  <div className="cj-card-body" style={{ paddingTop: 14 }}>
-                    <div className="cj-card-customer">
+                  <div className="cj-card-row">
+                    <div className="cj-card-left">
                       <div className="cj-card-name">{order.customer_name}</div>
-                      <div className="cj-card-phone">
-                        <svg viewBox="0 0 20 20" fill="currentColor" width="11" height="11" style={{ flexShrink: 0 }}>
-                          <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/>
-                        </svg>
-                        {order.customer_phone}
-                      </div>
-                    </div>
-                    <div className="cj-card-meta">
                       <span className="cj-method-tag">{info.label}</span>
-                      {order.delivery_type && (
-                        <span className="cj-delivery-tag">
-                          {order.delivery_type === 'pickup' ? 'Retiro' : 'Delivery'}
-                        </span>
-                      )}
-                      <span className="cj-card-time">{fmtDate(order.created_at)}</span>
                     </div>
-                    <div className="cj-card-amounts">
-                      <div className="cj-card-amount-main">{info.symbol}{amount.toFixed(2)}</div>
-                      {bcvRate && !isVES && (
-                        <div className="cj-card-amount-bs">Bs {fmtBs(amount, bcvRate)}</div>
-                      )}
-                    </div>
+                    <div className="cj-card-amount-main">{info.symbol}{amount.toFixed(2)}</div>
                   </div>
                 </div>
               )

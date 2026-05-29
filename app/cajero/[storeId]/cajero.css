@@ -101,6 +101,38 @@
   letter-spacing: 0.06em;
 }
 
+/* ── METHOD TOTALS ── */
+.cj-totals {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cj-total-card {
+  background: white;
+  border: 1.5px solid #F1F5F9;
+  border-radius: 12px;
+  padding: 10px 14px;
+  flex: 1;
+  min-width: 110px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cj-total-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.cj-total-amount {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: -0.3px;
+  line-height: 1.2;
+}
+
 /* ── ORDER LIST ── */
 .cj-proof-list {
   display: flex;

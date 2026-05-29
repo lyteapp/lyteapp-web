@@ -279,6 +279,15 @@ export default function CajeroPage() {
   // ── MAIN APP ──
   const todayOrders = orders.filter(o => o.status !== 'cancelled' && isToday(o.created_at))
 
+  const methodTotals = Object.values(
+    todayOrders.reduce((acc, o) => {
+      const info = getCurrencyInfo(o.payment_method)
+      if (!acc[info.label]) acc[info.label] = { ...info, total: 0 }
+      acc[info.label].total += Number(o.total)
+      return acc
+    }, {} as Record<string, { label: string; currency: string; symbol: string; total: number }>)
+  )
+
   return (
     <div className="cj-root" onContextMenu={e => e.preventDefault()} style={{ userSelect: 'none' }}>
 
@@ -307,6 +316,25 @@ export default function CajeroPage() {
         <div className="cj-list-header">
           {todayOrders.length} pedido{todayOrders.length !== 1 ? 's' : ''} hoy
         </div>
+
+        {methodTotals.length > 0 && (
+          <div className="cj-totals">
+            {methodTotals.map(m => {
+              const isVES = m.currency === 'VES'
+              const displayAmount = isVES
+                ? bcvRate > 0
+                  ? `Bs ${(m.total * bcvRate).toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  : 'Bs ...'
+                : `${m.symbol}${m.total.toFixed(2)}`
+              return (
+                <div key={m.label} className="cj-total-card">
+                  <div className="cj-total-label">{m.label}</div>
+                  <div className="cj-total-amount">{displayAmount}</div>
+                </div>
+              )
+            })}
+          </div>
+        )}
 
         {todayOrders.length === 0 ? (
           <div className="cj-empty">

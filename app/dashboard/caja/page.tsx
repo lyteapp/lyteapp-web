@@ -253,13 +253,15 @@ export default function CajaPage() {
     ? dateFrom.toLocaleDateString('es', { day: 'numeric', month: 'long' })
     : `${dateFrom.toLocaleDateString('es', { day: 'numeric', month: 'short' })} — ${dateTo.toLocaleDateString('es', { day: 'numeric', month: 'short' })}`
 
-  // Currency totals
-  const totalVES  = filteredOrders.filter(o => getCurrencyInfo(o.payment_method).currency === 'VES').reduce((s, o) => s + Number(o.total), 0)
-  const totalUSD  = filteredOrders.filter(o => getCurrencyInfo(o.payment_method).currency === 'USD').reduce((s, o) => s + Number(o.total), 0)
-  const totalUSDT = filteredOrders.filter(o => getCurrencyInfo(o.payment_method).currency === 'USDT').reduce((s, o) => s + Number(o.total), 0)
-  const showVES   = filteredOrders.some(o => getCurrencyInfo(o.payment_method).currency === 'VES')
-  const showUSD   = filteredOrders.some(o => getCurrencyInfo(o.payment_method).currency === 'USD')
-  const showUSDT  = filteredOrders.some(o => getCurrencyInfo(o.payment_method).currency === 'USDT')
+  // Per-method totals
+  const methodTotals = Object.values(
+    filteredOrders.reduce((acc, o) => {
+      const info = getCurrencyInfo(o.payment_method)
+      if (!acc[info.label]) acc[info.label] = { ...info, total: 0 }
+      acc[info.label].total += Number(o.total)
+      return acc
+    }, {} as Record<string, { label: string; currency: string; symbol: string; total: number }>)
+  )
 
   if (loading) return <div className="cx-spinner-wrap"><div className="cx-spinner" /></div>
 
@@ -307,32 +309,23 @@ export default function CajaPage() {
             />
           )}
 
-          {/* Currency totals */}
+          {/* Per-method totals */}
           {filteredOrders.length > 0 && (
             <div className="cx-day-totals">
-              {showVES && (
-                <div className="cx-day-total-card">
-                  <div className="cx-day-total-label">Bolivares</div>
-                  <div className="cx-day-total-amount">
-                    {bcvRate > 0
-                      ? `Bs ${(totalVES * bcvRate).toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                      : 'Bs ...'}
+              {methodTotals.map(m => {
+                const isVES = m.currency === 'VES'
+                const displayAmount = isVES
+                  ? bcvRate > 0
+                    ? `Bs ${(m.total * bcvRate).toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    : 'Bs ...'
+                  : `${m.symbol}${m.total.toFixed(2)}`
+                return (
+                  <div key={m.label} className="cx-day-total-card">
+                    <div className="cx-day-total-label">{m.label}</div>
+                    <div className="cx-day-total-amount">{displayAmount}</div>
                   </div>
-                  <div className="cx-day-total-sub">${totalVES.toFixed(2)} USD equiv.</div>
-                </div>
-              )}
-              {showUSD && (
-                <div className="cx-day-total-card">
-                  <div className="cx-day-total-label">Dolares</div>
-                  <div className="cx-day-total-amount">${totalUSD.toFixed(2)}</div>
-                </div>
-              )}
-              {showUSDT && (
-                <div className="cx-day-total-card">
-                  <div className="cx-day-total-label">USDT</div>
-                  <div className="cx-day-total-amount">₮{totalUSDT.toFixed(2)}</div>
-                </div>
-              )}
+                )
+              })}
             </div>
           )}
 

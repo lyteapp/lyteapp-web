@@ -142,12 +142,59 @@ export default function CajeroPage() {
     })
   }, [storeId, doFetch])
 
-  // Polling
+  // Realtime via SSE — reconecta automaticamente si cae
   useEffect(() => {
     if (authState !== 'ok') return
     const pin = sessionStorage.getItem(SESSION_KEY(storeId)) ?? ''
-    pollRef.current = setInterval(() => doFetch(pin), 6000)
-    return () => { if (pollRef.current) clearInterval(pollRef.current) }
+    let abort = new AbortController()
+    let reconnectTimer: ReturnType<typeof setTimeout>
+
+    const connect = async () => {
+      try {
+        const res = await fetch(`/api/caja/stream?storeId=${storeId}`, {
+          headers: { 'x-cajero-pin': pin },
+          signal: abort.signal,
+        })
+        if (!res.ok || !res.body) {
+          reconnectTimer = setTimeout(connect, 4000)
+          return
+        }
+        const reader = res.body.getReader()
+        const dec = new TextDecoder()
+        let buf = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buf += dec.decode(value, { stream: true })
+          const lines = buf.split('\n')
+          buf = lines.pop() ?? ''
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue
+            try {
+              const msg = JSON.parse(line.slice(6))
+              if (msg.type === 'change') doFetch(pin)
+            } catch { /* ignore malformed line */ }
+          }
+        }
+        // Stream ended — reconnect
+        reconnectTimer = setTimeout(connect, 2000)
+      } catch (e: unknown) {
+        if ((e as { name?: string })?.name !== 'AbortError') {
+          reconnectTimer = setTimeout(connect, 4000)
+        }
+      }
+    }
+
+    connect()
+
+    // Fallback poll every 30s (network issues, proxy drops, etc.)
+    pollRef.current = setInterval(() => doFetch(pin), 30000)
+
+    return () => {
+      abort.abort()
+      clearTimeout(reconnectTimer)
+      if (pollRef.current) clearInterval(pollRef.current)
+    }
   }, [authState, storeId, doFetch])
 
   // BCV rate

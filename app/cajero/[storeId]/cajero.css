@@ -1,6 +1,7 @@
 /* ── ROOT ── */
 .cj-root {
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
   background: #F8FAFC;
   display: flex;
   flex-direction: column;
@@ -83,7 +84,8 @@
 /* ── VIEW ── */
 .cj-view {
   flex: 1;
-  padding: 14px 14px 80px;
+  overflow-y: auto;
+  padding: 14px 14px 20px;
   display: flex;
   flex-direction: column;
   gap: 12px;

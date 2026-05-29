@@ -940,6 +940,17 @@ export default function StoreShell({ store, products, categories = [] }: { store
 
           {(selectedPayment || paymentFreeText) && (
             <div className="sf-proof-upload">
+              <div className="sf-proof-total">
+                <span>Total a pagar</span>
+                <div>
+                  <strong>{currencySymbol}{orderTotal.toFixed(2)}</strong>
+                  {vesAmount && (
+                    <span className="sf-proof-total-bs">
+                      {' · '}Bs {vesAmount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  )}
+                </div>
+              </div>
               <label className="sf-proof-label" htmlFor="sf-proof-input">
                 Comprobante de pago <span className="sf-optional">(opcional)</span>
               </label>
@@ -963,7 +974,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
                     className="sf-proof-remove"
                     onClick={() => { setPaymentProofFile(null); setPaymentProofPreview(null) }}
                   >
-                    Quitar
+                    Quitar foto
                   </button>
                 </div>
               ) : (
@@ -977,23 +988,6 @@ export default function StoreShell({ store, products, categories = [] }: { store
             </div>
           )}
         </div>
-
-
-        {vesAmount && (
-          <div className="sf-ves-box">
-            <div className="sf-ves-row">
-              <span>Total {storeCurrency}</span>
-              <span>{currencySymbol}{orderTotal.toFixed(2)}</span>
-            </div>
-            <div className="sf-ves-row sf-ves-main">
-              <span>Total Bs</span>
-              <span>Bs {vesAmount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-            </div>
-            <div className="sf-ves-rate">
-              Tasa BCV: Bs {bcvRate!.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} / {currencySymbol}1
-            </div>
-          </div>
-        )}
 
         {error && <div className="sf-co-error">{error}</div>}
         <button className="sf-submit-btn" onClick={handleSubmit} disabled={submitting || cartItems.length === 0}>

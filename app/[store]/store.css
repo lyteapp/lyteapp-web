@@ -362,10 +362,18 @@ html, body { overflow-x: hidden; }
 }
 .sf-payment-detail-row strong { color: #0F172A; }
 
-.sf-proof-upload { margin-top: 12px; }
+.sf-proof-upload { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+.sf-proof-total {
+  display: flex; justify-content: space-between; align-items: center;
+  background: rgba(15,23,42,0.04); border: 1px solid rgba(15,23,42,0.08);
+  border-radius: 10px; padding: 12px 14px;
+  font-size: 12px; color: rgba(15,23,42,0.5);
+}
+.sf-proof-total strong { font-size: 18px; font-weight: 800; color: #0F172A; display: block; }
+.sf-proof-total-bs { font-size: 12px; color: #64748B; }
 .sf-proof-label {
   display: block; font-size: 11px; font-weight: 700; color: rgba(15,23,42,0.45);
-  letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px;
+  letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0;
 }
 .sf-proof-drop {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -374,9 +382,9 @@ html, body { overflow-x: hidden; }
   cursor: pointer; font-size: 13px; color: #64748B; transition: border-color 0.15s, background 0.15s;
 }
 .sf-proof-drop:hover { border-color: var(--sf-accent-color, #7C3AED); background: color-mix(in srgb, var(--sf-accent-color, #7C3AED) 5%, white); }
-.sf-proof-preview-wrap { display: flex; align-items: flex-start; gap: 12px; }
-.sf-proof-preview { width: 80px; height: 80px; object-fit: cover; border-radius: 10px; border: 1px solid rgba(15,23,42,0.1); }
-.sf-proof-remove { font-size: 12px; color: #DC2626; background: none; border: none; cursor: pointer; padding: 0; font-family: inherit; }
+.sf-proof-preview-wrap { display: flex; flex-direction: column; gap: 8px; }
+.sf-proof-preview { width: 100%; max-height: 300px; object-fit: contain; border-radius: 10px; border: 1px solid rgba(15,23,42,0.1); background: rgba(15,23,42,0.03); }
+.sf-proof-remove { font-size: 12px; color: #DC2626; background: none; border: none; cursor: pointer; padding: 0; font-family: inherit; align-self: flex-start; }
 
 .sf-ves-box {
   background: rgba(15,23,42,0.04);

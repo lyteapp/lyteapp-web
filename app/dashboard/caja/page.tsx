@@ -215,20 +215,26 @@ export default function CajaPage() {
                     )}
                     <div className="cx-proof-img-wrap" onClick={() => setLightbox(order.payment_proof_url!)}>
                       <img src={order.payment_proof_url!} alt="Comprobante" className="cx-proof-img" />
-                      <div className="cx-proof-zoom-hint">Ver</div>
+                      <div className="cx-proof-zoom-hint">
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13">
+                          <path fillRule="evenodd" d="M3 4a1 1 0 011-1h4a1 1 0 010 2H6.414l2.293 2.293a1 1 0 11-1.414 1.414L5 6.414V8a1 1 0 01-2 0V4zm9 1a1 1 0 010-2h4a1 1 0 011 1v4a1 1 0 01-2 0V6.414l-2.293 2.293a1 1 0 11-1.414-1.414L13.586 5H12zm-9 7a1 1 0 012 0v1.586l2.293-2.293a1 1 0 111.414 1.414L6.414 15H8a1 1 0 010 2H4a1 1 0 01-1-1v-4zm13 2a1 1 0 01-2 0v-1.586l-2.293 2.293a1 1 0 01-1.414-1.414L13.586 15H12a1 1 0 010-2h4a1 1 0 011 1v4z" clipRule="evenodd"/>
+                        </svg>
+                        Ver completo
+                      </div>
                     </div>
                     <div className="cx-proof-info">
                       <div className="cx-proof-name">{order.customer_name}</div>
                       <div className="cx-proof-meta">
                         <span className="cx-method-chip">{order.payment_method ?? '—'}</span>
-                        <span className="cx-proof-amount">${Number(order.total).toFixed(2)}</span>
+                        <span style={{ fontSize: 11, color: 'var(--cx-ink-muted)' }}>{order.customer_phone}</span>
+                        <span className="cx-proof-time">{fmtTime(order.created_at)}</span>
                       </div>
-                      <div className="cx-proof-time">{fmtTime(order.created_at)} · {order.customer_phone}</div>
+                      <div className="cx-proof-amount">${Number(order.total).toFixed(2)}</div>
                     </div>
                     {isPending ? (
                       <div className="cx-proof-actions">
                         <button className="cx-btn-approve" disabled={verifying === order.id} onClick={() => setPaymentStatus(order.id, 'approved')}>
-                          {verifying === order.id ? '...' : 'Aprobar'}
+                          {verifying === order.id ? '...' : 'Aprobar pago'}
                         </button>
                         <button className="cx-btn-reject" disabled={verifying === order.id} onClick={() => setPaymentStatus(order.id, 'rejected')}>
                           Rechazar

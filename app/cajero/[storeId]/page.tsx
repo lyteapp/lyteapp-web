@@ -468,11 +468,10 @@ export default function CajeroPage() {
                       <div className="cj-card-img-wrap" onClick={() => setLightbox(order.payment_proof_url!)}>
                         <img src={order.payment_proof_url!} alt="Comprobante" className="cj-card-img" draggable={false} />
                         <div className="cj-card-img-overlay">
-                          <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
-                            <path d="M5 8a1 1 0 011-1h1V6a1 1 0 012 0v1h1a1 1 0 110 2H9v1a1 1 0 11-2 0V9H6a1 1 0 01-1-1z"/>
-                            <path fillRule="evenodd" d="M2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8zm6-4a4 4 0 100 8 4 4 0 000-8z" clipRule="evenodd"/>
+                          <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+                            <path fillRule="evenodd" d="M3 4a1 1 0 011-1h4a1 1 0 010 2H6.414l2.293 2.293a1 1 0 11-1.414 1.414L5 6.414V8a1 1 0 01-2 0V4zm9 1a1 1 0 010-2h4a1 1 0 011 1v4a1 1 0 01-2 0V6.414l-2.293 2.293a1 1 0 11-1.414-1.414L13.586 5H12zm-9 7a1 1 0 012 0v1.586l2.293-2.293a1 1 0 111.414 1.414L6.414 15H8a1 1 0 010 2H4a1 1 0 01-1-1v-4zm13 2a1 1 0 01-2 0v-1.586l-2.293 2.293a1 1 0 01-1.414-1.414L13.586 15H12a1 1 0 010-2h4a1 1 0 011 1v4z" clipRule="evenodd"/>
                           </svg>
-                          Ampliar
+                          Ver completo
                         </div>
                       </div>
                     ) : (

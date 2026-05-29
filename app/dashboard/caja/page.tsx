@@ -61,6 +61,9 @@ export default function CajaPage() {
   const [verifying, setVerifying] = useState<string | null>(null)
   const [toast, setToast]       = useState<string | null>(null)
   const [copied, setCopied]     = useState(false)
+  const [checkoutSettings, setCheckoutSettings] = useState<Record<string, unknown>>({})
+  const [pinInput, setPinInput] = useState('')
+  const [pinSaving, setPinSaving] = useState(false)
   const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function showToast(msg: string) {
@@ -81,8 +84,14 @@ export default function CajaPage() {
 
   useEffect(() => {
     if (!user) return
-    supabase.from('stores').select('id').eq('owner_id', user.id).maybeSingle().then(({ data }) => {
-      if (data) { setStoreId(data.id); loadOrders(data.id) }
+    supabase.from('stores').select('id, checkout_settings').eq('owner_id', user.id).maybeSingle().then(({ data }) => {
+      if (data) {
+        setStoreId(data.id)
+        loadOrders(data.id)
+        const cs = (data.checkout_settings as Record<string, unknown>) ?? {}
+        setCheckoutSettings(cs)
+        setPinInput((cs.cajeroPIN as string) ?? '')
+      }
       setLoading(false)
     })
   }, [user, loadOrders])
@@ -143,6 +152,16 @@ export default function CajaPage() {
   const approvedTotal = todayOrders.filter(o => o.payment_status === 'approved').reduce((s, o) => s + Number(o.total), 0)
 
   const cajeroUrl = storeId ? `https://lyte-app.com/cajero/${storeId}` : ''
+
+  async function savePin() {
+    if (!storeId) return
+    setPinSaving(true)
+    const newCs = { ...checkoutSettings, cajeroPIN: pinInput.trim() }
+    await supabase.from('stores').update({ checkout_settings: newCs }).eq('id', storeId)
+    setCheckoutSettings(newCs)
+    setPinSaving(false)
+    showToast(pinInput.trim() ? 'PIN guardado' : 'PIN eliminado')
+  }
 
   function copyCajeroLink() {
     if (!cajeroUrl) return
@@ -209,6 +228,50 @@ export default function CajaPage() {
               </svg>
               Abrir
             </a>
+          </div>
+        </div>
+      )}
+
+      {/* ── PIN DE ACCESO ── */}
+      {storeId && (
+        <div style={{
+          margin: '10px 14px 0',
+          background: 'white',
+          border: '1.5px solid #E2E8F0',
+          borderRadius: 14,
+          padding: '14px 16px',
+        }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+            PIN de acceso a caja
+          </div>
+          <div style={{ fontSize: 13, color: '#64748B', marginBottom: 10 }}>
+            Protege la app de cajero con un PIN numerico. Dejalo en blanco para acceso sin PIN.
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              type="password"
+              inputMode="numeric"
+              placeholder="Sin PIN (acceso libre)"
+              value={pinInput}
+              onChange={e => setPinInput(e.target.value)}
+              style={{
+                flex: 1, border: '1.5px solid #E2E8F0', borderRadius: 8,
+                padding: '8px 12px', fontSize: 14, outline: 'none',
+                fontFamily: 'inherit', color: '#0F172A', background: '#F8FAFC',
+              }}
+            />
+            <button
+              onClick={savePin}
+              disabled={pinSaving}
+              style={{
+                flexShrink: 0, background: '#7C3AED', color: 'white',
+                border: 'none', borderRadius: 8, padding: '8px 16px',
+                fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                fontFamily: 'inherit', opacity: pinSaving ? 0.6 : 1,
+              }}
+            >
+              {pinSaving ? 'Guardando...' : 'Guardar'}
+            </button>
           </div>
         </div>
       )}

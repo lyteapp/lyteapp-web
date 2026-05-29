@@ -288,6 +288,31 @@
 .cj-card-img-wrap:hover .cj-card-img-overlay,
 .cj-card-img-wrap:active .cj-card-img-overlay { opacity: 1; }
 
+/* Waiting placeholder */
+.cj-card-waiting {
+  padding: 20px 16px;
+  background: #FAFAF7;
+  border-bottom: 1px solid #F1F5F9;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #94A3B8;
+  font-weight: 500;
+}
+.cj-waiting-pulse {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #7C3AED;
+  flex-shrink: 0;
+  animation: cjPulse 1.4s ease-in-out infinite;
+}
+@keyframes cjPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.8); }
+}
+
 /* Body */
 .cj-card-body {
   padding: 14px 14px 0;

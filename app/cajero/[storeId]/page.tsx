@@ -6,7 +6,7 @@ import './cajero.css'
 
 type PaymentStatus = 'pending' | 'approved' | 'rejected'
 type Tab = 'comprobantes' | 'cierre'
-type ProofFilter = 'pending' | 'approved' | 'rejected' | 'all'
+type ProofFilter = 'new' | 'waiting' | 'approved' | 'rejected' | 'all'
 
 type Order = {
   id: string
@@ -84,7 +84,7 @@ export default function CajeroPage() {
   const [orders, setOrders]           = useState<Order[]>([])
   const [bcvRate, setBcvRate]         = useState<number | null>(null)
   const [tab, setTab]                 = useState<Tab>('comprobantes')
-  const [proofFilter, setProofFilter] = useState<ProofFilter>('pending')
+  const [proofFilter, setProofFilter] = useState<ProofFilter>('new')
   const [lightbox, setLightbox]       = useState<string | null>(null)
   const [verifying, setVerifying]     = useState<string | null>(null)
   const [toast, setToast]             = useState<string | null>(null)
@@ -115,14 +115,14 @@ export default function CajeroPage() {
     setOrders(incoming)
     setLastUpdate(new Date())
 
-    // Detect new pending proofs since last poll
-    const currentPending = new Set(incoming.filter(o => o.payment_proof_url && o.payment_status === 'pending').map(o => o.id))
-    const newOnes = [...currentPending].filter(id => !prevPendingRef.current.has(id))
+    // Detect new orders since last poll
+    const currentIds = new Set(incoming.filter(o => o.status !== 'cancelled').map(o => o.id))
+    const newOnes = [...currentIds].filter(id => !prevPendingRef.current.has(id))
     if (newOnes.length > 0 && prevPendingRef.current.size > 0) {
       setNewCount(n => n + newOnes.length)
       setTimeout(() => setNewCount(0), 4000)
     }
-    prevPendingRef.current = currentPending
+    prevPendingRef.current = currentIds
 
     return { ok: true }
   }, [storeId])
@@ -244,17 +244,19 @@ export default function CajeroPage() {
   )
 
   // ── MAIN APP ──
-  const todayOrders = orders.filter(o => isToday(o.created_at))
-  const allProofs   = orders.filter(o => o.payment_proof_url)
-  const todayProofs = allProofs.filter(o => isToday(o.created_at))
-  const pending     = todayProofs.filter(o => o.payment_status === 'pending')
+  const todayOrders   = orders.filter(o => isToday(o.created_at) && o.status !== 'cancelled')
+  const allActive     = orders.filter(o => o.status !== 'cancelled')
+  const todayProofs   = todayOrders.filter(o => o.payment_proof_url)
+  // "new": today's orders with no approved payment yet (includes no-proof and pending-proof)
+  const newOrders     = todayOrders.filter(o => o.payment_status !== 'approved' && o.payment_status !== 'rejected')
+  const waitingProof  = todayOrders.filter(o => o.payment_proof_url && o.payment_status === 'pending')
 
-  const filteredProofs = (() => {
-    const base = proofFilter === 'all' ? allProofs : todayProofs
-    if (proofFilter === 'pending')  return base.filter(o => o.payment_status === 'pending')
-    if (proofFilter === 'approved') return base.filter(o => o.payment_status === 'approved')
-    if (proofFilter === 'rejected') return base.filter(o => o.payment_status === 'rejected')
-    return base
+  const filteredOrders = (() => {
+    if (proofFilter === 'new')      return newOrders
+    if (proofFilter === 'waiting')  return waitingProof
+    if (proofFilter === 'approved') return todayOrders.filter(o => o.payment_status === 'approved')
+    if (proofFilter === 'rejected') return todayOrders.filter(o => o.payment_status === 'rejected')
+    return allActive  // historial
   })()
 
   const methodTotals = (() => {
@@ -292,7 +294,7 @@ export default function CajeroPage() {
             <div className="cj-header-store">{cajeraName || 'Sin identificar'}</div>
           </div>
           <div className="cj-header-right">
-            {pending.length > 0 && <div className="cj-pending-badge">{pending.length}</div>}
+            {newOrders.length > 0 && <div className="cj-pending-badge">{newOrders.length}</div>}
             <div className="cj-update-time">
               {lastUpdate.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
             </div>
@@ -309,7 +311,7 @@ export default function CajeroPage() {
       <nav className="cj-tabs">
         <button className={`cj-tab${tab === 'comprobantes' ? ' active' : ''}`} onClick={() => setTab('comprobantes')}>
           Comprobantes
-          {pending.length > 0 && <span className="cj-tab-dot" />}
+          {newOrders.length > 0 && <span className="cj-tab-dot" />}
         </button>
         <button className={`cj-tab${tab === 'cierre' ? ' active' : ''}`} onClick={() => setTab('cierre')}>
           Cierre del dia
@@ -333,8 +335,12 @@ export default function CajeroPage() {
           {/* KPIs */}
           <div className="cj-kpi-bar">
             <div className="cj-kpi">
-              <div className="cj-kpi-num" style={{ color: pending.length > 0 ? '#D97706' : '#0F172A' }}>{pending.length}</div>
-              <div className="cj-kpi-label">Pendientes</div>
+              <div className="cj-kpi-num" style={{ color: newOrders.length > 0 ? '#D97706' : '#0F172A' }}>{newOrders.length}</div>
+              <div className="cj-kpi-label">Activos hoy</div>
+            </div>
+            <div className="cj-kpi">
+              <div className="cj-kpi-num" style={{ color: waitingProof.length > 0 ? '#7C3AED' : '#0F172A' }}>{waitingProof.length}</div>
+              <div className="cj-kpi-label">Por verificar</div>
             </div>
             <div className="cj-kpi">
               <div className="cj-kpi-num">{todayProofs.filter(o => o.payment_status === 'approved').length}</div>
@@ -344,78 +350,76 @@ export default function CajeroPage() {
               <div className="cj-kpi-num">${approvedTotal.toFixed(2)}</div>
               <div className="cj-kpi-label">Monto aprobado</div>
             </div>
-            <div className="cj-kpi">
-              <div className="cj-kpi-num">{todayProofs.length}</div>
-              <div className="cj-kpi-label">Hoy</div>
-            </div>
           </div>
 
           {/* Filters */}
           <div className="cj-filter-bar">
-            <button className={`cj-filter-pill${proofFilter === 'pending'  ? ' active' : ''}`} onClick={() => setProofFilter('pending')}>
-              Pendientes · {pending.length}
+            <button className={`cj-filter-pill${proofFilter === 'new'      ? ' active' : ''}`} onClick={() => setProofFilter('new')}>
+              Activos · {newOrders.length}
+            </button>
+            <button className={`cj-filter-pill${proofFilter === 'waiting'  ? ' active' : ''}`} onClick={() => setProofFilter('waiting')}>
+              Por verificar · {waitingProof.length}
             </button>
             <button className={`cj-filter-pill${proofFilter === 'approved' ? ' active' : ''}`} onClick={() => setProofFilter('approved')}>
-              Aprobados · {todayProofs.filter(o => o.payment_status === 'approved').length}
+              Aprobados · {todayOrders.filter(o => o.payment_status === 'approved').length}
             </button>
             <button className={`cj-filter-pill${proofFilter === 'rejected' ? ' active' : ''}`} onClick={() => setProofFilter('rejected')}>
-              Rechazados · {todayProofs.filter(o => o.payment_status === 'rejected').length}
+              Rechazados · {todayOrders.filter(o => o.payment_status === 'rejected').length}
             </button>
-            <button className={`cj-filter-pill${proofFilter === 'all' ? ' active' : ''}`} onClick={() => setProofFilter('all')}>
-              Historial · {allProofs.length}
+            <button className={`cj-filter-pill${proofFilter === 'all'      ? ' active' : ''}`} onClick={() => setProofFilter('all')}>
+              Historial · {allActive.length}
             </button>
           </div>
 
           {/* Cards */}
-          {filteredProofs.length === 0 ? (
+          {filteredOrders.length === 0 ? (
             <div className="cj-empty">
               <svg viewBox="0 0 48 48" fill="none" stroke="#CBD5E1" strokeWidth="1.5" width="44" height="44">
                 <rect x="6" y="10" width="36" height="28" rx="3"/>
                 <path strokeLinecap="round" d="M14 20h20M14 26h12"/>
               </svg>
-              <p>{proofFilter === 'pending' ? 'Sin comprobantes pendientes' : 'Sin registros'}</p>
+              <p>{proofFilter === 'new' ? 'Sin pedidos activos' : 'Sin registros'}</p>
             </div>
           ) : (
             <div className="cj-proof-list">
-              {filteredProofs.map(order => {
+              {filteredOrders.map(order => {
                 const info       = getCurrencyInfo(order.payment_method)
+                const hasProof   = Boolean(order.payment_proof_url)
                 const isPending  = order.payment_status === 'pending'
                 const isApproved = order.payment_status === 'approved'
                 const isVES      = info.currency === 'VES'
                 const amount     = Number(order.total)
-                // For VES methods, total is assumed to be in USD and we show Bs equivalent
-                // For USD/USDT methods, just show the dollar amount
                 return (
                   <div key={order.id} className={`cj-card${isApproved ? ' approved' : order.payment_status === 'rejected' ? ' rejected' : ''}`}>
 
                     {/* Status stripe */}
-                    {!isPending && (
+                    {!isPending && order.payment_status && (
                       <div className={`cj-card-stripe ${order.payment_status}`}>
                         {isApproved ? 'Aprobado' : 'Rechazado'}
                       </div>
                     )}
 
-                    {/* Proof image — full width, tappable */}
-                    <div className="cj-card-img-wrap" onClick={() => setLightbox(order.payment_proof_url!)}>
-                      <img
-                        src={order.payment_proof_url!}
-                        alt="Comprobante"
-                        className="cj-card-img"
-                        draggable={false}
-                      />
-                      <div className="cj-card-img-overlay">
-                        <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
-                          <path d="M5 8a1 1 0 011-1h1V6a1 1 0 012 0v1h1a1 1 0 110 2H9v1a1 1 0 11-2 0V9H6a1 1 0 01-1-1z"/>
-                          <path fillRule="evenodd" d="M2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8zm6-4a4 4 0 100 8 4 4 0 000-8z" clipRule="evenodd"/>
-                        </svg>
-                        Ampliar
+                    {/* Proof image or waiting placeholder */}
+                    {hasProof ? (
+                      <div className="cj-card-img-wrap" onClick={() => setLightbox(order.payment_proof_url!)}>
+                        <img src={order.payment_proof_url!} alt="Comprobante" className="cj-card-img" draggable={false} />
+                        <div className="cj-card-img-overlay">
+                          <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
+                            <path d="M5 8a1 1 0 011-1h1V6a1 1 0 012 0v1h1a1 1 0 110 2H9v1a1 1 0 11-2 0V9H6a1 1 0 01-1-1z"/>
+                            <path fillRule="evenodd" d="M2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8zm6-4a4 4 0 100 8 4 4 0 000-8z" clipRule="evenodd"/>
+                          </svg>
+                          Ampliar
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="cj-card-waiting">
+                        <div className="cj-waiting-pulse" />
+                        <span>Esperando comprobante de pago...</span>
+                      </div>
+                    )}
 
                     {/* Details */}
                     <div className="cj-card-body">
-
-                      {/* Customer */}
                       <div className="cj-card-customer">
                         <div className="cj-card-name">{order.customer_name}</div>
                         <div className="cj-card-phone">
@@ -426,7 +430,6 @@ export default function CajeroPage() {
                         </div>
                       </div>
 
-                      {/* Method + delivery */}
                       <div className="cj-card-meta">
                         <span className="cj-method-tag">{info.label}</span>
                         {order.delivery_type && (
@@ -437,23 +440,17 @@ export default function CajeroPage() {
                         <span className="cj-card-time">{fmtDate(order.created_at)}</span>
                       </div>
 
-                      {/* Amount */}
                       <div className="cj-card-amounts">
-                        <div className="cj-card-amount-main">
-                          {info.symbol}{amount.toFixed(2)}
-                        </div>
+                        <div className="cj-card-amount-main">{info.symbol}{amount.toFixed(2)}</div>
                         {bcvRate && !isVES && (
-                          <div className="cj-card-amount-bs">
-                            Bs {fmtBs(amount, bcvRate)}
-                          </div>
+                          <div className="cj-card-amount-bs">Bs {fmtBs(amount, bcvRate)}</div>
                         )}
                       </div>
-
                     </div>
 
                     {/* Actions */}
                     <div className="cj-card-actions">
-                      {isPending ? (
+                      {hasProof && isPending ? (
                         <>
                           <button className="cj-btn-approve" disabled={verifying === order.id} onClick={() => setPaymentStatus(order.id, 'approved')}>
                             {verifying === order.id ? '...' : 'Aprobar pago'}
@@ -462,6 +459,8 @@ export default function CajeroPage() {
                             Rechazar
                           </button>
                         </>
+                      ) : !hasProof ? (
+                        <span style={{ fontSize: 12, color: '#94A3B8' }}>Sin acciones — esperando comprobante</span>
                       ) : (
                         <>
                           <span className={`cj-status-badge ${order.payment_status}`}>
@@ -509,8 +508,8 @@ export default function CajeroPage() {
               <div className="cj-stat-lbl">Verificados</div>
             </div>
             <div className="cj-stat">
-              <div className="cj-stat-num">{pending.length}</div>
-              <div className="cj-stat-lbl">Pendientes</div>
+              <div className="cj-stat-num">{waitingProof.length}</div>
+              <div className="cj-stat-lbl">Por verificar</div>
             </div>
           </div>
           {methodTotals.length > 0 && (

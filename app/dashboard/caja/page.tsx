@@ -38,18 +38,18 @@ function getCurrencyInfo(method: string | null) {
   return METHOD_CURRENCY[method.toLowerCase().trim()] ?? { label: method, currency: 'USD', symbol: '$' }
 }
 
-function isSameDay(iso: string, ref: Date) {
-  const d = new Date(iso)
-  return d.getFullYear() === ref.getFullYear() && d.getMonth() === ref.getMonth() && d.getDate() === ref.getDate()
-}
-
 function startOfDay(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate())
 }
 
-function CalendarPicker({ value, onChange }: { value: Date; onChange: (d: Date) => void }) {
-  const [viewYear, setViewYear]   = useState(value.getFullYear())
-  const [viewMonth, setViewMonth] = useState(value.getMonth())
+function CalendarPicker({ from, to, onChange }: {
+  from: Date
+  to: Date
+  onChange: (from: Date, to: Date) => void
+}) {
+  const [viewYear, setViewYear]   = useState(from.getFullYear())
+  const [viewMonth, setViewMonth] = useState(from.getMonth())
+  const [picking, setPicking]     = useState<Date | null>(null)
   const today = startOfDay(new Date())
 
   function prevMonth() {
@@ -57,21 +57,35 @@ function CalendarPicker({ value, onChange }: { value: Date; onChange: (d: Date) 
     else setViewMonth(m => m - 1)
   }
   function nextMonth() {
-    const nextIsAfterToday = viewYear > today.getFullYear() || (viewYear === today.getFullYear() && viewMonth >= today.getMonth())
-    if (nextIsAfterToday) return
+    const canGo = viewYear < today.getFullYear() || (viewYear === today.getFullYear() && viewMonth < today.getMonth())
+    if (!canGo) return
     if (viewMonth === 11) { setViewYear(y => y + 1); setViewMonth(0) }
     else setViewMonth(m => m + 1)
   }
 
-  const firstDow  = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7 // Mon=0
+  function handleDay(date: Date) {
+    if (!picking) {
+      setPicking(date)
+    } else {
+      const [a, b] = date.getTime() < picking.getTime() ? [date, picking] : [picking, date]
+      onChange(a, b)
+      setPicking(null)
+    }
+  }
+
+  const firstDow  = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7
   const daysInMo  = new Date(viewYear, viewMonth + 1, 0).getDate()
   const cells: (number | null)[] = [...Array(firstDow).fill(null), ...Array.from({ length: daysInMo }, (_, i) => i + 1)]
-
   const monthLabel = new Date(viewYear, viewMonth, 1).toLocaleDateString('es', { month: 'long', year: 'numeric' })
   const canGoNext  = viewYear < today.getFullYear() || (viewYear === today.getFullYear() && viewMonth < today.getMonth())
 
   return (
     <div className="cx-calendar">
+      <div className={`cx-cal-hint${picking ? ' cx-cal-hint--picking' : ''}`}>
+        {picking
+          ? `Desde ${picking.toLocaleDateString('es', { day: 'numeric', month: 'long' })} — elige el dia final`
+          : 'Elige el primer dia del rango'}
+      </div>
       <div className="cx-cal-nav">
         <button className="cx-cal-nav-btn" onClick={prevMonth}>‹</button>
         <span className="cx-cal-month">{monthLabel}</span>
@@ -83,17 +97,22 @@ function CalendarPicker({ value, onChange }: { value: Date; onChange: (d: Date) 
       <div className="cx-cal-grid">
         {cells.map((day, i) => {
           if (!day) return <span key={i} />
-          const date    = startOfDay(new Date(viewYear, viewMonth, day))
-          const isFuture   = date > today
-          const isSelected = date.getTime() === startOfDay(value).getTime()
-          const isTodayDay = date.getTime() === today.getTime()
+          const date = startOfDay(new Date(viewYear, viewMonth, day))
+          const isFuture = date > today
+          let cls = 'cx-cal-day'
+          if (picking) {
+            if (date.getTime() === picking.getTime()) cls += ' cx-cal-day--picking'
+            else if (date.getTime() === today.getTime()) cls += ' cx-cal-day--today'
+          } else {
+            const isStart = date.getTime() === from.getTime()
+            const isEnd   = date.getTime() === to.getTime()
+            const inRange = date > from && date < to
+            if (isStart || isEnd)  cls += ' cx-cal-day--sel'
+            else if (inRange)      cls += ' cx-cal-day--in-range'
+            else if (date.getTime() === today.getTime()) cls += ' cx-cal-day--today'
+          }
           return (
-            <button
-              key={i}
-              disabled={isFuture}
-              onClick={() => onChange(date)}
-              className={`cx-cal-day${isSelected ? ' cx-cal-day--sel' : ''}${isTodayDay && !isSelected ? ' cx-cal-day--today' : ''}`}
-            >
+            <button key={i} disabled={isFuture} onClick={() => handleDay(date)} className={cls}>
               {day}
             </button>
           )
@@ -130,7 +149,8 @@ export default function CajaPage() {
   const [orders, setOrders]         = useState<Order[]>([])
   const [bcvRate, setBcvRate]       = useState<number>(0)
   const [lightbox, setLightbox]     = useState<string | null>(null)
-  const [selectedDate, setSelectedDate] = useState<Date>(() => startOfDay(new Date()))
+  const [dateFrom, setDateFrom]         = useState<Date>(() => startOfDay(new Date()))
+  const [dateTo, setDateTo]             = useState<Date>(() => startOfDay(new Date()))
   const [showCalendar, setShowCalendar] = useState(false)
 
   function showToast(msg: string) {
@@ -221,19 +241,25 @@ export default function CajaPage() {
 
   // Filtered orders
   const today = startOfDay(new Date())
-  const isSelectedToday = selectedDate.getTime() === today.getTime()
-  const todayOrders = orders.filter(o => o.status !== 'cancelled' && isSameDay(o.created_at, selectedDate))
-  const dateLabel = isSelectedToday
+  const filteredOrders = orders.filter(o => {
+    if (o.status === 'cancelled') return false
+    const d = startOfDay(new Date(o.created_at))
+    return d >= dateFrom && d <= dateTo
+  })
+  const isSingleDay = dateFrom.getTime() === dateTo.getTime()
+  const dateLabel = isSingleDay && dateFrom.getTime() === today.getTime()
     ? 'Hoy'
-    : selectedDate.toLocaleDateString('es', { day: 'numeric', month: 'long' })
+    : isSingleDay
+    ? dateFrom.toLocaleDateString('es', { day: 'numeric', month: 'long' })
+    : `${dateFrom.toLocaleDateString('es', { day: 'numeric', month: 'short' })} — ${dateTo.toLocaleDateString('es', { day: 'numeric', month: 'short' })}`
 
   // Currency totals
-  const totalVES  = todayOrders.filter(o => getCurrencyInfo(o.payment_method).currency === 'VES').reduce((s, o) => s + Number(o.total), 0)
-  const totalUSD  = todayOrders.filter(o => getCurrencyInfo(o.payment_method).currency === 'USD').reduce((s, o) => s + Number(o.total), 0)
-  const totalUSDT = todayOrders.filter(o => getCurrencyInfo(o.payment_method).currency === 'USDT').reduce((s, o) => s + Number(o.total), 0)
-  const showVES   = todayOrders.some(o => getCurrencyInfo(o.payment_method).currency === 'VES')
-  const showUSD   = todayOrders.some(o => getCurrencyInfo(o.payment_method).currency === 'USD')
-  const showUSDT  = todayOrders.some(o => getCurrencyInfo(o.payment_method).currency === 'USDT')
+  const totalVES  = filteredOrders.filter(o => getCurrencyInfo(o.payment_method).currency === 'VES').reduce((s, o) => s + Number(o.total), 0)
+  const totalUSD  = filteredOrders.filter(o => getCurrencyInfo(o.payment_method).currency === 'USD').reduce((s, o) => s + Number(o.total), 0)
+  const totalUSDT = filteredOrders.filter(o => getCurrencyInfo(o.payment_method).currency === 'USDT').reduce((s, o) => s + Number(o.total), 0)
+  const showVES   = filteredOrders.some(o => getCurrencyInfo(o.payment_method).currency === 'VES')
+  const showUSD   = filteredOrders.some(o => getCurrencyInfo(o.payment_method).currency === 'USD')
+  const showUSDT  = filteredOrders.some(o => getCurrencyInfo(o.payment_method).currency === 'USDT')
 
   if (loading) return <div className="cx-spinner-wrap"><div className="cx-spinner" /></div>
 
@@ -247,7 +273,7 @@ export default function CajaPage() {
             <div>
               <div className="cx-breakdown-title">Pagos · {dateLabel}</div>
               <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 2 }}>
-                {todayOrders.length} pedido{todayOrders.length !== 1 ? 's' : ''}
+                {filteredOrders.length} pedido{filteredOrders.length !== 1 ? 's' : ''}
               </div>
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
@@ -275,13 +301,14 @@ export default function CajaPage() {
 
           {showCalendar && (
             <CalendarPicker
-              value={selectedDate}
-              onChange={d => { setSelectedDate(d); setShowCalendar(false) }}
+              from={dateFrom}
+              to={dateTo}
+              onChange={(a, b) => { setDateFrom(a); setDateTo(b); setShowCalendar(false) }}
             />
           )}
 
           {/* Currency totals */}
-          {todayOrders.length > 0 && (
+          {filteredOrders.length > 0 && (
             <div className="cx-day-totals">
               {showVES && (
                 <div className="cx-day-total-card">
@@ -310,13 +337,13 @@ export default function CajaPage() {
           )}
 
           {/* Order list */}
-          {todayOrders.length === 0 ? (
+          {filteredOrders.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '28px 0', color: '#94A3B8', fontSize: 13 }}>
               Sin pedidos hoy
             </div>
           ) : (
             <div className="cx-pay-list">
-              {todayOrders.map((order, idx) => {
+              {filteredOrders.map((order, idx) => {
                 const info    = getCurrencyInfo(order.payment_method)
                 const amount  = Number(order.total)
                 const isVES   = info.currency === 'VES'
@@ -325,7 +352,7 @@ export default function CajaPage() {
                     ? `Bs ${(amount * bcvRate).toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                     : 'Bs ...'
                   : `${info.symbol}${amount.toFixed(2)}`
-                const orderNum = todayOrders.length - idx
+                const orderNum = filteredOrders.length - idx
                 const hasProof = !!order.payment_proof_url
 
                 return (

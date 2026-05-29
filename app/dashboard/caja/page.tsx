@@ -12,6 +12,7 @@ type Order = {
   customer_phone: string
   payment_method: string | null
   payment_proof_url: string | null
+  payment_verified_by: string | null
   total: number
   status: string
   created_at: string
@@ -163,7 +164,7 @@ export default function CajaPage() {
     const since = new Date(); since.setDate(since.getDate() - 90)
     const { data } = await supabase
       .from('orders')
-      .select('id,customer_name,customer_phone,payment_method,payment_proof_url,total,status,created_at')
+      .select('id,customer_name,customer_phone,payment_method,payment_proof_url,payment_verified_by,total,status,created_at')
       .eq('store_id', sid)
       .gte('created_at', since.toISOString())
       .order('created_at', { ascending: false })
@@ -354,6 +355,9 @@ export default function CajaPage() {
                     <div className="cx-pay-info">
                       <div className="cx-pay-name">{order.customer_name}</div>
                       <span className="cx-method-chip">{info.label}</span>
+                      {order.payment_verified_by && (
+                        <span className="cx-pay-verified">Verificado por {order.payment_verified_by}</span>
+                      )}
                     </div>
                     <div className="cx-pay-right">
                       <div className="cx-pay-amount">{displayAmount}</div>

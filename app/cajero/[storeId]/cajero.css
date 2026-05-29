@@ -148,6 +148,20 @@
   white-space: nowrap;
   align-self: flex-start;
 }
+.cj-wa-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #25D366;
+  color: white;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+.cj-wa-btn:active { opacity: 0.75; }
+
 .cj-card-amount-main {
   font-size: 24px;
   font-weight: 800;

@@ -190,6 +190,10 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const currencySymbol = storeCurrency === 'EUR' ? '€' : '$'
 
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [view])
+
+  useEffect(() => {
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !(window.navigator as Navigator & { standalone?: boolean }).standalone
     setIsIos(ios)
     if (window.matchMedia('(display-mode: standalone)').matches) { setInstalled(true); return }

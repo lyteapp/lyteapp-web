@@ -38,9 +38,69 @@ function getCurrencyInfo(method: string | null) {
   return METHOD_CURRENCY[method.toLowerCase().trim()] ?? { label: method, currency: 'USD', symbol: '$' }
 }
 
-function isToday(iso: string) {
-  const d = new Date(iso), n = new Date()
-  return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate()
+function isSameDay(iso: string, ref: Date) {
+  const d = new Date(iso)
+  return d.getFullYear() === ref.getFullYear() && d.getMonth() === ref.getMonth() && d.getDate() === ref.getDate()
+}
+
+function startOfDay(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate())
+}
+
+function CalendarPicker({ value, onChange }: { value: Date; onChange: (d: Date) => void }) {
+  const [viewYear, setViewYear]   = useState(value.getFullYear())
+  const [viewMonth, setViewMonth] = useState(value.getMonth())
+  const today = startOfDay(new Date())
+
+  function prevMonth() {
+    if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11) }
+    else setViewMonth(m => m - 1)
+  }
+  function nextMonth() {
+    const nextIsAfterToday = viewYear > today.getFullYear() || (viewYear === today.getFullYear() && viewMonth >= today.getMonth())
+    if (nextIsAfterToday) return
+    if (viewMonth === 11) { setViewYear(y => y + 1); setViewMonth(0) }
+    else setViewMonth(m => m + 1)
+  }
+
+  const firstDow  = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7 // Mon=0
+  const daysInMo  = new Date(viewYear, viewMonth + 1, 0).getDate()
+  const cells: (number | null)[] = [...Array(firstDow).fill(null), ...Array.from({ length: daysInMo }, (_, i) => i + 1)]
+
+  const monthLabel = new Date(viewYear, viewMonth, 1).toLocaleDateString('es', { month: 'long', year: 'numeric' })
+  const canGoNext  = viewYear < today.getFullYear() || (viewYear === today.getFullYear() && viewMonth < today.getMonth())
+
+  return (
+    <div className="cx-calendar">
+      <div className="cx-cal-nav">
+        <button className="cx-cal-nav-btn" onClick={prevMonth}>‹</button>
+        <span className="cx-cal-month">{monthLabel}</span>
+        <button className="cx-cal-nav-btn" onClick={nextMonth} disabled={!canGoNext} style={{ opacity: canGoNext ? 1 : 0.3 }}>›</button>
+      </div>
+      <div className="cx-cal-dow">
+        {['L','M','M','J','V','S','D'].map((d, i) => <span key={i}>{d}</span>)}
+      </div>
+      <div className="cx-cal-grid">
+        {cells.map((day, i) => {
+          if (!day) return <span key={i} />
+          const date    = startOfDay(new Date(viewYear, viewMonth, day))
+          const isFuture   = date > today
+          const isSelected = date.getTime() === startOfDay(value).getTime()
+          const isTodayDay = date.getTime() === today.getTime()
+          return (
+            <button
+              key={i}
+              disabled={isFuture}
+              onClick={() => onChange(date)}
+              className={`cx-cal-day${isSelected ? ' cx-cal-day--sel' : ''}${isTodayDay && !isSelected ? ' cx-cal-day--today' : ''}`}
+            >
+              {day}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
 }
 
 function whatsappUrl(phone: string) {
@@ -70,6 +130,8 @@ export default function CajaPage() {
   const [orders, setOrders]         = useState<Order[]>([])
   const [bcvRate, setBcvRate]       = useState<number>(0)
   const [lightbox, setLightbox]     = useState<string | null>(null)
+  const [selectedDate, setSelectedDate] = useState<Date>(() => startOfDay(new Date()))
+  const [showCalendar, setShowCalendar] = useState(false)
 
   function showToast(msg: string) {
     setToast(msg)
@@ -78,12 +140,14 @@ export default function CajaPage() {
   }
 
   const fetchOrders = useCallback(async (sid: string) => {
+    const since = new Date(); since.setDate(since.getDate() - 90)
     const { data } = await supabase
       .from('orders')
       .select('id,customer_name,customer_phone,payment_method,payment_proof_url,total,status,created_at')
       .eq('store_id', sid)
+      .gte('created_at', since.toISOString())
       .order('created_at', { ascending: false })
-      .limit(500)
+      .limit(5000)
     setOrders(data ?? [])
   }, [])
 
@@ -155,8 +219,13 @@ export default function CajaPage() {
 
   const cajeroUrl = storeId ? `https://lyte-app.com/cajero/${storeId}` : ''
 
-  // Today's orders
-  const todayOrders = orders.filter(o => o.status !== 'cancelled' && isToday(o.created_at))
+  // Filtered orders
+  const today = startOfDay(new Date())
+  const isSelectedToday = selectedDate.getTime() === today.getTime()
+  const todayOrders = orders.filter(o => o.status !== 'cancelled' && isSameDay(o.created_at, selectedDate))
+  const dateLabel = isSelectedToday
+    ? 'Hoy'
+    : selectedDate.toLocaleDateString('es', { day: 'numeric', month: 'long' })
 
   // Currency totals
   const totalVES  = todayOrders.filter(o => getCurrencyInfo(o.payment_method).currency === 'VES').reduce((s, o) => s + Number(o.total), 0)
@@ -174,23 +243,42 @@ export default function CajaPage() {
 
         {/* ── Pagos de hoy ── */}
         <div className="cx-breakdown-section">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div className="cx-breakdown-title">Pagos de hoy</div>
-            <div style={{ fontSize: 12, color: '#94A3B8' }}>
-              {todayOrders.length} pedido{todayOrders.length !== 1 ? 's' : ''}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <div>
+              <div className="cx-breakdown-title">Pagos · {dateLabel}</div>
+              <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 2 }}>
+                {todayOrders.length} pedido{todayOrders.length !== 1 ? 's' : ''}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button
+                onClick={() => setShowCalendar(v => !v)}
+                className={`cx-settings-btn${showCalendar ? ' cx-settings-btn--active' : ''}`}
+                title="Filtrar por fecha"
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15">
+                  <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd"/>
+                </svg>
+                {dateLabel}
+              </button>
+              <button
+                onClick={() => setShowSettings(true)}
+                className="cx-settings-btn"
+                title="Ajustes de caja"
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15">
+                  <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd"/>
+                </svg>
+              </button>
             </div>
           </div>
 
-          <button
-            onClick={() => setShowSettings(true)}
-            className="cx-settings-btn"
-            title="Ajustes de caja"
-          >
-            <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
-              <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd"/>
-            </svg>
-            Ajustes
-          </button>
+          {showCalendar && (
+            <CalendarPicker
+              value={selectedDate}
+              onChange={d => { setSelectedDate(d); setShowCalendar(false) }}
+            />
+          )}
 
           {/* Currency totals */}
           {todayOrders.length > 0 && (

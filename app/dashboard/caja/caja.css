@@ -299,6 +299,83 @@
   align-self: flex-end;
 }
 .cx-settings-btn:hover { background: #E2E8F0; color: var(--cx-ink); }
+.cx-settings-btn--active { background: #EDE9FE; color: var(--cx-violet); border-color: #C4B5FD; }
+.cx-settings-btn--active:hover { background: #DDD6FE; }
+
+/* ========== CALENDAR ========== */
+.cx-calendar {
+  background: #F8FAFC;
+  border: 1px solid var(--cx-line);
+  border-radius: 12px;
+  padding: 14px;
+}
+.cx-cal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.cx-cal-nav-btn {
+  background: white;
+  border: 1px solid var(--cx-line);
+  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  cursor: pointer;
+  color: var(--cx-ink-soft);
+  line-height: 1;
+}
+.cx-cal-nav-btn:hover:not(:disabled) { background: #E2E8F0; }
+.cx-cal-month {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cx-ink);
+  text-transform: capitalize;
+}
+.cx-cal-dow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 4px;
+}
+.cx-cal-dow span {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--cx-ink-muted);
+  padding: 4px 0;
+}
+.cx-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.cx-cal-day {
+  aspect-ratio: 1;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--cx-ink-soft);
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cx-cal-day:hover:not(:disabled) { background: #E2E8F0; color: var(--cx-ink); }
+.cx-cal-day:disabled { color: #CBD5E1; cursor: default; }
+.cx-cal-day--today { color: var(--cx-violet); font-weight: 700; }
+.cx-cal-day--sel {
+  background: var(--cx-violet);
+  color: white;
+  font-weight: 700;
+}
+.cx-cal-day--sel:hover { background: #6D28D9; }
 
 /* ========== SETTINGS PANEL ========== */
 .cx-settings-panel {

@@ -32,8 +32,8 @@ const METHOD_CURRENCY: Record<string, { label: string; currency: string; symbol:
 }
 
 function getCurrencyInfo(method: string | null) {
-  if (!method) return { label: 'Otro', symbol: '$' }
-  return METHOD_CURRENCY[method.toLowerCase().trim()] ?? { label: method, symbol: '$' }
+  if (!method) return { label: 'Otro', currency: 'USD', symbol: '$' }
+  return METHOD_CURRENCY[method.toLowerCase().trim()] ?? { label: method, currency: 'USD', symbol: '$' }
 }
 
 function isToday(iso: string) {
@@ -60,6 +60,7 @@ export default function CajeroPage() {
   const [cajeraName, setCajeraName] = useState('')
   const [orders, setOrders]         = useState<Order[]>([])
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
+  const [bcvRate, setBcvRate]       = useState<number>(0)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const doFetch = useCallback(async (pin: string): Promise<{ ok: boolean; requiresPin?: boolean; notFound?: boolean; error?: boolean }> => {
@@ -138,6 +139,15 @@ export default function CajeroPage() {
       if (pollRef.current) clearInterval(pollRef.current)
     }
   }, [authState, storeId, doFetch])
+
+  // BCV rate
+  useEffect(() => {
+    if (authState !== 'ok') return
+    fetch('/api/bcv-rate')
+      .then(r => r.json())
+      .then(d => { if (d.rates?.USD > 0) setBcvRate(d.rates.USD) })
+      .catch(() => {})
+  }, [authState])
 
   // Focus PIN input
   useEffect(() => {
@@ -280,6 +290,10 @@ export default function CajeroPage() {
             {todayOrders.map(order => {
               const info   = getCurrencyInfo(order.payment_method)
               const amount = Number(order.total)
+              const isVES  = info.currency === 'VES'
+              const displayAmount = isVES
+                ? bcvRate > 0 ? `Bs ${(amount * bcvRate).toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'Bs ...'
+                : `${info.symbol}${amount.toFixed(2)}`
               return (
                 <div key={order.id} className="cj-card">
                   <div className="cj-card-row">
@@ -287,7 +301,7 @@ export default function CajeroPage() {
                       <div className="cj-card-name">{order.customer_name}</div>
                       <span className="cj-method-tag">{info.label}</span>
                     </div>
-                    <div className="cj-card-amount-main">{info.symbol}{amount.toFixed(2)}</div>
+                    <div className="cj-card-amount-main">{displayAmount}</div>
                   </div>
                 </div>
               )

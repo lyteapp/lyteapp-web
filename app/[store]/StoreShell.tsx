@@ -100,6 +100,7 @@ type Store = {
     allowNotes?: boolean; minOrder?: string
     deliveryEnabled?: boolean; deliveryFee?: string
     deliveryTypes?: { delivery?: boolean; pickup?: boolean }
+    requirePaymentMethod?: boolean; requirePaymentProof?: boolean
   } | null
 }
 
@@ -256,7 +257,9 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const cartTotal  = cartItems.reduce((s, i) => s + (i.price + i.extraPrice) * i.quantity, 0)
 
   // ── Checkout settings ──
-  const cs              = store.checkout_settings ?? {}
+  const cs                   = store.checkout_settings ?? {}
+  const requirePaymentMethod = cs.requirePaymentMethod ?? false
+  const requirePaymentProof  = cs.requirePaymentProof  ?? false
   const dtOn            = cs.deliveryTypes?.delivery !== false  // domicilio habilitado (default true)
   const puOn            = cs.deliveryTypes?.pickup === true     // retiro habilitado (default false)
   const bothTypes       = dtOn && puOn
@@ -431,6 +434,14 @@ export default function StoreShell({ store, products, categories = [] }: { store
     if (!customerName.trim() || !customerPhone.trim()) { setError(t('store.error.required')); return }
     if (deliveryType === 'delivery' && !customerLat && !customerAddress.trim()) {
       setError('Ingresa tu direccion o comparte tu ubicacion GPS para continuar')
+      return
+    }
+    if (requirePaymentMethod && !selectedPayment && !paymentFreeText.trim()) {
+      setError('Debes seleccionar un metodo de pago para continuar')
+      return
+    }
+    if (requirePaymentProof && (selectedPayment || paymentFreeText.trim()) && !paymentProofFile) {
+      setError('Debes subir el comprobante de pago para continuar')
       return
     }
     setSubmitting(true); setError('')
@@ -912,7 +923,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
         </div>
 
         <div className="sf-co-section">
-          <h3 className="sf-co-section-title">{t('store.paymentMethod')}</h3>
+          <h3 className="sf-co-section-title">{t('store.paymentMethod')}{requirePaymentMethod && <span className="sf-required"> *</span>}</h3>
           {enabledMethods.length > 0 ? (
             <div className="sf-payment-list">
               {enabledMethods.map(m => (
@@ -952,7 +963,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
                 </div>
               </div>
               <label className="sf-proof-label" htmlFor="sf-proof-input">
-                Comprobante de pago <span className="sf-optional">(opcional)</span>
+                Comprobante de pago{requirePaymentProof ? <span className="sf-required"> *</span> : <span className="sf-optional"> (opcional)</span>}
               </label>
               <input
                 id="sf-proof-input"

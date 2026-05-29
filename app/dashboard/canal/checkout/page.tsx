@@ -46,12 +46,14 @@ interface CheckoutSettings {
   requireName: boolean; requirePhone: boolean; requireAddress: boolean
   allowNotes: boolean; minOrder: string; deliveryEnabled: boolean; deliveryFee: string
   deliveryTypes: { delivery: boolean; pickup: boolean }
+  requirePaymentMethod: boolean; requirePaymentProof: boolean
 }
 
 const DEFAULTS: CheckoutSettings = {
   requireName: true, requirePhone: true, requireAddress: false,
   allowNotes: true, minOrder: '', deliveryEnabled: false, deliveryFee: '',
   deliveryTypes: { delivery: true, pickup: false },
+  requirePaymentMethod: false, requirePaymentProof: false,
 }
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
@@ -430,6 +432,20 @@ export default function CheckoutPage() {
                     <div className="cn-toggle-hint">Permite que el cliente agregue instrucciones especiales</div>
                   </div>
                   <Toggle checked={settings.allowNotes} onChange={v => setSetting('allowNotes', v)} />
+                </div>
+                <div className="cn-toggle-row">
+                  <div className="cn-toggle-info">
+                    <div className="cn-toggle-label">Metodo de pago obligatorio</div>
+                    <div className="cn-toggle-hint">El cliente debe seleccionar o escribir su forma de pago para confirmar</div>
+                  </div>
+                  <Toggle checked={settings.requirePaymentMethod} onChange={v => setSetting('requirePaymentMethod', v)} />
+                </div>
+                <div className="cn-toggle-row">
+                  <div className="cn-toggle-info">
+                    <div className="cn-toggle-label">Comprobante de pago obligatorio</div>
+                    <div className="cn-toggle-hint">El cliente debe subir una foto del comprobante antes de confirmar</div>
+                  </div>
+                  <Toggle checked={settings.requirePaymentProof} onChange={v => setSetting('requirePaymentProof', v)} />
                 </div>
               </div>
             </div>

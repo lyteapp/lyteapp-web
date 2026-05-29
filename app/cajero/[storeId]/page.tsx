@@ -295,7 +295,7 @@ export default function CajeroPage() {
           </div>
         ) : (
           <div className="cj-proof-list">
-            {todayOrders.map(order => {
+            {todayOrders.map((order, idx) => {
               const info   = getCurrencyInfo(order.payment_method)
               const amount = Number(order.total)
               const isVES  = info.currency === 'VES'
@@ -303,6 +303,7 @@ export default function CajeroPage() {
                 ? bcvRate > 0 ? `Bs ${(amount * bcvRate).toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'Bs ...'
                 : `${info.symbol}${amount.toFixed(2)}`
               const hasProof = !!order.payment_proof_url
+              const orderNum = todayOrders.length - idx
               return (
                 <div
                   key={order.id}
@@ -311,7 +312,10 @@ export default function CajeroPage() {
                 >
                   <div className="cj-card-row">
                     <div className="cj-card-left">
-                      <div className="cj-card-name">{order.customer_name}</div>
+                      <div className="cj-card-name">
+                        <span className="cj-order-num">#{orderNum}</span>
+                        {order.customer_name}
+                      </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span className="cj-method-tag">{info.label}</span>
                         {order.customer_phone && (

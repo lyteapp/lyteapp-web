@@ -62,6 +62,7 @@ export default function CajaPage() {
   const [cajerasSaving, setCajerasSaving] = useState(false)
   const [copied, setCopied]         = useState(false)
   const [showQr, setShowQr]         = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const [toast, setToast]           = useState<string | null>(null)
   const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -180,6 +181,17 @@ export default function CajaPage() {
             </div>
           </div>
 
+          <button
+            onClick={() => setShowSettings(true)}
+            className="cx-settings-btn"
+            title="Ajustes de caja"
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+              <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd"/>
+            </svg>
+            Ajustes
+          </button>
+
           {/* Currency totals */}
           {todayOrders.length > 0 && (
             <div className="cx-day-totals">
@@ -268,81 +280,78 @@ export default function CajaPage() {
           )}
         </div>
 
-        {/* ── Link ── */}
-        <div className="cx-breakdown-section">
-          <div className="cx-breakdown-title">Link de acceso para cajeros</div>
-          <div style={{ fontSize: 13, color: '#64748B' }}>
-            Comparte este link con tus cajeros o escanea el QR desde el dispositivo de caja.
-          </div>
-          <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#475569', fontFamily: 'monospace', wordBreak: 'break-all' }}>
-            {cajeroUrl}
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              onClick={copyCajeroLink}
-              style={{ flex: 1, background: copied ? '#10B981' : '#7C3AED', color: 'white', border: 'none', borderRadius: 8, padding: '9px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'background 0.2s' }}
-            >
-              {copied ? 'Copiado' : 'Copiar link'}
-            </button>
-            <button
-              onClick={() => setShowQr(true)}
-              style={{ background: '#F1F5F9', color: '#0F172A', border: '1px solid #E2E8F0', borderRadius: 8, padding: '9px 12px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center' }}
-            >
-              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
-                <path fillRule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 2V5h1v1H5zM3 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm2 2v-1h1v1H5zM13 3a1 1 0 00-1 1v3a1 1 0 001 1h3a1 1 0 001-1V4a1 1 0 00-1-1h-3zm1 2v1h1V5h-1z" clipRule="evenodd"/>
-                <path d="M11 4a1 1 0 10-2 0v1a1 1 0 002 0V4zM10 7a1 1 0 011 1v1h2a1 1 0 110 2h-3a1 1 0 01-1-1V8a1 1 0 011-1zM16 9a1 1 0 100 2 1 1 0 000-2zM9 13a1 1 0 011-1h1a1 1 0 110 2v2a1 1 0 11-2 0v-3zM15 13a1 1 0 10-2 0v3a1 1 0 102 0v-3zM11 19a1 1 0 110-2h2a1 1 0 110 2h-2z"/>
-              </svg>
-            </button>
-            <a href={cajeroUrl} target="_blank" rel="noopener noreferrer" style={{ background: '#F1F5F9', color: '#0F172A', border: '1px solid #E2E8F0', borderRadius: 8, padding: '9px 12px', fontSize: 13, fontWeight: 500, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5 }}>
-              <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13">
-                <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"/>
-                <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z"/>
-              </svg>
-              Abrir
-            </a>
-          </div>
-        </div>
-
-        {/* ── Cajeras ── */}
-        <div className="cx-breakdown-section">
-          <div className="cx-breakdown-title">Cajeras</div>
-          <div style={{ fontSize: 13, color: '#64748B' }}>
-            Cada cajera tiene su propio PIN. Al ingresar, la app muestra su nombre en el encabezado.
-          </div>
-          {cajeras.length > 0 && (
-            <table className="cx-breakdown-table">
-              <thead><tr><th>Nombre</th><th>PIN</th><th></th></tr></thead>
-              <tbody>
-                {cajeras.map(c => (
-                  <tr key={c.id}>
-                    <td style={{ fontWeight: 500 }}>{c.name}</td>
-                    <td style={{ fontFamily: 'monospace', letterSpacing: '0.1em', color: '#64748B' }}>{'•'.repeat(c.pin.length)}</td>
-                    <td style={{ textAlign: 'right' }}>
-                      <button onClick={() => removeCajera(c.id)} style={{ background: 'none', border: 'none', color: '#DC2626', cursor: 'pointer', fontSize: 12, fontFamily: 'inherit', padding: '2px 6px' }}>
-                        Eliminar
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-            <div style={{ flex: 2, minWidth: 120 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', marginBottom: 5 }}>NOMBRE</div>
-              <input type="text" placeholder="Ej: Maria" value={newName} onChange={e => setNewName(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', border: '1.5px solid #E2E8F0', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'inherit', background: '#F8FAFC' }} />
-            </div>
-            <div style={{ flex: 1, minWidth: 90 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', marginBottom: 5 }}>PIN</div>
-              <input type="password" inputMode="numeric" placeholder="1234" value={newPin} onChange={e => setNewPin(e.target.value)} onKeyDown={e => e.key === 'Enter' && addCajera()} style={{ width: '100%', boxSizing: 'border-box', border: '1.5px solid #E2E8F0', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'inherit', background: '#F8FAFC' }} />
-            </div>
-            <button onClick={addCajera} disabled={cajerasSaving || !newName.trim() || !newPin.trim()} style={{ background: '#7C3AED', color: 'white', border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: cajerasSaving ? 0.6 : 1, flexShrink: 0 }}>
-              Agregar
-            </button>
-          </div>
-        </div>
-
       </div>
+
+      {/* ── SETTINGS MODAL ── */}
+      {showSettings && (
+        <div onClick={() => setShowSettings(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} className="cx-settings-panel">
+            <div className="cx-settings-header">
+              <span className="cx-settings-title">Ajustes de caja</span>
+              <button onClick={() => setShowSettings(false)} className="cx-settings-close">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/></svg>
+              </button>
+            </div>
+
+            <div className="cx-settings-body">
+              {/* Link */}
+              <div className="cx-breakdown-section">
+                <div className="cx-breakdown-title">Link de acceso para cajeros</div>
+                <div style={{ fontSize: 13, color: '#64748B' }}>Comparte este link con tus cajeros o escanea el QR desde el dispositivo de caja.</div>
+                <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#475569', fontFamily: 'monospace', wordBreak: 'break-all' }}>{cajeroUrl}</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={copyCajeroLink} style={{ flex: 1, background: copied ? '#10B981' : '#7C3AED', color: 'white', border: 'none', borderRadius: 8, padding: '9px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'background 0.2s' }}>
+                    {copied ? 'Copiado' : 'Copiar link'}
+                  </button>
+                  <button onClick={() => setShowQr(true)} style={{ background: '#F1F5F9', color: '#0F172A', border: '1px solid #E2E8F0', borderRadius: 8, padding: '9px 12px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center' }}>
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+                      <path fillRule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 2V5h1v1H5zM3 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm2 2v-1h1v1H5zM13 3a1 1 0 00-1 1v3a1 1 0 001 1h3a1 1 0 001-1V4a1 1 0 00-1-1h-3zm1 2v1h1V5h-1z" clipRule="evenodd"/>
+                      <path d="M11 4a1 1 0 10-2 0v1a1 1 0 002 0V4zM10 7a1 1 0 011 1v1h2a1 1 0 110 2h-3a1 1 0 01-1-1V8a1 1 0 011-1zM16 9a1 1 0 100 2 1 1 0 000-2zM9 13a1 1 0 011-1h1a1 1 0 110 2v2a1 1 0 11-2 0v-3zM15 13a1 1 0 10-2 0v3a1 1 0 102 0v-3zM11 19a1 1 0 110-2h2a1 1 0 110 2h-2z"/>
+                    </svg>
+                  </button>
+                  <a href={cajeroUrl} target="_blank" rel="noopener noreferrer" style={{ background: '#F1F5F9', color: '#0F172A', border: '1px solid #E2E8F0', borderRadius: 8, padding: '9px 12px', fontSize: 13, fontWeight: 500, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13"><path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"/><path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z"/></svg>
+                    Abrir
+                  </a>
+                </div>
+              </div>
+
+              {/* Cajeras */}
+              <div className="cx-breakdown-section">
+                <div className="cx-breakdown-title">Cajeras</div>
+                <div style={{ fontSize: 13, color: '#64748B' }}>Cada cajera tiene su propio PIN. Al ingresar, la app muestra su nombre en el encabezado.</div>
+                {cajeras.length > 0 && (
+                  <table className="cx-breakdown-table">
+                    <thead><tr><th>Nombre</th><th>PIN</th><th></th></tr></thead>
+                    <tbody>
+                      {cajeras.map(c => (
+                        <tr key={c.id}>
+                          <td style={{ fontWeight: 500 }}>{c.name}</td>
+                          <td style={{ fontFamily: 'monospace', letterSpacing: '0.1em', color: '#64748B' }}>{'•'.repeat(c.pin.length)}</td>
+                          <td style={{ textAlign: 'right' }}>
+                            <button onClick={() => removeCajera(c.id)} style={{ background: 'none', border: 'none', color: '#DC2626', cursor: 'pointer', fontSize: 12, fontFamily: 'inherit', padding: '2px 6px' }}>Eliminar</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                  <div style={{ flex: 2, minWidth: 120 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', marginBottom: 5 }}>NOMBRE</div>
+                    <input type="text" placeholder="Ej: Maria" value={newName} onChange={e => setNewName(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', border: '1.5px solid #E2E8F0', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'inherit', background: '#F8FAFC' }} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 90 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', marginBottom: 5 }}>PIN</div>
+                    <input type="password" inputMode="numeric" placeholder="1234" value={newPin} onChange={e => setNewPin(e.target.value)} onKeyDown={e => e.key === 'Enter' && addCajera()} style={{ width: '100%', boxSizing: 'border-box', border: '1.5px solid #E2E8F0', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'inherit', background: '#F8FAFC' }} />
+                  </div>
+                  <button onClick={addCajera} disabled={cajerasSaving || !newName.trim() || !newPin.trim()} style={{ background: '#7C3AED', color: 'white', border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: cajerasSaving ? 0.6 : 1, flexShrink: 0 }}>Agregar</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── LIGHTBOX ── */}
       {lightbox && (

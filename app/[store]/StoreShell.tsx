@@ -267,7 +267,6 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const dtOn            = cs.deliveryTypes?.delivery !== false  // domicilio habilitado (default true)
   const puOn            = cs.deliveryTypes?.pickup === true     // retiro habilitado (default false)
   const bothTypes       = dtOn && puOn
-  const requireAddress  = cs.requireAddress ?? false
   const deliveryFeeAmt  = dtOn && deliveryType === 'delivery' && cs.deliveryEnabled && cs.deliveryFee
     ? Number(cs.deliveryFee)
     : 0
@@ -704,9 +703,9 @@ export default function StoreShell({ store, products, categories = [] }: { store
                   transition: 'all 0.15s',
                 }}
               >
-                <svg viewBox="0 0 20 20" fill={deliveryType === 'delivery' ? '#7C3AED' : '#94A3B8'} width="20" height="20">
-                  <path fillRule="evenodd" clipRule="evenodd" d="M5 10.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5zm0 1a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm10-1a2.5 2.5 0 100 5 2.5 2.5 0 000-5zm0 1a1.5 1.5 0 110 3 1.5 1.5 0 010-3z"/>
-                  <path d="M5.5 10.5L8 7h1.5L10 5.5h2.5L13 7.5l1.5-1.5h2v2L14.5 10.5H5.5z"/>
+                <svg viewBox="0 0 24 24" fill={deliveryType === 'delivery' ? '#7C3AED' : '#94A3B8'} width="20" height="20">
+                  <path fillRule="evenodd" d="M5 12a3 3 0 100 6 3 3 0 000-6zm0 1.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zM17 12a3 3 0 100 6 3 3 0 000-6zm0 1.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3z"/>
+                  <path d="M8 15l3.5-6h4l1.5-2.5H20V9l-1.5 3H9.5z"/>
                 </svg>
                 <span style={{ fontSize: 13, fontWeight: deliveryType === 'delivery' ? 700 : 500, color: deliveryType === 'delivery' ? '#7C3AED' : '#64748B' }}>Domicilio</span>
               </button>

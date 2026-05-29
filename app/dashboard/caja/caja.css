@@ -282,6 +282,120 @@
 }
 .cx-lightbox-close:hover { background: rgba(255,255,255,0.22); }
 
+/* ========== DAY TOTALS ========== */
+.cx-day-totals {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.cx-day-total-card {
+  flex: 1;
+  min-width: 120px;
+  background: #F8FAFC;
+  border: 1px solid var(--cx-line);
+  border-radius: var(--cx-radius);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.cx-day-total-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--cx-ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.cx-day-total-amount {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--cx-ink);
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+}
+.cx-day-total-sub {
+  font-size: 11px;
+  color: var(--cx-ink-muted);
+}
+
+/* ========== PAYMENT LIST ========== */
+.cx-pay-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--cx-line);
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--cx-line);
+}
+.cx-pay-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  background: white;
+}
+.cx-pay-row--proof {
+  cursor: pointer;
+}
+.cx-pay-row--proof:hover { background: #FAFAFA; }
+.cx-pay-num {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--cx-ink-muted);
+  width: 28px;
+  flex-shrink: 0;
+  text-align: right;
+}
+.cx-pay-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cx-pay-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cx-ink);
+}
+.cx-pay-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.cx-pay-amount {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--cx-ink);
+  letter-spacing: -0.3px;
+}
+.cx-pay-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cx-pay-proof-icon {
+  color: #94A3B8;
+  display: flex;
+  align-items: center;
+}
+.cx-pay-wa {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #25D366;
+  color: white;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.cx-pay-wa:hover { background: #1ebe5d; }
+
 /* ========== TOAST ========== */
 .cx-toast {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);

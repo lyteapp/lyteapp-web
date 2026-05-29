@@ -72,7 +72,7 @@ export default function CajeroPage() {
   const storeId = params.storeId as string
 
   // Auth
-  const [authState, setAuthState]   = useState<'checking' | 'pin' | 'ok' | 'notfound'>('checking')
+  const [authState, setAuthState]   = useState<'checking' | 'pin' | 'ok' | 'notfound' | 'error'>('checking')
   const [pinInput, setPinInput]     = useState('')
   const [pinError, setPinError]     = useState('')
   const [pinLoading, setPinLoading] = useState(false)
@@ -100,40 +100,45 @@ export default function CajeroPage() {
     toastRef.current = setTimeout(() => setToast(null), 2400)
   }
 
-  const doFetch = useCallback(async (pin: string): Promise<{ ok: boolean; requiresPin?: boolean; notFound?: boolean }> => {
-    const res = await fetch(`/api/caja?storeId=${storeId}`, {
-      headers: { 'x-cajero-pin': pin },
-    })
-    if (res.status === 404) return { ok: false, notFound: true }
-    if (res.status === 401) return { ok: false, requiresPin: true }
-    if (!res.ok) return { ok: false }
-    const json = await res.json()
-    setStoreName(json.store.name ?? '')
-    if (json.cajera?.name) setCajeraName(json.cajera.name)
+  const doFetch = useCallback(async (pin: string): Promise<{ ok: boolean; requiresPin?: boolean; notFound?: boolean; error?: boolean }> => {
+    try {
+      const res = await fetch(`/api/caja?storeId=${storeId}`, {
+        headers: { 'x-cajero-pin': pin },
+      })
+      if (res.status === 404) return { ok: false, notFound: true }
+      if (res.status === 401) return { ok: false, requiresPin: true }
+      if (!res.ok) return { ok: false, error: true }
+      const json = await res.json()
+      setStoreName(json.store?.name ?? '')
+      if (json.cajera?.name) setCajeraName(json.cajera.name)
 
-    const incoming: Order[] = json.orders
-    setOrders(incoming)
-    setLastUpdate(new Date())
+      const incoming: Order[] = json.orders ?? []
+      setOrders(incoming)
+      setLastUpdate(new Date())
 
-    // Detect new orders since last poll
-    const currentIds = new Set(incoming.filter(o => o.status !== 'cancelled').map(o => o.id))
-    const newOnes = [...currentIds].filter(id => !prevPendingRef.current.has(id))
-    if (newOnes.length > 0 && prevPendingRef.current.size > 0) {
-      setNewCount(n => n + newOnes.length)
-      setTimeout(() => setNewCount(0), 4000)
+      // Detect new orders since last poll
+      const currentIds = new Set(incoming.filter(o => o.status !== 'cancelled').map(o => o.id))
+      const newOnes = [...currentIds].filter(id => !prevPendingRef.current.has(id))
+      if (newOnes.length > 0 && prevPendingRef.current.size > 0) {
+        setNewCount(n => n + newOnes.length)
+        setTimeout(() => setNewCount(0), 4000)
+      }
+      prevPendingRef.current = currentIds
+
+      return { ok: true }
+    } catch {
+      return { ok: false, error: true }
     }
-    prevPendingRef.current = currentIds
-
-    return { ok: true }
   }, [storeId])
 
   // Initial auth
   useEffect(() => {
     const savedPin = sessionStorage.getItem(SESSION_KEY(storeId)) ?? ''
     doFetch(savedPin).then(result => {
-      if (result.notFound)   { setAuthState('notfound'); return }
-      if (result.requiresPin){ setAuthState('pin');      return }
-      if (result.ok)           setAuthState('ok')
+      if (result.notFound)    { setAuthState('notfound'); return }
+      if (result.requiresPin) { setAuthState('pin');      return }
+      if (result.error)       { setAuthState('error');    return }
+      if (result.ok)            setAuthState('ok')
     })
   }, [storeId, doFetch])
 
@@ -212,6 +217,21 @@ export default function CajeroPage() {
     </div>
   )
 
+  if (authState === 'error') return (
+    <div className="cj-loading">
+      <div style={{ fontWeight: 700, fontSize: 16, color: '#DC2626' }}>Error de conexion</div>
+      <div style={{ fontSize: 13, color: '#94A3B8', marginTop: 4, textAlign: 'center', maxWidth: 260 }}>
+        No se pudo conectar con el servidor. Revisa la conexion y vuelve a intentar.
+      </div>
+      <button
+        onClick={() => { setAuthState('checking'); const pin = sessionStorage.getItem(SESSION_KEY(storeId)) ?? ''; doFetch(pin).then(r => { if (r.ok) setAuthState('ok'); else if (r.requiresPin) setAuthState('pin'); else setAuthState('error') }) }}
+        style={{ marginTop: 16, background: '#7C3AED', color: 'white', border: 'none', borderRadius: 10, padding: '10px 24px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+      >
+        Reintentar
+      </button>
+    </div>
+  )
+
   if (authState === 'pin') return (
     <div className="cj-pin-screen" onContextMenu={e => e.preventDefault()}>
       <div className="cj-pin-card">
@@ -244,19 +264,19 @@ export default function CajeroPage() {
   )
 
   // ── MAIN APP ──
-  const todayOrders   = orders.filter(o => isToday(o.created_at) && o.status !== 'cancelled')
   const allActive     = orders.filter(o => o.status !== 'cancelled')
+  const todayOrders   = allActive.filter(o => isToday(o.created_at))
   const todayProofs   = todayOrders.filter(o => o.payment_proof_url)
-  // "new": today's orders with no approved payment yet (includes no-proof and pending-proof)
-  const newOrders     = todayOrders.filter(o => o.payment_status !== 'approved' && o.payment_status !== 'rejected')
-  const waitingProof  = todayOrders.filter(o => o.payment_proof_url && o.payment_status === 'pending')
+  const waitingProof  = allActive.filter(o => o.payment_proof_url && o.payment_status === 'pending')
+  const noProof       = allActive.filter(o => !o.payment_proof_url)
 
   const filteredOrders = (() => {
-    if (proofFilter === 'new')      return newOrders
+    // Default: all active orders most recent first
+    if (proofFilter === 'new')      return allActive
     if (proofFilter === 'waiting')  return waitingProof
-    if (proofFilter === 'approved') return todayOrders.filter(o => o.payment_status === 'approved')
-    if (proofFilter === 'rejected') return todayOrders.filter(o => o.payment_status === 'rejected')
-    return allActive  // historial
+    if (proofFilter === 'approved') return allActive.filter(o => o.payment_status === 'approved')
+    if (proofFilter === 'rejected') return allActive.filter(o => o.payment_status === 'rejected')
+    return allActive
   })()
 
   const methodTotals = (() => {
@@ -294,7 +314,7 @@ export default function CajeroPage() {
             <div className="cj-header-store">{cajeraName || 'Sin identificar'}</div>
           </div>
           <div className="cj-header-right">
-            {newOrders.length > 0 && <div className="cj-pending-badge">{newOrders.length}</div>}
+            {waitingProof.length > 0 && <div className="cj-pending-badge">{waitingProof.length}</div>}
             <div className="cj-update-time">
               {lastUpdate.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
             </div>
@@ -311,7 +331,7 @@ export default function CajeroPage() {
       <nav className="cj-tabs">
         <button className={`cj-tab${tab === 'comprobantes' ? ' active' : ''}`} onClick={() => setTab('comprobantes')}>
           Comprobantes
-          {newOrders.length > 0 && <span className="cj-tab-dot" />}
+          {waitingProof.length > 0 && <span className="cj-tab-dot" />}
         </button>
         <button className={`cj-tab${tab === 'cierre' ? ' active' : ''}`} onClick={() => setTab('cierre')}>
           Cierre del dia
@@ -335,8 +355,8 @@ export default function CajeroPage() {
           {/* KPIs */}
           <div className="cj-kpi-bar">
             <div className="cj-kpi">
-              <div className="cj-kpi-num" style={{ color: newOrders.length > 0 ? '#D97706' : '#0F172A' }}>{newOrders.length}</div>
-              <div className="cj-kpi-label">Activos hoy</div>
+              <div className="cj-kpi-num">{todayOrders.length}</div>
+              <div className="cj-kpi-label">Pedidos hoy</div>
             </div>
             <div className="cj-kpi">
               <div className="cj-kpi-num" style={{ color: waitingProof.length > 0 ? '#7C3AED' : '#0F172A' }}>{waitingProof.length}</div>
@@ -344,7 +364,7 @@ export default function CajeroPage() {
             </div>
             <div className="cj-kpi">
               <div className="cj-kpi-num">{todayProofs.filter(o => o.payment_status === 'approved').length}</div>
-              <div className="cj-kpi-label">Aprobados</div>
+              <div className="cj-kpi-label">Aprobados hoy</div>
             </div>
             <div className="cj-kpi">
               <div className="cj-kpi-num">${approvedTotal.toFixed(2)}</div>
@@ -355,19 +375,16 @@ export default function CajeroPage() {
           {/* Filters */}
           <div className="cj-filter-bar">
             <button className={`cj-filter-pill${proofFilter === 'new'      ? ' active' : ''}`} onClick={() => setProofFilter('new')}>
-              Activos · {newOrders.length}
+              Todos · {allActive.length}
             </button>
             <button className={`cj-filter-pill${proofFilter === 'waiting'  ? ' active' : ''}`} onClick={() => setProofFilter('waiting')}>
               Por verificar · {waitingProof.length}
             </button>
             <button className={`cj-filter-pill${proofFilter === 'approved' ? ' active' : ''}`} onClick={() => setProofFilter('approved')}>
-              Aprobados · {todayOrders.filter(o => o.payment_status === 'approved').length}
+              Aprobados · {allActive.filter(o => o.payment_status === 'approved').length}
             </button>
             <button className={`cj-filter-pill${proofFilter === 'rejected' ? ' active' : ''}`} onClick={() => setProofFilter('rejected')}>
-              Rechazados · {todayOrders.filter(o => o.payment_status === 'rejected').length}
-            </button>
-            <button className={`cj-filter-pill${proofFilter === 'all'      ? ' active' : ''}`} onClick={() => setProofFilter('all')}>
-              Historial · {allActive.length}
+              Rechazados · {allActive.filter(o => o.payment_status === 'rejected').length}
             </button>
           </div>
 
@@ -378,7 +395,7 @@ export default function CajeroPage() {
                 <rect x="6" y="10" width="36" height="28" rx="3"/>
                 <path strokeLinecap="round" d="M14 20h20M14 26h12"/>
               </svg>
-              <p>{proofFilter === 'new' ? 'Sin pedidos activos' : 'Sin registros'}</p>
+              <p>{proofFilter === 'waiting' ? 'Sin comprobantes pendientes' : 'Sin pedidos'}</p>
             </div>
           ) : (
             <div className="cj-proof-list">
@@ -508,8 +525,8 @@ export default function CajeroPage() {
               <div className="cj-stat-lbl">Verificados</div>
             </div>
             <div className="cj-stat">
-              <div className="cj-stat-num">{waitingProof.length}</div>
-              <div className="cj-stat-lbl">Por verificar</div>
+              <div className="cj-stat-num">{noProof.length}</div>
+              <div className="cj-stat-lbl">Sin comprobante</div>
             </div>
           </div>
           {methodTotals.length > 0 && (

@@ -63,8 +63,10 @@ export default function CajaPage() {
   const [toast, setToast]         = useState<string | null>(null)
   // Config state
   const [checkoutSettings, setCheckoutSettings] = useState<Record<string, unknown>>({})
-  const [pinInput, setPinInput]   = useState('')
-  const [pinSaving, setPinSaving] = useState(false)
+  const [cajeras, setCajeras]     = useState<{ id: string; name: string; pin: string }[]>([])
+  const [newName, setNewName]     = useState('')
+  const [newPin, setNewPin]       = useState('')
+  const [cajerasSaving, setCajerasSaving] = useState(false)
   const [copied, setCopied]       = useState(false)
   const [showQr, setShowQr]       = useState(false)
   const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -93,7 +95,7 @@ export default function CajaPage() {
         loadOrders(data.id)
         const cs = (data.checkout_settings as Record<string, unknown>) ?? {}
         setCheckoutSettings(cs)
-        setPinInput((cs.cajeroPIN as string) ?? '')
+        setCajeras((cs.cajeros as { id: string; name: string; pin: string }[]) ?? [])
       }
       setLoading(false)
     })
@@ -116,14 +118,28 @@ export default function CajaPage() {
     showToast(status === 'approved' ? 'Pago aprobado' : status === 'rejected' ? 'Pago rechazado' : 'Revertido')
   }
 
-  async function savePin() {
-    if (!storeId) return
-    setPinSaving(true)
-    const newCs = { ...checkoutSettings, cajeroPIN: pinInput.trim() }
+  async function addCajera() {
+    if (!storeId || !newName.trim() || !newPin.trim()) return
+    setCajerasSaving(true)
+    const next = [...cajeras, { id: crypto.randomUUID(), name: newName.trim(), pin: newPin.trim() }]
+    const newCs = { ...checkoutSettings, cajeros: next }
     await supabase.from('stores').update({ checkout_settings: newCs }).eq('id', storeId)
     setCheckoutSettings(newCs)
-    setPinSaving(false)
-    showToast(pinInput.trim() ? 'PIN guardado' : 'PIN eliminado')
+    setCajeras(next)
+    setNewName('')
+    setNewPin('')
+    setCajerasSaving(false)
+    showToast('Cajera agregada')
+  }
+
+  async function removeCajera(id: string) {
+    if (!storeId) return
+    const next = cajeras.filter(c => c.id !== id)
+    const newCs = { ...checkoutSettings, cajeros: next }
+    await supabase.from('stores').update({ checkout_settings: newCs }).eq('id', storeId)
+    setCheckoutSettings(newCs)
+    setCajeras(next)
+    showToast('Cajera eliminada')
   }
 
   function copyCajeroLink() {
@@ -430,36 +446,72 @@ export default function CajaPage() {
             </div>
           </div>
 
-          {/* PIN */}
+          {/* Cajeras */}
           <div className="cx-breakdown-section">
-            <div className="cx-breakdown-title">PIN de acceso</div>
+            <div className="cx-breakdown-title">Cajeras</div>
             <div style={{ fontSize: 13, color: '#64748B' }}>
-              Protege la app con un PIN numerico. Dejalo en blanco para acceso sin PIN.
+              Cada cajera tiene su propio PIN. Al ingresar, la app muestra su nombre en el encabezado.
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input
-                type="password"
-                inputMode="numeric"
-                placeholder="Sin PIN (acceso libre)"
-                value={pinInput}
-                onChange={e => setPinInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && savePin()}
-                style={{
-                  flex: 1, border: '1.5px solid #E2E8F0', borderRadius: 8,
-                  padding: '9px 12px', fontSize: 14, outline: 'none',
-                  fontFamily: 'inherit', color: '#0F172A', background: '#F8FAFC',
-                }}
-              />
+
+            {/* Lista */}
+            {cajeras.length > 0 && (
+              <table className="cx-breakdown-table">
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>PIN</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cajeras.map(c => (
+                    <tr key={c.id}>
+                      <td style={{ fontWeight: 500 }}>{c.name}</td>
+                      <td style={{ fontFamily: 'monospace', letterSpacing: '0.1em', color: '#64748B' }}>{'•'.repeat(c.pin.length)}</td>
+                      <td style={{ textAlign: 'right' }}>
+                        <button
+                          onClick={() => removeCajera(c.id)}
+                          style={{ background: 'none', border: 'none', color: '#DC2626', cursor: 'pointer', fontSize: 12, fontFamily: 'inherit', padding: '2px 6px' }}
+                        >
+                          Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+
+            {/* Agregar */}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <div style={{ flex: 2, minWidth: 120 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', marginBottom: 5 }}>NOMBRE</div>
+                <input
+                  type="text"
+                  placeholder="Ej: Maria"
+                  value={newName}
+                  onChange={e => setNewName(e.target.value)}
+                  style={{ width: '100%', boxSizing: 'border-box', border: '1.5px solid #E2E8F0', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'inherit', background: '#F8FAFC' }}
+                />
+              </div>
+              <div style={{ flex: 1, minWidth: 90 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', marginBottom: 5 }}>PIN</div>
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  placeholder="1234"
+                  value={newPin}
+                  onChange={e => setNewPin(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && addCajera()}
+                  style={{ width: '100%', boxSizing: 'border-box', border: '1.5px solid #E2E8F0', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'inherit', background: '#F8FAFC' }}
+                />
+              </div>
               <button
-                onClick={savePin}
-                disabled={pinSaving}
-                style={{
-                  background: '#7C3AED', color: 'white', border: 'none', borderRadius: 8,
-                  padding: '9px 20px', fontSize: 13, fontWeight: 600,
-                  cursor: 'pointer', fontFamily: 'inherit', opacity: pinSaving ? 0.6 : 1,
-                }}
+                onClick={addCajera}
+                disabled={cajerasSaving || !newName.trim() || !newPin.trim()}
+                style={{ background: '#7C3AED', color: 'white', border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: cajerasSaving ? 0.6 : 1, flexShrink: 0 }}
               >
-                {pinSaving ? 'Guardando...' : 'Guardar'}
+                Agregar
               </button>
             </div>
           </div>

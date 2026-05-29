@@ -86,6 +86,17 @@
   font-size: 11px;
   color: #94A3B8;
 }
+.cj-logout-btn {
+  background: none;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 6px 8px;
+  cursor: pointer;
+  color: #94A3B8;
+  display: flex;
+  align-items: center;
+}
+.cj-logout-btn:hover { color: #64748B; border-color: #CBD5E1; }
 
 /* ── TABS ── */
 .cj-tabs {

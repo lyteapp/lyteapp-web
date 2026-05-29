@@ -5,7 +5,6 @@ import { useParams } from 'next/navigation'
 import './cajero.css'
 
 type PaymentStatus = 'pending' | 'approved' | 'rejected'
-type Tab = 'comprobantes' | 'cierre'
 type ProofFilter = 'new' | 'waiting' | 'approved' | 'rejected' | 'all'
 
 type Order = {
@@ -83,7 +82,6 @@ export default function CajeroPage() {
   const [cajeraName, setCajeraName]   = useState('')
   const [orders, setOrders]           = useState<Order[]>([])
   const [bcvRate, setBcvRate]         = useState<number | null>(null)
-  const [tab, setTab]                 = useState<Tab>('comprobantes')
   const [proofFilter, setProofFilter] = useState<ProofFilter>('new')
   const [lightbox, setLightbox]       = useState<string | null>(null)
   const [verifying, setVerifying]     = useState<string | null>(null)
@@ -311,14 +309,12 @@ export default function CajeroPage() {
   )
 
   // ── MAIN APP ──
-  const allActive     = orders.filter(o => o.status !== 'cancelled')
-  const todayOrders   = allActive.filter(o => isToday(o.created_at))
-  const todayProofs   = todayOrders.filter(o => o.payment_proof_url)
-  const waitingProof  = allActive.filter(o => o.payment_proof_url && o.payment_status === 'pending')
-  const noProof       = allActive.filter(o => !o.payment_proof_url)
+  const allActive    = orders.filter(o => o.status !== 'cancelled')
+  const todayOrders  = allActive.filter(o => isToday(o.created_at))
+  const todayProofs  = todayOrders.filter(o => o.payment_proof_url)
+  const waitingProof = allActive.filter(o => o.payment_proof_url && o.payment_status === 'pending')
 
   const filteredOrders = (() => {
-    // Default: all active orders most recent first
     if (proofFilter === 'new')      return allActive
     if (proofFilter === 'waiting')  return waitingProof
     if (proofFilter === 'approved') return allActive.filter(o => o.payment_status === 'approved')
@@ -326,28 +322,6 @@ export default function CajeroPage() {
     return allActive
   })()
 
-  const methodTotals = (() => {
-    const map: Record<string, { label: string; currency: string; symbol: string; total: number; count: number }> = {}
-    for (const o of todayOrders) {
-      if (o.status === 'cancelled') continue
-      const info = getCurrencyInfo(o.payment_method)
-      if (!map[info.label]) map[info.label] = { ...info, total: 0, count: 0 }
-      map[info.label].total += Number(o.total)
-      map[info.label].count += 1
-    }
-    return Object.values(map).sort((a, b) => b.total - a.total)
-  })()
-
-  const currencyTotals = (() => {
-    const map: Record<string, { currency: string; symbol: string; total: number }> = {}
-    for (const m of methodTotals) {
-      if (!map[m.currency]) map[m.currency] = { currency: m.currency, symbol: m.symbol, total: 0 }
-      map[m.currency].total += m.total
-    }
-    return Object.values(map)
-  })()
-
-  const todayTotal    = todayOrders.filter(o => o.status !== 'cancelled').reduce((s, o) => s + Number(o.total), 0)
   const approvedTotal = todayProofs.filter(o => o.payment_status === 'approved').reduce((s, o) => s + Number(o.total), 0)
 
   return (
@@ -374,17 +348,6 @@ export default function CajeroPage() {
         </div>
       </header>
 
-      {/* ── TABS ── */}
-      <nav className="cj-tabs">
-        <button className={`cj-tab${tab === 'comprobantes' ? ' active' : ''}`} onClick={() => setTab('comprobantes')}>
-          Comprobantes
-          {waitingProof.length > 0 && <span className="cj-tab-dot" />}
-        </button>
-        <button className={`cj-tab${tab === 'cierre' ? ' active' : ''}`} onClick={() => setTab('cierre')}>
-          Cierre del dia
-        </button>
-      </nav>
-
       {/* ── NEW PROOF BANNER ── */}
       {newCount > 0 && (
         <div className="cj-new-banner">
@@ -396,8 +359,7 @@ export default function CajeroPage() {
       )}
 
       {/* ══ COMPROBANTES ══ */}
-      {tab === 'comprobantes' && (
-        <div className="cj-view">
+      <div className="cj-view">
 
           {/* KPIs */}
           <div className="cj-kpi-bar">
@@ -542,88 +504,6 @@ export default function CajeroPage() {
             </div>
           )}
         </div>
-      )}
-
-      {/* ══ CIERRE ══ */}
-      {tab === 'cierre' && (
-        <div className="cj-view">
-          <div className="cj-cierre-date">
-            {new Date().toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' })}
-          </div>
-          <div className="cj-currency-grid">
-            {currencyTotals.length === 0 ? (
-              <div className="cj-empty" style={{ gridColumn: '1/-1' }}><p>Sin movimientos hoy</p></div>
-            ) : currencyTotals.map(c => (
-              <div key={c.currency} className="cj-currency-card">
-                <div className="cj-currency-code">{c.currency}</div>
-                <div className="cj-currency-amount">{c.symbol}{c.total.toFixed(2)}</div>
-                <div className="cj-currency-sub">total del dia</div>
-              </div>
-            ))}
-          </div>
-          <div className="cj-stats-row">
-            <div className="cj-stat">
-              <div className="cj-stat-num">{todayOrders.filter(o => o.status !== 'cancelled').length}</div>
-              <div className="cj-stat-lbl">Pedidos</div>
-            </div>
-            <div className="cj-stat">
-              <div className="cj-stat-num">{todayProofs.filter(o => o.payment_status === 'approved').length}</div>
-              <div className="cj-stat-lbl">Verificados</div>
-            </div>
-            <div className="cj-stat">
-              <div className="cj-stat-num">{noProof.length}</div>
-              <div className="cj-stat-lbl">Sin comprobante</div>
-            </div>
-          </div>
-          {methodTotals.length > 0 && (
-            <div className="cj-breakdown">
-              <div className="cj-breakdown-title">Por metodo de pago</div>
-              {methodTotals.map(m => (
-                <div key={m.label} className="cj-breakdown-row">
-                  <div className="cj-breakdown-left">
-                    <span className="cj-method-tag">{m.label}</span>
-                    <span className="cj-breakdown-count">{m.count} {m.count === 1 ? 'pedido' : 'pedidos'}</span>
-                  </div>
-                  <div className="cj-breakdown-amount">{m.symbol}{m.total.toFixed(2)}</div>
-                </div>
-              ))}
-              <div className="cj-breakdown-total">
-                <span>Total general</span>
-                <span>${todayTotal.toFixed(2)}</span>
-              </div>
-            </div>
-          )}
-          {todayOrders.length > 0 && (
-            <div className="cj-breakdown">
-              <div className="cj-breakdown-title">Pedidos del dia</div>
-              {todayOrders.map(o => {
-                const info = getCurrencyInfo(o.payment_method)
-                return (
-                  <div key={o.id} className={`cj-order-row${o.status === 'cancelled' ? ' cancelled' : ''}`}>
-                    <div className="cj-order-left">
-                      <div className="cj-order-name">{o.customer_name}</div>
-                      <div className="cj-order-meta">{fmtTime(o.created_at)} · {info.label}</div>
-                    </div>
-                    <div className="cj-order-right">
-                      {o.payment_proof_url && (
-                        <button className="cj-thumb-btn" onClick={() => setLightbox(o.payment_proof_url!)}>
-                          <img src={o.payment_proof_url} alt="" className="cj-thumb-img" draggable={false} />
-                        </button>
-                      )}
-                      {o.payment_status && (
-                        <span className={`cj-status-badge ${o.payment_status}`}>
-                          {o.payment_status === 'approved' ? 'OK' : o.payment_status === 'rejected' ? '✕' : '...'}
-                        </span>
-                      )}
-                      <span className="cj-order-total">{info.symbol}{Number(o.total).toFixed(2)}</span>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* ── LIGHTBOX ── */}
       {lightbox && (

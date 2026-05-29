@@ -10,6 +10,8 @@ type Order = {
   customer_phone: string
   payment_method: string | null
   payment_proof_url: string | null
+  payment_status: string | null
+  payment_verified_by: string | null
   total: number
   status: string
   created_at: string
@@ -69,6 +71,7 @@ export default function CajeroPage() {
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
   const [bcvRate, setBcvRate]       = useState<number>(0)
   const [lightbox, setLightbox]     = useState<string | null>(null)
+  const [verifying, setVerifying]   = useState<Set<string>>(new Set())
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const doFetch = useCallback(async (pin: string): Promise<{ ok: boolean; requiresPin?: boolean; notFound?: boolean; error?: boolean }> => {
@@ -176,6 +179,26 @@ export default function CajeroPage() {
       pinRef.current?.focus()
     }
     setPinLoading(false)
+  }
+
+  async function verifyPayment(orderId: string, e: React.MouseEvent) {
+    e.stopPropagation()
+    const pin = sessionStorage.getItem(SESSION_KEY(storeId)) ?? ''
+    setVerifying(prev => new Set(prev).add(orderId))
+    try {
+      const res = await fetch('/api/caja', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-cajero-pin': pin },
+        body: JSON.stringify({ orderId, storeId, status: 'approved', verifiedBy: cajeraName }),
+      })
+      if (res.ok) {
+        setOrders(prev => prev.map(o =>
+          o.id === orderId ? { ...o, payment_status: 'approved', payment_verified_by: cajeraName } : o
+        ))
+      }
+    } finally {
+      setVerifying(prev => { const s = new Set(prev); s.delete(orderId); return s })
+    }
   }
 
   function logout() {
@@ -341,6 +364,24 @@ export default function CajeroPage() {
                       )}
                       <div className="cj-card-amount-main">{displayAmount}</div>
                     </div>
+                  </div>
+                  <div className="cj-card-footer">
+                    {order.payment_verified_by ? (
+                      <div className="cj-verified-badge">
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                        </svg>
+                        Verificado por {order.payment_verified_by}
+                      </div>
+                    ) : (
+                      <button
+                        className="cj-verify-btn"
+                        disabled={verifying.has(order.id)}
+                        onClick={e => verifyPayment(order.id, e)}
+                      >
+                        {verifying.has(order.id) ? 'Verificando...' : 'Verificar pago'}
+                      </button>
+                    )}
                   </div>
                 </div>
               )

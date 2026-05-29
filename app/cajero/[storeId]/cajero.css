@@ -181,6 +181,36 @@
   flex-shrink: 0;
 }
 
+/* ── CARD FOOTER ── */
+.cj-card-footer {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #F1F5F9;
+}
+.cj-verify-btn {
+  width: 100%;
+  background: none;
+  border: 1.5px solid #7C3AED;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #7C3AED;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.cj-verify-btn:hover:not(:disabled) { background: #F5F3FF; }
+.cj-verify-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.cj-verified-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #16A34A;
+}
+
 /* ── LIGHTBOX ── */
 .cj-lightbox {
   position: fixed;

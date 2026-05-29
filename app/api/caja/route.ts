@@ -53,7 +53,7 @@ export async function GET(req: Request) {
 
   const { data: orders } = await supa
     .from('orders')
-    .select('id,customer_name,customer_phone,payment_method,payment_proof_url,payment_status,total,status,created_at,delivery_type')
+    .select('id,customer_name,customer_phone,payment_method,payment_proof_url,payment_status,payment_verified_by,total,status,created_at,delivery_type')
     .eq('store_id', storeId)
     .order('created_at', { ascending: false })
     .limit(500)
@@ -69,7 +69,7 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null)
   if (!body) return Response.json({ error: 'Invalid body' }, { status: 400 })
 
-  const { orderId, status, storeId } = body
+  const { orderId, status, storeId, verifiedBy } = body
   if (!orderId || !status || !storeId) return Response.json({ error: 'Missing fields' }, { status: 400 })
   if (!['approved', 'rejected', 'pending'].includes(status)) return Response.json({ error: 'Invalid status' }, { status: 400 })
 
@@ -81,6 +81,9 @@ export async function POST(req: Request) {
   const { data: order } = await supa.from('orders').select('store_id').eq('id', orderId).maybeSingle()
   if (!order || order.store_id !== storeId) return Response.json({ error: 'Not found' }, { status: 404 })
 
-  await supa.from('orders').update({ payment_status: status }).eq('id', orderId)
+  const update: Record<string, unknown> = { payment_status: status }
+  if (verifiedBy && status === 'approved') update.payment_verified_by = verifiedBy
+
+  await supa.from('orders').update(update).eq('id', orderId)
   return Response.json({ ok: true })
 }

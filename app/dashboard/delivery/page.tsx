@@ -277,7 +277,7 @@ export default function DeliveryPage() {
 
   function openZoneForm(zone?: Zone) {
     if (zone) {
-      setEditZone(zone); setZName(zone.name); setZFee(String(zone.fee))
+      setEditZone(zone); setZName(zone.name ?? ''); setZFee(String(zone.fee ?? 0))
       setZColor(zone.color); setZRadius(zone.radius_m)
       setZCenter([zone.center_lat, zone.center_lng])
     } else {
@@ -907,7 +907,7 @@ export default function DeliveryPage() {
                   <div className="dv-zone-item-head">
                     <div className="dv-zone-name-row">
                       <span className="dv-zone-color-dot" style={{ background: z.color }} />
-                      <h4>{z.name}</h4>
+                      <h4>{z.name ?? 'Sin nombre'}</h4>
                     </div>
                     <div style={{ display: 'flex', gap: 4 }}>
                       <button
@@ -922,7 +922,7 @@ export default function DeliveryPage() {
                   </div>
                   <div className="dv-zone-meta">
                     <span>{(z.radius_m / 1000).toFixed(1)} km radio</span>
-                    <span className="dv-zone-fee">${z.fee.toFixed(2)}</span>
+                    <span className="dv-zone-fee">${(z.fee ?? 0).toFixed(2)}</span>
                   </div>
                 </div>
               ))

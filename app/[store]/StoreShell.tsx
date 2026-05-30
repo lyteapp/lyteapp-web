@@ -703,10 +703,10 @@ export default function StoreShell({ store, products, categories = [] }: { store
               </div>
             </div>
           ))}
-          {deliveryFeeAmt > 0 && (
+          {deliveryType === 'delivery' && cs.deliveryEnabled && (
             <div className="sf-co-total" style={{ fontWeight: 400, fontSize: 13, color: '#64748B', borderTop: 'none', paddingTop: 0 }}>
-              <span>Envio</span>
-              <span>{currencySymbol}{deliveryFeeAmt.toFixed(2)}</span>
+              <span>Envio{matchedZone ? ` · ${matchedZone.name}` : ''}</span>
+              <span>{deliveryFeeAmt > 0 ? `${currencySymbol}${deliveryFeeAmt.toFixed(2)}` : (deliveryZones.length > 0 && customerLat === null ? 'segun zona' : deliveryFeeAmt === 0 && deliveryZones.length > 0 ? 'fuera de zona' : `${currencySymbol}0.00`)}</span>
             </div>
           )}
           <div className="sf-co-total">

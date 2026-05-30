@@ -26,10 +26,29 @@ type Driver = {
   name: string
 }
 
+type CustomerPin = {
+  id: string
+  customer_name: string
+  delivery_address: string
+  status: string
+  customer_lat: number
+  customer_lng: number
+}
+
+const PIN_STATUS_LABEL: Record<string, string> = {
+  pending: 'Pendiente', preparing: 'Preparando', ready: 'Listo',
+  picked_up: 'En ruta', delivered: 'Entregado', cancelled: 'Cancelado',
+}
+const PIN_STATUS_COLOR: Record<string, string> = {
+  pending: '#94A3B8', preparing: '#F59E0B', ready: '#3B82F6',
+  picked_up: '#7C3AED', delivered: '#10B981', cancelled: '#EF4444',
+}
+
 type Props = {
   inRoute: InRouteDelivery[]
   driverLocations: DriverLocation[]
   drivers: Driver[]
+  customerPins: CustomerPin[]
   mapboxToken: string
 }
 
@@ -43,7 +62,7 @@ const STATUS_COLORS = {
   late:      { border: '#B45309', bg: '#FFFBEB', text: '#B45309', dot: '#B45309' },
 }
 
-export default function MapView({ inRoute, driverLocations, drivers, mapboxToken }: Props) {
+export default function MapView({ inRoute, driverLocations, drivers, customerPins, mapboxToken }: Props) {
   const mapRef = useRef<MapRef>(null)
   const [pos, setPos]     = useState<[number, number] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -174,6 +193,38 @@ export default function MapView({ inRoute, driverLocations, drivers, mapboxToken
                     <div style={{ color: '#15803D', fontWeight: 500 }}>Disponible</div>
                   )}
                   <div style={{ color: '#9CA3AF', marginTop: 4, fontSize: 11 }}>GPS · {freshLabel}</div>
+                </div>
+              )}
+            </div>
+          </Marker>
+        )
+      })}
+
+      {/* Customer location pins (today) */}
+      {customerPins.map(pin => {
+        const statusColor = PIN_STATUS_COLOR[pin.status] ?? '#94A3B8'
+        const statusLabel = PIN_STATUS_LABEL[pin.status] ?? pin.status
+        return (
+          <Marker key={pin.id} longitude={pin.customer_lng} latitude={pin.customer_lat} anchor="bottom">
+            <div style={{ position: 'relative', cursor: 'pointer' }} onClick={e => { e.stopPropagation(); setPopup(p => p === pin.id ? null : pin.id) }}>
+              <svg viewBox="0 0 24 32" width="18" height="24" style={{ filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.28))', display: 'block' }}>
+                <path d="M12 0C5.373 0 0 5.373 0 12c0 9 12 20 12 20S24 21 24 12C24 5.373 18.627 0 12 0z" fill={statusColor}/>
+                <circle cx="12" cy="11" r="5" fill="white"/>
+              </svg>
+              {popup === pin.id && (
+                <div style={{
+                  position: 'absolute', bottom: 30, left: '50%', transform: 'translateX(-50%)',
+                  background: 'white', borderRadius: 10, padding: '10px 14px',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.16)', minWidth: 170,
+                  fontSize: 12, zIndex: 20, whiteSpace: 'nowrap',
+                }}>
+                  <div style={{ fontWeight: 700, marginBottom: 4, color: '#0F172A' }}>{pin.customer_name}</div>
+                  {pin.delivery_address && (
+                    <div style={{ color: '#6B7280', maxWidth: 200, whiteSpace: 'normal', lineHeight: 1.4, marginBottom: 4 }}>{pin.delivery_address}</div>
+                  )}
+                  <div style={{ display: 'inline-block', background: statusColor, color: 'white', borderRadius: 6, padding: '2px 7px', fontSize: 10, fontWeight: 600 }}>
+                    {statusLabel}
+                  </div>
                 </div>
               )}
             </div>

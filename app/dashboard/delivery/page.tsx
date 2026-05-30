@@ -476,6 +476,14 @@ export default function DeliveryPage() {
               }))}
               driverLocations={driverLocations}
               drivers={drivers.map(d => ({ id: d.id, name: d.name }))}
+              customerPins={todayDels.filter(d => d.customer_lat != null && d.customer_lng != null).map(d => ({
+                id: d.id,
+                customer_name: d.customer_name,
+                delivery_address: d.delivery_address,
+                status: d.status,
+                customer_lat: d.customer_lat!,
+                customer_lng: d.customer_lng!,
+              }))}
               mapboxToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
             />
           </div>
@@ -519,6 +527,14 @@ export default function DeliveryPage() {
             }))}
             driverLocations={driverLocations}
             drivers={drivers.map(d => ({ id: d.id, name: d.name }))}
+            customerPins={todayDels.filter(d => d.customer_lat != null && d.customer_lng != null).map(d => ({
+              id: d.id,
+              customer_name: d.customer_name,
+              delivery_address: d.delivery_address,
+              status: d.status,
+              customer_lat: d.customer_lat!,
+              customer_lng: d.customer_lng!,
+            }))}
             mapboxToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
           />
         </div>

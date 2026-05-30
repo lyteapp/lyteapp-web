@@ -461,8 +461,11 @@ export default function StoreShell({ store, products, categories = [] }: { store
         setCustomerLng(pos.coords.longitude)
         setLocationState('granted')
       },
-      () => setLocationState('denied'),
-      { enableHighAccuracy: true, timeout: 10000 }
+      (err) => {
+        // code 1 = PERMISSION_DENIED; 2/3 = unavailable/timeout → allow retry
+        setLocationState(err.code === 1 ? 'denied' : 'idle')
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 },
     )
   }
 
@@ -887,7 +890,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
                       <svg viewBox="0 0 20 20" fill="#7C3AED" width="14" height="14" style={{ flexShrink: 0 }}>
                         <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                       </svg>
-                      <span>Zona: <strong>{matchedZone.name}</strong> · Envio {currencySymbol}{matchedZone.fee.toFixed(2)}</span>
+                      <span>Zona: <strong>{matchedZone.name ?? 'Sin nombre'}</strong> · Envio {currencySymbol}{(matchedZone.fee ?? 0).toFixed(2)}</span>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FFF7ED', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#92400E' }}>
@@ -899,11 +902,16 @@ export default function StoreShell({ store, products, categories = [] }: { store
                   )
                 )}
                 {locationState === 'denied' && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FFF7ED', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#92400E' }}>
-                    <svg viewBox="0 0 20 20" fill="#F59E0B" width="14" height="14" style={{ flexShrink: 0 }}>
-                      <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-                    </svg>
-                    Ingresa la direccion manualmente
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, background: '#FFF7ED', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#92400E' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <svg viewBox="0 0 20 20" fill="#F59E0B" width="14" height="14" style={{ flexShrink: 0 }}>
+                        <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                      </svg>
+                      <span>Ubicacion bloqueada. Ve a Configuracion &gt; Privacidad &gt; Ubicacion y activa el permiso, luego intenta de nuevo.</span>
+                    </div>
+                    <button type="button" onClick={requestLocation} style={{ background: 'none', border: '1px solid #F59E0B', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, color: '#92400E', cursor: 'pointer', alignSelf: 'flex-start' }}>
+                      Reintentar GPS
+                    </button>
                   </div>
                 )}
 

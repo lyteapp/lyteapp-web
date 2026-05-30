@@ -144,12 +144,22 @@ body { background: #F1F5F9; }
   margin: 2px auto;
   grid-column: 1;
   border-radius: 2px;
-  transition: background 0.25s;
+  position: relative;
+  overflow: hidden;
 }
 
-.ot-step--done + .ot-step .ot-step-line,
-.ot-step--done .ot-step-line {
+.ot-step-line-fill {
+  position: absolute;
+  inset: 0;
   background: #7C3AED;
+  transform: scaleY(0);
+  transform-origin: top center;
+  animation: ot-fill-down 0.45s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes ot-fill-down {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
 }
 
 .ot-step-label {

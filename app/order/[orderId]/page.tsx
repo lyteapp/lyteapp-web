@@ -138,7 +138,13 @@ export default function OrderTrackPage({ params }: { params: Promise<{ orderId: 
                       <div className="ot-dot-pulse" />
                     ) : null}
                   </div>
-                  {i < STAGE_LABELS.length - 1 && <div className="ot-step-line" />}
+                  {i < STAGE_LABELS.length - 1 && (
+                    <div className="ot-step-line">
+                      {i < stage && (
+                        <div className="ot-step-line-fill" style={{ animationDelay: `${i * 0.3}s` }} />
+                      )}
+                    </div>
+                  )}
                   <div className="ot-step-label">{label}</div>
                 </div>
               ))}

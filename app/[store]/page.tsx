@@ -10,6 +10,12 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
 )
 
+const supabaseService = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!,
+  { auth: { persistSession: false } }
+)
+
 export async function generateMetadata({ params }: { params: Promise<{ store: string }> }) {
   const { store: slug } = await params
   const { data } = await supabase
@@ -41,13 +47,17 @@ export default async function StorePage({ params }: { params: Promise<{ store: s
 
   if (!store) notFound()
 
-  const [{ data: products }, { data: categories }] = await Promise.all([
+  const currency = (store.store_currency ?? 'USD') as string
+  const [{ data: products }, { data: categories }, { data: rateRow }] = await Promise.all([
     supabase.from('products').select('*')
       .eq('store_id', store.id).eq('is_active', true)
       .order('created_at', { ascending: false }),
     supabase.from('categories').select('*')
       .eq('store_id', store.id).order('position', { ascending: true }),
+    supabaseService.from('exchange_rates').select('rate').eq('currency', currency).maybeSingle(),
   ])
 
-  return <StoreShell store={store} products={products ?? []} categories={categories ?? []} />
+  const initialBcvRate = rateRow?.rate ? Number(rateRow.rate) : null
+
+  return <StoreShell store={store} products={products ?? []} categories={categories ?? []} initialBcvRate={initialBcvRate} />
 }

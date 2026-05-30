@@ -141,7 +141,7 @@ const IG_ICON = (
   </svg>
 )
 
-export default function StoreShell({ store, products, categories = [] }: { store: Store; products: Product[]; categories: { id: string; name: string; position: number }[] }) {
+export default function StoreShell({ store, products, categories = [], initialBcvRate = null }: { store: Store; products: Product[]; categories: { id: string; name: string; position: number }[]; initialBcvRate?: number | null }) {
   const t = useT()
   const router = useRouter()
   const [cart, setCart]                   = useState<Record<string, CartItem>>({})
@@ -151,7 +151,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const [customerNotes, setCustomerNotes] = useState('')
   const [selectedPayment, setSelectedPayment]   = useState('')
   const [paymentFreeText, setPaymentFreeText]   = useState('')
-  const [bcvRate, setBcvRate] = useState<number | null>(null)
+  const bcvRate = initialBcvRate ?? null
   const [paymentProofFile, setPaymentProofFile]       = useState<File | null>(null)
   const [paymentProofPreview, setPaymentProofPreview] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -258,15 +258,6 @@ export default function StoreShell({ store, products, categories = [] }: { store
     try { localStorage.setItem(`cart-${store.slug}`, JSON.stringify(cart)) } catch {}
   }, [cart, store.slug])
 
-  useEffect(() => {
-    if (view !== 'checkout' || bcvRate !== null) return
-    supabase
-      .from('exchange_rates')
-      .select('rate')
-      .eq('currency', storeCurrency)
-      .maybeSingle()
-      .then(({ data }) => { if (data?.rate) setBcvRate(Number(data.rate)) })
-  }, [view, bcvRate, storeCurrency])
 
   useEffect(() => {
     if (view !== 'checkout' || deliveryZones.length > 0) return

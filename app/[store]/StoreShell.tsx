@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useT } from '../lib/LocaleProvider'
+import LocationMapPicker from './LocationMapPicker'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -141,7 +142,7 @@ const IG_ICON = (
   </svg>
 )
 
-export default function StoreShell({ store, products, categories = [], initialBcvRate = null, initialDeliveryZones = [] }: { store: Store; products: Product[]; categories: { id: string; name: string; position: number }[]; initialBcvRate?: number | null; initialDeliveryZones?: DeliveryZone[] }) {
+export default function StoreShell({ store, products, categories = [], initialBcvRate = null, initialDeliveryZones = [], mapboxToken = '' }: { store: Store; products: Product[]; categories: { id: string; name: string; position: number }[]; initialBcvRate?: number | null; initialDeliveryZones?: DeliveryZone[]; mapboxToken?: string }) {
   const t = useT()
   const router = useRouter()
   const [cart, setCart]                   = useState<Record<string, CartItem>>({})
@@ -160,6 +161,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [deliveryTrackId, setDeliveryTrackId] = useState('')
   const [pickupTrackId, setPickupTrackId]     = useState('')
   const [locationState, setLocationState] = useState<'idle' | 'requesting' | 'granted' | 'denied'>('idle')
+  const [showMapPicker, setShowMapPicker] = useState(false)
   const [customerLat, setCustomerLat] = useState<number | null>(null)
   const [customerLng, setCustomerLng] = useState<number | null>(null)
   const [deliveryZones] = useState<DeliveryZone[]>(initialDeliveryZones)
@@ -646,6 +648,20 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // ── CHECKOUT ──
   if (view === 'checkout') return (
     <div className={`sf-page sf-tpl-${store.template ?? 'clasico'} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize}`} style={pageStyle}>
+      {showMapPicker && mapboxToken && (
+        <LocationMapPicker
+          initialLat={customerLat ?? 10.4806}
+          initialLng={customerLng ?? -66.9036}
+          mapboxToken={mapboxToken}
+          onConfirm={(lat, lng) => {
+            setCustomerLat(lat)
+            setCustomerLng(lng)
+            setLocationState('granted')
+            setShowMapPicker(false)
+          }}
+          onClose={() => setShowMapPicker(false)}
+        />
+      )}
       <nav className="sf-nav">
         <div className="sf-nav-inner">
           <button className="sf-nav-back" onClick={() => setView('catalog')}>
@@ -850,12 +866,22 @@ export default function StoreShell({ store, products, categories = [], initialBc
             {showLocForm && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {locationState === 'idle' && (
-                  <button type="button" onClick={requestLocation} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#7C3AED', color: 'white', border: 'none', borderRadius: 10, padding: '11px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, width: '100%' }}>
-                    <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15">
-                      <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                    </svg>
-                    Compartir mi ubicacion GPS
-                  </button>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button type="button" onClick={requestLocation} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#7C3AED', color: 'white', border: 'none', borderRadius: 10, padding: '11px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15">
+                        <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                      </svg>
+                      GPS
+                    </button>
+                    {mapboxToken && (
+                      <button type="button" onClick={() => setShowMapPicker(true)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'white', color: '#7C3AED', border: '1.5px solid #7C3AED', borderRadius: 10, padding: '11px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15">
+                          <path fillRule="evenodd" d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM17.707 5.293L14 1.586v12.828l2.293 2.293A1 1 0 0018 16V6a1 1 0 00-.293-.707z" clipRule="evenodd" />
+                        </svg>
+                        Marcar en mapa
+                      </button>
+                    )}
+                  </div>
                 )}
                 {locationState === 'requesting' && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 14px', background: '#F8FAFC', borderRadius: 10, fontSize: 13, color: '#64748B' }}>
@@ -868,7 +894,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
                     <svg viewBox="0 0 20 20" fill="#10B981" width="14" height="14" style={{ flexShrink: 0 }}>
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
                     </svg>
-                    Ubicacion GPS compartida
+                    <span style={{ flex: 1 }}>Ubicacion seleccionada</span>
+                    {mapboxToken && (
+                      <button type="button" onClick={() => setShowMapPicker(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#059669', padding: 0 }}>
+                        Cambiar
+                      </button>
+                    )}
                   </div>
                 )}
                 {locationState === 'granted' && deliveryZones.length > 0 && (
@@ -896,9 +927,16 @@ export default function StoreShell({ store, products, categories = [], initialBc
                       </svg>
                       <span>Ubicacion bloqueada. Ve a Configuracion &gt; Privacidad &gt; Ubicacion y activa el permiso, luego intenta de nuevo.</span>
                     </div>
-                    <button type="button" onClick={requestLocation} style={{ background: 'none', border: '1px solid #F59E0B', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, color: '#92400E', cursor: 'pointer', alignSelf: 'flex-start' }}>
-                      Reintentar GPS
-                    </button>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button type="button" onClick={requestLocation} style={{ background: 'none', border: '1px solid #F59E0B', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, color: '#92400E', cursor: 'pointer' }}>
+                        Reintentar GPS
+                      </button>
+                      {mapboxToken && (
+                        <button type="button" onClick={() => setShowMapPicker(true)} style={{ background: '#92400E', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, color: 'white', cursor: 'pointer' }}>
+                          Marcar en mapa
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
 

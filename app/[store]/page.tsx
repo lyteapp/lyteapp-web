@@ -58,8 +58,9 @@ export default async function StorePage({ params }: { params: Promise<{ store: s
     supabaseService.from('delivery_zones').select('*').eq('store_id', store.id),
   ])
 
-  const initialBcvRate    = rateRow?.rate ? Number(rateRow.rate) : null
+  const initialBcvRate       = rateRow?.rate ? Number(rateRow.rate) : null
   const initialDeliveryZones = zones ?? []
+  const mapboxToken          = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''
 
-  return <StoreShell store={store} products={products ?? []} categories={categories ?? []} initialBcvRate={initialBcvRate} initialDeliveryZones={initialDeliveryZones} />
+  return <StoreShell store={store} products={products ?? []} categories={categories ?? []} initialBcvRate={initialBcvRate} initialDeliveryZones={initialDeliveryZones} mapboxToken={mapboxToken} />
 }

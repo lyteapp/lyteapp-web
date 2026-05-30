@@ -168,7 +168,9 @@ export default function AnaliticsPage() {
   const [storeId, setStoreId] = useState<string | null>(null)
 
   // Sales
-  const [preset, setPreset]           = useState<Preset>('mes')
+  const [preset, setPreset]           = useState<Preset | null>('mes')
+  const [salesFromStr, setSalesFromStr] = useState(() => toStr(presetDates('mes').from))
+  const [salesToStr,   setSalesToStr]   = useState(() => toStr(presetDates('mes').to))
   const [salesOrders, setSalesOrders] = useState<SaleOrder[]>([])
   const [prevOrders, setPrevOrders]   = useState<SaleOrder[]>([])
   const [bcvRate, setBcvRate]         = useState<number>(0)
@@ -183,9 +185,8 @@ export default function AnaliticsPage() {
   const [openCard, setOpenCard]     = useState(false)
 
   // ── Loaders ──
-  const loadSales = useCallback(async (sid: string, p: Preset) => {
+  const loadSales = useCallback(async (sid: string, from: Date, to: Date, prevFrom: Date, prevTo: Date) => {
     setSalesLoading(true)
-    const { from, to, prevFrom, prevTo } = presetDates(p)
     const [curRes, prevRes] = await Promise.all([
       supabase
         .from('orders')
@@ -221,21 +222,39 @@ export default function AnaliticsPage() {
     setLoadingDel(false)
   }, [])
 
+  function applySalesPreset(p: Preset) {
+    const dates = presetDates(p)
+    setPreset(p)
+    setSalesFromStr(toStr(dates.from))
+    setSalesToStr(toStr(dates.to))
+  }
+
   // Initial load
   useEffect(() => {
     if (!user) return
     supabase.from('stores').select('id').eq('owner_id', user.id).maybeSingle().then(({ data }) => {
       if (!data) return
       setStoreId(data.id)
-      loadSales(data.id, preset)
       loadDeliveries(data.id, dateFrom, dateTo)
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
   useEffect(() => {
-    if (storeId) loadSales(storeId, preset)
-  }, [storeId, preset, loadSales])
+    if (!storeId || !salesFromStr || !salesToStr) return
+    const from = new Date(salesFromStr + 'T00:00:00')
+    const to   = new Date(salesToStr   + 'T00:00:00')
+    let prevFrom: Date, prevTo: Date
+    if (preset) {
+      const p = presetDates(preset)
+      prevFrom = p.prevFrom; prevTo = p.prevTo
+    } else {
+      const diffMs = to.getTime() - from.getTime()
+      prevTo   = new Date(from.getTime() - 86400000)
+      prevFrom = new Date(prevTo.getTime() - diffMs)
+    }
+    loadSales(storeId, from, to, prevFrom, prevTo)
+  }, [storeId, salesFromStr, salesToStr, preset, loadSales])
 
   useEffect(() => {
     if (storeId) loadDeliveries(storeId, dateFrom, dateTo)
@@ -278,7 +297,8 @@ export default function AnaliticsPage() {
     return Object.values(map).sort((a, b) => b.total - a.total)
   }, [salesOrders])
 
-  const { from: salesFrom, to: salesTo } = presetDates(preset)
+  const salesFrom = new Date(salesFromStr + 'T00:00:00')
+  const salesTo   = new Date(salesToStr   + 'T00:00:00')
   const salesDiffDays = Math.round((salesTo.getTime() - salesFrom.getTime()) / 86400000) + 1
 
   // ── Delivery computations ──
@@ -315,20 +335,40 @@ export default function AnaliticsPage() {
           {salesLoading && <div className="an-spinner" />}
         </div>
 
-        {/* Presets */}
-        <div className="an-presets" style={{ marginBottom: 16 }}>
-          {(['hoy', '7d', 'mes', 'mes_ant'] as Preset[]).map(p => {
-            const labels: Record<Preset, string> = { hoy: 'Hoy', '7d': '7 dias', mes: 'Mes', mes_ant: 'Mes ant.' }
-            return (
-              <button
-                key={p}
-                className={`an-preset${preset === p ? ' active' : ''}`}
-                onClick={() => setPreset(p)}
-              >
-                {labels[p]}
-              </button>
-            )
-          })}
+        {/* Presets + date range */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+          <div className="an-presets" style={{ marginBottom: 0 }}>
+            {(['hoy', '7d', 'mes', 'mes_ant'] as Preset[]).map(p => {
+              const labels: Record<Preset, string> = { hoy: 'Hoy', '7d': '7 dias', mes: 'Mes', mes_ant: 'Mes ant.' }
+              return (
+                <button
+                  key={p}
+                  className={`an-preset${preset === p ? ' active' : ''}`}
+                  onClick={() => applySalesPreset(p)}
+                >
+                  {labels[p]}
+                </button>
+              )
+            })}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 10, padding: '7px 12px' }}>
+            <input
+              type="date"
+              value={salesFromStr}
+              max={salesToStr}
+              onChange={e => { setSalesFromStr(e.target.value); setPreset(null) }}
+              style={{ border: 'none', outline: 'none', fontSize: 12, color: '#0F172A', background: 'transparent', fontFamily: 'inherit', cursor: 'pointer' }}
+            />
+            <span style={{ color: '#CBD5E1', fontSize: 12 }}>→</span>
+            <input
+              type="date"
+              value={salesToStr}
+              min={salesFromStr}
+              max={todayStr}
+              onChange={e => { setSalesToStr(e.target.value); setPreset(null) }}
+              style={{ border: 'none', outline: 'none', fontSize: 12, color: '#0F172A', background: 'transparent', fontFamily: 'inherit', cursor: 'pointer' }}
+            />
+          </div>
         </div>
 
         {salesLoading ? null : salesOrders.length === 0 ? (

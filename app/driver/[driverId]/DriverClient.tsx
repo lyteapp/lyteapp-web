@@ -507,12 +507,15 @@ export default function DriverClient({
   async function completeDelivery() {
     if (!delivery) return
     setCompleting(true)
-    await supabase.from('deliveries')
-      .update({ status: 'delivered', delivered_at: new Date().toISOString() })
-      .eq('id', delivery.id)
-    if (delivery.order_id) {
-      await supabase.from('orders').update({ status: 'delivered' }).eq('id', delivery.order_id)
-    }
+    await fetch('/api/driver-complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        deliveryId: delivery.id,
+        orderId: delivery.order_id ?? null,
+        driverId,
+      }),
+    }).catch(() => {})
     stopNavigation()
     setDelivery(null)
     setCompleting(false)

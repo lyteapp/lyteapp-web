@@ -39,6 +39,7 @@ type Product = {
 }
 type PaymentMethod = { type: string; label: string; enabled: boolean; details: Record<string, string> }
 type SavedLocation = { id: string; label: string; address: string; lat: number | null; lng: number | null }
+type DeliveryZone  = { id: string; name: string; fee: number; color: string; radius_m: number; center_lat: number; center_lng: number }
 
 const PM_LABELS: Record<string, string> = {
   pago_movil: 'Pago Móvil', zelle: 'Zelle', efectivo_usd: 'Efectivo USD',
@@ -114,6 +115,14 @@ function toEmbedUrl(url: string): string {
   return url
 }
 
+function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
 function buildCartKey(productId: string, color?: string, variables?: Record<string, string>): string {
   const parts = [productId]
   if (color) parts.push(color)
@@ -153,6 +162,8 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const [locationState, setLocationState] = useState<'idle' | 'requesting' | 'granted' | 'denied'>('idle')
   const [customerLat, setCustomerLat] = useState<number | null>(null)
   const [customerLng, setCustomerLng] = useState<number | null>(null)
+  const [deliveryZones, setDeliveryZones] = useState<DeliveryZone[]>([])
+  const [matchedZone, setMatchedZone] = useState<DeliveryZone | null>(null)
   const [customerAddress, setCustomerAddress] = useState('')
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([])
   const [selectedLocId, setSelectedLocId]   = useState<string | null>(null)
@@ -257,6 +268,27 @@ export default function StoreShell({ store, products, categories = [] }: { store
       .then(({ data }) => { if (data?.rate) setBcvRate(Number(data.rate)) })
   }, [view, bcvRate, storeCurrency])
 
+  useEffect(() => {
+    if (view !== 'checkout' || deliveryZones.length > 0) return
+    supabase
+      .from('delivery_zones')
+      .select('*')
+      .eq('store_id', store.id)
+      .then(({ data }) => { if (data?.length) setDeliveryZones(data as DeliveryZone[]) })
+  }, [view, store.id, deliveryZones.length])
+
+  useEffect(() => {
+    if (customerLat === null || customerLng === null || deliveryZones.length === 0) {
+      setMatchedZone(null)
+      return
+    }
+    const hits = deliveryZones.filter(z =>
+      haversineMeters(customerLat, customerLng, z.center_lat, z.center_lng) <= z.radius_m
+    )
+    hits.sort((a, b) => a.radius_m - b.radius_m)
+    setMatchedZone(hits[0] ?? null)
+  }, [customerLat, customerLng, deliveryZones])
+
   const cartItems  = Object.values(cart).filter(i => i.quantity > 0)
   const cartCount  = cartItems.reduce((s, i) => s + i.quantity, 0)
   const cartTotal  = cartItems.reduce((s, i) => s + (i.price + i.extraPrice) * i.quantity, 0)
@@ -268,8 +300,9 @@ export default function StoreShell({ store, products, categories = [] }: { store
   const dtOn            = cs.deliveryTypes?.delivery !== false  // domicilio habilitado (default true)
   const puOn            = cs.deliveryTypes?.pickup === true     // retiro habilitado (default false)
   const bothTypes       = dtOn && puOn
-  const deliveryFeeAmt  = dtOn && deliveryType === 'delivery' && cs.deliveryEnabled && cs.deliveryFee
-    ? Number(cs.deliveryFee)
+  const zoneBasedFee   = deliveryZones.length > 0 && customerLat !== null ? (matchedZone?.fee ?? 0) : null
+  const deliveryFeeAmt = dtOn && deliveryType === 'delivery' && cs.deliveryEnabled
+    ? (zoneBasedFee !== null ? zoneBasedFee : cs.deliveryFee ? Number(cs.deliveryFee) : 0)
     : 0
   const orderTotal  = cartTotal + deliveryFeeAmt
   const showLocForm = savedLocations.length === 0 || showNewLoc
@@ -516,7 +549,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
           return rows
         }),
         '', `*Subtotal: ${currencySymbol}${cartTotal.toFixed(2)}*`,
-        ...(deliveryFeeAmt > 0 ? [`*Envio: ${currencySymbol}${deliveryFeeAmt.toFixed(2)}*`] : []),
+        ...(deliveryFeeAmt > 0 ? [`*Envio: ${currencySymbol}${deliveryFeeAmt.toFixed(2)}${matchedZone ? ` (${matchedZone.name})` : ''}*`] : []),
         `*Total: ${currencySymbol}${orderTotal.toFixed(2)}*`,
         ...(vesAmount ? [`*Total Bs: ${vesAmount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (BCV ${bcvRate!.toFixed(4)})*`] : []),
         ...(proofUrl ? ['', `*Comprobante:* ${proofUrl}`] : []),
@@ -847,6 +880,23 @@ export default function StoreShell({ store, products, categories = [] }: { store
                     </svg>
                     Ubicacion GPS compartida
                   </div>
+                )}
+                {locationState === 'granted' && deliveryZones.length > 0 && (
+                  matchedZone ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#EDE9FE', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#5B21B6', fontWeight: 500 }}>
+                      <svg viewBox="0 0 20 20" fill="#7C3AED" width="14" height="14" style={{ flexShrink: 0 }}>
+                        <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                      </svg>
+                      <span>Zona: <strong>{matchedZone.name}</strong> · Envio {currencySymbol}{matchedZone.fee.toFixed(2)}</span>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FFF7ED', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#92400E' }}>
+                      <svg viewBox="0 0 20 20" fill="#F59E0B" width="14" height="14" style={{ flexShrink: 0 }}>
+                        <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                      </svg>
+                      Tu ubicacion esta fuera de las zonas de cobertura
+                    </div>
+                  )
                 )}
                 {locationState === 'denied' && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FFF7ED', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#92400E' }}>

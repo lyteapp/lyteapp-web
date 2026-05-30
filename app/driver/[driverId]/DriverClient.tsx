@@ -507,15 +507,33 @@ export default function DriverClient({
   async function completeDelivery() {
     if (!delivery) return
     setCompleting(true)
-    await fetch('/api/driver-complete', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        deliveryId: delivery.id,
-        orderId: delivery.order_id ?? null,
-        driverId,
-      }),
-    }).catch(() => {})
+    const now = new Date().toISOString()
+    try {
+      const res = await fetch('/api/driver-complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deliveryId: delivery.id,
+          orderId: delivery.order_id ?? null,
+          driverId,
+        }),
+      })
+      if (!res.ok) {
+        // API failed — update delivery directly with anon key as fallback
+        await supabase
+          .from('deliveries')
+          .update({ status: 'delivered', delivered_at: now })
+          .eq('id', delivery.id)
+          .eq('driver_id', driverId)
+      }
+    } catch {
+      // Network error — update delivery directly
+      await supabase
+        .from('deliveries')
+        .update({ status: 'delivered', delivered_at: now })
+        .eq('id', delivery.id)
+        .eq('driver_id', driverId)
+    }
     stopNavigation()
     setDelivery(null)
     setCompleting(false)

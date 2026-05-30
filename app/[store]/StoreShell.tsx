@@ -476,6 +476,10 @@ export default function StoreShell({ store, products, categories = [] }: { store
       setError('Ingresa tu direccion o comparte tu ubicacion GPS para continuar')
       return
     }
+    if (deliveryType === 'delivery' && deliveryZones.length > 0 && customerLat !== null && matchedZone === null) {
+      setError('Ubicacion desconocida, por favor contactenos para coordinar tu entrega')
+      return
+    }
     if (requirePaymentMethod && !selectedPayment && !paymentFreeText.trim()) {
       setError('Debes seleccionar un metodo de pago para continuar')
       return
@@ -1063,7 +1067,7 @@ export default function StoreShell({ store, products, categories = [] }: { store
         </div>
 
         {error && <div className="sf-co-error">{error}</div>}
-        <button className="sf-submit-btn" onClick={handleSubmit} disabled={submitting || cartItems.length === 0}>
+        <button className="sf-submit-btn" onClick={handleSubmit} disabled={submitting || cartItems.length === 0 || (deliveryType === 'delivery' && deliveryZones.length > 0 && customerLat !== null && matchedZone === null)}>
           {submitting ? t('store.sending') : `${t('store.confirmOrder')} · ${currencySymbol}${orderTotal.toFixed(2)}`}
         </button>
       </div>

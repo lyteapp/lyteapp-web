@@ -48,16 +48,18 @@ export default async function StorePage({ params }: { params: Promise<{ store: s
   if (!store) notFound()
 
   const currency = (store.store_currency ?? 'USD') as string
-  const [{ data: products }, { data: categories }, { data: rateRow }] = await Promise.all([
+  const [{ data: products }, { data: categories }, { data: rateRow }, { data: zones }] = await Promise.all([
     supabase.from('products').select('*')
       .eq('store_id', store.id).eq('is_active', true)
       .order('created_at', { ascending: false }),
     supabase.from('categories').select('*')
       .eq('store_id', store.id).order('position', { ascending: true }),
     supabaseService.from('exchange_rates').select('rate').eq('currency', currency).maybeSingle(),
+    supabaseService.from('delivery_zones').select('*').eq('store_id', store.id),
   ])
 
-  const initialBcvRate = rateRow?.rate ? Number(rateRow.rate) : null
+  const initialBcvRate    = rateRow?.rate ? Number(rateRow.rate) : null
+  const initialDeliveryZones = zones ?? []
 
-  return <StoreShell store={store} products={products ?? []} categories={categories ?? []} initialBcvRate={initialBcvRate} />
+  return <StoreShell store={store} products={products ?? []} categories={categories ?? []} initialBcvRate={initialBcvRate} initialDeliveryZones={initialDeliveryZones} />
 }

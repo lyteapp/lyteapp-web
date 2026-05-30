@@ -141,7 +141,7 @@ const IG_ICON = (
   </svg>
 )
 
-export default function StoreShell({ store, products, categories = [], initialBcvRate = null }: { store: Store; products: Product[]; categories: { id: string; name: string; position: number }[]; initialBcvRate?: number | null }) {
+export default function StoreShell({ store, products, categories = [], initialBcvRate = null, initialDeliveryZones = [] }: { store: Store; products: Product[]; categories: { id: string; name: string; position: number }[]; initialBcvRate?: number | null; initialDeliveryZones?: DeliveryZone[] }) {
   const t = useT()
   const router = useRouter()
   const [cart, setCart]                   = useState<Record<string, CartItem>>({})
@@ -162,7 +162,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [locationState, setLocationState] = useState<'idle' | 'requesting' | 'granted' | 'denied'>('idle')
   const [customerLat, setCustomerLat] = useState<number | null>(null)
   const [customerLng, setCustomerLng] = useState<number | null>(null)
-  const [deliveryZones, setDeliveryZones] = useState<DeliveryZone[]>([])
+  const [deliveryZones] = useState<DeliveryZone[]>(initialDeliveryZones)
   const [matchedZone, setMatchedZone] = useState<DeliveryZone | null>(null)
   const [customerAddress, setCustomerAddress] = useState('')
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([])
@@ -259,14 +259,6 @@ export default function StoreShell({ store, products, categories = [], initialBc
   }, [cart, store.slug])
 
 
-  useEffect(() => {
-    if (view !== 'checkout' || deliveryZones.length > 0) return
-    supabase
-      .from('delivery_zones')
-      .select('*')
-      .eq('store_id', store.id)
-      .then(({ data }) => { if (data?.length) setDeliveryZones(data as DeliveryZone[]) })
-  }, [view, store.id, deliveryZones.length])
 
   useEffect(() => {
     if (customerLat === null || customerLng === null || deliveryZones.length === 0) {

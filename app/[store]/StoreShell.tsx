@@ -975,21 +975,81 @@ export default function StoreShell({ store, products, categories = [], initialBc
           <h3 className="sf-co-section-title">{t('store.paymentMethod')}{requirePaymentMethod && <span className="sf-required"> *</span>}</h3>
           {enabledMethods.length > 0 ? (
             <div className="sf-payment-list">
-              {enabledMethods.map(m => (
-                <div key={m.type} className={`sf-payment-opt${selectedPayment === m.type ? ' selected' : ''}`} onClick={() => setSelectedPayment(m.type)}>
-                  <div className="sf-payment-opt-top">
-                    <div className={`sf-payment-radio${selectedPayment === m.type ? ' on' : ''}`} />
-                    <span className="sf-payment-label">{m.label}</span>
-                  </div>
-                  {selectedPayment === m.type && Object.keys(m.details ?? {}).length > 0 && (
-                    <div className="sf-payment-info">
-                      {Object.entries(m.details).map(([k, v]) => (
-                        <div key={k} className="sf-payment-detail-row"><span>{k}</span><strong>{v}</strong></div>
-                      ))}
+              {enabledMethods.map(m => {
+                const isSelected = selectedPayment === m.type
+                const isVES      = VES_METHODS.has(m.type)
+                return (
+                  <div key={m.type} className={`sf-payment-opt${isSelected ? ' selected' : ''}`} onClick={() => setSelectedPayment(m.type)}>
+                    <div className="sf-payment-opt-top">
+                      <div className={`sf-payment-radio${isSelected ? ' on' : ''}`} />
+                      <span className="sf-payment-label">{m.label}</span>
                     </div>
-                  )}
-                </div>
-              ))}
+                    {isSelected && Object.keys(m.details ?? {}).length > 0 && (
+                      <div className="sf-payment-info">
+                        {Object.entries(m.details).map(([k, v]) => (
+                          <div key={k} className="sf-payment-detail-row"><span>{k}</span><strong>{v as string}</strong></div>
+                        ))}
+                      </div>
+                    )}
+                    {isSelected && (
+                      <div className="sf-proof-upload" onClick={e => e.stopPropagation()}>
+                        <div className="sf-proof-total">
+                          <span>Total a pagar</span>
+                          {isVES && vesAmount ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                              <strong style={{ fontSize: '1.2em' }}>Bs {vesAmount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                              <span style={{ fontSize: 12, color: '#6B7280' }}>{currencySymbol}{orderTotal.toFixed(2)}</span>
+                            </div>
+                          ) : (
+                            <div>
+                              <strong>{currencySymbol}{orderTotal.toFixed(2)}</strong>
+                              {vesAmount && (
+                                <span className="sf-proof-total-bs">
+                                  {' · '}Bs {vesAmount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <label className="sf-proof-label" htmlFor="sf-proof-input">
+                          Comprobante de pago{requirePaymentProof ? <span className="sf-required"> *</span> : <span className="sf-optional"> (opcional)</span>}
+                        </label>
+                        <input
+                          id="sf-proof-input"
+                          type="file"
+                          accept="image/*"
+                          style={{ display: 'none' }}
+                          onChange={e => {
+                            const f = e.target.files?.[0]
+                            if (!f) return
+                            setPaymentProofFile(f)
+                            setPaymentProofPreview(URL.createObjectURL(f))
+                          }}
+                        />
+                        {paymentProofPreview ? (
+                          <div className="sf-proof-preview-wrap">
+                            <img src={paymentProofPreview} alt="Comprobante" className="sf-proof-preview" />
+                            <button
+                              type="button"
+                              className="sf-proof-remove"
+                              onClick={() => { setPaymentProofFile(null); setPaymentProofPreview(null) }}
+                            >
+                              Quitar foto
+                            </button>
+                          </div>
+                        ) : (
+                          <label htmlFor="sf-proof-input" className="sf-proof-drop">
+                            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" width="22" height="22">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v1.25A1.25 1.25 0 004.25 19h11.5A1.25 1.25 0 0017 17.75V16.5M10 3v10m0 0l-3-3m3 3l3-3" />
+                            </svg>
+                            <span>Subir foto del pago</span>
+                          </label>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           ) : (
             <div className="sf-co-field">
@@ -998,18 +1058,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
             </div>
           )}
 
-          {(selectedPayment || paymentFreeText) && (
+          {paymentFreeText && (
             <div className="sf-proof-upload">
               <div className="sf-proof-total">
                 <span>Total a pagar</span>
-                <div>
-                  <strong>{currencySymbol}{orderTotal.toFixed(2)}</strong>
-                  {vesAmount && (
-                    <span className="sf-proof-total-bs">
-                      {' · '}Bs {vesAmount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                  )}
-                </div>
+                <div><strong>{currencySymbol}{orderTotal.toFixed(2)}</strong></div>
               </div>
               <label className="sf-proof-label" htmlFor="sf-proof-input">
                 Comprobante de pago{requirePaymentProof ? <span className="sf-required"> *</span> : <span className="sf-optional"> (opcional)</span>}

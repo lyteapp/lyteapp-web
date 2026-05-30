@@ -866,16 +866,16 @@ export default function StoreShell({ store, products, categories = [], initialBc
             {showLocForm && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {locationState === 'idle' && (
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button type="button" onClick={requestLocation} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#7C3AED', color: 'white', border: 'none', borderRadius: 10, padding: '11px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <button type="button" onClick={requestLocation} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#7C3AED', color: 'white', border: 'none', borderRadius: 10, padding: '11px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, width: '100%' }}>
                       <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15">
                         <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                       </svg>
-                      GPS
+                      Compartir mi ubicacion
                     </button>
                     {mapboxToken && (
-                      <button type="button" onClick={() => setShowMapPicker(true)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'white', color: '#7C3AED', border: '1.5px solid #7C3AED', borderRadius: 10, padding: '11px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
-                        <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15">
+                      <button type="button" onClick={() => setShowMapPicker(true)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: 'none', color: '#6B7280', border: 'none', borderRadius: 10, padding: '6px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 500, width: '100%' }}>
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13">
                           <path fillRule="evenodd" d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM17.707 5.293L14 1.586v12.828l2.293 2.293A1 1 0 0018 16V6a1 1 0 00-.293-.707z" clipRule="evenodd" />
                         </svg>
                         Marcar en mapa

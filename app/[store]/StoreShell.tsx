@@ -874,8 +874,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
                       Compartir mi ubicacion
                     </button>
                     {mapboxToken && (
-                      <button type="button" onClick={() => setShowMapPicker(true)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: 'none', color: '#6B7280', border: 'none', borderRadius: 10, padding: '6px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 500, width: '100%' }}>
-                        <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13">
+                      <button type="button" onClick={() => setShowMapPicker(true)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: '#F1F0FF', color: '#6D28D9', border: '1px solid #DDD6FE', borderRadius: 10, padding: '10px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, width: '100%' }}>
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
                           <path fillRule="evenodd" d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM17.707 5.293L14 1.586v12.828l2.293 2.293A1 1 0 0018 16V6a1 1 0 00-.293-.707z" clipRule="evenodd" />
                         </svg>
                         Marcar en mapa

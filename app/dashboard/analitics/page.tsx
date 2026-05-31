@@ -23,8 +23,10 @@ type DeliveryRow = {
 }
 
 type ZoneRow = { id: string; name: string | null; center_lat: number; center_lng: number; radius_m: number }
-type GeoDelivery = { id: string; customer_lat: number | null; customer_lng: number | null }
 type AllOrder = { id: string; created_at: string; status: string; customer_lat: number | null; customer_lng: number | null }
+type OrderItem = { product_id: string | null; product_name: string; quantity: number; unit_price: number; modifiers: unknown }
+type ProductMeta = { id: string; name: string; is_active: boolean; category_id: string | null }
+type CategoryMeta = { id: string; name: string }
 
 // ── Status constants ──
 const STATUS_LABELS: Record<string, string> = { pending: 'Pendiente', preparing: 'Cocina', ready: 'Listo', picked_up: 'En camino', delivered: 'Entregado', cancelled: 'Cancelado' }
@@ -205,8 +207,13 @@ export default function AnaliticsPage() {
   const [allOrders, setAllOrders] = useState<AllOrder[]>([])
   const [zonesData, setZonesData] = useState<ZoneRow[]>([])
 
+  // Products
+  const [orderItems, setOrderItems]     = useState<OrderItem[]>([])
+  const [allProducts, setAllProducts]   = useState<ProductMeta[]>([])
+  const [allCategories, setAllCategories] = useState<CategoryMeta[]>([])
+
   // Tab
-  const [activeTab, setActiveTab] = useState<'ventas' | 'operaciones' | 'zonas' | 'entregas'>('ventas')
+  const [activeTab, setActiveTab] = useState<'ventas' | 'operaciones' | 'zonas' | 'entregas' | 'productos'>('ventas')
 
   // ── Loaders ──
   const loadSales = useCallback(async (sid: string, from: Date, to: Date, prevFrom: Date, prevTo: Date) => {
@@ -233,7 +240,7 @@ export default function AnaliticsPage() {
   }, [])
 
   const loadOpsData = useCallback(async (sid: string, from: Date, to: Date) => {
-    const [ordersRes, zonesRes] = await Promise.all([
+    const [ordersRes, zonesRes, productsRes, categoriesRes] = await Promise.all([
       supabase
         .from('orders')
         .select('id,created_at,status,customer_lat,customer_lng')
@@ -244,9 +251,31 @@ export default function AnaliticsPage() {
         .from('delivery_zones')
         .select('id,name,center_lat,center_lng,radius_m')
         .eq('store_id', sid),
+      supabase
+        .from('products')
+        .select('id,name,is_active,category_id')
+        .eq('store_id', sid),
+      supabase
+        .from('categories')
+        .select('id,name')
+        .eq('store_id', sid),
     ])
-    setAllOrders((ordersRes.data ?? []) as AllOrder[])
+    const orders = (ordersRes.data ?? []) as AllOrder[]
+    setAllOrders(orders)
     setZonesData((zonesRes.data ?? []) as ZoneRow[])
+    setAllProducts((productsRes.data ?? []) as ProductMeta[])
+    setAllCategories((categoriesRes.data ?? []) as CategoryMeta[])
+
+    const activeOrderIds = orders.filter(o => o.status !== 'cancelled').map(o => o.id)
+    if (activeOrderIds.length > 0) {
+      const { data } = await supabase
+        .from('order_items')
+        .select('product_id,product_name,quantity,unit_price,modifiers')
+        .in('order_id', activeOrderIds)
+      setOrderItems((data ?? []) as OrderItem[])
+    } else {
+      setOrderItems([])
+    }
   }, [])
 
   const loadDeliveries = useCallback(async (sid: string, from: string, to: string) => {
@@ -409,6 +438,75 @@ export default function AnaliticsPage() {
   }, [allOrders, zonesData])
   const zoneCountMax = Math.max(...zoneCounts.map(z => z.count), 1)
 
+  // ── Product computations ──
+  const topProducts = useMemo(() => {
+    const map: Record<string, { name: string; qty: number; revenue: number }> = {}
+    orderItems.forEach(item => {
+      const key = item.product_id ?? item.product_name
+      if (!map[key]) map[key] = { name: item.product_name, qty: 0, revenue: 0 }
+      map[key].qty += item.quantity
+      map[key].revenue += Number(item.unit_price) * item.quantity
+    })
+    return Object.values(map).sort((a, b) => b.qty - a.qty).slice(0, 10)
+  }, [orderItems])
+  const topProductMax = Math.max(...topProducts.map(p => p.qty), 1)
+
+  const slowProducts = useMemo(() => {
+    const qtys: Record<string, number> = {}
+    orderItems.forEach(i => { if (i.product_id) qtys[i.product_id] = (qtys[i.product_id] ?? 0) + i.quantity })
+    return allProducts
+      .filter(p => p.is_active)
+      .map(p => ({ id: p.id, name: p.name, qty: qtys[p.id] ?? 0 }))
+      .sort((a, b) => a.qty - b.qty)
+      .slice(0, 5)
+  }, [orderItems, allProducts])
+
+  const outOfStockProducts = useMemo(() => {
+    const qtys: Record<string, { name: string; qty: number }> = {}
+    orderItems.forEach(i => {
+      if (!i.product_id) return
+      if (!qtys[i.product_id]) qtys[i.product_id] = { name: i.product_name, qty: 0 }
+      qtys[i.product_id].qty += i.quantity
+    })
+    return allProducts
+      .filter(p => !p.is_active && qtys[p.id])
+      .map(p => ({ id: p.id, name: p.name, qty: qtys[p.id].qty }))
+      .sort((a, b) => b.qty - a.qty)
+      .slice(0, 5)
+  }, [orderItems, allProducts])
+
+  const topModifiers = useMemo(() => {
+    const map: Record<string, number> = {}
+    orderItems.forEach(item => {
+      const mods = item.modifiers
+      if (!mods || !Array.isArray(mods)) return
+      ;(mods as Record<string, unknown>[]).forEach(m => {
+        const name = typeof m === 'string' ? m : (m?.name as string | undefined)
+        if (name) map[name] = (map[name] ?? 0) + item.quantity
+      })
+    })
+    return Object.entries(map).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 10)
+  }, [orderItems])
+  const topModMax = Math.max(...topModifiers.map(m => m.count), 1)
+
+  const revenueByCategory = useMemo(() => {
+    const productCatMap: Record<string, string | null> = {}
+    allProducts.forEach(p => { productCatMap[p.id] = p.category_id })
+    const catRevenue: Record<string, number> = {}
+    orderItems.forEach(item => {
+      const catId = item.product_id ? (productCatMap[item.product_id] ?? '__none__') : '__none__'
+      catRevenue[catId] = (catRevenue[catId] ?? 0) + Number(item.unit_price) * item.quantity
+    })
+    const catMap: Record<string, string> = {}
+    allCategories.forEach(c => { catMap[c.id] = c.name })
+    const rows = Object.entries(catRevenue).map(([id, revenue]) => ({
+      name: id === '__none__' ? 'Sin categoria' : (catMap[id] ?? 'Sin categoria'),
+      revenue,
+    })).sort((a, b) => b.revenue - a.revenue)
+    return rows
+  }, [orderItems, allProducts, allCategories])
+  const catRevMax = Math.max(...revenueByCategory.map(r => r.revenue), 1)
+
   function setDelPreset(p: 'today' | 'week' | 'month') {
     const d = new Date()
     if (p === 'today') {
@@ -433,6 +531,7 @@ export default function AnaliticsPage() {
           { key: 'operaciones', label: 'Operaciones' },
           { key: 'zonas',       label: 'Zonas'       },
           { key: 'entregas',    label: 'Entregas'    },
+          { key: 'productos',   label: 'Productos'   },
         ] as const).map(t => (
           <button
             key={t.key}
@@ -736,6 +835,128 @@ export default function AnaliticsPage() {
                 })}
               </div>
             </div>
+          )}
+        </div>
+      )}
+
+      {/* ── PRODUCTOS TAB ── */}
+      {activeTab === 'productos' && (
+        <div className="dh-card" style={{ padding: '20px 24px' }}>
+          {orderItems.length === 0 ? (
+            <div className="an-empty">Sin pedidos en este periodo</div>
+          ) : (
+            <>
+              {/* Top productos */}
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Top productos mas vendidos
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 28 }}>
+                {topProducts.map((p, i) => {
+                  const pct = (p.qty / topProductMax) * 100
+                  return (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 20, fontSize: 11, fontWeight: 700, color: i < 3 ? '#7C3AED' : '#CBD5E1', flexShrink: 0, textAlign: 'right' }}>{i + 1}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: '#0F172A', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
+                        <div style={{ background: '#F1F5F9', borderRadius: 4, height: 6, overflow: 'hidden' }}>
+                          <div style={{ width: `${pct}%`, height: '100%', background: i === 0 ? '#7C3AED' : '#C4B5FD', borderRadius: 4 }} />
+                        </div>
+                      </div>
+                      <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: '#0F172A' }}>{p.qty} uds</div>
+                        <div style={{ fontSize: 11, color: '#94A3B8' }}>${p.revenue.toFixed(2)}</div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Productos que menos rotan */}
+              {slowProducts.length > 0 && (
+                <>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Productos que menos rotan
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 28 }}>
+                    {slowProducts.map(p => (
+                      <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 10, background: '#FFFBEB', border: '1px solid #FDE68A' }}>
+                        <div style={{ fontSize: 13, color: '#92400E', fontWeight: 500 }}>{p.name}</div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: '#B45309' }}>{p.qty === 0 ? 'Sin ventas' : `${p.qty} uds`}</div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* Productos que mas se agotan */}
+              {outOfStockProducts.length > 0 && (
+                <>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Productos que mas se agotan
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 28 }}>
+                    {outOfStockProducts.map(p => (
+                      <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 10, background: '#FEF2F2', border: '1px solid #FECACA' }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, color: '#991B1B', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
+                          <div style={{ fontSize: 11, color: '#DC2626', marginTop: 1 }}>Actualmente sin stock</div>
+                        </div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: '#DC2626', flexShrink: 0 }}>{p.qty} vendidos</div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* Modificadores mas pedidos */}
+              {topModifiers.length > 0 && (
+                <>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Modificadores mas pedidos
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 28 }}>
+                    {topModifiers.map(m => {
+                      const pct = (m.count / topModMax) * 100
+                      return (
+                        <div key={m.name} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div style={{ flex: 1, minWidth: 0, fontSize: 12, color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</div>
+                          <div style={{ width: 90, background: '#F1F5F9', borderRadius: 4, height: 7, overflow: 'hidden', flexShrink: 0 }}>
+                            <div style={{ width: `${pct}%`, height: '100%', background: '#7C3AED', borderRadius: 4 }} />
+                          </div>
+                          <div style={{ width: 32, fontSize: 12, fontWeight: 600, color: '#0F172A', textAlign: 'right', flexShrink: 0 }}>{m.count}</div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+
+              {/* Ingreso por categoria */}
+              {revenueByCategory.length > 0 && (
+                <>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Ingreso por categoria
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {revenueByCategory.map(r => {
+                      const pct = (r.revenue / catRevMax) * 100
+                      const totalRevenue = revenueByCategory.reduce((s, x) => s + x.revenue, 0)
+                      const share = totalRevenue > 0 ? (r.revenue / totalRevenue) * 100 : 0
+                      return (
+                        <div key={r.name} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div style={{ width: 100, fontSize: 12, color: '#64748B', flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
+                          <div style={{ flex: 1, background: '#F1F5F9', borderRadius: 4, height: 8, overflow: 'hidden' }}>
+                            <div style={{ width: `${pct}%`, height: '100%', background: '#7C3AED', borderRadius: 4, transition: 'width 0.4s ease' }} />
+                          </div>
+                          <div style={{ width: 42, fontSize: 11, color: '#94A3B8', textAlign: 'right', flexShrink: 0 }}>{share.toFixed(0)}%</div>
+                          <div style={{ width: 56, fontSize: 12, fontWeight: 600, color: '#0F172A', textAlign: 'right', flexShrink: 0 }}>${r.revenue.toFixed(0)}</div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+            </>
           )}
         </div>
       )}

@@ -22,6 +22,16 @@ type DeliveryRow = {
   customer_name?: string
 }
 
+type ZoneRow = { id: string; name: string | null; center_lat: number; center_lng: number; radius_m: number }
+type GeoDelivery = { id: string; customer_lat: number | null; customer_lng: number | null }
+type AllOrder = { id: string; created_at: string; status: string; customer_lat: number | null; customer_lng: number | null }
+
+// ── Status constants ──
+const STATUS_LABELS: Record<string, string> = { pending: 'Pendiente', preparing: 'Cocina', ready: 'Listo', picked_up: 'En camino', delivered: 'Entregado', cancelled: 'Cancelado' }
+const STATUS_ORDER = ['delivered', 'picked_up', 'ready', 'preparing', 'pending', 'cancelled']
+const STATUS_COLORS: Record<string, string> = { pending: '#94A3B8', preparing: '#F59E0B', ready: '#3B82F6', picked_up: '#7C3AED', delivered: '#10B981', cancelled: '#EF4444' }
+const DAY_LABELS = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab']
+
 // ── Method currency map ──
 const METHOD_CURRENCY: Record<string, { label: string; currency: string; symbol: string }> = {
   'pago movil':       { label: 'Pago Movil',       currency: 'VES',  symbol: 'Bs' },
@@ -162,6 +172,14 @@ function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('es', { day: 'numeric', month: 'short' })
 }
 
+function haversineM(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const R = 6371000
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
 // ── Page ──
 export default function AnaliticsPage() {
   const { user } = useAuth()
@@ -183,6 +201,12 @@ export default function AnaliticsPage() {
   const [deliveries, setDeliveries] = useState<DeliveryRow[]>([])
   const [loadingDel, setLoadingDel] = useState(false)
   const [openCard, setOpenCard]     = useState(false)
+
+  // Operations / zones
+  const [allOrders, setAllOrders]       = useState<AllOrder[]>([])
+  const [zonesData, setZonesData]       = useState<ZoneRow[]>([])
+  const [openOpsCard, setOpenOpsCard]   = useState(false)
+  const [openZonesCard, setOpenZonesCard] = useState(false)
 
   // ── Loaders ──
   const loadSales = useCallback(async (sid: string, from: Date, to: Date, prevFrom: Date, prevTo: Date) => {
@@ -206,6 +230,23 @@ export default function AnaliticsPage() {
     setSalesOrders((curRes.data ?? []) as SaleOrder[])
     setPrevOrders((prevRes.data ?? []) as SaleOrder[])
     setSalesLoading(false)
+  }, [])
+
+  const loadOpsData = useCallback(async (sid: string, from: Date, to: Date) => {
+    const [ordersRes, zonesRes] = await Promise.all([
+      supabase
+        .from('orders')
+        .select('id,created_at,status,customer_lat,customer_lng')
+        .eq('store_id', sid)
+        .gte('created_at', sod(from).toISOString())
+        .lte('created_at', eod(to).toISOString()),
+      supabase
+        .from('delivery_zones')
+        .select('id,name,center_lat,center_lng,radius_m')
+        .eq('store_id', sid),
+    ])
+    setAllOrders((ordersRes.data ?? []) as AllOrder[])
+    setZonesData((zonesRes.data ?? []) as ZoneRow[])
   }, [])
 
   const loadDeliveries = useCallback(async (sid: string, from: string, to: string) => {
@@ -261,6 +302,13 @@ export default function AnaliticsPage() {
   }, [storeId, dateFrom, dateTo, loadDeliveries])
 
   useEffect(() => {
+    if (!storeId || !salesFromStr || !salesToStr) return
+    const from = new Date(salesFromStr + 'T00:00:00')
+    const to   = new Date(salesToStr   + 'T00:00:00')
+    loadOpsData(storeId, from, to)
+  }, [storeId, salesFromStr, salesToStr, loadOpsData])
+
+  useEffect(() => {
     fetch('/api/bcv-rate')
       .then(r => r.json())
       .then(d => { if (d.rates?.USD > 0) setBcvRate(d.rates.USD) })
@@ -310,6 +358,56 @@ export default function AnaliticsPage() {
   const worst  = mins.length ? Math.max(...mins) : null
   const bucketCounts = BUCKETS.map(b => mins.filter(m => m >= b.min && m < b.max).length)
   const bucketMax = Math.max(...bucketCounts, 1)
+
+  // ── Operations computations ──
+  const statusCounts = useMemo(() => {
+    const map: Record<string, number> = {}
+    allOrders.forEach(o => { map[o.status] = (map[o.status] ?? 0) + 1 })
+    return map
+  }, [allOrders])
+
+  const hourCounts = useMemo(() => {
+    const arr = Array(24).fill(0)
+    allOrders.forEach(o => {
+      const h = new Date(o.created_at).getHours()
+      arr[h]++
+    })
+    return arr as number[]
+  }, [allOrders])
+  const hourMax = Math.max(...hourCounts, 1)
+  const peakHour = hourCounts.indexOf(Math.max(...hourCounts))
+
+  const dayCounts = useMemo(() => {
+    const arr = Array(7).fill(0)
+    allOrders.forEach(o => {
+      const d = new Date(o.created_at).getDay()
+      arr[d]++
+    })
+    return arr as number[]
+  }, [allOrders])
+  const dayMax = Math.max(...dayCounts, 1)
+  const peakDay = dayCounts.indexOf(Math.max(...dayCounts))
+
+  const zoneCounts = useMemo(() => {
+    const map: Record<string, { zone: ZoneRow; count: number }> = {}
+    let outsideCount = 0
+    allOrders.forEach(o => {
+      if (o.customer_lat == null || o.customer_lng == null) return
+      const matched = zonesData.find(z =>
+        haversineM(o.customer_lat!, o.customer_lng!, z.center_lat, z.center_lng) <= z.radius_m
+      )
+      if (matched) {
+        if (!map[matched.id]) map[matched.id] = { zone: matched, count: 0 }
+        map[matched.id].count++
+      } else {
+        outsideCount++
+      }
+    })
+    const rows = Object.values(map).sort((a, b) => b.count - a.count)
+    if (outsideCount > 0) rows.push({ zone: { id: '__outside__', name: 'Fuera de zonas', center_lat: 0, center_lng: 0, radius_m: 0 }, count: outsideCount })
+    return rows
+  }, [allOrders, zonesData])
+  const zoneCountMax = Math.max(...zoneCounts.map(z => z.count), 1)
 
   function setDelPreset(p: 'today' | 'week' | 'month') {
     const d = new Date()
@@ -464,6 +562,156 @@ export default function AnaliticsPage() {
           </>
         )}
       </div>
+
+      {/* ── OPERACIONES (collapsible) ── */}
+      <div className="dh-card" style={{ padding: 0, marginBottom: 20, overflow: 'hidden' }}>
+        <button
+          onClick={() => setOpenOpsCard(o => !o)}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '18px 24px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: '#0F172A' }}>Operaciones</span>
+            <span style={{ fontSize: 12, color: '#94A3B8' }}>{allOrders.length} pedidos</span>
+          </div>
+          <svg
+            width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round"
+            style={{ transition: 'transform 0.2s', transform: openOpsCard ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0 }}
+          >
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+
+        {openOpsCard && (
+          <div style={{ padding: '0 24px 24px' }}>
+
+            {/* Status breakdown */}
+            <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Por estado</div>
+            {allOrders.length === 0 ? (
+              <div style={{ fontSize: 13, color: '#94A3B8', marginBottom: 24 }}>Sin pedidos en este periodo</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 28 }}>
+                {STATUS_ORDER.filter(s => statusCounts[s] > 0).map(s => {
+                  const count = statusCounts[s] ?? 0
+                  const pct = allOrders.length > 0 ? (count / allOrders.length) * 100 : 0
+                  return (
+                    <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 78, fontSize: 12, color: '#64748B', flexShrink: 0 }}>{STATUS_LABELS[s] ?? s}</div>
+                      <div style={{ flex: 1, background: '#F1F5F9', borderRadius: 4, height: 8, overflow: 'hidden' }}>
+                        <div style={{ width: `${pct}%`, height: '100%', background: STATUS_COLORS[s] ?? '#94A3B8', borderRadius: 4, transition: 'width 0.4s ease' }} />
+                      </div>
+                      <div style={{ width: 28, fontSize: 12, fontWeight: 600, color: '#0F172A', textAlign: 'right', flexShrink: 0 }}>{count}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Hour of day */}
+            <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Hora pico{allOrders.length > 0 ? ` — ${peakHour}:00 h` : ''}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 52, marginBottom: 6 }}>
+              {hourCounts.map((count, h) => {
+                const isPeak = h === peakHour && allOrders.length > 0
+                return (
+                  <div
+                    key={h}
+                    title={`${h}:00 — ${count} pedidos`}
+                    style={{
+                      flex: 1, minWidth: 0,
+                      height: `${Math.max((count / hourMax) * 100, count > 0 ? 8 : 3)}%`,
+                      background: isPeak ? '#7C3AED' : count > 0 ? '#C4B5FD' : '#E2E8F0',
+                      borderRadius: '2px 2px 0 0',
+                      transition: 'height 0.3s ease',
+                    }}
+                  />
+                )
+              })}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 28 }}>
+              {[0, 6, 12, 18, 23].map(h => (
+                <div key={h} style={{ fontSize: 10, color: '#94A3B8' }}>{h}h</div>
+              ))}
+            </div>
+
+            {/* Day of week */}
+            <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Dia mas fuerte{allOrders.length > 0 ? ` — ${DAY_LABELS[peakDay]}` : ''}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 52 }}>
+              {dayCounts.map((count, d) => {
+                const isPeak = d === peakDay && allOrders.length > 0
+                return (
+                  <div key={d} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                    <div
+                      style={{
+                        width: '100%',
+                        height: `${Math.max((count / dayMax) * 40, count > 0 ? 6 : 2)}px`,
+                        background: isPeak ? '#7C3AED' : count > 0 ? '#C4B5FD' : '#E2E8F0',
+                        borderRadius: '3px 3px 0 0',
+                        transition: 'height 0.3s ease',
+                      }}
+                    />
+                    <div style={{ fontSize: 11, color: isPeak ? '#7C3AED' : '#94A3B8', fontWeight: isPeak ? 700 : 400 }}>{DAY_LABELS[d]}</div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── ZONAS MAS DESPACHADAS (collapsible) ── */}
+      {zonesData.length > 0 && (
+        <div className="dh-card" style={{ padding: 0, marginBottom: 20, overflow: 'hidden' }}>
+          <button
+            onClick={() => setOpenZonesCard(o => !o)}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '18px 24px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: '#0F172A' }}>Zonas mas despachadas</span>
+            </div>
+            <svg
+              width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round"
+              style={{ transition: 'transform 0.2s', transform: openZonesCard ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0 }}
+            >
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+
+          {openZonesCard && (
+            <div style={{ padding: '0 24px 24px' }}>
+              {zoneCounts.length === 0 ? (
+                <div style={{ fontSize: 13, color: '#94A3B8' }}>Sin pedidos con ubicacion en este periodo</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {zoneCounts.map(({ zone, count }) => {
+                    const pct = (count / zoneCountMax) * 100
+                    const isOutside = zone.id === '__outside__'
+                    return (
+                      <div key={zone.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 110, fontSize: 12, color: isOutside ? '#94A3B8' : '#64748B', flexShrink: 0, fontStyle: isOutside ? 'italic' : 'normal' }}>
+                          {zone.name ?? 'Sin nombre'}
+                        </div>
+                        <div style={{ flex: 1, background: '#F1F5F9', borderRadius: 4, height: 8, overflow: 'hidden' }}>
+                          <div style={{ width: `${pct}%`, height: '100%', background: isOutside ? '#CBD5E1' : '#7C3AED', borderRadius: 4, transition: 'width 0.4s ease' }} />
+                        </div>
+                        <div style={{ width: 28, fontSize: 12, fontWeight: 600, color: '#0F172A', textAlign: 'right', flexShrink: 0 }}>{count}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── TIEMPOS DE ENTREGA (collapsible) ── */}
       <div className="dh-card" style={{ padding: 0, marginBottom: 20, overflow: 'hidden' }}>

@@ -200,13 +200,13 @@ export default function AnaliticsPage() {
   const [dateTo, setDateTo]     = useState(todayStr)
   const [deliveries, setDeliveries] = useState<DeliveryRow[]>([])
   const [loadingDel, setLoadingDel] = useState(false)
-  const [openCard, setOpenCard]     = useState(false)
 
   // Operations / zones
-  const [allOrders, setAllOrders]       = useState<AllOrder[]>([])
-  const [zonesData, setZonesData]       = useState<ZoneRow[]>([])
-  const [openOpsCard, setOpenOpsCard]   = useState(false)
-  const [openZonesCard, setOpenZonesCard] = useState(false)
+  const [allOrders, setAllOrders] = useState<AllOrder[]>([])
+  const [zonesData, setZonesData] = useState<ZoneRow[]>([])
+
+  // Tab
+  const [activeTab, setActiveTab] = useState<'ventas' | 'operaciones' | 'zonas' | 'entregas'>('ventas')
 
   // ── Loaders ──
   const loadSales = useCallback(async (sid: string, from: Date, to: Date, prevFrom: Date, prevTo: Date) => {
@@ -424,26 +424,40 @@ export default function AnaliticsPage() {
 
   return (
     <div className="dh-content">
-      <div className="dh-section-title" style={{ marginBottom: 20 }}>Analytics</div>
+      <div className="dh-section-title" style={{ marginBottom: 16 }}>Analytics</div>
 
-      {/* ── VENTAS CARD ── */}
-      <div className="dh-card" style={{ padding: '20px 24px', marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: '#0F172A' }}>Ventas</span>
-          {salesLoading && <div className="an-spinner" />}
-        </div>
+      {/* ── TAB BAR ── */}
+      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', marginBottom: 16, scrollbarWidth: 'none' }}>
+        {([
+          { key: 'ventas',      label: 'Ventas'      },
+          { key: 'operaciones', label: 'Operaciones' },
+          { key: 'zonas',       label: 'Zonas'       },
+          { key: 'entregas',    label: 'Entregas'    },
+        ] as const).map(t => (
+          <button
+            key={t.key}
+            onClick={() => setActiveTab(t.key)}
+            style={{
+              padding: '8px 18px', borderRadius: 100, border: 'none', cursor: 'pointer',
+              fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0,
+              background: activeTab === t.key ? '#7C3AED' : '#F1F5F9',
+              color: activeTab === t.key ? 'white' : '#64748B',
+              fontFamily: 'inherit',
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-        {/* Presets + date range */}
+      {/* ── SHARED DATE RANGE (ventas / operaciones / zonas) ── */}
+      {activeTab !== 'entregas' && (
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 16 }}>
           <div className="an-presets" style={{ marginBottom: 0 }}>
             {(['hoy', '7d', 'mes', 'mes_ant'] as Preset[]).map(p => {
               const labels: Record<Preset, string> = { hoy: 'Hoy', '7d': '7 dias', mes: 'Mes', mes_ant: 'Mes ant.' }
               return (
-                <button
-                  key={p}
-                  className={`an-preset${preset === p ? ' active' : ''}`}
-                  onClick={() => applySalesPreset(p)}
-                >
+                <button key={p} className={`an-preset${preset === p ? ' active' : ''}`} onClick={() => applySalesPreset(p)}>
                   {labels[p]}
                 </button>
               )
@@ -451,151 +465,115 @@ export default function AnaliticsPage() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 10, padding: '7px 12px' }}>
             <input
-              type="date"
-              value={salesFromStr}
-              max={salesToStr}
+              type="date" value={salesFromStr} max={salesToStr}
               onChange={e => { setSalesFromStr(e.target.value); setPreset(null) }}
               style={{ border: 'none', outline: 'none', fontSize: 12, color: '#0F172A', background: 'transparent', fontFamily: 'inherit', cursor: 'pointer' }}
             />
             <span style={{ color: '#CBD5E1', fontSize: 12 }}>→</span>
             <input
-              type="date"
-              value={salesToStr}
-              min={salesFromStr}
-              max={todayStr}
+              type="date" value={salesToStr} min={salesFromStr} max={todayStr}
               onChange={e => { setSalesToStr(e.target.value); setPreset(null) }}
               style={{ border: 'none', outline: 'none', fontSize: 12, color: '#0F172A', background: 'transparent', fontFamily: 'inherit', cursor: 'pointer' }}
             />
           </div>
+          {salesLoading && <div className="an-spinner" />}
         </div>
+      )}
 
-        {salesLoading ? null : salesOrders.length === 0 ? (
-          <div className="an-empty">Sin ventas en este periodo</div>
-        ) : (
-          <>
-            {/* KPI strip */}
-            <div className="an-kpi-row">
-              <div className="an-kpi">
-                <div className="an-kpi-label">Total facturado</div>
-                <div className="an-kpi-value">
-                  ${totalUSD.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      {/* ── VENTAS TAB ── */}
+      {activeTab === 'ventas' && (
+        <div className="dh-card" style={{ padding: '20px 24px' }}>
+          {salesOrders.length === 0 ? (
+            <div className="an-empty">Sin ventas en este periodo</div>
+          ) : (
+            <>
+              <div className="an-kpi-row">
+                <div className="an-kpi">
+                  <div className="an-kpi-label">Total facturado</div>
+                  <div className="an-kpi-value">${totalUSD.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                  <Delta pct={changePct} />
                 </div>
-                <Delta pct={changePct} />
+                <div className="an-kpi">
+                  <div className="an-kpi-label">Pedidos</div>
+                  <div className="an-kpi-value">{orderCount}</div>
+                  <Delta pct={countChangePct} />
+                </div>
+                <div className="an-kpi">
+                  <div className="an-kpi-label">Ticket prom.</div>
+                  <div className="an-kpi-value">${avgTicket.toFixed(2)}</div>
+                </div>
               </div>
-              <div className="an-kpi">
-                <div className="an-kpi-label">Pedidos</div>
-                <div className="an-kpi-value">{orderCount}</div>
-                <Delta pct={countChangePct} />
-              </div>
-              <div className="an-kpi">
-                <div className="an-kpi-label">Ticket prom.</div>
-                <div className="an-kpi-value">${avgTicket.toFixed(2)}</div>
-              </div>
-            </div>
 
-            {/* Currency breakdown */}
-            {(vesTotalUSD > 0 || usdTotal > 0 || usdtTotal > 0) && (
-              <div className="an-currency-row">
-                {vesTotalUSD > 0 && (
-                  <div className="an-currency-card">
-                    <div className="an-currency-label">Bolivares</div>
-                    <div className="an-currency-amount">
-                      {bcvRate > 0
-                        ? `Bs ${(vesTotalUSD * bcvRate).toLocaleString('es', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
-                        : 'Bs ...'}
-                    </div>
-                    <div className="an-currency-sub">${vesTotalUSD.toFixed(2)} equiv.</div>
-                  </div>
-                )}
-                {usdTotal > 0 && (
-                  <div className="an-currency-card">
-                    <div className="an-currency-label">Dolares</div>
-                    <div className="an-currency-amount">
-                      ${usdTotal.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </div>
-                  </div>
-                )}
-                {usdtTotal > 0 && (
-                  <div className="an-currency-card">
-                    <div className="an-currency-label">USDT</div>
-                    <div className="an-currency-amount">
-                      ₮{usdtTotal.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Method breakdown */}
-            {methodTotals.length > 0 && (
-              <>
-                <div className="an-section-label">Por metodo de pago</div>
-                <div className="an-method-list" style={{ marginBottom: 16 }}>
-                  {methodTotals.map(m => {
-                    const pct = totalUSD > 0 ? (m.total / totalUSD) * 100 : 0
-                    const isVES = m.currency === 'VES'
-                    const displayAmt = isVES
-                      ? bcvRate > 0
-                        ? `Bs ${(m.total * bcvRate).toLocaleString('es', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
-                        : 'Bs ...'
-                      : `${m.symbol}${m.total.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                    return (
-                      <div key={m.label} className="an-method-row">
-                        <div className="an-method-name">{m.label}</div>
-                        <div className="an-method-bar-wrap">
-                          <div className="an-method-bar" style={{ width: `${pct}%` }} />
-                        </div>
-                        <div className="an-method-pct">{pct.toFixed(0)}%</div>
-                        <div className="an-method-amt">{displayAmt}</div>
+              {(vesTotalUSD > 0 || usdTotal > 0 || usdtTotal > 0) && (
+                <div className="an-currency-row">
+                  {vesTotalUSD > 0 && (
+                    <div className="an-currency-card">
+                      <div className="an-currency-label">Bolivares</div>
+                      <div className="an-currency-amount">
+                        {bcvRate > 0 ? `Bs ${(vesTotalUSD * bcvRate).toLocaleString('es', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : 'Bs ...'}
                       </div>
-                    )
-                  })}
+                      <div className="an-currency-sub">${vesTotalUSD.toFixed(2)} equiv.</div>
+                    </div>
+                  )}
+                  {usdTotal > 0 && (
+                    <div className="an-currency-card">
+                      <div className="an-currency-label">Dolares</div>
+                      <div className="an-currency-amount">${usdTotal.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                    </div>
+                  )}
+                  {usdtTotal > 0 && (
+                    <div className="an-currency-card">
+                      <div className="an-currency-label">USDT</div>
+                      <div className="an-currency-amount">₮{usdtTotal.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                    </div>
+                  )}
                 </div>
-              </>
-            )}
+              )}
 
-            {/* Bar chart */}
-            <div className="an-section-label" style={{ marginBottom: 10 }}>
-              Facturacion por {salesDiffDays > 60 ? 'mes' : 'dia'}
-            </div>
-            <RevenueChart orders={salesOrders} from={salesFrom} to={salesTo} />
-          </>
-        )}
-      </div>
+              {methodTotals.length > 0 && (
+                <>
+                  <div className="an-section-label">Por metodo de pago</div>
+                  <div className="an-method-list" style={{ marginBottom: 16 }}>
+                    {methodTotals.map(m => {
+                      const pct = totalUSD > 0 ? (m.total / totalUSD) * 100 : 0
+                      const isVES = m.currency === 'VES'
+                      const displayAmt = isVES
+                        ? bcvRate > 0
+                          ? `Bs ${(m.total * bcvRate).toLocaleString('es', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+                          : 'Bs ...'
+                        : `${m.symbol}${m.total.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                      return (
+                        <div key={m.label} className="an-method-row">
+                          <div className="an-method-name">{m.label}</div>
+                          <div className="an-method-bar-wrap"><div className="an-method-bar" style={{ width: `${pct}%` }} /></div>
+                          <div className="an-method-pct">{pct.toFixed(0)}%</div>
+                          <div className="an-method-amt">{displayAmt}</div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
 
-      {/* ── OPERACIONES (collapsible) ── */}
-      <div className="dh-card" style={{ padding: 0, marginBottom: 20, overflow: 'hidden' }}>
-        <button
-          onClick={() => setOpenOpsCard(o => !o)}
-          style={{
-            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '18px 24px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#0F172A' }}>Operaciones</span>
-            <span style={{ fontSize: 12, color: '#94A3B8' }}>{allOrders.length} pedidos</span>
-          </div>
-          <svg
-            width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round"
-            style={{ transition: 'transform 0.2s', transform: openOpsCard ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0 }}
-          >
-            <polyline points="6 9 12 15 18 9"/>
-          </svg>
-        </button>
+              <div className="an-section-label" style={{ marginBottom: 10 }}>Facturacion por {salesDiffDays > 60 ? 'mes' : 'dia'}</div>
+              <RevenueChart orders={salesOrders} from={salesFrom} to={salesTo} />
+            </>
+          )}
+        </div>
+      )}
 
-        {openOpsCard && (
-          <div style={{ padding: '0 24px 24px' }}>
-
-            {/* Status breakdown */}
-            <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Por estado</div>
-            {allOrders.length === 0 ? (
-              <div style={{ fontSize: 13, color: '#94A3B8', marginBottom: 24 }}>Sin pedidos en este periodo</div>
-            ) : (
+      {/* ── OPERACIONES TAB ── */}
+      {activeTab === 'operaciones' && (
+        <div className="dh-card" style={{ padding: '20px 24px' }}>
+          {allOrders.length === 0 ? (
+            <div className="an-empty">Sin pedidos en este periodo</div>
+          ) : (
+            <>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Por estado</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 28 }}>
                 {STATUS_ORDER.filter(s => statusCounts[s] > 0).map(s => {
                   const count = statusCounts[s] ?? 0
-                  const pct = allOrders.length > 0 ? (count / allOrders.length) * 100 : 0
+                  const pct = (count / allOrders.length) * 100
                   return (
                     <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{ width: 78, fontSize: 12, color: '#64748B', flexShrink: 0 }}>{STATUS_LABELS[s] ?? s}</div>
@@ -607,246 +585,160 @@ export default function AnaliticsPage() {
                   )
                 })}
               </div>
-            )}
 
-            {/* Hour of day */}
-            <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Hora pico{allOrders.length > 0 ? ` — ${peakHour}:00 h` : ''}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 52, marginBottom: 6 }}>
-              {hourCounts.map((count, h) => {
-                const isPeak = h === peakHour && allOrders.length > 0
-                return (
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Hora pico — {peakHour}:00 h
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 52, marginBottom: 6 }}>
+                {hourCounts.map((count, h) => (
                   <div
                     key={h}
                     title={`${h}:00 — ${count} pedidos`}
                     style={{
                       flex: 1, minWidth: 0,
                       height: `${Math.max((count / hourMax) * 100, count > 0 ? 8 : 3)}%`,
-                      background: isPeak ? '#7C3AED' : count > 0 ? '#C4B5FD' : '#E2E8F0',
+                      background: h === peakHour ? '#7C3AED' : count > 0 ? '#C4B5FD' : '#E2E8F0',
                       borderRadius: '2px 2px 0 0',
-                      transition: 'height 0.3s ease',
                     }}
                   />
-                )
-              })}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 28 }}>
-              {[0, 6, 12, 18, 23].map(h => (
-                <div key={h} style={{ fontSize: 10, color: '#94A3B8' }}>{h}h</div>
-              ))}
-            </div>
+                ))}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 28 }}>
+                {[0, 6, 12, 18, 23].map(h => <div key={h} style={{ fontSize: 10, color: '#94A3B8' }}>{h}h</div>)}
+              </div>
 
-            {/* Day of week */}
-            <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Dia mas fuerte{allOrders.length > 0 ? ` — ${DAY_LABELS[peakDay]}` : ''}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 52 }}>
-              {dayCounts.map((count, d) => {
-                const isPeak = d === peakDay && allOrders.length > 0
-                return (
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Dia mas fuerte — {DAY_LABELS[peakDay]}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 52 }}>
+                {dayCounts.map((count, d) => (
                   <div key={d} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                    <div
-                      style={{
-                        width: '100%',
-                        height: `${Math.max((count / dayMax) * 40, count > 0 ? 6 : 2)}px`,
-                        background: isPeak ? '#7C3AED' : count > 0 ? '#C4B5FD' : '#E2E8F0',
-                        borderRadius: '3px 3px 0 0',
-                        transition: 'height 0.3s ease',
-                      }}
-                    />
-                    <div style={{ fontSize: 11, color: isPeak ? '#7C3AED' : '#94A3B8', fontWeight: isPeak ? 700 : 400 }}>{DAY_LABELS[d]}</div>
+                    <div style={{
+                      width: '100%',
+                      height: `${Math.max((count / dayMax) * 40, count > 0 ? 6 : 2)}px`,
+                      background: d === peakDay ? '#7C3AED' : count > 0 ? '#C4B5FD' : '#E2E8F0',
+                      borderRadius: '3px 3px 0 0',
+                    }} />
+                    <div style={{ fontSize: 11, color: d === peakDay ? '#7C3AED' : '#94A3B8', fontWeight: d === peakDay ? 700 : 400 }}>{DAY_LABELS[d]}</div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── ZONAS TAB ── */}
+      {activeTab === 'zonas' && (
+        <div className="dh-card" style={{ padding: '20px 24px' }}>
+          {zonesData.length === 0 ? (
+            <div className="an-empty">No hay zonas de entrega configuradas</div>
+          ) : zoneCounts.length === 0 ? (
+            <div className="an-empty">Sin pedidos con ubicacion en este periodo</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {zoneCounts.map(({ zone, count }) => {
+                const pct = (count / zoneCountMax) * 100
+                const isOutside = zone.id === '__outside__'
+                return (
+                  <div key={zone.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 110, fontSize: 12, color: isOutside ? '#94A3B8' : '#64748B', flexShrink: 0, fontStyle: isOutside ? 'italic' : 'normal' }}>
+                      {zone.name ?? 'Sin nombre'}
+                    </div>
+                    <div style={{ flex: 1, background: '#F1F5F9', borderRadius: 4, height: 8, overflow: 'hidden' }}>
+                      <div style={{ width: `${pct}%`, height: '100%', background: isOutside ? '#CBD5E1' : '#7C3AED', borderRadius: 4, transition: 'width 0.4s ease' }} />
+                    </div>
+                    <div style={{ width: 28, fontSize: 12, fontWeight: 600, color: '#0F172A', textAlign: 'right', flexShrink: 0 }}>{count}</div>
                   </div>
                 )
               })}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── ZONAS MAS DESPACHADAS (collapsible) ── */}
-      {zonesData.length > 0 && (
-        <div className="dh-card" style={{ padding: 0, marginBottom: 20, overflow: 'hidden' }}>
-          <button
-            onClick={() => setOpenZonesCard(o => !o)}
-            style={{
-              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '18px 24px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: '#0F172A' }}>Zonas mas despachadas</span>
-            </div>
-            <svg
-              width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round"
-              style={{ transition: 'transform 0.2s', transform: openZonesCard ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0 }}
-            >
-              <polyline points="6 9 12 15 18 9"/>
-            </svg>
-          </button>
-
-          {openZonesCard && (
-            <div style={{ padding: '0 24px 24px' }}>
-              {zoneCounts.length === 0 ? (
-                <div style={{ fontSize: 13, color: '#94A3B8' }}>Sin pedidos con ubicacion en este periodo</div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {zoneCounts.map(({ zone, count }) => {
-                    const pct = (count / zoneCountMax) * 100
-                    const isOutside = zone.id === '__outside__'
-                    return (
-                      <div key={zone.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ width: 110, fontSize: 12, color: isOutside ? '#94A3B8' : '#64748B', flexShrink: 0, fontStyle: isOutside ? 'italic' : 'normal' }}>
-                          {zone.name ?? 'Sin nombre'}
-                        </div>
-                        <div style={{ flex: 1, background: '#F1F5F9', borderRadius: 4, height: 8, overflow: 'hidden' }}>
-                          <div style={{ width: `${pct}%`, height: '100%', background: isOutside ? '#CBD5E1' : '#7C3AED', borderRadius: 4, transition: 'width 0.4s ease' }} />
-                        </div>
-                        <div style={{ width: 28, fontSize: 12, fontWeight: 600, color: '#0F172A', textAlign: 'right', flexShrink: 0 }}>{count}</div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
             </div>
           )}
         </div>
       )}
 
-      {/* ── TIEMPOS DE ENTREGA (collapsible) ── */}
-      <div className="dh-card" style={{ padding: 0, marginBottom: 20, overflow: 'hidden' }}>
-        <button
-          onClick={() => setOpenCard(o => !o)}
-          style={{
-            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '18px 24px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#0F172A' }}>Tiempos de entrega</span>
-            <span style={{ fontSize: 12, color: '#94A3B8' }}>
-              {loadingDel ? '...' : `${deliveries.length} entregas`}
-            </span>
-          </div>
-          <svg
-            width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round"
-            style={{ transition: 'transform 0.2s', transform: openCard ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0 }}
-          >
-            <polyline points="6 9 12 15 18 9"/>
-          </svg>
-        </button>
-
-        {openCard && (
-          <div style={{ padding: '0 24px 24px' }}>
-            {/* Date range for deliveries */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'white', border: '1px solid #E2E8F0', borderRadius: 10, padding: '8px 12px' }}>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  max={dateTo}
-                  onChange={e => setDateFrom(e.target.value)}
-                  style={{ border: 'none', outline: 'none', fontSize: 12, color: '#0F172A', background: 'transparent', fontFamily: 'inherit', cursor: 'pointer' }}
-                />
-                <span style={{ color: '#CBD5E1' }}>→</span>
-                <input
-                  type="date"
-                  value={dateTo}
-                  min={dateFrom}
-                  max={todayStr}
-                  onChange={e => setDateTo(e.target.value)}
-                  style={{ border: 'none', outline: 'none', fontSize: 12, color: '#0F172A', background: 'transparent', fontFamily: 'inherit', cursor: 'pointer' }}
-                />
-              </div>
-              <div style={{ display: 'flex', gap: 3, background: '#F1F5F9', borderRadius: 8, padding: 3 }}>
-                {([
-                  { key: 'today', label: 'Hoy' },
-                  { key: 'week',  label: 'Semana' },
-                  { key: 'month', label: 'Mes' },
-                ] as const).map(p => (
-                  <button
-                    key={p.key}
-                    onClick={() => setDelPreset(p.key)}
-                    style={{
-                      padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer',
-                      fontSize: 11, fontWeight: 600, background: 'transparent', color: '#64748B',
-                      fontFamily: 'inherit',
-                    }}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
+      {/* ── ENTREGAS TAB ── */}
+      {activeTab === 'entregas' && (
+        <div className="dh-card" style={{ padding: '20px 24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 10, padding: '7px 12px' }}>
+              <input type="date" value={dateFrom} max={dateTo} onChange={e => setDateFrom(e.target.value)} style={{ border: 'none', outline: 'none', fontSize: 12, color: '#0F172A', background: 'transparent', fontFamily: 'inherit', cursor: 'pointer' }} />
+              <span style={{ color: '#CBD5E1', fontSize: 12 }}>→</span>
+              <input type="date" value={dateTo} min={dateFrom} max={todayStr} onChange={e => setDateTo(e.target.value)} style={{ border: 'none', outline: 'none', fontSize: 12, color: '#0F172A', background: 'transparent', fontFamily: 'inherit', cursor: 'pointer' }} />
             </div>
-
-            {/* Summary stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
-              {[
-                { label: 'Promedio', value: avg   !== null ? fmtMins(avg)   : '—' },
-                { label: 'Mejor',    value: best  !== null ? fmtMins(best)  : '—' },
-                { label: 'Peor',     value: worst !== null ? fmtMins(worst) : '—' },
-              ].map(stat => (
-                <div key={stat.label} style={{ background: '#F8FAFC', borderRadius: 10, padding: '14px 16px', border: '1px solid #E2E8F0' }}>
-                  <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</div>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.5px' }}>{stat.value}</div>
-                </div>
+            <div style={{ display: 'flex', gap: 3, background: '#F1F5F9', borderRadius: 8, padding: 3 }}>
+              {([{ key: 'today', label: 'Hoy' }, { key: 'week', label: 'Semana' }, { key: 'month', label: 'Mes' }] as const).map(p => (
+                <button key={p.key} onClick={() => setDelPreset(p.key)} style={{ padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600, background: 'transparent', color: '#64748B', fontFamily: 'inherit' }}>
+                  {p.label}
+                </button>
               ))}
             </div>
-
-            {/* Distribution */}
-            {deliveries.length > 0 && (
-              <div style={{ marginBottom: 24 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Distribucion</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {BUCKETS.map((b, i) => {
-                    const count = bucketCounts[i]
-                    const pct = Math.round((count / bucketMax) * 100)
-                    return (
-                      <div key={b.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ width: 72, fontSize: 12, color: '#64748B', flexShrink: 0 }}>{b.label}</div>
-                        <div style={{ flex: 1, background: '#F1F5F9', borderRadius: 4, height: 8, overflow: 'hidden' }}>
-                          <div style={{ width: `${pct}%`, height: '100%', background: '#7C3AED', borderRadius: 4, transition: 'width 0.4s ease' }} />
-                        </div>
-                        <div style={{ width: 24, fontSize: 12, fontWeight: 600, color: '#0F172A', textAlign: 'right', flexShrink: 0 }}>{count}</div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Delivery list */}
-            {loadingDel ? (
-              <div style={{ textAlign: 'center', padding: '24px 0', color: '#94A3B8', fontSize: 13 }}>Cargando...</div>
-            ) : deliveries.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '24px 0', color: '#94A3B8', fontSize: 13 }}>Sin entregas en este periodo</div>
-            ) : (
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Detalle</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {deliveries.map((d, i) => {
-                    const m = mins[i]
-                    const isLong = m >= 45
-                    return (
-                      <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 10, background: isLong ? '#FEF2F2' : '#F8FAFC', border: `1px solid ${isLong ? '#FECACA' : '#E2E8F0'}` }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A' }}>{d.customer_name ?? 'Cliente'}</div>
-                          <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 1 }}>
-                            {fmtDate(d.created_at)} · {fmtTime(d.created_at)} → {fmtTime(d.delivered_at)}
-                          </div>
-                        </div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: isLong ? '#DC2626' : '#7C3AED', flexShrink: 0 }}>
-                          {fmtMins(m)}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
           </div>
-        )}
-      </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
+            {[
+              { label: 'Promedio', value: avg   !== null ? fmtMins(avg)   : '—' },
+              { label: 'Mejor',    value: best  !== null ? fmtMins(best)  : '—' },
+              { label: 'Peor',     value: worst !== null ? fmtMins(worst) : '—' },
+            ].map(stat => (
+              <div key={stat.label} style={{ background: '#F8FAFC', borderRadius: 10, padding: '14px 16px', border: '1px solid #E2E8F0' }}>
+                <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</div>
+                <div style={{ fontSize: 24, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.5px' }}>{stat.value}</div>
+              </div>
+            ))}
+          </div>
+
+          {deliveries.length > 0 && (
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Distribucion</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {BUCKETS.map((b, i) => {
+                  const count = bucketCounts[i]
+                  const pct = Math.round((count / bucketMax) * 100)
+                  return (
+                    <div key={b.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 72, fontSize: 12, color: '#64748B', flexShrink: 0 }}>{b.label}</div>
+                      <div style={{ flex: 1, background: '#F1F5F9', borderRadius: 4, height: 8, overflow: 'hidden' }}>
+                        <div style={{ width: `${pct}%`, height: '100%', background: '#7C3AED', borderRadius: 4, transition: 'width 0.4s ease' }} />
+                      </div>
+                      <div style={{ width: 24, fontSize: 12, fontWeight: 600, color: '#0F172A', textAlign: 'right', flexShrink: 0 }}>{count}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {loadingDel ? (
+            <div style={{ textAlign: 'center', padding: '24px 0', color: '#94A3B8', fontSize: 13 }}>Cargando...</div>
+          ) : deliveries.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '24px 0', color: '#94A3B8', fontSize: 13 }}>Sin entregas en este periodo</div>
+          ) : (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Detalle</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {deliveries.map((d, i) => {
+                  const m = mins[i]
+                  const isLong = m >= 45
+                  return (
+                    <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 10, background: isLong ? '#FEF2F2' : '#F8FAFC', border: `1px solid ${isLong ? '#FECACA' : '#E2E8F0'}` }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A' }}>{d.customer_name ?? 'Cliente'}</div>
+                        <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 1 }}>
+                          {fmtDate(d.created_at)} · {fmtTime(d.created_at)} → {fmtTime(d.delivered_at)}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: isLong ? '#DC2626' : '#7C3AED', flexShrink: 0 }}>
+                        {fmtMins(m)}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

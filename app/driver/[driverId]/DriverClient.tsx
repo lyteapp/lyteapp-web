@@ -425,7 +425,7 @@ export default function DriverClient({
   // ── Load active delivery ──────────────────────────────────────────
   const loadDelivery = useCallback(async () => {
     const { data } = await supabase.from('deliveries')
-      .select('id,customer_name,customer_phone,delivery_address,notes,status,picked_up_at,order_id,customer_lat,customer_lng,orders(total,payment_method)')
+      .select('id,customer_name,customer_phone,delivery_address,notes,status,picked_up_at,order_id,customer_lat,customer_lng,orders(total,payment_method),zone:zone_id(name,fee,color)')
       .eq('driver_id', driverId).in('status', ['ready', 'picked_up'])
       .order('created_at', { ascending: false }).limit(1).maybeSingle()
     if (!data) { setDelivery(null); return }
@@ -433,6 +433,9 @@ export default function DriverClient({
       ...data,
       order_total: (data.orders as unknown as { total: number } | null)?.total ?? null,
       order_payment_method: (data.orders as unknown as { payment_method: string } | null)?.payment_method ?? null,
+      zone_name: (data.zone as unknown as { name: string; fee: number; color: string } | null)?.name ?? null,
+      zone_fee: (data.zone as unknown as { name: string; fee: number; color: string } | null)?.fee ?? null,
+      zone_color: (data.zone as unknown as { name: string; fee: number; color: string } | null)?.color ?? null,
     } as ActiveDelivery)
   }, [driverId])
 
@@ -761,6 +764,27 @@ export default function DriverClient({
                         {delivery.order_payment_method}
                       </span>
                     )}
+                  </div>
+                )}
+                {delivery.zone_fee != null && (
+                  <div style={{
+                    background: 'rgba(0,0,0,0.52)', backdropFilter: 'blur(8px)',
+                    borderRadius: 12, padding: '9px 16px', marginBottom: 8,
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                      <span style={{
+                        width: 10, height: 10, borderRadius: '50%', flexShrink: 0,
+                        background: delivery.zone_color ?? '#7C3AED',
+                        boxShadow: `0 0 0 2px rgba(255,255,255,0.25)`,
+                      }} />
+                      <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>
+                        {delivery.zone_name ?? 'Zona'}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: 18, fontWeight: 800, color: 'white', letterSpacing: '-0.5px' }}>
+                      ${Number(delivery.zone_fee).toFixed(2)}
+                    </span>
                   </div>
                 )}
                 {(delivery.customer_phone || (delivery.customer_lat && delivery.customer_lng)) && (

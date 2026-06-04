@@ -863,10 +863,6 @@ export default function DriverClient({
                   <div className="dsp-stat-val">{driverStats?.todayCount ?? 0}</div>
                   <div className="dsp-stat-lbl">Despachos hoy</div>
                 </div>
-                <div className="dsp-stat-box">
-                  <div className="dsp-stat-val">{driverStats?.totalCount ?? 0}</div>
-                  <div className="dsp-stat-lbl">Total despachos</div>
-                </div>
                 <div className="dsp-stat-box featured">
                   <div className="dsp-stat-val">${(driverStats?.totalEarnings ?? 0).toFixed(2)}</div>
                   <div className="dsp-stat-lbl">Total acumulado</div>

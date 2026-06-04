@@ -391,18 +391,19 @@ export default function DriverClient({
 
   // ── Load driver stats ────────────────────────────────────────────
   const loadStats = useCallback(async () => {
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
     const [{ data }, { data: allZones }] = await Promise.all([
       supabase.from('deliveries')
-        .select('driver_fee, delivered_at, customer_lat, customer_lng, zone_id')
+        .select('driver_fee, created_at, customer_lat, customer_lng, zone_id')
         .eq('driver_id', driverId)
-        .eq('status', 'delivered'),
+        .eq('status', 'delivered')
+        .gte('created_at', todayStart.toISOString()),
       supabase.from('delivery_zones')
         .select('id,fee,center_lat,center_lng,radius_m')
         .eq('store_id', storeId),
     ])
     if (!data) return
-    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
-    const todayDels = data.filter(d => d.delivered_at && new Date(d.delivered_at) >= todayStart)
+    const todayDels = data
     const todayCount = todayDels.length
 
     const zoneFeesMap: Record<string, number> = {}
@@ -557,7 +558,7 @@ export default function DriverClient({
         () => { loadOrders(); loadDelivery(); loadStats() })
       .subscribe()
     return () => { supabase.removeChannel(ch) }
-  }, [storeId, driverId, loadOrders, loadDelivery])
+  }, [storeId, driverId, loadOrders, loadDelivery, loadStats])
 
   // ── Mark delivered ────────────────────────────────────────────────
   async function completeDelivery() {

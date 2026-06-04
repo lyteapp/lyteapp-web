@@ -133,13 +133,12 @@ function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
 }
 
 export default function DriverClient({
-  driverId, driverName, driverAvatar, storeId, storeName, storeLogo,
+  driverId, driverName, driverAvatar, storeId, storeName,
   initialDelivery, mapboxToken,
 }: Props) {
   const [delivery, setDelivery]         = useState<ActiveDelivery | null>(initialDelivery)
   const [completing, setCompleting]     = useState(false)
   const [gpsStatus, setGpsStatus]       = useState<GpsStatus>('requesting')
-  const [accuracy, setAccuracy]         = useState<number | null>(null)
   const [lastUpdate, setLastUpdate]     = useState<Date | null>(null)
   const [driverPos, setDriverPos]       = useState<[number, number] | null>(null)
   const [heading, setHeading]           = useState<number | null>(null)
@@ -157,6 +156,7 @@ export default function DriverClient({
   const [totalDist, setTotalDist]     = useState(0)
   const [newDeliveryFlash, setNewDeliveryFlash] = useState(false)
   const [orders, setOrders] = useState<AvailableOrder[]>([])
+  const [driverStats, setDriverStats] = useState<{ todayCount: number; totalCount: number; totalEarnings: number } | null>(null)
 
   const watchId              = useRef<number | null>(null)
   const fallbackInterval = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -256,7 +256,6 @@ export default function DriverClient({
     watchId.current = navigator.geolocation.watchPosition(
       pos => {
         sendLocation(pos.coords.latitude, pos.coords.longitude)
-        setAccuracy(Math.round(pos.coords.accuracy))
         setGpsStatus('active')
         if (!compassActive && pos.coords.heading != null && !Number.isNaN(pos.coords.heading)) {
           setHeading(pos.coords.heading)
@@ -272,8 +271,7 @@ export default function DriverClient({
       navigator.geolocation.getCurrentPosition(
         pos => {
           sendLocation(pos.coords.latitude, pos.coords.longitude)
-          setAccuracy(Math.round(pos.coords.accuracy))
-          setGpsStatus('active')
+            setGpsStatus('active')
         },
         () => {},
         opts
@@ -389,6 +387,13 @@ export default function DriverClient({
   }, [])
 
   // ── Load driver stats ────────────────────────────────────────────
+  const loadStats = useCallback(async () => {
+    const res = await fetch(`/api/driver-stats?driverId=${driverId}`).catch(() => null)
+    if (!res?.ok) return
+    const json = await res.json().catch(() => null)
+    if (!json) return
+    setDriverStats({ todayCount: json.todayCount, totalCount: json.totalCount, totalEarnings: json.todayZoneFee })
+  }, [driverId])
 
   // ── Load available orders ─────────────────────────────────────────
   const loadOrders = useCallback(async () => {
@@ -516,14 +521,15 @@ export default function DriverClient({
   useEffect(() => {
     loadOrders()
     loadDelivery()
+    loadStats()
     const ch = supabase.channel(`dispatcher-${driverId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `store_id=eq.${storeId}` },
         () => loadOrders())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'deliveries', filter: `store_id=eq.${storeId}` },
-        () => { loadOrders(); loadDelivery() })
+        () => { loadOrders(); loadDelivery(); loadStats() })
       .subscribe()
     return () => { supabase.removeChannel(ch) }
-  }, [storeId, driverId, loadOrders, loadDelivery])
+  }, [storeId, driverId, loadOrders, loadDelivery, loadStats])
 
   // ── Mark delivered ────────────────────────────────────────────────
   async function completeDelivery() {
@@ -611,23 +617,37 @@ export default function DriverClient({
 
       {/* Header */}
       <div className="dsp-header">
-        {storeLogo
-          ? <img src={storeLogo} alt={storeName} className="dsp-logo" />
-          : <div className="dsp-logo-av">{storeName[0]?.toUpperCase()}</div>
-        }
-        {driverAvatar && (
-          <img src={driverAvatar} alt={driverName} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '2px solid #E2E8F0' }} />
-        )}
-        <div className="dsp-header-info">
-          <div className="dsp-store">{storeName}</div>
-          <div className="dsp-name">{driverName}</div>
+        <div className="dsp-header-top">
+          {driverAvatar
+            ? <img src={driverAvatar} alt={driverName} className="dsp-courier-av" style={{ objectFit: 'cover' }} />
+            : <div className="dsp-courier-av">{driverName[0]?.toUpperCase()}</div>
+          }
+          <div className="dsp-courier-info">
+            <div className="dsp-courier-name">{driverName}</div>
+            <div className="dsp-store">{storeName}</div>
+          </div>
+          {gpsStatus === 'active' && delivery
+            ? <span className="dsp-badge-route">en ruta</span>
+            : gpsStatus === 'active'
+              ? <span className="dsp-badge-gps"><span className="dsp-badge-dot" />GPS activo</span>
+              : gpsStatus === 'error'
+                ? <span className="dsp-badge-offline">Sin GPS</span>
+                : <span className="dsp-badge-offline">offline</span>
+          }
         </div>
-        <div className={`dsp-gps-pill${isActive ? ' on' : gpsStatus === 'error' ? ' err' : ''}`}>
-          <span className="dsp-gps-dot" />
-          {gpsStatus === 'requesting' && 'GPS...'}
-          {gpsStatus === 'active'     && (accuracy ? `±${accuracy}m` : 'GPS activo')}
-          {gpsStatus === 'error'      && 'Sin GPS'}
-          {gpsStatus === 'stopped'    && 'GPS off'}
+        <div className="dsp-header-stats">
+          <div className="dsp-courier-stat">
+            <div className="dsp-courier-stat-val">{driverStats?.todayCount ?? 0}</div>
+            <div className="dsp-courier-stat-lbl">Entregas hoy</div>
+          </div>
+          <div className="dsp-courier-stat">
+            <div className="dsp-courier-stat-val">{driverStats?.totalCount ?? 0}</div>
+            <div className="dsp-courier-stat-lbl">Total</div>
+          </div>
+          <div className="dsp-courier-stat featured">
+            <div className="dsp-courier-stat-val">${(driverStats?.totalEarnings ?? 0).toFixed(2)}</div>
+            <div className="dsp-courier-stat-lbl">Acumulado hoy</div>
+          </div>
         </div>
       </div>
 

@@ -12,15 +12,24 @@
 
 /* ── Header ── */
 .dsp-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 18px;
   background: #fff;
   border-bottom: 1px solid #E2E8F0;
   position: sticky;
   top: 0;
   z-index: 10;
+}
+
+.dsp-header-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px 12px;
+}
+
+.dsp-header-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  border-top: 1px solid #F1F5F9;
 }
 
 .dsp-logo {
@@ -1111,6 +1120,7 @@
 
   /* Header */
   .dsp-header        { background: #1E293B; border-bottom-color: #334155; }
+  .dsp-header-stats  { border-top-color: #334155; }
   .dsp-store         { color: #F1F5F9; }
   .dsp-name          { color: #94A3B8; }
 

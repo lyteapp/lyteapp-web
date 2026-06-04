@@ -394,14 +394,18 @@ export default function DriverClient({
   const loadStats = useCallback(async () => {
     const { data } = await supabase
       .from('deliveries')
-      .select('driver_fee, delivered_at')
+      .select('driver_fee, delivered_at, zone:zone_id(fee)')
       .eq('driver_id', driverId)
       .eq('status', 'delivered')
     if (!data) return
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
-    const todayCount = data.filter(d => d.delivered_at && new Date(d.delivered_at) >= todayStart).length
-    const totalEarnings = data.reduce((s, d) => s + Number(d.driver_fee), 0)
-    setDriverStats({ todayCount, totalCount: data.length, totalEarnings })
+    const todayDels = data.filter(d => d.delivered_at && new Date(d.delivered_at) >= todayStart)
+    const todayCount = todayDels.length
+    const todayZoneFee = todayDels.reduce((s, d) => {
+      const zoneFee = (d.zone as unknown as { fee: number } | null)?.fee
+      return s + Number(zoneFee ?? d.driver_fee)
+    }, 0)
+    setDriverStats({ todayCount, totalCount: data.length, totalEarnings: todayZoneFee })
   }, [driverId])
 
   // ── Load available orders ─────────────────────────────────────────
@@ -865,7 +869,7 @@ export default function DriverClient({
                 </div>
                 <div className="dsp-stat-box featured">
                   <div className="dsp-stat-val">${(driverStats?.totalEarnings ?? 0).toFixed(2)}</div>
-                  <div className="dsp-stat-lbl">Total acumulado</div>
+                  <div className="dsp-stat-lbl">Acumulado hoy</div>
                 </div>
               </div>
             )}

@@ -610,6 +610,7 @@ export default function DeliveryPage() {
                   <th>Entregado</th>
                   <th>Tiempo</th>
                   <th>Zona</th>
+                  <th style={{ textAlign: 'right' }}>Fee zona</th>
                   <th>Estado</th>
                   <th></th>
                 </tr>
@@ -640,6 +641,9 @@ export default function DeliveryPage() {
                             </span>
                           : <span style={{ color: 'var(--dv-ink-muted)' }}>—</span>
                         }
+                      </td>
+                      <td style={{ textAlign: 'right', fontWeight: 500 }}>
+                        {displayZone ? `$${Number(displayZone.fee).toFixed(2)}` : <span style={{ color: 'var(--dv-ink-muted)' }}>—</span>}
                       </td>
                       <td><span className={`dv-chip ${status}`}>{statusLabel}</span></td>
                       <td>

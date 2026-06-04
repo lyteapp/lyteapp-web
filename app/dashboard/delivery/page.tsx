@@ -722,6 +722,7 @@ export default function DeliveryPage() {
               {drivers.map(drv => {
                 const dDels = deliveries.filter(d => d.driver_id === drv.id && d.status !== 'cancelled')
                 const todayDrv = dDels.filter(d => isToday(d.created_at) && d.status === 'delivered')
+                const todayZoneFeeTotal = todayDrv.reduce((s, d) => s + Number(d.zone?.fee ?? d.driver_fee), 0)
                 const busy = inRoute.find(d => d.driver_id === drv.id)
                 const loc = driverLocations.find(d => d.driver_id === drv.id)
                 const gpsActive = loc?.is_sharing && (Date.now() - new Date(loc.updated_at).getTime()) < 300_000
@@ -757,6 +758,10 @@ export default function DeliveryPage() {
                       <div className="dv-courier-stat">
                         <div className="val">{dDels.length}</div>
                         <div className="lbl">Total</div>
+                      </div>
+                      <div className="dv-courier-stat">
+                        <div className="val">${todayZoneFeeTotal.toFixed(2)}</div>
+                        <div className="lbl">Fee zona hoy</div>
                       </div>
                     </div>
 

@@ -76,6 +76,8 @@ type TemplateConfig = {
   photoSize?: 'small' | 'medium' | 'large'
   categoryPhotoShapes?: Record<string, string>
   categoryNavStyle?: string
+  variantShape?: 'pill' | 'rounded' | 'square'
+  extraShape?: 'rounded' | 'pill' | 'square'
   showCatNav?: boolean
   showWhatsapp?: boolean
   showInstagram?: boolean
@@ -329,6 +331,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const cfgPriceSize       = cfg.priceSize ?? 'medium'
   const cfgCategoryShapes  = cfg.categoryPhotoShapes ?? {}
   const cfgCatNavStyle     = cfg.categoryNavStyle ?? 'pills'
+  const cfgVariantShape    = cfg.variantShape ?? 'pill'
+  const cfgExtraShape      = cfg.extraShape ?? 'rounded'
   const cfgLogoShape   = cfg.logoShape ?? 'rounded'
   const cfgLogoSizePx  = cfg.logoSizePx ?? (cfg.logoSize === 'small' ? 26 : cfg.logoSize === 'large' ? 46 : 34)
   const cfgLogoPosition: 'left' | 'center' | 'right' | 'none' =
@@ -647,7 +651,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
   // ── CHECKOUT ──
   if (view === 'checkout') return (
-    <div className={`sf-page sf-tpl-${store.template ?? 'clasico'} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize}`} style={pageStyle}>
+    <div className={`sf-page sf-tpl-${store.template ?? 'clasico'} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize} sf-vshape-${cfgVariantShape} sf-eshape-${cfgExtraShape}`} style={pageStyle}>
       {showMapPicker && mapboxToken && (
         <LocationMapPicker
           initialLat={customerLat ?? 10.4806}
@@ -1638,7 +1642,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   }
 
   return (
-    <div className={`sf-page sf-tpl-${tpl} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize}`} style={pageStyle}>
+    <div className={`sf-page sf-tpl-${tpl} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize} sf-vshape-${cfgVariantShape} sf-eshape-${cfgExtraShape}`} style={pageStyle}>
       <div className="sf-topbar">
         <div className="sf-topbar-inner sf-topbar-3col">
           <div className="sf-topbar-slot-left">

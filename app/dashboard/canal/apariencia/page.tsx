@@ -129,6 +129,8 @@ export default function Apariencia() {
   const [baseConfig, setBaseConfig]         = useState<Record<string, unknown>>({})
   const [categories, setCategories]         = useState<Category[]>([])
   const [categoryShapes, setCategoryShapes] = useState<Record<string, string>>({})
+  const [variantShape, setVariantShape]     = useState<'pill' | 'rounded' | 'square'>('pill')
+  const [extraShape, setExtraShape]         = useState<'rounded' | 'pill' | 'square'>('rounded')
   const [trConfig, setTrConfig]             = useState<TrackingConfig>(DEFAULT_TR_CONFIG)
   const [storeLogo, setStoreLogo]           = useState<string | null>(null)
   const [saving, setSaving]                 = useState(false)
@@ -161,6 +163,8 @@ export default function Apariencia() {
         const cfg = (data.template_config ?? {}) as Record<string, unknown>
         setBaseConfig(cfg)
         if (cfg.categoryPhotoShapes) setCategoryShapes(cfg.categoryPhotoShapes as Record<string, string>)
+        if (cfg.variantShape) setVariantShape(cfg.variantShape as 'pill' | 'rounded' | 'square')
+        if (cfg.extraShape)   setExtraShape(cfg.extraShape as 'rounded' | 'pill' | 'square')
         if (cfg.trackingConfig) setTrConfig({ ...DEFAULT_TR_CONFIG, ...(cfg.trackingConfig as Partial<TrackingConfig>) })
         const { data: cats } = await supabase
           .from('categories').select('id,name')
@@ -196,6 +200,8 @@ export default function Apariencia() {
     setError(''); setSuccess(false); setSaving(true)
     const template_config = {
       ...baseConfig,
+      variantShape,
+      extraShape,
       categoryPhotoShapes: Object.keys(categoryShapes).length > 0 ? categoryShapes : undefined,
       trackingConfig: trConfig,
     }
@@ -829,6 +835,98 @@ export default function Apariencia() {
                 {s.name}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Variant chip shape */}
+        <div className="cn-field">
+          <div className="cn-label">Forma de pills de variables</div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+            {([
+              { id: 'pill'    as const, label: 'Pill',     radius: '100px' },
+              { id: 'rounded' as const, label: 'Redondeado', radius: '10px' },
+              { id: 'square'  as const, label: 'Cuadrado', radius: '4px'   },
+            ]).map(({ id, label, radius }) => {
+              const sel = variantShape === id
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setVariantShape(id)}
+                  style={{
+                    flex: 1, padding: '10px 6px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                    background: sel ? trConfig.accentColor + '12' : '#F8FAFC',
+                    outline: `2px solid ${sel ? trConfig.accentColor : 'rgba(15,23,42,0.1)'}`,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                    transition: 'outline-color 0.15s, background 0.15s',
+                  }}
+                >
+                  <div style={{
+                    padding: '4px 10px', fontSize: 10, fontWeight: 600,
+                    border: `1.5px solid ${sel ? trConfig.accentColor : '#CBD5E1'}`,
+                    borderRadius: radius,
+                    color: sel ? trConfig.accentColor : '#94A3B8',
+                    background: sel ? trConfig.accentColor + '14' : 'white',
+                    transition: 'all 0.15s',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    M / L
+                  </div>
+                  <span style={{ fontSize: 10, fontWeight: sel ? 700 : 500, color: sel ? trConfig.accentColor : '#64748B', fontFamily: 'var(--font-geist-sans), sans-serif' }}>
+                    {label}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Extra shape */}
+        <div className="cn-field">
+          <div className="cn-label">Forma de pills de extras</div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+            {([
+              { id: 'rounded' as const, label: 'Redondeado', radius: '12px'  },
+              { id: 'pill'    as const, label: 'Pill',     radius: '100px' },
+              { id: 'square'  as const, label: 'Cuadrado', radius: '4px'   },
+            ]).map(({ id, label, radius }) => {
+              const sel = extraShape === id
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setExtraShape(id)}
+                  style={{
+                    flex: 1, padding: '10px 6px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                    background: sel ? trConfig.accentColor + '12' : '#F8FAFC',
+                    outline: `2px solid ${sel ? trConfig.accentColor : 'rgba(15,23,42,0.1)'}`,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                    transition: 'outline-color 0.15s, background 0.15s',
+                  }}
+                >
+                  <div style={{
+                    width: '100%', padding: '5px 8px', fontSize: 10, fontWeight: 500,
+                    border: `1.5px solid ${sel ? trConfig.accentColor : 'rgba(15,23,42,0.1)'}`,
+                    borderRadius: radius,
+                    color: sel ? trConfig.accentColor : '#64748B',
+                    background: sel ? trConfig.accentColor + '06' : 'white',
+                    display: 'flex', alignItems: 'center', gap: 5,
+                    transition: 'all 0.15s',
+                  }}>
+                    <div style={{
+                      width: 12, height: 12, flexShrink: 0,
+                      borderRadius: id === 'pill' ? '50%' : id === 'rounded' ? '3px' : '2px',
+                      border: `2px solid ${sel ? trConfig.accentColor : '#CBD5E1'}`,
+                      transition: 'all 0.15s',
+                    }} />
+                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Extra</span>
+                  </div>
+                  <span style={{ fontSize: 10, fontWeight: sel ? 700 : 500, color: sel ? trConfig.accentColor : '#64748B', fontFamily: 'var(--font-geist-sans), sans-serif' }}>
+                    {label}
+                  </span>
+                </button>
+              )
+            })}
           </div>
         </div>
 

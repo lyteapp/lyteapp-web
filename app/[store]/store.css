@@ -883,6 +883,16 @@ html, body { overflow-x: hidden; }
 .sf-modal-extra-name { flex: 1; font-size: 14px; color: #0F172A; }
 .sf-modal-extra-price { font-size: 13px; font-weight: 600; color: var(--sf-accent-color, #7C3AED); flex-shrink: 0; }
 
+/* Variant chip shape overrides (default = pill, 100px) */
+.sf-vshape-rounded .sf-modal-chip { border-radius: 10px; }
+.sf-vshape-square  .sf-modal-chip { border-radius: 4px; }
+
+/* Extra shape overrides (default = rounded, 12px) */
+.sf-eshape-pill   .sf-modal-extra        { border-radius: 100px; }
+.sf-eshape-pill   .sf-modal-extra-check  { border-radius: 50%; }
+.sf-eshape-square .sf-modal-extra        { border-radius: 4px; }
+.sf-eshape-square .sf-modal-extra-check  { border-radius: 2px; }
+
 /* Notes */
 .sf-modal-notes {
   width: 100%; border: 1.5px solid rgba(15,23,42,0.1); border-radius: 12px;

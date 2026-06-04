@@ -80,6 +80,19 @@ function isToday(iso: string) {
   return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate()
 }
 
+function haversineM(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const R = 6371000
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+function zoneForCoords(lat: number | null, lng: number | null, zones: Zone[]) {
+  if (lat == null || lng == null) return null
+  return zones.find(z => haversineM(lat, lng, z.center_lat, z.center_lng) <= z.radius_m) ?? null
+}
+
 export default function DeliveryPage() {
   const { user } = useAuth()
   const [loading, setLoading]       = useState(true)
@@ -607,6 +620,7 @@ export default function DeliveryPage() {
                   const mins = deliveryMinutes(del)
                   const status = del.status === 'delivered' ? 'delivered' : del.status === 'cancelled' ? 'cancelled' : 'ongoing'
                   const statusLabel = { delivered: 'Entregado', cancelled: 'Cancelado', ongoing: 'En curso' }[status]
+                  const displayZone = zoneForCoords(del.customer_lat, del.customer_lng, zones) ?? del.zone
                   return (
                     <tr key={del.id}>
                       <td style={{ fontWeight: 500 }}>{del.customer_name}</td>
@@ -619,10 +633,10 @@ export default function DeliveryPage() {
                       <td>{fmtTime(del.delivered_at)}</td>
                       <td>{mins !== null ? `${mins} min` : '—'}</td>
                       <td>
-                        {del.zone
+                        {displayZone
                           ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12 }}>
-                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: del.zone.color, flexShrink: 0 }} />
-                              {del.zone.name}
+                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: displayZone.color, flexShrink: 0 }} />
+                              {displayZone.name}
                             </span>
                           : <span style={{ color: 'var(--dv-ink-muted)' }}>—</span>
                         }

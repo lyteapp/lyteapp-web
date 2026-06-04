@@ -388,7 +388,8 @@ export default function DriverClient({
 
   // ── Load driver stats ────────────────────────────────────────────
   const loadStats = useCallback(async () => {
-    const res = await fetch(`/api/driver-stats?driverId=${driverId}`).catch(() => null)
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
+    const res = await fetch(`/api/driver-stats?driverId=${driverId}&todayStart=${todayStart.toISOString()}`).catch(() => null)
     if (!res?.ok) return
     const json = await res.json().catch(() => null)
     if (!json) return

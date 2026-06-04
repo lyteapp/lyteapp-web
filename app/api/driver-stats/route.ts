@@ -27,8 +27,8 @@ export async function GET(req: Request) {
     .maybeSingle()
   if (!driver) return Response.json({ error: 'Driver not found' }, { status: 404 })
 
-  const todayStart = new Date()
-  todayStart.setHours(0, 0, 0, 0)
+  const todayStartParam = searchParams.get('todayStart')
+  const todayStart = todayStartParam ? new Date(todayStartParam) : (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d })()
 
   const [{ data: deliveries }, { data: zones }] = await Promise.all([
     supa.from('deliveries')

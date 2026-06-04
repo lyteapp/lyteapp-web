@@ -61,12 +61,18 @@ export default async function DriverPage(
 
   const { data: activeDelivery } = await supa
     .from('deliveries')
-    .select('id, customer_name, customer_phone, delivery_address, notes, status, picked_up_at, order_id, customer_lat, customer_lng')
+    .select('id, customer_name, customer_phone, delivery_address, notes, status, picked_up_at, order_id, customer_lat, customer_lng, orders(total, payment_method)')
     .eq('driver_id', driverId)
     .in('status', ['ready', 'picked_up'])
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
+
+  const flatDelivery = activeDelivery ? {
+    ...activeDelivery,
+    order_total: (activeDelivery.orders as unknown as { total: number } | null)?.total ?? null,
+    order_payment_method: (activeDelivery.orders as unknown as { payment_method: string } | null)?.payment_method ?? null,
+  } : null
 
   return (
     <DriverClient
@@ -76,7 +82,7 @@ export default async function DriverPage(
       storeId={driver.store_id}
       storeName={(driver.stores as unknown as { name: string; logo_url: string | null } | null)?.name ?? ''}
       storeLogo={(driver.stores as unknown as { name: string; logo_url: string | null } | null)?.logo_url ?? null}
-      initialDelivery={activeDelivery as ActiveDelivery | null}
+      initialDelivery={flatDelivery as ActiveDelivery | null}
       mapboxToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
     />
   )
@@ -93,4 +99,6 @@ export type ActiveDelivery = {
   order_id: string | null
   customer_lat: number | null
   customer_lng: number | null
+  order_total: number | null
+  order_payment_method: string | null
 }

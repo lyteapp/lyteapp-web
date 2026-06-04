@@ -157,6 +157,8 @@ export default function DriverClient({
   const [totalDist, setTotalDist]     = useState(0)
   const [newDeliveryFlash, setNewDeliveryFlash] = useState(false)
   const [orders, setOrders] = useState<AvailableOrder[]>([])
+  const [showStats, setShowStats] = useState(false)
+  const [driverStats, setDriverStats] = useState<{ todayCount: number; totalCount: number; totalEarnings: number } | null>(null)
 
   const watchId              = useRef<number | null>(null)
   const fallbackInterval = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -388,6 +390,20 @@ export default function DriverClient({
     wakeLock.current?.release().catch(() => {})
   }, [])
 
+  // ── Load driver stats ────────────────────────────────────────────
+  const loadStats = useCallback(async () => {
+    const { data } = await supabase
+      .from('deliveries')
+      .select('driver_fee, delivered_at')
+      .eq('driver_id', driverId)
+      .eq('status', 'delivered')
+    if (!data) return
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
+    const todayCount = data.filter(d => d.delivered_at && new Date(d.delivered_at) >= todayStart).length
+    const totalEarnings = data.reduce((s, d) => s + Number(d.driver_fee), 0)
+    setDriverStats({ todayCount, totalCount: data.length, totalEarnings })
+  }, [driverId])
+
   // ── Load available orders ─────────────────────────────────────────
   const loadOrders = useCallback(async () => {
     const [{ data: ready }, { data: claimed }] = await Promise.all([
@@ -409,10 +425,15 @@ export default function DriverClient({
   // ── Load active delivery ──────────────────────────────────────────
   const loadDelivery = useCallback(async () => {
     const { data } = await supabase.from('deliveries')
-      .select('id,customer_name,customer_phone,delivery_address,notes,status,picked_up_at,order_id,customer_lat,customer_lng')
+      .select('id,customer_name,customer_phone,delivery_address,notes,status,picked_up_at,order_id,customer_lat,customer_lng,orders(total,payment_method)')
       .eq('driver_id', driverId).in('status', ['ready', 'picked_up'])
       .order('created_at', { ascending: false }).limit(1).maybeSingle()
-    setDelivery(data as ActiveDelivery | null)
+    if (!data) { setDelivery(null); return }
+    setDelivery({
+      ...data,
+      order_total: (data.orders as unknown as { total: number } | null)?.total ?? null,
+      order_payment_method: (data.orders as unknown as { payment_method: string } | null)?.payment_method ?? null,
+    } as ActiveDelivery)
   }, [driverId])
 
   // ── New-delivery alert (beep + flash when a delivery is assigned) ──
@@ -494,11 +515,12 @@ export default function DriverClient({
   useEffect(() => {
     loadOrders()
     loadDelivery()
+    loadStats()
     const ch = supabase.channel(`dispatcher-${driverId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `store_id=eq.${storeId}` },
         () => loadOrders())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'deliveries', filter: `store_id=eq.${storeId}` },
-        () => { loadOrders(); loadDelivery() })
+        () => { loadOrders(); loadDelivery(); loadStats() })
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, [storeId, driverId, loadOrders, loadDelivery])
@@ -723,6 +745,24 @@ export default function DriverClient({
               </div>
 
               <div className="dsp-active-actions">
+                {(delivery.order_total != null || delivery.order_payment_method) && (
+                  <div style={{
+                    background: 'rgba(0,0,0,0.52)', backdropFilter: 'blur(8px)',
+                    borderRadius: 12, padding: '9px 16px', marginBottom: 8,
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+                  }}>
+                    {delivery.order_total != null && (
+                      <span style={{ fontSize: 20, fontWeight: 800, color: 'white', letterSpacing: '-0.5px' }}>
+                        ${Number(delivery.order_total).toFixed(2)}
+                      </span>
+                    )}
+                    {delivery.order_payment_method && (
+                      <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.75)', textTransform: 'capitalize' }}>
+                        {delivery.order_payment_method}
+                      </span>
+                    )}
+                  </div>
+                )}
                 {(delivery.customer_phone || (delivery.customer_lat && delivery.customer_lng)) && (
                   <div className="dsp-actions-row">
                     {delivery.customer_phone && (
@@ -780,6 +820,35 @@ export default function DriverClient({
                 </button>
               </div>
             ))}
+          </div>
+        )}
+
+        {!delivery && (
+          <div className="dsp-stats-wrap">
+            <button className="dsp-stats-toggle" onClick={() => setShowStats(s => !s)}>
+              <span>Mis despachos</span>
+              <span className="dsp-stats-today-badge">{driverStats?.todayCount ?? 0} hoy</span>
+              <svg viewBox="0 0 16 16" fill="currentColor" width="12" height="12" style={{ marginLeft: 'auto', flexShrink: 0, transform: showStats ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+                <path d="M8 10.5L3 5.5h10L8 10.5z"/>
+              </svg>
+            </button>
+
+            {showStats && (
+              <div className="dsp-stats-panel">
+                <div className="dsp-stat-box">
+                  <div className="dsp-stat-val">{driverStats?.todayCount ?? 0}</div>
+                  <div className="dsp-stat-lbl">Despachos hoy</div>
+                </div>
+                <div className="dsp-stat-box">
+                  <div className="dsp-stat-val">{driverStats?.totalCount ?? 0}</div>
+                  <div className="dsp-stat-lbl">Total despachos</div>
+                </div>
+                <div className="dsp-stat-box featured">
+                  <div className="dsp-stat-val">${(driverStats?.totalEarnings ?? 0).toFixed(2)}</div>
+                  <div className="dsp-stat-lbl">Total acumulado</div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

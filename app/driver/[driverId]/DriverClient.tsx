@@ -728,7 +728,7 @@ export default function DriverClient({
                   <>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                       <span className="dsp-pulse-dot" />
-                      <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#64748B' }}>Pedido activo</span>
+                      <span className="dsp-active-label">Pedido activo</span>
                     </div>
                     <div className="dsp-delivery-customer" style={{ marginBottom: 4 }}>{delivery.customer_name}</div>
                     {delivery.delivery_address && (
@@ -864,7 +864,7 @@ export default function DriverClient({
               </div>
               <button className="dsp-gps-stop" onClick={stopGps}>Detener</button>
             </div>
-            <div style={{ background: '#FFFBEB', borderTop: '1px solid #FDE68A', padding: '8px 18px', fontSize: 11, color: '#92400E', textAlign: 'center' }}>
+            <div className="dsp-gps-tip">
               Android: puedes bloquear la pantalla · iOS: manten Safari abierto
             </div>
           </>

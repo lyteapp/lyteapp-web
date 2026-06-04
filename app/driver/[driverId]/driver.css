@@ -961,3 +961,212 @@
   letter-spacing: 0.04em;
   flex-shrink: 0;
 }
+
+/* ── Driver stats ── */
+.dsp-stats-wrap {
+  padding: 0 16px;
+  margin-bottom: 10px;
+}
+
+.dsp-stats-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0F172A;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+.dsp-stats-toggle:hover { border-color: #C4B5FD; }
+
+.dsp-stats-today-badge {
+  background: #F5F3FF;
+  color: #7C3AED;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 100px;
+}
+
+.dsp-stats-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.dsp-stat-box {
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 14px 10px;
+  text-align: center;
+}
+
+.dsp-stat-box.featured {
+  background: #0F172A;
+  border-color: #0F172A;
+}
+
+.dsp-stat-val {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0F172A;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.dsp-stat-box.featured .dsp-stat-val { color: white; }
+
+.dsp-stat-lbl {
+  font-size: 10px;
+  font-weight: 500;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1.3;
+}
+
+.dsp-stat-box.featured .dsp-stat-lbl { color: rgba(255,255,255,0.5); }
+
+/* ── Misc inline-replaceable classes ── */
+.dsp-active-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748B;
+}
+
+.dsp-gps-tip {
+  background: #FFFBEB;
+  border-top: 1px solid #FDE68A;
+  padding: 8px 18px;
+  font-size: 11px;
+  color: #92400E;
+  text-align: center;
+}
+
+/* ── Dark Mode ────────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+
+  .dsp-root { background: #0F172A; color: #F1F5F9; }
+
+  /* Header */
+  .dsp-header        { background: #1E293B; border-bottom-color: #334155; }
+  .dsp-store         { color: #F1F5F9; }
+  .dsp-name          { color: #94A3B8; }
+
+  /* GPS pill */
+  .dsp-gps-pill      { background: #334155; color: #94A3B8; }
+  .dsp-gps-pill.on   { background: #14532D; color: #4ADE80; }
+  .dsp-gps-pill.err  { background: #450a0a; color: #FCA5A5; }
+
+  /* GPS error/restart banners */
+  .dsp-gps-restart         { background: #334155; }
+  .dsp-gps-error           { background: #450a0a; border-bottom-color: #7f1d1d; color: #FCA5A5; }
+  .dsp-gps-error button    { border-color: #7f1d1d; color: #FCA5A5; }
+  .dsp-gps-tip             { background: #1c1a0a; border-top-color: #78350f; color: #FCD34D; }
+
+  /* Install banner */
+  .dsp-install-bar          { background: #1e1b4b; border-bottom-color: #312e81; }
+  .dsp-install-text         { color: #A5B4FC; }
+  .dsp-install-text span    { color: #818CF8; }
+  .dsp-install-dismiss      { color: #818CF8; }
+  .dsp-install-hint         { background: #1e1b4b; border-bottom-color: #312e81; }
+  .dsp-install-hint-step    { color: #A5B4FC; }
+
+  /* Active delivery map */
+  .dsp-active-wrap,
+  .dsp-active-map           { background: #1E293B; }
+
+  .dsp-active-info          {
+    background: rgba(15,23,42,0.96);
+    border-bottom-color: rgba(51,65,85,0.8);
+  }
+
+  /* Active delivery info content */
+  .dsp-active-label         { color: #64748B; }
+  .dsp-delivery-customer    { color: #F1F5F9; }
+  .dsp-delivery-address     { color: #CBD5E1; }
+  .dsp-delivery-phone       { color: #A78BFA; }
+  .dsp-delivery-notes       { background: #0F172A; color: #94A3B8; }
+
+  /* Nav instruction */
+  .dsp-nav-dist             { color: #F1F5F9; }
+  .dsp-nav-instr            { color: #E2E8F0; }
+  .dsp-nav-total            { color: #64748B; }
+
+  /* Action buttons */
+  .dsp-btn-nav              { background: #1e3a5f; color: #93C5FD; }
+  .dsp-btn-nav:hover:not(:disabled) { background: #1e4976; }
+  .dsp-btn-nav-stop         { background: #450a0a; color: #FCA5A5; }
+  .dsp-btn-nav-stop:hover   { background: #7f1d1d; }
+  .dsp-btn-call             { background: #14532D; color: #4ADE80; }
+  .dsp-btn-call:hover       { background: #166534; }
+  .dsp-btn-done             { background: #7C3AED; }
+  .dsp-btn-done:hover:not(:disabled) { background: #6D28D9; }
+  .dsp-btn-claim            { background: #F1F5F9; color: #0F172A; }
+  .dsp-btn-claim:hover:not(:disabled) { background: #E2E8F0; }
+
+  /* Order cards */
+  .dsp-order-card           { background: #1E293B; border-color: #334155; }
+  .dsp-order-card:hover     { border-color: #7C3AED; box-shadow: 0 2px 12px rgba(124,58,237,0.15); }
+  .dsp-order-name           { color: #F1F5F9; }
+  .dsp-order-time           { color: #64748B; }
+  .dsp-order-notes          { color: #94A3B8; }
+  .dsp-order-meta           { color: #94A3B8; }
+  .dsp-order-meta span::before { color: #475569; }
+
+  /* GPS bar */
+  .dsp-gps-bar              { background: #1E293B; border-top-color: #334155; }
+  .dsp-gps-info             { color: #4ADE80; }
+  .dsp-gps-time             { color: #64748B; }
+  .dsp-gps-stop             { border-color: #334155; color: #94A3B8; }
+  .dsp-gps-stop:hover       { border-color: #EF4444; color: #EF4444; }
+
+  /* Stats */
+  .dsp-stats-toggle         { background: #1E293B; border-color: #334155; color: #F1F5F9; }
+  .dsp-stats-toggle:hover   { border-color: #7C3AED; }
+  .dsp-stats-today-badge    { background: #2D1B69; color: #A78BFA; }
+  .dsp-stat-box             { background: #1E293B; border-color: #334155; }
+  .dsp-stat-val             { color: #F1F5F9; }
+
+  /* Queue */
+  .dsp-queue-label          { color: #94A3B8; }
+  .dsp-queue-empty          { color: #475569; }
+  .dsp-queue-card           { background: #1E293B; border-color: #334155; }
+  .dsp-queue-card--me       { background: #2D1B69; border-color: #7C3AED; }
+  .dsp-queue-name           { color: #F1F5F9; }
+  .dsp-queue-card--me .dsp-queue-name { color: #C4B5FD; }
+  .dsp-queue-initials       { background: #334155; color: #94A3B8; }
+  .dsp-queue-since          { color: #64748B; }
+  .dsp-queue-waiting        { background: #1E293B; border-color: #334155; color: #94A3B8; }
+
+  /* Empty state */
+  .dsp-empty                { background: #1E293B; border-color: #334155; }
+  .dsp-empty-text           { color: #94A3B8; }
+  .dsp-empty-sub            { color: #64748B; }
+
+  /* Section title */
+  .dsp-section-title        { color: #94A3B8; }
+
+  /* Error bar */
+  .dsp-error-bar            { background: #450a0a; border-color: #7f1d1d; color: #FCA5A5; }
+  .dsp-error-bar button     { border-color: #7f1d1d; color: #FCA5A5; }
+
+  /* Available row */
+  .dsp-avail-row            { background: #14532D; border-color: #22C55E; }
+  .dsp-avail-label          { color: #4ADE80; }
+  .dsp-btn-available        { background: #1E293B; border-color: #334155; color: #F1F5F9; }
+  .dsp-btn-leave-queue      { border-color: rgba(220,38,38,0.4); color: #FCA5A5; }
+  .dsp-btn-leave-queue:hover { background: #450a0a; border-color: #DC2626; }
+}

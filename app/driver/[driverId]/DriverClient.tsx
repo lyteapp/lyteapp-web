@@ -157,7 +157,6 @@ export default function DriverClient({
   const [totalDist, setTotalDist]     = useState(0)
   const [newDeliveryFlash, setNewDeliveryFlash] = useState(false)
   const [orders, setOrders] = useState<AvailableOrder[]>([])
-  const [showStats, setShowStats] = useState(false)
   const [driverStats, setDriverStats] = useState<{ todayCount: number; totalCount: number; totalEarnings: number } | null>(null)
 
   const watchId              = useRef<number | null>(null)
@@ -874,27 +873,39 @@ export default function DriverClient({
         )}
 
         {!delivery && (
-          <div className="dsp-stats-wrap">
-            <button className="dsp-stats-toggle" onClick={() => setShowStats(s => !s)}>
-              <span>Mis despachos</span>
-              <span className="dsp-stats-today-badge">{driverStats?.todayCount ?? 0} hoy</span>
-              <svg viewBox="0 0 16 16" fill="currentColor" width="12" height="12" style={{ marginLeft: 'auto', flexShrink: 0, transform: showStats ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
-                <path d="M8 10.5L3 5.5h10L8 10.5z"/>
-              </svg>
-            </button>
-
-            {showStats && (
-              <div className="dsp-stats-panel">
-                <div className="dsp-stat-box">
-                  <div className="dsp-stat-val">{driverStats?.todayCount ?? 0}</div>
-                  <div className="dsp-stat-lbl">Despachos hoy</div>
-                </div>
-                <div className="dsp-stat-box featured">
-                  <div className="dsp-stat-val">${(driverStats?.totalEarnings ?? 0).toFixed(2)}</div>
-                  <div className="dsp-stat-lbl">Acumulado hoy</div>
-                </div>
+          <div className="dsp-courier-card">
+            <div className="dsp-courier-head">
+              {driverAvatar
+                ? <img src={driverAvatar} alt={driverName} className="dsp-courier-av" style={{ objectFit: 'cover' }} />
+                : <div className="dsp-courier-av">{driverName[0].toUpperCase()}</div>
+              }
+              <div className="dsp-courier-info">
+                <div className="dsp-courier-name">{driverName}</div>
               </div>
-            )}
+              {gpsStatus === 'active' && delivery
+                ? <span className="dsp-badge-route">en ruta</span>
+                : gpsStatus === 'active'
+                  ? <span className="dsp-badge-gps">
+                      <span className="dsp-badge-dot" />
+                      GPS activo
+                    </span>
+                  : <span className="dsp-badge-offline">offline</span>
+              }
+            </div>
+            <div className="dsp-courier-stats">
+              <div className="dsp-courier-stat">
+                <div className="dsp-courier-stat-val">{driverStats?.todayCount ?? 0}</div>
+                <div className="dsp-courier-stat-lbl">Entregas hoy</div>
+              </div>
+              <div className="dsp-courier-stat">
+                <div className="dsp-courier-stat-val">{driverStats?.totalCount ?? 0}</div>
+                <div className="dsp-courier-stat-lbl">Total</div>
+              </div>
+              <div className="dsp-courier-stat featured">
+                <div className="dsp-courier-stat-val">${(driverStats?.totalEarnings ?? 0).toFixed(2)}</div>
+                <div className="dsp-courier-stat-lbl">Acumulado hoy</div>
+              </div>
+            </div>
           </div>
         )}
 

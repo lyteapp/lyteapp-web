@@ -963,79 +963,128 @@
 }
 
 /* ── Driver stats ── */
-.dsp-stats-wrap {
-  padding: 0 16px;
-  margin-bottom: 10px;
+/* ── Courier card (matches dashboard courier card) ── */
+.dsp-courier-card {
+  margin: 0 16px 12px;
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  overflow: hidden;
 }
 
-.dsp-stats-toggle {
-  width: 100%;
+.dsp-courier-head {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 14px;
-  background: white;
-  border: 1px solid #E2E8F0;
-  border-radius: 12px;
-  font-size: 13px;
+  padding: 14px 14px 12px;
+}
+
+.dsp-courier-av {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #7C3AED;
+  color: white;
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dsp-courier-info { flex: 1; min-width: 0; }
+
+.dsp-courier-name {
+  font-size: 15px;
   font-weight: 600;
   color: #0F172A;
-  cursor: pointer;
-  font-family: inherit;
-  transition: border-color 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.dsp-stats-toggle:hover { border-color: #C4B5FD; }
 
-.dsp-stats-today-badge {
-  background: #F5F3FF;
-  color: #7C3AED;
-  font-size: 11px;
-  font-weight: 700;
+.dsp-badge-gps {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #DCFCE7;
+  color: #15803D;
   padding: 2px 8px;
   border-radius: 100px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.dsp-stats-panel {
+.dsp-badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #15803D;
+  animation: dbBlink 1.4s ease-in-out infinite;
+}
+
+.dsp-badge-route {
+  background: #DBEAFE;
+  color: #1E40AF;
+  padding: 2px 8px;
+  border-radius: 100px;
+  font-size: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.dsp-badge-offline {
+  background: #F1F5F9;
+  color: #94A3B8;
+  padding: 2px 8px;
+  border-radius: 100px;
+  font-size: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.dsp-courier-stats {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
-  margin-top: 8px;
+  border-top: 1px solid #F1F5F9;
 }
 
-.dsp-stat-box {
-  background: white;
-  border: 1px solid #E2E8F0;
-  border-radius: 12px;
-  padding: 14px 10px;
+.dsp-courier-stat {
+  padding: 12px 8px;
   text-align: center;
+  border-right: 1px solid #F1F5F9;
 }
+.dsp-courier-stat:last-child { border-right: none; }
 
-.dsp-stat-box.featured {
+.dsp-courier-stat.featured {
   background: #0F172A;
-  border-color: #0F172A;
 }
 
-.dsp-stat-val {
-  font-size: 20px;
+.dsp-courier-stat-val {
+  font-size: 18px;
   font-weight: 700;
   color: #0F172A;
   letter-spacing: -0.03em;
   line-height: 1;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
-.dsp-stat-box.featured .dsp-stat-val { color: white; }
+.dsp-courier-stat.featured .dsp-courier-stat-val { color: white; }
 
-.dsp-stat-lbl {
+.dsp-courier-stat-lbl {
   font-size: 10px;
   font-weight: 500;
   color: #94A3B8;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  line-height: 1.3;
+  letter-spacing: 0.04em;
 }
 
-.dsp-stat-box.featured .dsp-stat-lbl { color: rgba(255,255,255,0.5); }
+.dsp-courier-stat.featured .dsp-courier-stat-lbl { color: rgba(255,255,255,0.5); }
 
 /* ── Misc inline-replaceable classes ── */
 .dsp-active-label {
@@ -1133,12 +1182,13 @@
   .dsp-gps-stop             { border-color: #334155; color: #94A3B8; }
   .dsp-gps-stop:hover       { border-color: #EF4444; color: #EF4444; }
 
-  /* Stats */
-  .dsp-stats-toggle         { background: #1E293B; border-color: #334155; color: #F1F5F9; }
-  .dsp-stats-toggle:hover   { border-color: #7C3AED; }
-  .dsp-stats-today-badge    { background: #2D1B69; color: #A78BFA; }
-  .dsp-stat-box             { background: #1E293B; border-color: #334155; }
-  .dsp-stat-val             { color: #F1F5F9; }
+  /* Courier card */
+  .dsp-courier-card         { background: #1E293B; border-color: #334155; }
+  .dsp-courier-name         { color: #F1F5F9; }
+  .dsp-courier-stats        { border-top-color: #334155; }
+  .dsp-courier-stat         { border-right-color: #334155; }
+  .dsp-courier-stat-val     { color: #F1F5F9; }
+  .dsp-badge-offline        { background: #1E293B; color: #64748B; }
 
   /* Queue */
   .dsp-queue-label          { color: #94A3B8; }

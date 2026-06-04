@@ -761,7 +761,7 @@ export default function DeliveryPage() {
                       </div>
                       <div className="dv-courier-stat">
                         <div className="val">${todayZoneFeeTotal.toFixed(2)}</div>
-                        <div className="lbl">Fee zona hoy</div>
+                        <div className="lbl">Acumulado hoy</div>
                       </div>
                     </div>
 

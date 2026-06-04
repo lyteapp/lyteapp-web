@@ -38,7 +38,9 @@ type Delivery = {
   status: DeliveryStatus; driver_fee: number; fee_paid: boolean
   notes: string | null; picked_up_at: string | null; delivered_at: string | null; created_at: string
   customer_lat: number | null; customer_lng: number | null; is_customer_order: boolean | null
+  zone_id: string | null
   driver?: Driver | null
+  zone?: { id: string; name: string; fee: number; color: string } | null
 }
 type Zone = { id: string; name: string; fee: number; color: string; radius_m: number; center_lat: number; center_lng: number }
 
@@ -131,6 +133,8 @@ export default function DeliveryPage() {
   const [qrDel, setQrDel]       = useState<Delivery | null>(null)
   const [qrDriver, setQrDriver] = useState<Driver | null>(null)
   const [qrSeconds, setQrSeconds] = useState(272)
+  const [expandedDriver, setExpandedDriver] = useState<string | null>(null)
+  const [expandedSettle, setExpandedSettle] = useState<string | null>(null)
   const qrTimer = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Toast
@@ -150,7 +154,7 @@ export default function DeliveryPage() {
 
   const loadData = useCallback(async (sid: string) => {
     const [{ data: dels }, { data: drvs }, { data: locs }, { data: zns }, { data: storeRow }] = await Promise.all([
-      supabase.from('deliveries').select('*, driver:driver_id(id,name,phone,is_active)').eq('store_id', sid).order('created_at', { ascending: false }).limit(300),
+      supabase.from('deliveries').select('*, driver:driver_id(id,name,phone,is_active), zone:zone_id(id,name,fee,color)').eq('store_id', sid).order('created_at', { ascending: false }).limit(300),
       supabase.from('delivery_drivers').select('*').eq('store_id', sid).order('name'),
       supabase.from('driver_locations').select('*').eq('store_id', sid),
       supabase.from('delivery_zones').select('*').eq('store_id', sid).order('created_at'),
@@ -368,7 +372,9 @@ export default function DeliveryPage() {
     const dDels = deliveries.filter(d => d.driver_id === drv.id && d.status !== 'cancelled')
     const base    = dDels.reduce((s, d) => s + Number(d.driver_fee), 0)
     const paid    = dDels.filter(d => d.fee_paid).reduce((s, d) => s + Number(d.driver_fee), 0)
-    return { drv, dDels, base, paid, pending: base - paid }
+    const todayDrvDels = dDels.filter(d => isToday(d.created_at) && d.status === 'delivered')
+    const todayEarnings = todayDrvDels.reduce((s, d) => s + Number(d.driver_fee), 0)
+    return { drv, dDels, base, paid, pending: base - paid, todayDrvDels, todayEarnings }
   }).filter(s => s.base > 0 || s.dDels.length > 0)
 
   const totalToPay   = settlements.reduce((s, x) => s + x.pending, 0)
@@ -588,6 +594,7 @@ export default function DeliveryPage() {
                   <th>Recogido</th>
                   <th>Entregado</th>
                   <th>Tiempo</th>
+                  <th>Zona</th>
                   <th>Estado</th>
                   <th style={{ textAlign: 'right' }}>Fee</th>
                   <th></th>
@@ -610,8 +617,17 @@ export default function DeliveryPage() {
                       <td>{fmtTime(del.picked_up_at)}</td>
                       <td>{fmtTime(del.delivered_at)}</td>
                       <td>{mins !== null ? `${mins} min` : '—'}</td>
+                      <td>
+                        {del.zone
+                          ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12 }}>
+                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: del.zone.color, flexShrink: 0 }} />
+                              {del.zone.name}
+                            </span>
+                          : <span style={{ color: 'var(--dv-ink-muted)' }}>—</span>
+                        }
+                      </td>
                       <td><span className={`dv-chip ${status}`}>{statusLabel}</span></td>
-                      <td style={{ textAlign: 'right', fontWeight: 500 }}>${Number(del.driver_fee).toFixed(2)}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 500 }}>${Number(del.zone?.fee ?? del.driver_fee).toFixed(2)}</td>
                       <td>
                         {del.status === 'ready' && (
                           <button className="dv-btn-outline-sm" onClick={() => setQrDel(del)} style={{ fontSize: 11, padding: '4px 8px' }}>QR</button>
@@ -755,6 +771,48 @@ export default function DeliveryPage() {
                         <div className="lbl">Ganado hoy</div>
                       </div>
                     </div>
+                    <button
+                      className="dv-courier-toggle"
+                      onClick={() => setExpandedDriver(expandedDriver === drv.id ? null : drv.id)}
+                    >
+                      {expandedDriver === drv.id ? 'Ocultar despachos' : `Despachos (${dDels.length})`}
+                      <svg viewBox="0 0 16 16" fill="currentColor" width="12" height="12" style={{ transform: expandedDriver === drv.id ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+                        <path d="M8 10.5L3 5.5h10L8 10.5z"/>
+                      </svg>
+                    </button>
+
+                    {expandedDriver === drv.id && (
+                      <div className="dv-driver-dels">
+                        {dDels.length === 0 ? (
+                          <div className="dv-driver-dels-empty">Sin despachos registrados</div>
+                        ) : (
+                          [...dDels]
+                            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                            .map(del => {
+                              const st = del.status === 'delivered' ? 'delivered' : del.status === 'cancelled' ? 'cancelled' : 'ongoing'
+                              const stLabel = { delivered: 'Entregado', cancelled: 'Cancelado', ongoing: 'En curso' }[st]
+                              return (
+                                <div key={del.id} className="dv-driver-del-row">
+                                  <div className="dv-driver-del-meta">
+                                    <span className="dv-driver-del-time">{fmtTime(del.created_at)}</span>
+                                    <span className={`dv-chip ${st}`} style={{ fontSize: 10, padding: '2px 7px' }}>{stLabel}</span>
+                                    {del.zone && (
+                                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--dv-ink-soft)' }}>
+                                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: del.zone.color }} />
+                                        {del.zone.name}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="dv-driver-del-client">{del.customer_name}</div>
+                                  <div className="dv-driver-del-addr">{del.delivery_address || '—'}</div>
+                                  <div className="dv-driver-del-fee">${Number(del.driver_fee).toFixed(2)}</div>
+                                </div>
+                              )
+                            })
+                        )}
+                      </div>
+                    )}
+
                     <div className="dv-courier-card-actions">
                       <button onClick={() => { setEditDriver(drv); setDrName(drv.name); setDrPhone(drv.phone ?? ''); setDrAvatarFile(null); setDrAvatarPreview(drv.avatar_url ?? null); setShowDriverForm(true) }}>
                         Editar
@@ -980,7 +1038,8 @@ export default function DeliveryPage() {
               <thead>
                 <tr>
                   <th>Despachador</th>
-                  <th>Entregas</th>
+                  <th>Entregas hoy</th>
+                  <th>Ganado hoy</th>
                   <th>Comision base</th>
                   <th style={{ textAlign: 'right' }}>Total a pagar</th>
                   <th>Estado</th>
@@ -988,34 +1047,77 @@ export default function DeliveryPage() {
                 </tr>
               </thead>
               <tbody>
-                {settlements.map(({ drv, dDels, base, paid, pending }) => (
-                  <tr key={drv.id}>
-                    <td>
-                      <span className="dv-mini-av">{drv.name[0]}</span>
-                      <span style={{ fontWeight: 500 }}>{drv.name}</span>
-                    </td>
-                    <td>{dDels.length}</td>
-                    <td>${base.toFixed(2)}</td>
-                    <td style={{ textAlign: 'right', fontWeight: 500, fontSize: 14 }}>${pending.toFixed(2)}</td>
-                    <td>
-                      {pending === 0
-                        ? <span className="dv-paid-chip">Pagado</span>
-                        : <span className="dv-pending-chip">Pendiente</span>
-                      }
-                    </td>
-                    <td>
-                      {pending > 0 && (
-                        <button className="dv-btn-mark-paid" onClick={async () => {
-                          for (const d of dDels.filter(x => !x.fee_paid && x.driver_fee > 0)) {
-                            await markFeePaid(d.id, true)
-                          }
-                          showToast(`Liquidacion de ${drv.name} marcada como pagada`)
-                        }}>
-                          Marcar pagado
-                        </button>
-                      )}
-                    </td>
-                  </tr>
+                {settlements.map(({ drv, dDels, base, pending, todayDrvDels, todayEarnings }) => (
+                  <>
+                    <tr key={drv.id} style={{ cursor: 'pointer' }} onClick={() => setExpandedSettle(expandedSettle === drv.id ? null : drv.id)}>
+                      <td>
+                        <span className="dv-mini-av">{drv.name[0]}</span>
+                        <span style={{ fontWeight: 500 }}>{drv.name}</span>
+                      </td>
+                      <td>{todayDrvDels.length}</td>
+                      <td style={{ fontWeight: 500, color: todayEarnings > 0 ? 'var(--dv-ink)' : 'var(--dv-ink-muted)' }}>${todayEarnings.toFixed(2)}</td>
+                      <td>${base.toFixed(2)}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 500, fontSize: 14 }}>${pending.toFixed(2)}</td>
+                      <td>
+                        {pending === 0
+                          ? <span className="dv-paid-chip">Pagado</span>
+                          : <span className="dv-pending-chip">Pendiente</span>
+                        }
+                      </td>
+                      <td style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        {pending > 0 && (
+                          <button className="dv-btn-mark-paid" onClick={async (e) => {
+                            e.stopPropagation()
+                            for (const d of dDels.filter(x => !x.fee_paid && x.driver_fee > 0)) {
+                              await markFeePaid(d.id, true)
+                            }
+                            showToast(`Liquidacion de ${drv.name} marcada como pagada`)
+                          }}>
+                            Marcar pagado
+                          </button>
+                        )}
+                        <svg viewBox="0 0 16 16" fill="currentColor" width="12" height="12" style={{ color: 'var(--dv-ink-muted)', transform: expandedSettle === drv.id ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}>
+                          <path d="M8 10.5 L2 4.5 L14 4.5 Z" />
+                        </svg>
+                      </td>
+                    </tr>
+                    {expandedSettle === drv.id && (
+                      <tr key={`${drv.id}-dels`}>
+                        <td colSpan={7} style={{ padding: 0, background: 'var(--dv-surface-2, #F8FAFC)' }}>
+                          <div className="dv-driver-dels">
+                            {dDels.length === 0 ? (
+                              <div className="dv-driver-dels-empty">Sin despachos registrados</div>
+                            ) : (
+                              [...dDels]
+                                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                                .map(del => {
+                                  const st = del.status === 'delivered' ? 'delivered' : del.status === 'cancelled' ? 'cancelled' : 'ongoing'
+                                  const stLabel = { delivered: 'Entregado', cancelled: 'Cancelado', ongoing: 'En curso' }[st]
+                                  const zoneFee = del.zone?.fee ?? del.driver_fee
+                                  return (
+                                    <div key={del.id} className="dv-driver-del-row">
+                                      <div className="dv-driver-del-meta">
+                                        <span className="dv-driver-del-time">{fmtTime(del.created_at)}</span>
+                                        <span className={`dv-chip ${st}`} style={{ fontSize: 10, padding: '2px 7px' }}>{stLabel}</span>
+                                        {del.zone && (
+                                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--dv-ink-soft)' }}>
+                                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: del.zone.color }} />
+                                            {del.zone.name}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="dv-driver-del-client">{del.customer_name}</div>
+                                      <div className="dv-driver-del-addr">{del.delivery_address || '—'}</div>
+                                      <div className="dv-driver-del-fee">${Number(zoneFee).toFixed(2)}</div>
+                                    </div>
+                                  )
+                                })
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
                 ))}
               </tbody>
             </table>

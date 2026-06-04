@@ -366,7 +366,6 @@ export default function DeliveryPage() {
     return Math.round(total / completed.length)
   })()
 
-  const todayRevenue = todayDels.filter(d => d.status === 'delivered').reduce((s, d) => s + Number(d.driver_fee), 0)
 
   const todayFiltered = todayDels.filter(d =>
     todayFilter === 'all' ? true
@@ -559,10 +558,6 @@ export default function DeliveryPage() {
             <div className="dv-summary-card">
               <div className="dv-sc-label">Canceladas</div>
               <div className="dv-sc-val">{todayDels.filter(d => d.status === 'cancelled').length}</div>
-            </div>
-            <div className="dv-summary-card">
-              <div className="dv-sc-label">Facturado en delivery</div>
-              <div className="dv-sc-val">${todayRevenue.toFixed(2)}</div>
             </div>
           </div>
 

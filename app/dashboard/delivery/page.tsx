@@ -598,7 +598,6 @@ export default function DeliveryPage() {
                   <th>Tiempo</th>
                   <th>Zona</th>
                   <th>Estado</th>
-                  <th style={{ textAlign: 'right' }}>Fee</th>
                   <th></th>
                 </tr>
               </thead>
@@ -629,7 +628,6 @@ export default function DeliveryPage() {
                         }
                       </td>
                       <td><span className={`dv-chip ${status}`}>{statusLabel}</span></td>
-                      <td style={{ textAlign: 'right', fontWeight: 500 }}>${Number(del.zone?.fee ?? del.driver_fee).toFixed(2)}</td>
                       <td>
                         {del.status === 'ready' && (
                           <button className="dv-btn-outline-sm" onClick={() => setQrDel(del)} style={{ fontSize: 11, padding: '4px 8px' }}>QR</button>

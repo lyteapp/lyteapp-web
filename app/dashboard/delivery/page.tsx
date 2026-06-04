@@ -146,7 +146,6 @@ export default function DeliveryPage() {
   const [qrDel, setQrDel]       = useState<Delivery | null>(null)
   const [qrDriver, setQrDriver] = useState<Driver | null>(null)
   const [qrSeconds, setQrSeconds] = useState(272)
-  const [expandedDriver, setExpandedDriver] = useState<string | null>(null)
   const [expandedSettle, setExpandedSettle] = useState<string | null>(null)
   const qrTimer = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -789,47 +788,6 @@ export default function DeliveryPage() {
                         <div className="lbl">Ganado hoy</div>
                       </div>
                     </div>
-                    <button
-                      className="dv-courier-toggle"
-                      onClick={() => setExpandedDriver(expandedDriver === drv.id ? null : drv.id)}
-                    >
-                      {expandedDriver === drv.id ? 'Ocultar despachos' : `Despachos (${dDels.length})`}
-                      <svg viewBox="0 0 16 16" fill="currentColor" width="12" height="12" style={{ transform: expandedDriver === drv.id ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
-                        <path d="M8 10.5L3 5.5h10L8 10.5z"/>
-                      </svg>
-                    </button>
-
-                    {expandedDriver === drv.id && (
-                      <div className="dv-driver-dels">
-                        {dDels.length === 0 ? (
-                          <div className="dv-driver-dels-empty">Sin despachos registrados</div>
-                        ) : (
-                          [...dDels]
-                            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-                            .map(del => {
-                              const st = del.status === 'delivered' ? 'delivered' : del.status === 'cancelled' ? 'cancelled' : 'ongoing'
-                              const stLabel = { delivered: 'Entregado', cancelled: 'Cancelado', ongoing: 'En curso' }[st]
-                              return (
-                                <div key={del.id} className="dv-driver-del-row">
-                                  <div className="dv-driver-del-meta">
-                                    <span className="dv-driver-del-time">{fmtTime(del.created_at)}</span>
-                                    <span className={`dv-chip ${st}`} style={{ fontSize: 10, padding: '2px 7px' }}>{stLabel}</span>
-                                    {del.zone && (
-                                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--dv-ink-soft)' }}>
-                                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: del.zone.color }} />
-                                        {del.zone.name}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className="dv-driver-del-client">{del.customer_name}</div>
-                                  <div className="dv-driver-del-addr">{del.delivery_address || '—'}</div>
-                                  <div className="dv-driver-del-fee">${Number(del.driver_fee).toFixed(2)}</div>
-                                </div>
-                              )
-                            })
-                        )}
-                      </div>
-                    )}
 
                     <div className="dv-courier-card-actions">
                       <button onClick={() => { setEditDriver(drv); setDrName(drv.name); setDrPhone(drv.phone ?? ''); setDrAvatarFile(null); setDrAvatarPreview(drv.avatar_url ?? null); setShowDriverForm(true) }}>

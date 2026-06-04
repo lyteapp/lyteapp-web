@@ -722,7 +722,10 @@ export default function DeliveryPage() {
               {drivers.map(drv => {
                 const dDels = deliveries.filter(d => d.driver_id === drv.id && d.status !== 'cancelled')
                 const todayDrv = dDels.filter(d => isToday(d.created_at) && d.status === 'delivered')
-                const todayZoneFeeTotal = todayDrv.reduce((s, d) => s + Number(d.zone?.fee ?? d.driver_fee), 0)
+                const todayZoneFeeTotal = todayDrv.reduce((s, d) => {
+                  const z = zoneForCoords(d.customer_lat, d.customer_lng, zones) ?? d.zone
+                  return s + Number(z?.fee ?? d.driver_fee)
+                }, 0)
                 const busy = inRoute.find(d => d.driver_id === drv.id)
                 const loc = driverLocations.find(d => d.driver_id === drv.id)
                 const gpsActive = loc?.is_sharing && (Date.now() - new Date(loc.updated_at).getTime()) < 300_000

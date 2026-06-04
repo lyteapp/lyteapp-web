@@ -65,7 +65,7 @@ export async function GET(req: Request) {
     .from('deliveries')
     .select('id', { count: 'exact', head: true })
     .eq('driver_id', driverId)
-    .eq('status', 'delivered')
+    .neq('status', 'cancelled')
 
   return Response.json({ todayCount, totalCount: count ?? 0, todayZoneFee })
 }

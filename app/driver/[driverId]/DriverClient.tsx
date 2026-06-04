@@ -391,31 +391,37 @@ export default function DriverClient({
 
   // ── Load driver stats ────────────────────────────────────────────
   const loadStats = useCallback(async () => {
-    const { data } = await supabase
-      .from('deliveries')
-      .select('driver_fee, delivered_at, zone_id')
-      .eq('driver_id', driverId)
-      .eq('status', 'delivered')
+    const [{ data }, { data: allZones }] = await Promise.all([
+      supabase.from('deliveries')
+        .select('driver_fee, delivered_at, customer_lat, customer_lng, zone_id')
+        .eq('driver_id', driverId)
+        .eq('status', 'delivered'),
+      supabase.from('delivery_zones')
+        .select('id,fee,center_lat,center_lng,radius_m')
+        .eq('store_id', storeId),
+    ])
     if (!data) return
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
     const todayDels = data.filter(d => d.delivered_at && new Date(d.delivered_at) >= todayStart)
     const todayCount = todayDels.length
 
-    // Fetch zone fees separately for today's deliveries
-    const todayZoneIds = [...new Set(todayDels.map(d => d.zone_id).filter(Boolean))] as string[]
-    let zoneFeesMap: Record<string, number> = {}
-    if (todayZoneIds.length > 0) {
-      const { data: zones } = await supabase.from('delivery_zones')
-        .select('id,fee').in('id', todayZoneIds)
-      if (zones) zoneFeesMap = Object.fromEntries(zones.map(z => [z.id, z.fee]))
-    }
+    const zoneFeesMap: Record<string, number> = {}
+    if (allZones) allZones.forEach(z => { zoneFeesMap[z.id] = z.fee })
 
     const todayZoneFee = todayDels.reduce((s, d) => {
-      const fee = d.zone_id ? (zoneFeesMap[d.zone_id] ?? d.driver_fee) : d.driver_fee
+      let fee = d.driver_fee
+      if (d.customer_lat != null && d.customer_lng != null && allZones?.length) {
+        const matched = allZones.find(z =>
+          haversineDistance([d.customer_lat!, d.customer_lng!], [z.center_lat, z.center_lng]) <= z.radius_m
+        )
+        fee = matched ? matched.fee : (d.zone_id ? (zoneFeesMap[d.zone_id] ?? d.driver_fee) : d.driver_fee)
+      } else if (d.zone_id) {
+        fee = zoneFeesMap[d.zone_id] ?? d.driver_fee
+      }
       return s + Number(fee)
     }, 0)
     setDriverStats({ todayCount, totalCount: data.length, totalEarnings: todayZoneFee })
-  }, [driverId])
+  }, [driverId, storeId])
 
   // ── Load available orders ─────────────────────────────────────────
   const loadOrders = useCallback(async () => {

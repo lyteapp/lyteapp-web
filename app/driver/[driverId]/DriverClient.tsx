@@ -156,7 +156,7 @@ export default function DriverClient({
   const [totalDist, setTotalDist]     = useState(0)
   const [newDeliveryFlash, setNewDeliveryFlash] = useState(false)
   const [orders, setOrders] = useState<AvailableOrder[]>([])
-  const [driverStats, setDriverStats] = useState<{ todayCount: number; totalCount: number; totalEarnings: number } | null>(null)
+  const [driverStats, setDriverStats] = useState<{ todayCount: number; totalCount: number; totalEarnings: number; totalZoneFee: number } | null>(null)
 
   const watchId              = useRef<number | null>(null)
   const fallbackInterval = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -393,7 +393,7 @@ export default function DriverClient({
     if (!res?.ok) return
     const json = await res.json().catch(() => null)
     if (!json) return
-    setDriverStats({ todayCount: json.todayCount, totalCount: json.totalCount, totalEarnings: json.todayZoneFee })
+    setDriverStats({ todayCount: json.todayCount, totalCount: json.totalCount, totalEarnings: json.todayZoneFee, totalZoneFee: json.totalZoneFee })
   }, [driverId])
 
   // ── Load available orders ─────────────────────────────────────────
@@ -648,6 +648,10 @@ export default function DriverClient({
           <div className="dsp-courier-stat featured">
             <div className="dsp-courier-stat-val">${(driverStats?.totalEarnings ?? 0).toFixed(2)}</div>
             <div className="dsp-courier-stat-lbl">Acumulado hoy</div>
+          </div>
+          <div className="dsp-courier-stat featured">
+            <div className="dsp-courier-stat-val">${(driverStats?.totalZoneFee ?? 0).toFixed(2)}</div>
+            <div className="dsp-courier-stat-lbl">Total acumulado</div>
           </div>
         </div>
       </div>

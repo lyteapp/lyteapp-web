@@ -877,9 +877,6 @@ export default function DriverClient({
               </div>
               <button className="dsp-gps-stop" onClick={stopGps}>Detener</button>
             </div>
-            <div className="dsp-gps-tip">
-              Android: puedes bloquear la pantalla · iOS: manten Safari abierto
-            </div>
           </>
         )}
 

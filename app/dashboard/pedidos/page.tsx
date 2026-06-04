@@ -29,6 +29,7 @@ interface Order {
   created_at: string
   delivery_type?: string | null
   items?: OrderItem[]
+  delivery_info?: { zone_name: string | null; zone_color: string | null; driver_name: string | null } | null
 }
 
 interface DisplayOrder {
@@ -221,12 +222,21 @@ export default function PedidosPage() {
   }, [storeId])
 
   async function loadItems(orderId: string) {
-    const { data } = await supabase
-      .from('order_items')
-      .select('*')
-      .eq('order_id', orderId)
+    const [{ data: items }, { data: del }] = await Promise.all([
+      supabase.from('order_items').select('*').eq('order_id', orderId),
+      supabase.from('deliveries')
+        .select('zone:zone_id(name,color), driver:driver_id(name)')
+        .eq('order_id', orderId)
+        .maybeSingle(),
+    ])
+    const zone = (del?.zone as unknown as { name: string; color: string } | null)
+    const driver = (del?.driver as unknown as { name: string } | null)
     setOrders(prev =>
-      prev.map(o => o.id === orderId ? { ...o, items: data ?? [] } : o)
+      prev.map(o => o.id === orderId ? {
+        ...o,
+        items: items ?? [],
+        delivery_info: del ? { zone_name: zone?.name ?? null, zone_color: zone?.color ?? null, driver_name: driver?.name ?? null } : null,
+      } : o)
     )
   }
 
@@ -787,6 +797,20 @@ export default function PedidosPage() {
                                 <path fillRule="evenodd" d="M18 13V5a2 2 0 00-2-2H4a2 2 0 00-2 2v8a2 2 0 002 2h3l3 3 3-3h3a2 2 0 002-2zM5 7a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm1 3a1 1 0 100 2h3a1 1 0 100-2H6z" clipRule="evenodd" />
                               </svg>
                               {order.customer_notes}
+                            </div>
+                          )}
+                          {order.delivery_info?.zone_name && (
+                            <div className="pd-meta-chip">
+                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: order.delivery_info.zone_color ?? '#7C3AED', flexShrink: 0, display: 'inline-block' }} />
+                              {order.delivery_info.zone_name}
+                            </div>
+                          )}
+                          {order.delivery_info?.driver_name && (
+                            <div className="pd-meta-chip">
+                              <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13">
+                                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                              </svg>
+                              {order.delivery_info.driver_name}
                             </div>
                           )}
                         </div>

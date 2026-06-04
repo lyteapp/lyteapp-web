@@ -157,7 +157,6 @@ export default function DriverClient({
   const [totalDist, setTotalDist]     = useState(0)
   const [newDeliveryFlash, setNewDeliveryFlash] = useState(false)
   const [orders, setOrders] = useState<AvailableOrder[]>([])
-  const [driverStats, setDriverStats] = useState<{ todayCount: number; totalCount: number; totalEarnings: number } | null>(null)
 
   const watchId              = useRef<number | null>(null)
   const fallbackInterval = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -390,13 +389,6 @@ export default function DriverClient({
   }, [])
 
   // ── Load driver stats ────────────────────────────────────────────
-  const loadStats = useCallback(async () => {
-    const res = await fetch(`/api/driver-stats?driverId=${driverId}`).catch(() => null)
-    if (!res?.ok) return
-    const json = await res.json().catch(() => null)
-    if (!json) return
-    setDriverStats({ todayCount: json.todayCount, totalCount: json.totalCount, totalEarnings: json.todayZoneFee })
-  }, [driverId])
 
   // ── Load available orders ─────────────────────────────────────────
   const loadOrders = useCallback(async () => {
@@ -524,15 +516,14 @@ export default function DriverClient({
   useEffect(() => {
     loadOrders()
     loadDelivery()
-    loadStats()
     const ch = supabase.channel(`dispatcher-${driverId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `store_id=eq.${storeId}` },
         () => loadOrders())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'deliveries', filter: `store_id=eq.${storeId}` },
-        () => { loadOrders(); loadDelivery(); loadStats() })
+        () => { loadOrders(); loadDelivery() })
       .subscribe()
     return () => { supabase.removeChannel(ch) }
-  }, [storeId, driverId, loadOrders, loadDelivery, loadStats])
+  }, [storeId, driverId, loadOrders, loadDelivery])
 
   // ── Mark delivered ────────────────────────────────────────────────
   async function completeDelivery() {
@@ -853,42 +844,6 @@ export default function DriverClient({
           </div>
         )}
 
-        {!delivery && (
-          <div className="dsp-courier-card">
-            <div className="dsp-courier-head">
-              {driverAvatar
-                ? <img src={driverAvatar} alt={driverName} className="dsp-courier-av" style={{ objectFit: 'cover' }} />
-                : <div className="dsp-courier-av">{driverName[0].toUpperCase()}</div>
-              }
-              <div className="dsp-courier-info">
-                <div className="dsp-courier-name">{driverName}</div>
-              </div>
-              {gpsStatus === 'active' && delivery
-                ? <span className="dsp-badge-route">en ruta</span>
-                : gpsStatus === 'active'
-                  ? <span className="dsp-badge-gps">
-                      <span className="dsp-badge-dot" />
-                      GPS activo
-                    </span>
-                  : <span className="dsp-badge-offline">offline</span>
-              }
-            </div>
-            <div className="dsp-courier-stats">
-              <div className="dsp-courier-stat">
-                <div className="dsp-courier-stat-val">{driverStats?.todayCount ?? 0}</div>
-                <div className="dsp-courier-stat-lbl">Entregas hoy</div>
-              </div>
-              <div className="dsp-courier-stat">
-                <div className="dsp-courier-stat-val">{driverStats?.totalCount ?? 0}</div>
-                <div className="dsp-courier-stat-lbl">Total</div>
-              </div>
-              <div className="dsp-courier-stat featured">
-                <div className="dsp-courier-stat-val">${(driverStats?.totalEarnings ?? 0).toFixed(2)}</div>
-                <div className="dsp-courier-stat-lbl">Acumulado hoy</div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {isActive && !delivery && (
           <>

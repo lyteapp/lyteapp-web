@@ -394,16 +394,26 @@ export default function DriverClient({
   const loadStats = useCallback(async () => {
     const { data } = await supabase
       .from('deliveries')
-      .select('driver_fee, delivered_at, zone:zone_id(fee)')
+      .select('driver_fee, delivered_at, zone_id')
       .eq('driver_id', driverId)
       .eq('status', 'delivered')
     if (!data) return
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
     const todayDels = data.filter(d => d.delivered_at && new Date(d.delivered_at) >= todayStart)
     const todayCount = todayDels.length
+
+    // Fetch zone fees separately for today's deliveries
+    const todayZoneIds = [...new Set(todayDels.map(d => d.zone_id).filter(Boolean))] as string[]
+    let zoneFeesMap: Record<string, number> = {}
+    if (todayZoneIds.length > 0) {
+      const { data: zones } = await supabase.from('delivery_zones')
+        .select('id,fee').in('id', todayZoneIds)
+      if (zones) zoneFeesMap = Object.fromEntries(zones.map(z => [z.id, z.fee]))
+    }
+
     const todayZoneFee = todayDels.reduce((s, d) => {
-      const zoneFee = (d.zone as unknown as { fee: number } | null)?.fee
-      return s + Number(zoneFee ?? d.driver_fee)
+      const fee = d.zone_id ? (zoneFeesMap[d.zone_id] ?? d.driver_fee) : d.driver_fee
+      return s + Number(fee)
     }, 0)
     setDriverStats({ todayCount, totalCount: data.length, totalEarnings: todayZoneFee })
   }, [driverId])
@@ -428,18 +438,30 @@ export default function DriverClient({
 
   // ── Load active delivery ──────────────────────────────────────────
   const loadDelivery = useCallback(async () => {
-    const { data } = await supabase.from('deliveries')
-      .select('id,customer_name,customer_phone,delivery_address,notes,status,picked_up_at,order_id,customer_lat,customer_lng,orders(total,payment_method),zone:zone_id(name,fee,color)')
+    const { data, error } = await supabase.from('deliveries')
+      .select('id,customer_name,customer_phone,delivery_address,notes,status,picked_up_at,order_id,customer_lat,customer_lng,zone_id,orders(total,payment_method)')
       .eq('driver_id', driverId).in('status', ['ready', 'picked_up'])
       .order('created_at', { ascending: false }).limit(1).maybeSingle()
+    if (error) return // network/RLS error — keep existing state
     if (!data) { setDelivery(null); return }
+
+    // Fetch zone separately to avoid RLS issues on anon key joins
+    let zone_name: string | null = null
+    let zone_fee: number | null = null
+    let zone_color: string | null = null
+    if (data.zone_id) {
+      const { data: zd } = await supabase.from('delivery_zones')
+        .select('name,fee,color').eq('id', data.zone_id).maybeSingle()
+      if (zd) { zone_name = zd.name; zone_fee = zd.fee; zone_color = zd.color }
+    }
+
     setDelivery({
       ...data,
       order_total: (data.orders as unknown as { total: number } | null)?.total ?? null,
       order_payment_method: (data.orders as unknown as { payment_method: string } | null)?.payment_method ?? null,
-      zone_name: (data.zone as unknown as { name: string; fee: number; color: string } | null)?.name ?? null,
-      zone_fee: (data.zone as unknown as { name: string; fee: number; color: string } | null)?.fee ?? null,
-      zone_color: (data.zone as unknown as { name: string; fee: number; color: string } | null)?.color ?? null,
+      zone_name,
+      zone_fee,
+      zone_color,
     } as ActiveDelivery)
   }, [driverId])
 

@@ -374,11 +374,13 @@ export default function DeliveryPage() {
     const paid    = dDels.filter(d => d.fee_paid).reduce((s, d) => s + Number(d.driver_fee), 0)
     const todayDrvDels = dDels.filter(d => isToday(d.created_at) && d.status === 'delivered')
     const todayEarnings = todayDrvDels.reduce((s, d) => s + Number(d.driver_fee), 0)
-    return { drv, dDels, base, paid, pending: base - paid, todayDrvDels, todayEarnings }
+    const zoneRevenue = dDels.reduce((s, d) => s + Number(d.zone?.fee ?? d.driver_fee), 0)
+    const todayZoneRevenue = todayDrvDels.reduce((s, d) => s + Number(d.zone?.fee ?? d.driver_fee), 0)
+    return { drv, dDels, base, paid, pending: base - paid, todayDrvDels, todayEarnings, zoneRevenue, todayZoneRevenue }
   }).filter(s => s.base > 0 || s.dDels.length > 0)
 
   const totalToPay   = settlements.reduce((s, x) => s + x.pending, 0)
-  const totalRevenue = deliveries.filter(d => d.status !== 'cancelled').reduce((s, d) => s + Number(d.driver_fee), 0)
+  const totalRevenue = deliveries.filter(d => d.status !== 'cancelled').reduce((s, d) => s + Number(d.zone?.fee ?? d.driver_fee), 0)
 
   if (loading) return <div className="dv-spinner-wrap"><div className="dv-spinner" /></div>
 
@@ -1039,15 +1041,15 @@ export default function DeliveryPage() {
                 <tr>
                   <th>Despachador</th>
                   <th>Entregas hoy</th>
-                  <th>Ganado hoy</th>
-                  <th>Comision base</th>
-                  <th style={{ textAlign: 'right' }}>Total a pagar</th>
+                  <th>Zonas hoy</th>
+                  <th>Total zonas</th>
+                  <th style={{ textAlign: 'right' }}>Comision pendiente</th>
                   <th>Estado</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
-                {settlements.map(({ drv, dDels, base, pending, todayDrvDels, todayEarnings }) => (
+                {settlements.map(({ drv, dDels, pending, todayDrvDels, zoneRevenue, todayZoneRevenue }) => (
                   <>
                     <tr key={drv.id} style={{ cursor: 'pointer' }} onClick={() => setExpandedSettle(expandedSettle === drv.id ? null : drv.id)}>
                       <td>
@@ -1055,8 +1057,8 @@ export default function DeliveryPage() {
                         <span style={{ fontWeight: 500 }}>{drv.name}</span>
                       </td>
                       <td>{todayDrvDels.length}</td>
-                      <td style={{ fontWeight: 500, color: todayEarnings > 0 ? 'var(--dv-ink)' : 'var(--dv-ink-muted)' }}>${todayEarnings.toFixed(2)}</td>
-                      <td>${base.toFixed(2)}</td>
+                      <td style={{ fontWeight: 500, color: todayZoneRevenue > 0 ? 'var(--dv-ink)' : 'var(--dv-ink-muted)' }}>${todayZoneRevenue.toFixed(2)}</td>
+                      <td style={{ fontWeight: 600 }}>${zoneRevenue.toFixed(2)}</td>
                       <td style={{ textAlign: 'right', fontWeight: 500, fontSize: 14 }}>${pending.toFixed(2)}</td>
                       <td>
                         {pending === 0

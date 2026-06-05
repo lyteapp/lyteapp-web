@@ -156,7 +156,8 @@ export default function DriverClient({
   const [totalDist, setTotalDist]     = useState(0)
   const [newDeliveryFlash, setNewDeliveryFlash] = useState(false)
   const [orders, setOrders] = useState<AvailableOrder[]>([])
-  const [driverStats, setDriverStats] = useState<{ todayCount: number; totalCount: number; totalEarnings: number; totalZoneFee: number } | null>(null)
+  type ZoneStat = { name: string; color: string; fee: number; todayCount: number; todayFee: number; totalCount: number; totalFee: number }
+  const [driverStats, setDriverStats] = useState<{ todayCount: number; totalCount: number; totalEarnings: number; totalZoneFee: number; zoneBreakdown: ZoneStat[] } | null>(null)
 
   const watchId              = useRef<number | null>(null)
   const fallbackInterval = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -393,7 +394,7 @@ export default function DriverClient({
     if (!res?.ok) return
     const json = await res.json().catch(() => null)
     if (!json) return
-    setDriverStats({ todayCount: json.todayCount, totalCount: json.totalCount, totalEarnings: json.todayZoneFee, totalZoneFee: json.totalZoneFee })
+    setDriverStats({ todayCount: json.todayCount, totalCount: json.totalCount, totalEarnings: json.todayZoneFee, totalZoneFee: json.totalZoneFee, zoneBreakdown: json.zoneBreakdown ?? [] })
   }, [driverId])
 
   // ── Load available orders ─────────────────────────────────────────
@@ -899,6 +900,35 @@ export default function DriverClient({
               <button className="dsp-gps-stop" onClick={stopGps}>Detener</button>
             </div>
           </>
+        )}
+
+        {/* Zone breakdown — visible when idle, has at least one entry */}
+        {!delivery && (driverStats?.zoneBreakdown ?? []).length > 0 && (
+          <div className="dsp-zone-breakdown">
+            <div className="dsp-zone-breakdown-title">Entregas por zona</div>
+            {(driverStats!.zoneBreakdown).map((z, i) => (
+              <div key={i} className="dsp-zone-row">
+                <div className="dsp-zone-row-left">
+                  <span className="dsp-zone-dot" style={{ background: z.color }} />
+                  <div>
+                    <div className="dsp-zone-name">{z.name}</div>
+                    <div className="dsp-zone-counts">
+                      {z.todayCount > 0 && (
+                        <span className="dsp-zone-today">{z.todayCount} hoy</span>
+                      )}
+                      <span className="dsp-zone-total">{z.totalCount} total</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="dsp-zone-row-right">
+                  {z.todayFee > 0 && (
+                    <div className="dsp-zone-fee-today">${z.todayFee.toFixed(2)} hoy</div>
+                  )}
+                  <div className="dsp-zone-fee-total">${z.totalFee.toFixed(2)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
 
       </div>

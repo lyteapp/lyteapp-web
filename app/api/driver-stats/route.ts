@@ -24,21 +24,25 @@ type DeliveryRow = {
 
 type ZoneRow = {
   id: string
+  name: string
   fee: number
+  color: string
   center_lat: number
   center_lng: number
   radius_m: number
 }
 
-function zoneFeeForDelivery(d: DeliveryRow, zones: ZoneRow[], zoneFeesMap: Record<string, number>): number {
+function matchZone(d: DeliveryRow, zones: ZoneRow[]): ZoneRow | null {
   if (d.customer_lat != null && d.customer_lng != null && zones.length) {
-    const matched = zones.find(z =>
+    return zones.find(z =>
       haversineM(d.customer_lat!, d.customer_lng!, z.center_lat, z.center_lng) <= z.radius_m
-    )
-    if (matched) return matched.fee
-    if (d.zone_id) return zoneFeesMap[d.zone_id] ?? d.driver_fee
-    return d.driver_fee
+    ) ?? null
   }
+  return null
+}
+
+function feeForDelivery(d: DeliveryRow, zone: ZoneRow | null, zoneFeesMap: Record<string, number>): number {
+  if (zone) return zone.fee
   if (d.zone_id) return zoneFeesMap[d.zone_id] ?? d.driver_fee
   return d.driver_fee
 }
@@ -56,7 +60,9 @@ export async function GET(req: Request) {
   if (!driver) return Response.json({ error: 'Driver not found' }, { status: 404 })
 
   const todayStartParam = searchParams.get('todayStart')
-  const todayStart = todayStartParam ? new Date(todayStartParam) : (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d })()
+  const todayStart = todayStartParam
+    ? new Date(todayStartParam)
+    : (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d })()
 
   const [{ data: allDelivered }, { data: zones }, { count }] = await Promise.all([
     supa.from('deliveries')
@@ -64,7 +70,7 @@ export async function GET(req: Request) {
       .eq('driver_id', driverId)
       .eq('status', 'delivered'),
     supa.from('delivery_zones')
-      .select('id, fee, center_lat, center_lng, radius_m')
+      .select('id, name, fee, color, center_lat, center_lng, radius_m')
       .eq('store_id', driver.store_id),
     supa.from('deliveries')
       .select('id', { count: 'exact', head: true })
@@ -79,9 +85,51 @@ export async function GET(req: Request) {
   const todayDels = allDels.filter(d => new Date(d.created_at) >= todayStart)
   const zonesArr  = (zones ?? []) as ZoneRow[]
 
-  const todayCount   = todayDels.length
-  const todayZoneFee = todayDels.reduce((s, d) => s + zoneFeeForDelivery(d, zonesArr, zoneFeesMap), 0)
-  const totalZoneFee = allDels.reduce((s, d) => s + zoneFeeForDelivery(d, zonesArr, zoneFeesMap), 0)
+  // Aggregate totals
+  let todayZoneFee = 0
+  let totalZoneFee = 0
 
-  return Response.json({ todayCount, totalCount: count ?? 0, todayZoneFee, totalZoneFee })
+  // Per-zone breakdown: keyed by zone id (or '_none' for unmatched)
+  const breakdown: Record<string, {
+    name: string; color: string; fee: number
+    todayCount: number; todayFee: number
+    totalCount: number; totalFee: number
+  }> = {}
+
+  const ensureZone = (z: ZoneRow | null) => {
+    const key = z?.id ?? '_none'
+    if (!breakdown[key]) {
+      breakdown[key] = {
+        name: z?.name ?? 'Sin zona', color: z?.color ?? '#64748B', fee: z?.fee ?? 0,
+        todayCount: 0, todayFee: 0, totalCount: 0, totalFee: 0,
+      }
+    }
+    return key
+  }
+
+  for (const d of allDels) {
+    const zone = matchZone(d, zonesArr)
+    const fee  = feeForDelivery(d, zone, zoneFeesMap)
+    const key  = ensureZone(zone)
+    breakdown[key].totalCount++
+    breakdown[key].totalFee += fee
+    totalZoneFee += fee
+  }
+
+  for (const d of todayDels) {
+    const zone = matchZone(d, zonesArr)
+    const fee  = feeForDelivery(d, zone, zoneFeesMap)
+    const key  = ensureZone(zone)
+    breakdown[key].todayCount++
+    breakdown[key].todayFee += fee
+    todayZoneFee += fee
+  }
+
+  const todayCount = todayDels.length
+
+  const zoneBreakdown = Object.values(breakdown)
+    .filter(z => z.totalCount > 0)
+    .sort((a, b) => b.totalCount - a.totalCount)
+
+  return Response.json({ todayCount, totalCount: count ?? 0, todayZoneFee, totalZoneFee, zoneBreakdown })
 }

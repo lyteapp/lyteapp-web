@@ -155,6 +155,7 @@ export default function DriverClient({
   const [navLoading, setNavLoading]   = useState(false)
   const [totalDist, setTotalDist]     = useState(0)
   const [newDeliveryFlash, setNewDeliveryFlash] = useState(false)
+  const [showProof, setShowProof] = useState(false)
   const [orders, setOrders] = useState<AvailableOrder[]>([])
   type ZoneStat = { name: string; color: string; fee: number; todayCount: number; todayFee: number; totalCount: number; totalFee: number }
   const [driverStats, setDriverStats] = useState<{ todayCount: number; totalCount: number; totalEarnings: number; totalZoneFee: number; zoneBreakdown: ZoneStat[] } | null>(null)
@@ -418,7 +419,7 @@ export default function DriverClient({
   // ── Load active delivery ──────────────────────────────────────────
   const loadDelivery = useCallback(async () => {
     const { data, error } = await supabase.from('deliveries')
-      .select('id,customer_name,customer_phone,delivery_address,notes,status,picked_up_at,order_id,customer_lat,customer_lng,zone_id,orders(total,payment_method)')
+      .select('id,customer_name,customer_phone,delivery_address,notes,status,picked_up_at,order_id,customer_lat,customer_lng,zone_id,orders(total,payment_method,payment_proof_url)')
       .eq('driver_id', driverId).in('status', ['ready', 'picked_up'])
       .order('created_at', { ascending: false }).limit(1).maybeSingle()
     if (error) return // network/RLS error — keep existing state
@@ -446,8 +447,9 @@ export default function DriverClient({
 
     setDelivery({
       ...data,
-      order_total: (data.orders as unknown as { total: number } | null)?.total ?? null,
-      order_payment_method: (data.orders as unknown as { payment_method: string } | null)?.payment_method ?? null,
+      order_total: (data.orders as unknown as { total: number; payment_method: string; payment_proof_url: string | null } | null)?.total ?? null,
+      order_payment_method: (data.orders as unknown as { total: number; payment_method: string; payment_proof_url: string | null } | null)?.payment_method ?? null,
+      order_proof_url: (data.orders as unknown as { total: number; payment_method: string; payment_proof_url: string | null } | null)?.payment_proof_url ?? null,
       zone_name,
       zone_fee,
       zone_color,
@@ -847,10 +849,60 @@ export default function DriverClient({
                     )}
                   </div>
                 )}
+                {delivery.order_proof_url && (
+                  <button className="dsp-btn-proof" onClick={() => setShowProof(true)}>
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+                      <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd"/>
+                    </svg>
+                    Ver comprobante
+                  </button>
+                )}
                 <button className="dsp-btn-done" onClick={completeDelivery} disabled={completing}>
                   {completing ? 'Guardando...' : 'Entregado'}
                 </button>
               </div>
+
+              {/* Proof lightbox */}
+              {showProof && delivery.order_proof_url && (
+                <div
+                  style={{
+                    position: 'absolute', inset: 0, zIndex: 2000,
+                    background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(8px)',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    padding: 20,
+                  }}
+                  onClick={() => setShowProof(false)}
+                >
+                  <div style={{
+                    fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.4)',
+                    textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 14,
+                  }}>
+                    Comprobante de pago
+                  </div>
+                  <img
+                    src={delivery.order_proof_url}
+                    alt="Comprobante"
+                    style={{
+                      maxWidth: '100%', maxHeight: '70vh',
+                      borderRadius: 14, objectFit: 'contain',
+                      boxShadow: '0 8px 40px rgba(0,0,0,0.6)',
+                    }}
+                    onClick={e => e.stopPropagation()}
+                  />
+                  <button
+                    onClick={() => setShowProof(false)}
+                    style={{
+                      marginTop: 20, background: 'rgba(255,255,255,0.12)',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      borderRadius: 10, padding: '10px 28px',
+                      color: 'white', fontSize: 14, fontWeight: 600,
+                      cursor: 'pointer', fontFamily: 'inherit',
+                    }}
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}

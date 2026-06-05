@@ -474,6 +474,26 @@
 
 .dsp-btn-call:hover { background: #BBF7D0; }
 
+.dsp-btn-proof {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 13px 12px;
+  border-radius: 12px;
+  border: none;
+  background: #FEF3C7;
+  color: #92400E;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.dsp-btn-proof:hover { background: #FDE68A; }
+
 /* ── Active delivery card ── */
 .dsp-delivery-card--new {
   animation: dsp-delivery-arrive 3s ease-out forwards;
@@ -1262,6 +1282,8 @@
   .dsp-btn-nav-stop:hover   { background: #7f1d1d; }
   .dsp-btn-call             { background: #14532D; color: #4ADE80; }
   .dsp-btn-call:hover       { background: #166534; }
+  .dsp-btn-proof            { background: #451a03; color: #FCD34D; }
+  .dsp-btn-proof:hover      { background: #78350f; }
   .dsp-btn-done             { background: #7C3AED; }
   .dsp-btn-done:hover:not(:disabled) { background: #6D28D9; }
   .dsp-btn-claim            { background: #F1F5F9; color: #0F172A; }

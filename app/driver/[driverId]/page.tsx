@@ -61,20 +61,24 @@ export default async function DriverPage(
 
   const { data: activeDelivery } = await supa
     .from('deliveries')
-    .select('id, customer_name, customer_phone, delivery_address, notes, status, picked_up_at, order_id, customer_lat, customer_lng, orders(total, payment_method), zone:zone_id(name, fee, color)')
+    .select('id, customer_name, customer_phone, delivery_address, notes, status, picked_up_at, order_id, customer_lat, customer_lng, orders(total, payment_method, payment_proof_url), zone:zone_id(name, fee, color)')
     .eq('driver_id', driverId)
     .in('status', ['ready', 'picked_up'])
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
 
+  type OrderJoin = { total: number; payment_method: string; payment_proof_url: string | null } | null
+  type ZoneJoin  = { name: string; fee: number; color: string } | null
+
   const flatDelivery = activeDelivery ? {
     ...activeDelivery,
-    order_total: (activeDelivery.orders as unknown as { total: number } | null)?.total ?? null,
-    order_payment_method: (activeDelivery.orders as unknown as { payment_method: string } | null)?.payment_method ?? null,
-    zone_name: (activeDelivery.zone as unknown as { name: string; fee: number; color: string } | null)?.name ?? null,
-    zone_fee: (activeDelivery.zone as unknown as { name: string; fee: number; color: string } | null)?.fee ?? null,
-    zone_color: (activeDelivery.zone as unknown as { name: string; fee: number; color: string } | null)?.color ?? null,
+    order_total:          (activeDelivery.orders as unknown as OrderJoin)?.total ?? null,
+    order_payment_method: (activeDelivery.orders as unknown as OrderJoin)?.payment_method ?? null,
+    order_proof_url:      (activeDelivery.orders as unknown as OrderJoin)?.payment_proof_url ?? null,
+    zone_name:  (activeDelivery.zone as unknown as ZoneJoin)?.name  ?? null,
+    zone_fee:   (activeDelivery.zone as unknown as ZoneJoin)?.fee   ?? null,
+    zone_color: (activeDelivery.zone as unknown as ZoneJoin)?.color ?? null,
   } : null
 
   return (
@@ -104,6 +108,7 @@ export type ActiveDelivery = {
   customer_lng: number | null
   order_total: number | null
   order_payment_method: string | null
+  order_proof_url: string | null
   zone_name: string | null
   zone_fee: number | null
   zone_color: string | null

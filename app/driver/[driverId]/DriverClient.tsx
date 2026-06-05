@@ -157,9 +157,6 @@ export default function DriverClient({
   const [newDeliveryFlash, setNewDeliveryFlash] = useState(false)
   const [showProof, setShowProof] = useState(false)
   const [orders, setOrders] = useState<AvailableOrder[]>([])
-  type ZoneStat = { name: string; color: string; fee: number; todayCount: number; todayFee: number; totalCount: number; totalFee: number }
-  const [driverStats, setDriverStats] = useState<{ todayCount: number; totalCount: number; totalEarnings: number; totalZoneFee: number; zoneBreakdown: ZoneStat[] } | null>(null)
-
   const watchId              = useRef<number | null>(null)
   const fallbackInterval = useRef<ReturnType<typeof setInterval> | null>(null)
   const lastSentAt       = useRef<number>(0)
@@ -388,16 +385,6 @@ export default function DriverClient({
     wakeLock.current?.release().catch(() => {})
   }, [])
 
-  // ── Load driver stats ────────────────────────────────────────────
-  const loadStats = useCallback(async () => {
-    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
-    const res = await fetch(`/api/driver-stats?driverId=${driverId}&todayStart=${todayStart.toISOString()}`).catch(() => null)
-    if (!res?.ok) return
-    const json = await res.json().catch(() => null)
-    if (!json) return
-    setDriverStats({ todayCount: json.todayCount, totalCount: json.totalCount, totalEarnings: json.todayZoneFee, totalZoneFee: json.totalZoneFee, zoneBreakdown: json.zoneBreakdown ?? [] })
-  }, [driverId])
-
   // ── Load available orders ─────────────────────────────────────────
   const loadOrders = useCallback(async () => {
     const [{ data: ready }, { data: claimed }] = await Promise.all([
@@ -535,15 +522,14 @@ export default function DriverClient({
   useEffect(() => {
     loadOrders()
     loadDelivery()
-    loadStats()
     const ch = supabase.channel(`dispatcher-${driverId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `store_id=eq.${storeId}` },
         () => loadOrders())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'deliveries', filter: `store_id=eq.${storeId}` },
-        () => { loadOrders(); loadDelivery(); loadStats() })
+        () => { loadOrders(); loadDelivery() })
       .subscribe()
     return () => { supabase.removeChannel(ch) }
-  }, [storeId, driverId, loadOrders, loadDelivery, loadStats])
+  }, [storeId, driverId, loadOrders, loadDelivery])
 
   // ── Mark delivered ────────────────────────────────────────────────
   async function completeDelivery() {
@@ -648,24 +634,6 @@ export default function DriverClient({
                 ? <span className="dsp-badge-offline">Sin GPS</span>
                 : <span className="dsp-badge-offline">offline</span>
           }
-        </div>
-        <div className="dsp-header-stats">
-          <div className="dsp-courier-stat">
-            <div className="dsp-courier-stat-val">{driverStats?.todayCount ?? 0}</div>
-            <div className="dsp-courier-stat-lbl">Entregas hoy</div>
-          </div>
-          <div className="dsp-courier-stat">
-            <div className="dsp-courier-stat-val">{driverStats?.totalCount ?? 0}</div>
-            <div className="dsp-courier-stat-lbl">Total</div>
-          </div>
-          <div className="dsp-courier-stat featured">
-            <div className="dsp-courier-stat-val">${(driverStats?.totalEarnings ?? 0).toFixed(2)}</div>
-            <div className="dsp-courier-stat-lbl">Acumulado hoy</div>
-          </div>
-          <div className="dsp-courier-stat featured">
-            <div className="dsp-courier-stat-val">${(driverStats?.totalZoneFee ?? 0).toFixed(2)}</div>
-            <div className="dsp-courier-stat-lbl">Total acumulado</div>
-          </div>
         </div>
       </div>
 
@@ -952,35 +920,6 @@ export default function DriverClient({
               <button className="dsp-gps-stop" onClick={stopGps}>Detener</button>
             </div>
           </>
-        )}
-
-        {/* Zone breakdown — visible when idle, has at least one entry */}
-        {!delivery && (driverStats?.zoneBreakdown ?? []).length > 0 && (
-          <div className="dsp-zone-breakdown">
-            <div className="dsp-zone-breakdown-title">Entregas por zona</div>
-            {(driverStats!.zoneBreakdown).map((z, i) => (
-              <div key={i} className="dsp-zone-row">
-                <div className="dsp-zone-row-left">
-                  <span className="dsp-zone-dot" style={{ background: z.color }} />
-                  <div>
-                    <div className="dsp-zone-name">{z.name}</div>
-                    <div className="dsp-zone-counts">
-                      {z.todayCount > 0 && (
-                        <span className="dsp-zone-today">{z.todayCount} hoy</span>
-                      )}
-                      <span className="dsp-zone-total">{z.totalCount} total</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="dsp-zone-row-right">
-                  {z.todayFee > 0 && (
-                    <div className="dsp-zone-fee-today">${z.todayFee.toFixed(2)} hoy</div>
-                  )}
-                  <div className="dsp-zone-fee-total">${z.totalFee.toFixed(2)}</div>
-                </div>
-              </div>
-            ))}
-          </div>
         )}
 
       </div>

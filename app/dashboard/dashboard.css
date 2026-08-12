@@ -1,3 +1,9 @@
+/* Prevent the page's dark-mode background from showing through during
+   iOS overscroll bounce at the top/bottom of the dashboard. */
+html, body {
+  background: #F8F7F4;
+}
+
 /* ===== DASHBOARD SHELL ===== */
 .db-layout {
   display: flex;

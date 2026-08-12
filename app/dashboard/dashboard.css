@@ -18,24 +18,24 @@
 
 @media (prefers-color-scheme: dark) {
   .db-layout {
-    --db-bg: #14101F;
-    --db-bg-card: #1E1830;
-    --db-bg-sidebar: #18132A;
-    --db-bg-hover: #2A2142;
-    --db-bg-hover-alt: #251C3A;
-    --db-border: #332752;
-    --db-border-soft: #2C2145;
-    --db-border-alt: #3A2D5C;
-    --db-text-primary: #FFFFFF;
-    --db-text-secondary: #D8D0EC;
-    --db-text-secondary-alt: #C3B8E0;
-    --db-text-muted: #9B8FC0;
-    --db-text-faint: #6B5F94;
+    --db-bg: #0B0B0F;
+    --db-bg-card: #16161D;
+    --db-bg-sidebar: #111116;
+    --db-bg-hover: #1F1F28;
+    --db-bg-hover-alt: #22222C;
+    --db-border: #26262F;
+    --db-border-soft: #232330;
+    --db-border-alt: #2A2A35;
+    --db-text-primary: #F1F0F5;
+    --db-text-secondary: #B8B7C4;
+    --db-text-secondary-alt: #9694A3;
+    --db-text-muted: #74738A;
+    --db-text-faint: #4B4A5C;
     --db-ink-rgb: 255,255,255;
   }
 
   .db-topbar {
-    background: rgba(20,16,31,0.85);
+    background: rgba(17,17,22,0.85);
   }
 }
 

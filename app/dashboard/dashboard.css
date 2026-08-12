@@ -14,12 +14,14 @@ html, body {
   max-width: 100%;
 }
 
-/* ── FROSTED STATUS BAR STRIP ── */
+/* ── FROSTED STATUS BAR STRIP ──
+   Tinted dark so the white iOS status bar icons (time/signal/battery)
+   stay legible, regardless of how light the dashboard content is. */
 .db-statusbar-blur {
   position: fixed;
   top: 0; left: 0; right: 0;
   height: env(safe-area-inset-top);
-  background: rgba(248,247,244,0.55);
+  background: rgba(15,23,42,0.45);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   z-index: 60;

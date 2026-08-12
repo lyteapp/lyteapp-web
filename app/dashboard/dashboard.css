@@ -15,15 +15,18 @@ html, body {
 }
 
 /* ── FROSTED STATUS BAR STRIP ──
-   Tinted dark so the white iOS status bar icons (time/signal/battery)
-   stay legible, regardless of how light the dashboard content is. */
+   iOS forces white icons in black-translucent mode, so this needs just
+   enough darkening to keep them legible. Using backdrop-filter's own
+   brightness/blur (instead of a flat dark background) lets the actual
+   light dashboard color underneath show through tinted, so it still
+   reads as glass, not a solid gray bar. */
 .db-statusbar-blur {
   position: fixed;
   top: 0; left: 0; right: 0;
   height: env(safe-area-inset-top);
-  background: rgba(15,23,42,0.45);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(15,23,42,0.16);
+  backdrop-filter: blur(20px) saturate(160%) brightness(0.6);
+  -webkit-backdrop-filter: blur(20px) saturate(160%) brightness(0.6);
   z-index: 60;
   pointer-events: none;
 }

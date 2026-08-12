@@ -14,6 +14,18 @@ html, body {
   max-width: 100%;
 }
 
+/* ── FROSTED STATUS BAR STRIP ── */
+.db-statusbar-blur {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: env(safe-area-inset-top);
+  background: rgba(248,247,244,0.55);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  z-index: 60;
+  pointer-events: none;
+}
+
 /* ===== SIDEBAR ===== */
 .db-sidebar {
   width: 240px;
@@ -270,8 +282,9 @@ html, body {
 
 /* ===== TOPBAR ===== */
 .db-topbar {
-  background: rgba(250,250,247,0.85);
-  backdrop-filter: blur(12px);
+  background: rgba(250,250,247,0.65);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-bottom: 1px solid #EEEcE5;
   padding: env(safe-area-inset-top) 36px 0;
   min-height: 56px;

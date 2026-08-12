@@ -148,6 +148,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="db-layout">
+      {/* Frosted strip behind the iOS status bar (time/signal/battery) so it
+          appears to float above blurred content while scrolling */}
+      <div className="db-statusbar-blur" />
+
       {/* SIDEBAR */}
       <aside className={`db-sidebar${mobileNav ? ' open' : ''}`}>
         {/* Brand + close */}

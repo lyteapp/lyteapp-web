@@ -14,7 +14,7 @@ export async function GET(req: Request) {
 
   const { data } = await supa
     .from('customers')
-    .select('name, phone, address')
+    .select('name, last_name, phone, address')
     .eq('store_id', storeId)
     .eq('cedula', cedula)
     .maybeSingle()
@@ -24,7 +24,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const body = await req.json()
-  const { store_id, cedula, name, phone, address } = body
+  const { store_id, cedula, name, last_name, phone, address } = body
   const cleanCedula = typeof cedula === 'string' ? cedula.trim() : ''
   if (!store_id || !cleanCedula) return Response.json({ error: 'Missing store_id or cedula' }, { status: 400 })
 
@@ -33,7 +33,8 @@ export async function POST(req: Request) {
     .upsert(
       {
         store_id, cedula: cleanCedula,
-        name: name?.trim() || null, phone: phone?.trim() || null, address: address?.trim() || null,
+        name: name?.trim() || null, last_name: last_name?.trim() || null,
+        phone: phone?.trim() || null, address: address?.trim() || null,
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'store_id,cedula' }

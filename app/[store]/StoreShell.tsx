@@ -102,7 +102,7 @@ type TemplateConfig = {
     pills?: { id: string; label: string; url: string; color?: string }[]
     transition?: string
     collectCustomerData?: boolean
-    customerFields?: { name?: boolean; phone?: boolean; address?: boolean }
+    customerFields?: { name?: boolean; lastName?: boolean; phone?: boolean; address?: boolean }
   }
 }
 type Store = {
@@ -209,6 +209,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     return () => cancelAnimationFrame(raf)
   }, [logoMorphStart, logoMorphEnd, view])
   const [customerName, setCustomerName]   = useState('')
+  const [customerLastName, setCustomerLastName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
   const [customerNotes, setCustomerNotes] = useState('')
   const [selectedPayment, setSelectedPayment]   = useState('')
@@ -571,7 +572,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
       const { error: oErr } = await supabase.from('orders').insert({
         id: newOrderId, store_id: store.id,
-        customer_name: customerName.trim(), customer_phone: customerPhone.trim(),
+        customer_name: fullCustomerName || customerName.trim(), customer_phone: customerPhone.trim(),
         customer_notes: customerNotes.trim() || null,
         payment_method: paymentLabel || null, total: orderTotal, status: 'pending',
         delivery_type: isPickup ? 'pickup' : 'delivery',
@@ -591,6 +592,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           body: JSON.stringify({
             store_id: store.id, cedula: customerCedula.trim(),
             name: customerFields.name ? customerName.trim() : null,
+            last_name: customerFields.lastName ? customerLastName.trim() : null,
             phone: customerFields.phone ? customerPhone.trim() : null,
             address: customerFields.address ? (customerAddress.trim() || null) : null,
           }),
@@ -614,7 +616,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       const lines: string[] = [
         `*Comanda #${newOrderId.slice(0, 8).toUpperCase()}*`,
         new Date().toLocaleString('es-VE', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-        '', `*Nombre:* ${customerName}`, `*Telefono:* ${customerPhone}`,
+        '', `*Nombre:* ${fullCustomerName || customerName}`, `*Telefono:* ${customerPhone}`,
         ...(bothTypes ? [`*Tipo:* ${isPickup ? 'Retiro en tienda' : 'Domicilio'}`] : []),
         ...(!isPickup && customerAddress.trim() ? [`*Direccion:* ${customerAddress.trim()}`] : []),
         ...(paymentLabel ? [`*Pago:* ${paymentLabel}`] : []),
@@ -648,7 +650,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
             id: newDeliveryId,
             store_id: store.id,
             order_id: newOrderId,
-            customer_name: customerName.trim(),
+            customer_name: fullCustomerName || customerName.trim(),
             customer_phone: customerPhone.trim(),
             delivery_address: customerAddress.trim(),
             customer_lat: customerLat,
@@ -683,9 +685,13 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const collectCustomerData = !!hp.enabled && hp.collectCustomerData !== false
   const customerFields = {
     name: hp.customerFields?.name !== false,
+    lastName: hp.customerFields?.lastName !== false,
     phone: hp.customerFields?.phone !== false,
     address: hp.customerFields?.address !== false,
   }
+  const fullCustomerName = customerFields.lastName && customerLastName.trim()
+    ? `${customerName.trim()} ${customerLastName.trim()}`.trim()
+    : customerName.trim()
 
   async function lookupCedula(cedula: string): Promise<'found' | 'new' | 'error'> {
     if (!cedula) return 'error'
@@ -694,9 +700,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
       const res = await fetch(`/api/customer-lookup?store_id=${store.id}&cedula=${encodeURIComponent(cedula)}`)
       const json = await res.json()
       if (json.found && json.customer) {
-        if (customerFields.name && json.customer.name)       setCustomerName(json.customer.name)
-        if (customerFields.phone && json.customer.phone)     setCustomerPhone(json.customer.phone)
-        if (customerFields.address && json.customer.address) setCustomerAddress(json.customer.address)
+        if (customerFields.name && json.customer.name)             setCustomerName(json.customer.name)
+        if (customerFields.lastName && json.customer.last_name)    setCustomerLastName(json.customer.last_name)
+        if (customerFields.phone && json.customer.phone)           setCustomerPhone(json.customer.phone)
+        if (customerFields.address && json.customer.address)       setCustomerAddress(json.customer.address)
         setCedulaStatus('found')
         return 'found'
       } else {
@@ -717,9 +724,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
       if (!cedula) { setSplashError('Ingresa tu cedula para continuar'); return }
       const status = (cedulaStatus === 'found' || cedulaStatus === 'new') ? cedulaStatus : await lookupCedula(cedula)
       if (status === 'new') {
-        if (customerFields.name && !customerName.trim())       { setSplashError('Ingresa tu nombre para continuar'); return }
-        if (customerFields.phone && !customerPhone.trim())     { setSplashError('Ingresa tu telefono para continuar'); return }
-        if (customerFields.address && !customerAddress.trim()) { setSplashError('Ingresa tu direccion para continuar'); return }
+        if (customerFields.name && !customerName.trim())         { setSplashError('Ingresa tu nombre para continuar'); return }
+        if (customerFields.lastName && !customerLastName.trim()) { setSplashError('Ingresa tu apellido para continuar'); return }
+        if (customerFields.phone && !customerPhone.trim())       { setSplashError('Ingresa tu telefono para continuar'); return }
+        if (customerFields.address && !customerAddress.trim())   { setSplashError('Ingresa tu direccion para continuar'); return }
       }
 
       try { localStorage.setItem('lyte-cedula', cedula) } catch {}
@@ -729,6 +737,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
         body: JSON.stringify({
           store_id: store.id, cedula,
           name: customerFields.name ? customerName.trim() : null,
+          last_name: customerFields.lastName ? customerLastName.trim() : null,
           phone: customerFields.phone ? customerPhone.trim() : null,
           address: customerFields.address ? (customerAddress.trim() || null) : null,
         }),
@@ -798,7 +807,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 onChange={e => {
                   setCustomerCedula(e.target.value)
                   setCedulaStatus('idle')
-                  setCustomerName(''); setCustomerPhone(''); setCustomerAddress('')
+                  setCustomerName(''); setCustomerLastName(''); setCustomerPhone(''); setCustomerAddress('')
                 }}
                 onBlur={e => lookupCedula(e.target.value.trim())}
               />
@@ -810,6 +819,13 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   className="sf-splash-cedula" type="text" placeholder="Tu nombre"
                   style={{ marginTop: 10 }}
                   value={customerName} onChange={e => setCustomerName(e.target.value)}
+                />
+              )}
+              {cedulaStatus === 'new' && customerFields.lastName && (
+                <input
+                  className="sf-splash-cedula" type="text" placeholder="Tu apellido"
+                  style={{ marginTop: 10 }}
+                  value={customerLastName} onChange={e => setCustomerLastName(e.target.value)}
                 />
               )}
               {cedulaStatus === 'new' && customerFields.phone && (

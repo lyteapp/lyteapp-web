@@ -171,6 +171,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [showWelcome, setShowWelcome] = useState(false)
   const [welcomeLeaving, setWelcomeLeaving] = useState(false)
   const [splashError, setSplashError] = useState('')
+  const [locationLabel, setLocationLabel] = useState('')
 
   useEffect(() => {
     if (!showWelcome) return
@@ -726,9 +727,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
       const status = (cedulaStatus === 'found' || cedulaStatus === 'new') ? cedulaStatus : await lookupCedula(cedula)
       if (status === 'error') return
       if (status === 'new') {
-        if (customerFields.name && !customerName.trim())       { setSplashError('Ingresa tu nombre para continuar'); return }
-        if (customerFields.phone && !customerPhone.trim())     { setSplashError('Ingresa tu telefono para continuar'); return }
-        if (customerFields.address && !customerAddress.trim()) { setSplashError('Ingresa tu direccion para continuar'); return }
+        if (customerFields.name && !customerName.trim())   { setSplashError('Ingresa tu nombre para continuar'); return }
+        if (customerFields.phone && !customerPhone.trim()) { setSplashError('Ingresa tu telefono para continuar'); return }
+        if (customerFields.address && !customerAddress.trim() && customerLat === null) {
+          setSplashError('Comparte tu ubicacion o ingresa tu direccion para continuar'); return
+        }
       }
 
       fetch('/api/customer-lookup', {
@@ -741,6 +744,26 @@ export default function StoreShell({ store, products, categories = [], initialBc
           address: customerFields.address ? (customerAddress.trim() || null) : null,
         }),
       }).catch(() => {})
+
+      if (customerFields.address && customerLat !== null) {
+        const ph = customerPhone.replace(/\D/g, '')
+        if (ph) {
+          try {
+            const raw = localStorage.getItem(`lyte-locs-${ph}`)
+            const existing: SavedLocation[] = raw ? JSON.parse(raw) : []
+            const loc: SavedLocation = {
+              id: crypto.randomUUID(),
+              label: locationLabel.trim() || customerAddress.trim() || 'Mi ubicacion',
+              address: customerAddress,
+              lat: customerLat, lng: customerLng,
+            }
+            const updated = [...existing, loc]
+            localStorage.setItem(`lyte-locs-${ph}`, JSON.stringify(updated))
+            setSavedLocations(updated)
+            setSelectedLocId(loc.id)
+          } catch {}
+        }
+      }
       setShowWelcome(true)
     }
 
@@ -807,6 +830,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   setCustomerCedula(e.target.value)
                   setCedulaStatus('idle')
                   setCustomerName(''); setCustomerPhone(''); setCustomerAddress('')
+                  setLocationState('idle'); setCustomerLat(null); setCustomerLng(null); setLocationLabel('')
                 }}
                 onBlur={e => lookupCedula(e.target.value.trim())}
               />
@@ -828,11 +852,36 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 />
               )}
               {cedulaStatus === 'new' && customerFields.address && (
-                <input
-                  className="sf-splash-cedula" type="text" placeholder="Tu direccion"
-                  style={{ marginTop: 10 }}
-                  value={customerAddress} onChange={e => setCustomerAddress(e.target.value)}
-                />
+                <>
+                  {locationState !== 'granted' && (
+                    <button
+                      type="button"
+                      onClick={requestLocation}
+                      className="sf-splash-cedula sf-splash-location-btn"
+                      style={{ marginTop: 10 }}
+                    >
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+                        <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                      </svg>
+                      {locationState === 'requesting' ? 'Obteniendo ubicacion...' : 'Compartir mi ubicacion'}
+                    </button>
+                  )}
+                  {locationState === 'granted' && (
+                    <>
+                      <div className="sf-splash-cedula-hint found">Ubicacion compartida</div>
+                      <input
+                        className="sf-splash-cedula" type="text" placeholder="Nombra esta ubicacion (Casa, Trabajo...)"
+                        style={{ marginTop: 10 }}
+                        value={locationLabel} onChange={e => setLocationLabel(e.target.value)}
+                      />
+                    </>
+                  )}
+                  <input
+                    className="sf-splash-cedula" type="text" placeholder="Tu direccion"
+                    style={{ marginTop: 10 }}
+                    value={customerAddress} onChange={e => setCustomerAddress(e.target.value)}
+                  />
+                </>
               )}
               {splashError && <div className="sf-splash-cedula-hint error">{splashError}</div>}
             </div>

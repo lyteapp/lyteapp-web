@@ -668,8 +668,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
     address: hp.customerFields?.address !== false,
   }
 
-  async function lookupCedula(cedula: string) {
-    if (!cedula) return
+  async function lookupCedula(cedula: string): Promise<'found' | 'new' | 'error'> {
+    if (!cedula) return 'error'
     setCedulaStatus('checking')
     try {
       const res = await fetch(`/api/customer-lookup?store_id=${store.id}&cedula=${encodeURIComponent(cedula)}`)
@@ -679,11 +679,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
         if (customerFields.phone && json.customer.phone)     setCustomerPhone(json.customer.phone)
         if (customerFields.address && json.customer.address) setCustomerAddress(json.customer.address)
         setCedulaStatus('found')
+        return 'found'
       } else {
         setCedulaStatus('new')
+        return 'new'
       }
     } catch {
       setCedulaStatus('idle')
+      return 'error'
     }
   }
 
@@ -693,10 +696,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
     if (collectCustomerData) {
       if (!cedula) { setSplashError('Ingresa tu cedula para continuar'); return }
-      if (cedulaStatus === 'idle') await lookupCedula(cedula)
-      if (customerFields.name && !customerName.trim())       { setSplashError('Ingresa tu nombre para continuar'); return }
-      if (customerFields.phone && !customerPhone.trim())     { setSplashError('Ingresa tu telefono para continuar'); return }
-      if (customerFields.address && !customerAddress.trim()) { setSplashError('Ingresa tu direccion para continuar'); return }
+      const status = (cedulaStatus === 'found' || cedulaStatus === 'new') ? cedulaStatus : await lookupCedula(cedula)
+      if (status === 'new') {
+        if (customerFields.name && !customerName.trim())       { setSplashError('Ingresa tu nombre para continuar'); return }
+        if (customerFields.phone && !customerPhone.trim())     { setSplashError('Ingresa tu telefono para continuar'); return }
+        if (customerFields.address && !customerAddress.trim()) { setSplashError('Ingresa tu direccion para continuar'); return }
+      }
 
       try { localStorage.setItem('lyte-cedula', cedula) } catch {}
       fetch('/api/customer-lookup', {
@@ -775,23 +780,23 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 onBlur={e => lookupCedula(e.target.value.trim())}
               />
               {cedulaStatus === 'found' && <div className="sf-splash-cedula-hint found">Te reconocimos{customerName ? `, ${customerName.split(' ')[0]}` : ''}</div>}
-              {cedulaStatus === 'new' && <div className="sf-splash-cedula-hint">Guardaremos tus datos para tu proxima visita</div>}
+              {cedulaStatus === 'new' && <div className="sf-splash-cedula-hint">Eres nuevo por aqui, completa tus datos</div>}
 
-              {customerFields.name && (
+              {cedulaStatus === 'new' && customerFields.name && (
                 <input
                   className="sf-splash-cedula" type="text" placeholder="Tu nombre"
                   style={{ marginTop: 10 }}
                   value={customerName} onChange={e => setCustomerName(e.target.value)}
                 />
               )}
-              {customerFields.phone && (
+              {cedulaStatus === 'new' && customerFields.phone && (
                 <input
                   className="sf-splash-cedula" type="tel" placeholder="Tu telefono"
                   style={{ marginTop: 10 }}
                   value={customerPhone} onChange={e => setCustomerPhone(e.target.value)}
                 />
               )}
-              {customerFields.address && (
+              {cedulaStatus === 'new' && customerFields.address && (
                 <input
                   className="sf-splash-cedula" type="text" placeholder="Tu direccion"
                   style={{ marginTop: 10 }}

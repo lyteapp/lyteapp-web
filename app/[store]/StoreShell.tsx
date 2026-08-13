@@ -162,8 +162,15 @@ export default function StoreShell({ store, products, categories = [], initialBc
     store.template_config?.homePage?.enabled ? 'splash' : 'catalog'
   )
   const [splashLeaving, setSplashLeaving] = useState(false)
+  const [catalogEnter, setCatalogEnter] = useState(false)
   const [customerCedula, setCustomerCedula] = useState('')
   const [cedulaStatus, setCedulaStatus] = useState<'idle' | 'checking' | 'found' | 'new'>('idle')
+
+  useEffect(() => {
+    if (!catalogEnter) return
+    const t = setTimeout(() => setCatalogEnter(false), 550)
+    return () => clearTimeout(t)
+  }, [catalogEnter])
   const [customerName, setCustomerName]   = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
   const [customerNotes, setCustomerNotes] = useState('')
@@ -643,7 +650,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       try { localStorage.setItem('lyte-cedula', cedula) } catch {}
     }
     setSplashLeaving(true)
-    setTimeout(() => setView('catalog'), 480)
+    setTimeout(() => { setCatalogEnter(true); setView('catalog') }, 500)
   }
 
   if (view === 'splash') {
@@ -1756,7 +1763,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   }
 
   return (
-    <div className={`sf-page sf-tpl-${tpl} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize} sf-vshape-${cfgVariantShape} sf-eshape-${cfgExtraShape}`} style={pageStyle}>
+    <div className={`sf-page sf-tpl-${tpl} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize} sf-vshape-${cfgVariantShape} sf-eshape-${cfgExtraShape}${catalogEnter ? ' sf-catalog-enter' : ''}`} style={pageStyle}>
       <div className="sf-topbar">
         <div className="sf-topbar-inner sf-topbar-3col">
           <div className="sf-topbar-slot-left">

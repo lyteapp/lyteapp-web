@@ -12,13 +12,17 @@ export async function GET(req: Request) {
   const cedula = searchParams.get('cedula')?.trim()
   if (!storeId || !cedula) return Response.json({ error: 'Missing store_id or cedula' }, { status: 400 })
 
-  const { data } = await supa
+  const { data, error } = await supa
     .from('customers')
     .select('name, phone, address')
     .eq('store_id', storeId)
     .eq('cedula', cedula)
     .maybeSingle()
 
+  if (error) {
+    console.error('customer-lookup GET failed:', error.message)
+    return Response.json({ error: error.message }, { status: 500 })
+  }
   return Response.json({ found: !!data, customer: data ?? null })
 }
 
@@ -40,6 +44,9 @@ export async function POST(req: Request) {
       { onConflict: 'store_id,cedula' }
     )
 
-  if (error) return Response.json({ error: error.message }, { status: 500 })
+  if (error) {
+    console.error('customer-lookup POST failed:', error.message)
+    return Response.json({ error: error.message }, { status: 500 })
+  }
   return Response.json({ ok: true })
 }

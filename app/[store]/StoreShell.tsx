@@ -693,6 +693,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
     try {
       const res = await fetch(`/api/customer-lookup?store_id=${store.id}&cedula=${encodeURIComponent(cedula)}`)
       const json = await res.json()
+      if (!res.ok || json.error) {
+        console.error('customer-lookup failed:', json.error)
+        setCedulaStatus('idle')
+        setSplashError('No pudimos verificar tu cedula, intenta de nuevo')
+        return 'error'
+      }
       if (json.found && json.customer) {
         if (customerFields.name && json.customer.name)       setCustomerName(json.customer.name)
         if (customerFields.phone && json.customer.phone)     setCustomerPhone(json.customer.phone)
@@ -703,8 +709,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
         setCedulaStatus('new')
         return 'new'
       }
-    } catch {
+    } catch (err) {
+      console.error('customer-lookup network error:', err)
       setCedulaStatus('idle')
+      setSplashError('No pudimos verificar tu cedula, intenta de nuevo')
       return 'error'
     }
   }
@@ -716,6 +724,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     if (collectCustomerData) {
       if (!cedula) { setSplashError('Ingresa tu cedula para continuar'); return }
       const status = (cedulaStatus === 'found' || cedulaStatus === 'new') ? cedulaStatus : await lookupCedula(cedula)
+      if (status === 'error') return
       if (status === 'new') {
         if (customerFields.name && !customerName.trim())       { setSplashError('Ingresa tu nombre para continuar'); return }
         if (customerFields.phone && !customerPhone.trim())     { setSplashError('Ingresa tu telefono para continuar'); return }

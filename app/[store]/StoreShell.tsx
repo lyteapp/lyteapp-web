@@ -295,16 +295,25 @@ export default function StoreShell({ store, products, categories = [], initialBc
   }, [store.slug])
 
   useEffect(() => {
+    // When the cedula-based customer system is on, identity must come only
+    // from a real lookup for whatever cedula is entered — never from a
+    // device-wide cache, or a different person on the same device would
+    // see the last visitor's name/phone/address.
+    const usesCedula = store.template_config?.homePage?.collectCustomerData !== false
+      && store.template_config?.homePage?.enabled
     try {
-      const saved = localStorage.getItem('lyte-customer')
-      if (saved) {
-        const { name, phone } = JSON.parse(saved)
-        if (name) setCustomerName(name)
-        if (phone) setCustomerPhone(phone)
+      if (!usesCedula) {
+        const saved = localStorage.getItem('lyte-customer')
+        if (saved) {
+          const { name, phone } = JSON.parse(saved)
+          if (name) setCustomerName(name)
+          if (phone) setCustomerPhone(phone)
+        }
       }
       const savedCedula = localStorage.getItem('lyte-cedula')
       if (savedCedula) setCustomerCedula(savedCedula)
     } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -571,7 +580,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
       })
       if (oErr) throw new Error(oErr.message)
 
-      try { localStorage.setItem('lyte-customer', JSON.stringify({ name: customerName.trim(), phone: customerPhone.trim() })) } catch {}
+      if (!collectCustomerData) {
+        try { localStorage.setItem('lyte-customer', JSON.stringify({ name: customerName.trim(), phone: customerPhone.trim() })) } catch {}
+      }
 
       if (collectCustomerData && customerCedula.trim()) {
         fetch('/api/customer-lookup', {
@@ -669,7 +680,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // ── SPLASH (home page) ──
   const hp = store.template_config?.homePage ?? {}
   const transitionId = hp.transition || 'slide'
-  const collectCustomerData = hp.collectCustomerData !== false
+  const collectCustomerData = !!hp.enabled && hp.collectCustomerData !== false
   const customerFields = {
     name: hp.customerFields?.name !== false,
     phone: hp.customerFields?.phone !== false,
@@ -784,7 +795,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 inputMode="numeric"
                 placeholder="Tu cedula de identidad"
                 value={customerCedula}
-                onChange={e => { setCustomerCedula(e.target.value); setCedulaStatus('idle') }}
+                onChange={e => {
+                  setCustomerCedula(e.target.value)
+                  setCedulaStatus('idle')
+                  setCustomerName(''); setCustomerPhone(''); setCustomerAddress('')
+                }}
                 onBlur={e => lookupCedula(e.target.value.trim())}
               />
               {cedulaStatus === 'found' && <div className="sf-splash-cedula-hint found">Te reconocimos{customerName ? `, ${customerName.split(' ')[0]}` : ''}</div>}

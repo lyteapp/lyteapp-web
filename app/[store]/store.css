@@ -608,6 +608,33 @@ html, body { overflow-x: hidden; }
   .sf-welcome-toast { padding: 18px 26px; border-radius: 16px; right: 14px; }
   .sf-welcome-name { font-size: 26px; }
 }
+
+.sf-reorder-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: color-mix(in srgb, var(--sf-accent-color, #7C3AED) 8%, white);
+  border: 1px solid color-mix(in srgb, var(--sf-accent-color, #7C3AED) 25%, transparent);
+  border-radius: 14px; padding: 14px 16px; margin: 0 16px 16px;
+  animation: sfFadeIn 0.4s ease both;
+}
+.sf-reorder-title { font-size: 14px; font-weight: 700; color: #0F172A; letter-spacing: -0.01em; }
+.sf-reorder-sub { font-size: 12px; color: #64748B; margin-top: 2px; }
+.sf-reorder-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.sf-reorder-btn {
+  background: var(--sf-accent-color, #7C3AED); color: white; border: none;
+  border-radius: 100px; padding: 9px 18px; font-size: 13px; font-weight: 600;
+  cursor: pointer; white-space: nowrap; font-family: var(--font-geist-sans), sans-serif;
+  transition: filter 0.15s;
+}
+.sf-reorder-btn:hover { filter: brightness(0.92); }
+.sf-reorder-close {
+  background: none; border: none; cursor: pointer; color: #94A3B8;
+  padding: 4px; display: flex; align-items: center; flex-shrink: 0;
+}
+.sf-reorder-close:hover { color: #475569; }
+@media (max-width: 640px) {
+  .sf-reorder-banner { margin: 0 12px 12px; padding: 12px 14px; flex-wrap: wrap; }
+  .sf-reorder-title { font-size: 13px; }
+}
 .sf-splash-btn {
   background: var(--sf-accent-color, #7C3AED); color: white; border: none;
   cursor: pointer; padding: 15px 40px; border-radius: 100px;

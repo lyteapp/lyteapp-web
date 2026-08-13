@@ -41,6 +41,8 @@ type Product = {
 type PaymentMethod = { type: string; label: string; enabled: boolean; details: Record<string, string> }
 type SavedLocation = { id: string; label: string; address: string; lat: number | null; lng: number | null }
 type DeliveryZone  = { id: string; name: string; fee: number; color: string; radius_m: number; center_lat: number; center_lng: number }
+type LastOrderItem = { product_id: string | null; product_name: string; product_price: number; quantity: number; selected_options: SelectedOptions | null }
+type LastOrder = { orderId: string; items: LastOrderItem[] }
 
 const PM_LABELS: Record<string, string> = {
   pago_movil: 'Pago Móvil', zelle: 'Zelle', efectivo_usd: 'Efectivo USD',
@@ -105,6 +107,7 @@ type TemplateConfig = {
     customerFields?: { name?: boolean; phone?: boolean; address?: boolean }
     inactivityTimeout?: { enabled?: boolean; minutes?: number }
     orderReturnTimeout?: { enabled?: boolean; seconds?: number }
+    enableReorder?: boolean
   }
 }
 type Store = {
@@ -174,6 +177,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [welcomeLeaving, setWelcomeLeaving] = useState(false)
   const [splashError, setSplashError] = useState('')
   const [locationLabel, setLocationLabel] = useState('')
+  const [lastOrder, setLastOrder] = useState<LastOrder | null>(null)
+  const [showReorder, setShowReorder] = useState(false)
+  const reorderCheckedRef = useRef(false)
 
   useEffect(() => {
     if (!showWelcome) return
@@ -214,6 +220,48 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [customerName, setCustomerName]   = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
   const [customerNotes, setCustomerNotes] = useState('')
+
+  useEffect(() => {
+    if (!store.template_config?.homePage?.enableReorder) return
+    const ph = customerPhone.replace(/\D/g, '')
+    if (!ph || reorderCheckedRef.current) return
+    reorderCheckedRef.current = true
+    fetch(`/api/last-order?store_id=${store.id}&phone=${ph}`)
+      .then(res => res.json())
+      .then(json => {
+        if (json.found && Array.isArray(json.items) && json.items.length > 0) {
+          setLastOrder({ orderId: json.orderId, items: json.items })
+          setShowReorder(true)
+        }
+      })
+      .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customerPhone])
+
+  function reorderLast() {
+    if (!lastOrder) return
+    const next: Record<string, CartItem> = {}
+    for (const item of lastOrder.items) {
+      const product = item.product_id ? products.find(p => p.id === item.product_id) : undefined
+      const color = item.selected_options?.color
+      const variables = item.selected_options?.variables
+      const key = buildCartKey(item.product_id ?? item.product_name, color, variables)
+      const extraPrice = (item.selected_options?.additionals ?? []).reduce((s, a) => s + (a.price || 0), 0)
+      next[key] = {
+        id: key,
+        productId: item.product_id ?? undefined,
+        name: product?.name ?? item.product_name,
+        price: product?.price ?? item.product_price,
+        extraPrice,
+        image_url: product?.image_url ?? null,
+        quantity: item.quantity,
+        options: product?.options ?? undefined,
+        selectedOptions: item.selected_options ?? undefined,
+      }
+    }
+    setCart(next)
+    setShowReorder(false)
+  }
   const [selectedPayment, setSelectedPayment]   = useState('')
   const [paymentFreeText, setPaymentFreeText]   = useState('')
   const bcvRate = initialBcvRate ?? null
@@ -2104,6 +2152,23 @@ export default function StoreShell({ store, products, categories = [], initialBc
         <div className={`sf-welcome-toast${welcomeLeaving ? ' leaving' : ''}`}>
           <div className="sf-welcome-label">Bienvenido</div>
           <div className="sf-welcome-name">{customerName.trim().split(' ')[0]}</div>
+        </div>
+      )}
+
+      {showReorder && lastOrder && (
+        <div className="sf-reorder-banner">
+          <div className="sf-reorder-info">
+            <div className="sf-reorder-title">¿Pedimos lo mismo que la ultima vez?</div>
+            <div className="sf-reorder-sub">
+              {lastOrder.items.reduce((s, i) => s + i.quantity, 0)} {lastOrder.items.reduce((s, i) => s + i.quantity, 0) === 1 ? 'producto' : 'productos'}
+            </div>
+          </div>
+          <div className="sf-reorder-actions">
+            <button type="button" className="sf-reorder-btn" onClick={reorderLast}>Repetir pedido</button>
+            <button type="button" className="sf-reorder-close" onClick={() => setShowReorder(false)} aria-label="Cerrar">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path strokeLinecap="round" d="M15 5L5 15M5 5l10 10"/></svg>
+            </button>
+          </div>
         </div>
       )}
 

@@ -42,6 +42,7 @@ interface HomePageConfig {
   customerFields: CustomerFields
   inactivityTimeout: InactivityTimeout
   orderReturnTimeout: OrderReturnTimeout
+  enableReorder: boolean
 }
 
 const DEFAULTS: HomePageConfig = {
@@ -58,6 +59,7 @@ const DEFAULTS: HomePageConfig = {
   customerFields: { name: true, phone: true, address: true },
   inactivityTimeout: { enabled: false, minutes: 3 },
   orderReturnTimeout: { enabled: false, seconds: 15 },
+  enableReorder: false,
 }
 
 const TRANSITIONS = [
@@ -324,6 +326,27 @@ export default function InicioPage() {
                     </div>
                   </>
                 )}
+              </div>
+            </div>
+
+            <div className="cn-section">
+              <div className="cn-section-head">
+                <div className="cn-section-icon">
+                  <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" /></svg>
+                </div>
+                <div>
+                  <div className="cn-section-title">Pedir de nuevo</div>
+                  <div className="cn-section-sub">Le ofrece al cliente repetir su ultimo pedido con un boton</div>
+                </div>
+              </div>
+              <div className="cn-section-body">
+                <div className="cn-toggle-row" style={{ paddingBottom: 0, borderBottom: 'none' }}>
+                  <div className="cn-toggle-info">
+                    <div className="cn-toggle-label">Permitir repetir el ultimo pedido</div>
+                    <div className="cn-toggle-hint">Si reconocemos al cliente (por cedula o por telefono en este dispositivo) y tiene un pedido anterior, le mostramos un boton para repetirlo</div>
+                  </div>
+                  <Toggle checked={config.enableReorder} onChange={v => set('enableReorder', v)} />
+                </div>
               </div>
             </div>
 

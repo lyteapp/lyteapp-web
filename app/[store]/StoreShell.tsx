@@ -696,8 +696,13 @@ export default function StoreShell({ store, products, categories = [], initialBc
     address: hp.customerFields?.address !== false,
   }
 
-  async function lookupCedula(cedula: string): Promise<'found' | 'new' | 'error'> {
-    if (!cedula) return 'error'
+  type CedulaLookupResult = {
+    status: 'found' | 'new' | 'error'
+    customer?: { name?: string | null; phone?: string | null; address?: string | null }
+  }
+
+  async function lookupCedula(cedula: string): Promise<CedulaLookupResult> {
+    if (!cedula) return { status: 'error' }
     setCedulaStatus('checking')
     try {
       const res = await fetch(`/api/customer-lookup?store_id=${store.id}&cedula=${encodeURIComponent(cedula)}`)
@@ -706,23 +711,23 @@ export default function StoreShell({ store, products, categories = [], initialBc
         console.error('customer-lookup failed:', json.error)
         setCedulaStatus('idle')
         setSplashError('No pudimos verificar tu cedula, intenta de nuevo')
-        return 'error'
+        return { status: 'error' }
       }
       if (json.found && json.customer) {
         if (customerFields.name && json.customer.name)       setCustomerName(json.customer.name)
         if (customerFields.phone && json.customer.phone)     setCustomerPhone(json.customer.phone)
         if (customerFields.address && json.customer.address) setCustomerAddress(json.customer.address)
         setCedulaStatus('found')
-        return 'found'
+        return { status: 'found', customer: json.customer }
       } else {
         setCedulaStatus('new')
-        return 'new'
+        return { status: 'new' }
       }
     } catch (err) {
       console.error('customer-lookup network error:', err)
       setCedulaStatus('idle')
       setSplashError('No pudimos verificar tu cedula, intenta de nuevo')
-      return 'error'
+      return { status: 'error' }
     }
   }
 
@@ -738,7 +743,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     setTimeout(() => { setCatalogEnter(true); setView('catalog') }, 550)
   }
 
-  function enterStore(status: 'found' | 'new') {
+  function enterStore(status: 'found' | 'new', foundCustomer?: CedulaLookupResult['customer']) {
     const cedula = customerCedula.trim()
 
     if (status === 'new') {
@@ -749,14 +754,21 @@ export default function StoreShell({ store, products, categories = [], initialBc
       }
     }
 
+    // For a just-recognized cedula, use the freshly-fetched values directly
+    // rather than customerName/Phone/Address state, which may not have
+    // finished updating yet if this runs right after the lookup resolved.
+    const nameToSave    = foundCustomer ? (foundCustomer.name ?? '')    : customerName.trim()
+    const phoneToSave   = foundCustomer ? (foundCustomer.phone ?? '')   : customerPhone.trim()
+    const addressToSave = foundCustomer ? (foundCustomer.address ?? '') : customerAddress.trim()
+
     fetch('/api/customer-lookup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         store_id: store.id, cedula,
-        name: customerFields.name ? customerName.trim() : null,
-        phone: customerFields.phone ? customerPhone.trim() : null,
-        address: customerFields.address ? (customerAddress.trim() || null) : null,
+        name: customerFields.name ? nameToSave : null,
+        phone: customerFields.phone ? phoneToSave : null,
+        address: customerFields.address ? (addressToSave || null) : null,
       }),
     }).catch(() => {})
 
@@ -790,9 +802,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
     if (!collectCustomerData) { proceedToTransition(); return }
 
     if (!cedula) { setSplashError('Ingresa tu cedula para continuar'); return }
-    const status = (cedulaStatus === 'found' || cedulaStatus === 'new') ? cedulaStatus : await lookupCedula(cedula)
-    if (status === 'error') return
-    enterStore(status)
+    if (cedulaStatus === 'found' || cedulaStatus === 'new') { enterStore(cedulaStatus); return }
+    const result = await lookupCedula(cedula)
+    if (result.status === 'error') return
+    enterStore(result.status, result.customer)
   }
 
   const logoShapeRadius: Record<string, string> = { circle: '50%', rounded: '8px', square: '0px' }
@@ -851,8 +864,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 onBlur={async e => {
                   const val = e.target.value.trim()
                   if (!val) return
-                  const status = await lookupCedula(val)
-                  if (status === 'found') enterStore('found')
+                  const result = await lookupCedula(val)
+                  if (result.status === 'found') enterStore('found', result.customer)
                 }}
               />
               {cedulaStatus === 'found' && <div className="sf-splash-cedula-hint found">Te reconocimos{customerName ? `, ${customerName.split(' ')[0]}` : ''}</div>}

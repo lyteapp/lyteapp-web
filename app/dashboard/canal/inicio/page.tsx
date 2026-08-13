@@ -5,13 +5,22 @@ import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../../lib/auth'
 import '../canal.css'
 
+interface HomePagePill {
+  id: string
+  label: string
+  url: string
+  color: string
+}
+
 interface HomePageConfig {
   enabled: boolean
   title: string
   subtitle: string
   buttonLabel: string
+  buttonColor: string
   imageUrl: string | null
   bgColor: string
+  pills: HomePagePill[]
 }
 
 const DEFAULTS: HomePageConfig = {
@@ -19,11 +28,18 @@ const DEFAULTS: HomePageConfig = {
   title: '',
   subtitle: '',
   buttonLabel: 'Empezar',
+  buttonColor: '#7C3AED',
   imageUrl: null,
   bgColor: '#0F172A',
+  pills: [],
 }
 
 const BG_PRESETS = ['#0F172A', '#7C3AED', '#111827', '#064E3B', '#7C2D12', '#1E1B4B']
+const PILL_COLOR_PRESETS = ['#7C3AED', '#2563EB', '#DC2626', '#D97706', '#059669', '#DB2777', '#0F172A', '#64748B']
+
+function newPill(): HomePagePill {
+  return { id: crypto.randomUUID(), label: '', url: '', color: '#7C3AED' }
+}
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -72,11 +88,23 @@ function SplashPreview({ config, storeName, logoUrl }: { config: HomePageConfig;
           </div>
         )}
         <div style={{
-          background: '#7C3AED', color: 'white', fontSize: 12, fontWeight: 700,
+          background: config.buttonColor || '#7C3AED', color: 'white', fontSize: 12, fontWeight: 700,
           padding: '11px 28px', borderRadius: 100, boxShadow: '0 8px 20px rgba(0,0,0,0.25)',
         }}>
           {config.buttonLabel || 'Empezar'}
         </div>
+        {config.pills.filter(p => p.label.trim()).length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12, width: '100%' }}>
+            {config.pills.filter(p => p.label.trim()).map(p => (
+              <div key={p.id} style={{
+                background: 'rgba(255,255,255,0.12)', border: `1.5px solid ${p.color}`, color: 'white',
+                fontSize: 11, fontWeight: 600, padding: '8px 20px', borderRadius: 100,
+              }}>
+                {p.label}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -94,6 +122,7 @@ export default function InicioPage() {
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const bgColorRef = useRef<HTMLInputElement>(null)
+  const buttonColorRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!user) return
@@ -114,6 +143,16 @@ export default function InicioPage() {
 
   function set<K extends keyof HomePageConfig>(key: K, value: HomePageConfig[K]) {
     setConfig(c => ({ ...c, [key]: value }))
+  }
+
+  function addPill() {
+    setConfig(c => ({ ...c, pills: [...c.pills, newPill()] }))
+  }
+  function updatePill(id: string, patch: Partial<HomePagePill>) {
+    setConfig(c => ({ ...c, pills: c.pills.map(p => p.id === id ? { ...p, ...patch } : p) }))
+  }
+  function removePill(id: string) {
+    setConfig(c => ({ ...c, pills: c.pills.filter(p => p.id !== id) }))
   }
 
   async function handleUpload(e: { target: { files: FileList | null } }) {
@@ -193,11 +232,76 @@ export default function InicioPage() {
                   <textarea className="cn-textarea" rows={2} value={config.subtitle} onChange={e => set('subtitle', e.target.value)}
                     placeholder="Ej: Los mejores productos, directo a tu puerta" />
                 </div>
-                <div className="cn-field" style={{ marginBottom: 0 }}>
+                <div className="cn-field">
                   <div className="cn-label">Texto del boton</div>
                   <input className="cn-input" value={config.buttonLabel} onChange={e => set('buttonLabel', e.target.value)}
                     placeholder="Empezar" maxLength={24} />
                 </div>
+                <div className="cn-field" style={{ marginBottom: 0 }}>
+                  <div className="cn-label">Color del boton</div>
+                  <div className="cn-colors">
+                    {PILL_COLOR_PRESETS.map(c => (
+                      <div key={c} className={`cn-color-swatch${config.buttonColor === c ? ' selected' : ''}`}
+                        style={{ background: c }} onClick={() => set('buttonColor', c)} />
+                    ))}
+                    <div
+                      className="cn-color-custom"
+                      style={{ background: PILL_COLOR_PRESETS.includes(config.buttonColor) ? undefined : config.buttonColor }}
+                      onClick={() => buttonColorRef.current?.click()}
+                    >
+                      {PILL_COLOR_PRESETS.includes(config.buttonColor) ? '+' : null}
+                      <input ref={buttonColorRef} type="color" value={config.buttonColor} onChange={e => set('buttonColor', e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="cn-section">
+              <div className="cn-section-head">
+                <div className="cn-section-icon">
+                  <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clipRule="evenodd" /></svg>
+                </div>
+                <div>
+                  <div className="cn-section-title">Enlaces adicionales</div>
+                  <div className="cn-section-sub">Pills con un nombre y un link, debajo del boton principal</div>
+                </div>
+              </div>
+              <div className="cn-section-body">
+                {config.pills.length === 0 && (
+                  <div style={{ fontSize: 13, color: '#94A3B8', marginBottom: 14 }}>Aun no has agregado ningun enlace.</div>
+                )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {config.pills.map(pill => (
+                    <div key={pill.id} style={{ border: '1px solid rgba(15,23,42,0.08)', borderRadius: 12, padding: 14, background: '#FAFAF9' }}>
+                      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          <input
+                            className="cn-input" placeholder="Nombre del pill (ej: WhatsApp)"
+                            value={pill.label} onChange={e => updatePill(pill.id, { label: e.target.value })}
+                            maxLength={24}
+                          />
+                          <input
+                            className="cn-input" placeholder="https://..."
+                            value={pill.url} onChange={e => updatePill(pill.id, { url: e.target.value })}
+                          />
+                        </div>
+                        <label style={{ width: 30, height: 30, borderRadius: '50%', overflow: 'hidden', border: '2px solid rgba(15,23,42,0.1)', cursor: 'pointer', flexShrink: 0, position: 'relative' }}>
+                          <div style={{ position: 'absolute', inset: 0, background: pill.color, pointerEvents: 'none' }} />
+                          <input type="color" value={pill.color} onChange={e => updatePill(pill.id, { color: e.target.value })}
+                            style={{ opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }} />
+                        </label>
+                        <button type="button" onClick={() => removePill(pill.id)} style={{
+                          width: 30, height: 30, borderRadius: 8, border: 'none', background: 'rgba(239,68,68,0.08)',
+                          color: '#EF4444', cursor: 'pointer', flexShrink: 0, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>✕</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button type="button" className="cn-upload-btn" style={{ marginTop: 14 }} onClick={addPill}>
+                  + Agregar enlace
+                </button>
               </div>
             </div>
 

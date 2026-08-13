@@ -96,8 +96,10 @@ type TemplateConfig = {
     title?: string
     subtitle?: string
     buttonLabel?: string
+    buttonColor?: string
     imageUrl?: string | null
     bgColor?: string
+    pills?: { id: string; label: string; url: string; color?: string }[]
   }
 }
 type Store = {
@@ -676,11 +678,29 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
           <button
             className="sf-splash-btn"
+            style={hp.buttonColor ? { background: hp.buttonColor } : undefined}
             disabled={cedulaStatus === 'checking'}
             onClick={handleSplashStart}
           >
             {cedulaStatus === 'checking' ? 'Buscando...' : (hp.buttonLabel || 'Empezar')}
           </button>
+
+          {(hp.pills ?? []).filter(p => p.label?.trim() && p.url?.trim()).length > 0 && (
+            <div className="sf-splash-pills">
+              {(hp.pills ?? []).filter(p => p.label?.trim() && p.url?.trim()).map(pill => (
+                <a
+                  key={pill.id}
+                  href={pill.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="sf-splash-pill"
+                  style={{ borderColor: pill.color || '#7C3AED' }}
+                >
+                  {pill.label}
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     )

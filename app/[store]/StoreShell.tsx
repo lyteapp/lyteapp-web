@@ -91,6 +91,14 @@ type TemplateConfig = {
   logoPosition?: 'left' | 'center' | 'right' | 'none'
   namePosition?: 'left' | 'center' | 'right' | 'none'
   contentBlocks?: ContentBlock[]
+  homePage?: {
+    enabled?: boolean
+    title?: string
+    subtitle?: string
+    buttonLabel?: string
+    imageUrl?: string | null
+    bgColor?: string
+  }
 }
 type Store = {
   id: string; name: string; slug: string
@@ -148,7 +156,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const t = useT()
   const router = useRouter()
   const [cart, setCart]                   = useState<Record<string, CartItem>>({})
-  const [view, setView]                   = useState<'catalog' | 'checkout' | 'confirmed'>('catalog')
+  const [view, setView]                   = useState<'catalog' | 'checkout' | 'confirmed' | 'splash'>(() =>
+    store.template_config?.homePage?.enabled ? 'splash' : 'catalog'
+  )
+  const [splashLeaving, setSplashLeaving] = useState(false)
   const [customerName, setCustomerName]   = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
   const [customerNotes, setCustomerNotes] = useState('')
@@ -590,6 +601,34 @@ export default function StoreShell({ store, products, categories = [], initialBc
       setError(err instanceof Error ? err.message : t('store.error.generic'))
     }
     setSubmitting(false)
+  }
+
+  // ── SPLASH (home page) ──
+  if (view === 'splash') {
+    const hp = store.template_config?.homePage ?? {}
+    return (
+      <div
+        className={`sf-splash-screen${splashLeaving ? ' sf-splash-leaving' : ''}`}
+        style={{
+          ...pageStyle,
+          background: hp.imageUrl
+            ? `linear-gradient(rgba(15,23,42,0.25), rgba(15,23,42,0.55)), url(${hp.imageUrl}) center/cover no-repeat`
+            : (hp.bgColor || '#0F172A'),
+        }}
+      >
+        <div className="sf-splash-content">
+          {store.logo_url && <img src={store.logo_url} alt={store.name} className="sf-splash-logo" />}
+          <h1 className="sf-splash-title">{hp.title || store.name}</h1>
+          {hp.subtitle && <p className="sf-splash-sub">{hp.subtitle}</p>}
+          <button
+            className="sf-splash-btn"
+            onClick={() => { setSplashLeaving(true); setTimeout(() => setView('catalog'), 480) }}
+          >
+            {hp.buttonLabel || 'Empezar'}
+          </button>
+        </div>
+      </div>
+    )
   }
 
   // ── CONFIRMED ──

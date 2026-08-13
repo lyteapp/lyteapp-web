@@ -465,6 +465,34 @@ html, body { overflow-x: hidden; }
 .sf-submit-btn:hover:not(:disabled) { filter: brightness(0.88); transform: translateY(-1px); box-shadow: 0 8px 28px color-mix(in srgb, var(--sf-accent-color, #7C3AED) 40%, transparent); }
 .sf-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* ── HOME SPLASH ── */
+.sf-splash-screen {
+  min-height: 100vh; min-height: 100dvh;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px; text-align: center;
+  font-family: var(--font-geist-sans), sans-serif;
+  animation: sfFadeIn 0.5s ease both;
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+.sf-splash-screen.sf-splash-leaving { opacity: 0; transform: scale(1.04); pointer-events: none; }
+.sf-splash-content { max-width: 420px; }
+.sf-splash-logo {
+  width: 72px; height: 72px; border-radius: 20px; object-fit: cover;
+  margin: 0 auto 24px; display: block; box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+}
+.sf-splash-title { font-size: 30px; font-weight: 800; color: white; letter-spacing: -0.03em; margin-bottom: 12px; line-height: 1.15; }
+.sf-splash-sub { font-size: 15px; color: rgba(255,255,255,0.75); line-height: 1.6; margin-bottom: 32px; }
+.sf-splash-btn {
+  background: var(--sf-accent-color, #7C3AED); color: white; border: none;
+  cursor: pointer; padding: 15px 40px; border-radius: 100px;
+  font-size: 15px; font-weight: 700; letter-spacing: -0.01em;
+  font-family: var(--font-geist-sans), sans-serif;
+  transition: transform 0.2s, box-shadow 0.2s, filter 0.2s;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+}
+.sf-splash-btn:hover { transform: translateY(-2px); filter: brightness(1.05); }
+.sf-splash-btn:active { transform: translateY(0) scale(0.97); }
+
 /* ── CONFIRMATION ── */
 .sf-confirm-screen {
   min-height: 100vh; background: #FAFAF9;

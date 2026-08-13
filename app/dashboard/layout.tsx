@@ -40,6 +40,7 @@ const navItems: { href: string; tKey: TranslationKey; exact?: boolean; soon?: bo
 
 const canalSubItems: { href: string; tKey: TranslationKey }[] = [
   { href: '/dashboard/canal/vitrina/editor', tKey: 'nav.vitrina' },
+  { href: '/dashboard/canal/inicio',         tKey: 'nav.inicio' },
   { href: '/dashboard/canal/checkout',       tKey: 'nav.checkout' },
   { href: '/dashboard/canal/apariencia',     tKey: 'nav.apariencia' },
 ]
@@ -152,6 +153,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     '/dashboard/configuracion': t('nav.settings'),
     '/dashboard/canal/vitrina': t('nav.vitrina'),
     '/dashboard/canal/vitrina/editor': t('nav.vitrina'),
+    '/dashboard/canal/inicio': t('nav.inicio'),
     '/dashboard/canal/checkout': t('nav.checkout'),
     '/dashboard/canal/apariencia': t('nav.apariencia'),
     '/dashboard/canal/menu': t('nav.menu'),

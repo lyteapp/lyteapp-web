@@ -174,6 +174,30 @@ export default function StoreShell({ store, products, categories = [], initialBc
     const t = setTimeout(() => setCatalogEnter(false), 550)
     return () => clearTimeout(t)
   }, [catalogEnter])
+
+  // Logo-morph transition: the splash logo flies to its real spot in the
+  // storefront header (a measured FLIP animation, not a canned keyframe).
+  type LogoRect = { top: number; left: number; width: number; height: number }
+  const splashLogoRef  = useRef<HTMLImageElement>(null)
+  const catalogLogoRef = useRef<HTMLDivElement>(null)
+  const [logoMorphStart, setLogoMorphStart]   = useState<LogoRect | null>(null)
+  const [logoMorphEnd, setLogoMorphEnd]       = useState<LogoRect | null>(null)
+  const [logoMorphFlying, setLogoMorphFlying] = useState(false)
+
+  useEffect(() => {
+    if (!logoMorphStart || view !== 'catalog' || logoMorphEnd) return
+    const raf = requestAnimationFrame(() => {
+      const el = catalogLogoRef.current
+      if (el) {
+        const r = el.getBoundingClientRect()
+        setLogoMorphEnd({ top: r.top, left: r.left, width: r.width, height: r.height })
+        requestAnimationFrame(() => setLogoMorphFlying(true))
+      } else {
+        setLogoMorphStart(null)
+      }
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [logoMorphStart, logoMorphEnd, view])
   const [customerName, setCustomerName]   = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
   const [customerNotes, setCustomerNotes] = useState('')
@@ -633,11 +657,13 @@ export default function StoreShell({ store, products, categories = [], initialBc
   }
 
   // ── SPLASH (home page) ──
-  const collectCustomerData = store.template_config?.homePage?.collectCustomerData !== false
+  const hp = store.template_config?.homePage ?? {}
+  const transitionId = hp.transition || 'slide'
+  const collectCustomerData = hp.collectCustomerData !== false
   const customerFields = {
-    name: store.template_config?.homePage?.customerFields?.name !== false,
-    phone: store.template_config?.homePage?.customerFields?.phone !== false,
-    address: store.template_config?.homePage?.customerFields?.address !== false,
+    name: hp.customerFields?.name !== false,
+    phone: hp.customerFields?.phone !== false,
+    address: hp.customerFields?.address !== false,
   }
 
   async function handleSplashStart() {
@@ -660,14 +686,44 @@ export default function StoreShell({ store, products, categories = [], initialBc
       }
       try { localStorage.setItem('lyte-cedula', cedula) } catch {}
     }
+
+    if (transitionId === 'logo-morph' && splashLogoRef.current) {
+      const r = splashLogoRef.current.getBoundingClientRect()
+      setLogoMorphStart({ top: r.top, left: r.left, width: r.width, height: r.height })
+      setSplashLeaving(true)
+      setTimeout(() => { setCatalogEnter(true); setView('catalog') }, 300)
+      return
+    }
+
     setSplashLeaving(true)
     setTimeout(() => { setCatalogEnter(true); setView('catalog') }, 550)
   }
 
-  if (view === 'splash') {
-    const hp = store.template_config?.homePage ?? {}
-    const transitionId = hp.transition || 'slide'
+  const logoShapeRadius: Record<string, string> = { circle: '50%', rounded: '8px', square: '0px' }
+
+  function renderLogoMorphOverlay() {
+    if (!logoMorphStart || !store.logo_url) return null
+    const rect = logoMorphFlying && logoMorphEnd ? logoMorphEnd : logoMorphStart
     return (
+      <img
+        src={store.logo_url}
+        alt=""
+        className={`sf-logo-morph${logoMorphFlying ? ' flying' : ''}`}
+        style={{
+          top: rect.top, left: rect.left, width: rect.width, height: rect.height,
+          borderRadius: logoMorphFlying ? (logoShapeRadius[cfgLogoShape] ?? '8px') : '20px',
+        }}
+        onTransitionEnd={() => {
+          if (logoMorphFlying) { setLogoMorphStart(null); setLogoMorphEnd(null); setLogoMorphFlying(false) }
+        }}
+      />
+    )
+  }
+
+  if (view === 'splash') {
+    return (
+      <>
+      {renderLogoMorphOverlay()}
       <div
         className={`sf-splash-screen sf-trans-${transitionId}${splashLeaving ? ' sf-splash-leaving' : ''}`}
         style={{
@@ -678,7 +734,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
         }}
       >
         <div className="sf-splash-content">
-          {store.logo_url && <img src={store.logo_url} alt={store.name} className="sf-splash-logo" />}
+          {store.logo_url && <img ref={splashLogoRef} src={store.logo_url} alt={store.name} className={`sf-splash-logo${logoMorphStart ? ' sf-splash-logo-hidden' : ''}`} />}
           <h1 className="sf-splash-title">{hp.title || store.name}</h1>
           {hp.subtitle && <p className="sf-splash-sub">{hp.subtitle}</p>}
 
@@ -724,6 +780,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           )}
         </div>
       </div>
+      </>
     )
   }
 
@@ -1777,12 +1834,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
   }
 
   return (
+    <>
+    {renderLogoMorphOverlay()}
     <div className={`sf-page sf-tpl-${tpl} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize} sf-vshape-${cfgVariantShape} sf-eshape-${cfgExtraShape}${catalogEnter ? ` sf-catalog-enter sf-trans-${store.template_config?.homePage?.transition || 'slide'}` : ''}`} style={pageStyle}>
       <div className="sf-topbar">
         <div className="sf-topbar-inner sf-topbar-3col">
           <div className="sf-topbar-slot-left">
             {cfgLogoPosition === 'left' && store.logo_url && (
-              <div className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape} sf-nav-logo-${cfgLogoShape}`} style={{ width: cfgLogoSizePx, height: cfgLogoSizePx }}>
+              <div ref={catalogLogoRef} className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape} sf-nav-logo-${cfgLogoShape}${logoMorphStart ? ' sf-nav-logo-hidden' : ''}`} style={{ width: cfgLogoSizePx, height: cfgLogoSizePx }}>
                 <img src={store.logo_url} alt={store.name} className="sf-nav-logo-img" />
               </div>
             )}
@@ -1792,7 +1851,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           </div>
           <div className="sf-topbar-slot-center">
             {cfgLogoPosition === 'center' && store.logo_url && (
-              <div className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape} sf-nav-logo-${cfgLogoShape}`} style={{ width: cfgLogoSizePx, height: cfgLogoSizePx }}>
+              <div ref={catalogLogoRef} className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape} sf-nav-logo-${cfgLogoShape}${logoMorphStart ? ' sf-nav-logo-hidden' : ''}`} style={{ width: cfgLogoSizePx, height: cfgLogoSizePx }}>
                 <img src={store.logo_url} alt={store.name} className="sf-nav-logo-img" />
               </div>
             )}
@@ -1805,7 +1864,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           </div>
           <div className="sf-topbar-slot-right">
             {cfgLogoPosition === 'right' && store.logo_url && (
-              <div className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape} sf-nav-logo-${cfgLogoShape}`} style={{ width: cfgLogoSizePx, height: cfgLogoSizePx }}>
+              <div ref={catalogLogoRef} className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape} sf-nav-logo-${cfgLogoShape}${logoMorphStart ? ' sf-nav-logo-hidden' : ''}`} style={{ width: cfgLogoSizePx, height: cfgLogoSizePx }}>
                 <img src={store.logo_url} alt={store.name} className="sf-nav-logo-img" />
               </div>
             )}
@@ -2298,5 +2357,6 @@ export default function StoreShell({ store, products, categories = [], initialBc
       )}
 
     </div>
+    </>
   )
 }

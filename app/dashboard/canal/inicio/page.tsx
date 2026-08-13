@@ -55,6 +55,7 @@ const TRANSITIONS = [
   { id: 'flip',     name: 'Voltear',     desc: 'Un giro elegante en 3D' },
   { id: 'blur',     name: 'Enfocar',     desc: 'De borroso a nitido, como una camara' },
   { id: 'bounce',   name: 'Rebote',      desc: 'Un deslizar con un rebote juguetón al final' },
+  { id: 'logo-morph', name: 'Logo', desc: 'Tu logo se desliza y se ubica en el encabezado de tu tienda' },
 ] as const
 
 const BG_PRESETS = ['#0F172A', '#7C3AED', '#111827', '#064E3B', '#7C2D12', '#1E1B4B']
@@ -460,7 +461,12 @@ export default function InicioPage() {
                       className={`cn-trans-card${config.transition === tr.id ? ' selected' : ''}`}
                       onClick={() => set('transition', tr.id)}
                     >
-                      <div className={`cn-trans-demo ${tr.id}`}><div className="cn-trans-demo-box" /></div>
+                      <div className={`cn-trans-demo ${tr.id}`}>
+                        {tr.id === 'logo-morph'
+                          ? <div className="cn-trans-demo-logo" />
+                          : <div className="cn-trans-demo-box" />
+                        }
+                      </div>
                       <div className="cn-trans-name">{tr.name}</div>
                       <div className="cn-trans-desc">{tr.desc}</div>
                     </div>

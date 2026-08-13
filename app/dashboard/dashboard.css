@@ -14,18 +14,16 @@ html, body {
   max-width: 100%;
 }
 
-/* ── FROSTED STATUS BAR STRIP ──
-   No color fill — purely a blur over whatever scrolls beneath. Note:
-   the OS forces white icons here in black-translucent mode, so over
-   light dashboard content they may be hard to read; that's a deliberate
-   tradeoff the user chose over tinting this strip. */
+/* ── STATUS BAR STRIP ──
+   Fully transparent, no blur — content shows through as-is. The OS
+   still forces white icons here in black-translucent mode, so over
+   light dashboard content they may be hard to read; that's a
+   deliberate tradeoff the user chose. */
 .db-statusbar-blur {
   position: fixed;
   top: 0; left: 0; right: 0;
   height: env(safe-area-inset-top);
   background: transparent;
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
   z-index: 60;
   pointer-events: none;
 }

@@ -726,55 +726,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     }
   }
 
-  async function handleSplashStart() {
-    setSplashError('')
-    const cedula = customerCedula.trim()
-
-    if (collectCustomerData) {
-      if (!cedula) { setSplashError('Ingresa tu cedula para continuar'); return }
-      const status = (cedulaStatus === 'found' || cedulaStatus === 'new') ? cedulaStatus : await lookupCedula(cedula)
-      if (status === 'error') return
-      if (status === 'new') {
-        if (customerFields.name && !customerName.trim())   { setSplashError('Ingresa tu nombre para continuar'); return }
-        if (customerFields.phone && !customerPhone.trim()) { setSplashError('Ingresa tu telefono para continuar'); return }
-        if (customerFields.address && !customerAddress.trim() && customerLat === null) {
-          setSplashError('Comparte tu ubicacion o ingresa tu direccion para continuar'); return
-        }
-      }
-
-      fetch('/api/customer-lookup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          store_id: store.id, cedula,
-          name: customerFields.name ? customerName.trim() : null,
-          phone: customerFields.phone ? customerPhone.trim() : null,
-          address: customerFields.address ? (customerAddress.trim() || null) : null,
-        }),
-      }).catch(() => {})
-
-      if (customerFields.address && customerLat !== null) {
-        const locKey = cedula ? `cedula-${cedula}` : customerPhone.replace(/\D/g, '')
-        if (locKey) {
-          try {
-            const raw = localStorage.getItem(`lyte-locs-${locKey}`)
-            const existing: SavedLocation[] = raw ? JSON.parse(raw) : []
-            const loc: SavedLocation = {
-              id: crypto.randomUUID(),
-              label: locationLabel.trim() || customerAddress.trim() || 'Mi ubicacion',
-              address: customerAddress,
-              lat: customerLat, lng: customerLng,
-            }
-            const updated = [...existing, loc]
-            localStorage.setItem(`lyte-locs-${locKey}`, JSON.stringify(updated))
-            setSavedLocations(updated)
-            setSelectedLocId(loc.id)
-          } catch {}
-        }
-      }
-      setShowWelcome(true)
-    }
-
+  function proceedToTransition() {
     if (transitionId === 'logo-morph' && splashLogoRef.current) {
       const r = splashLogoRef.current.getBoundingClientRect()
       setLogoMorphStart({ top: r.top, left: r.left, width: r.width, height: r.height })
@@ -782,9 +734,65 @@ export default function StoreShell({ store, products, categories = [], initialBc
       setTimeout(() => { setCatalogEnter(true); setView('catalog') }, 300)
       return
     }
-
     setSplashLeaving(true)
     setTimeout(() => { setCatalogEnter(true); setView('catalog') }, 550)
+  }
+
+  function enterStore(status: 'found' | 'new') {
+    const cedula = customerCedula.trim()
+
+    if (status === 'new') {
+      if (customerFields.name && !customerName.trim())   { setSplashError('Ingresa tu nombre para continuar'); return }
+      if (customerFields.phone && !customerPhone.trim()) { setSplashError('Ingresa tu telefono para continuar'); return }
+      if (customerFields.address && !customerAddress.trim() && customerLat === null) {
+        setSplashError('Comparte tu ubicacion o ingresa tu direccion para continuar'); return
+      }
+    }
+
+    fetch('/api/customer-lookup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        store_id: store.id, cedula,
+        name: customerFields.name ? customerName.trim() : null,
+        phone: customerFields.phone ? customerPhone.trim() : null,
+        address: customerFields.address ? (customerAddress.trim() || null) : null,
+      }),
+    }).catch(() => {})
+
+    if (customerFields.address && customerLat !== null) {
+      const locKey = cedula ? `cedula-${cedula}` : customerPhone.replace(/\D/g, '')
+      if (locKey) {
+        try {
+          const raw = localStorage.getItem(`lyte-locs-${locKey}`)
+          const existing: SavedLocation[] = raw ? JSON.parse(raw) : []
+          const loc: SavedLocation = {
+            id: crypto.randomUUID(),
+            label: locationLabel.trim() || customerAddress.trim() || 'Mi ubicacion',
+            address: customerAddress,
+            lat: customerLat, lng: customerLng,
+          }
+          const updated = [...existing, loc]
+          localStorage.setItem(`lyte-locs-${locKey}`, JSON.stringify(updated))
+          setSavedLocations(updated)
+          setSelectedLocId(loc.id)
+        } catch {}
+      }
+    }
+    setShowWelcome(true)
+    proceedToTransition()
+  }
+
+  async function handleSplashStart() {
+    setSplashError('')
+    const cedula = customerCedula.trim()
+
+    if (!collectCustomerData) { proceedToTransition(); return }
+
+    if (!cedula) { setSplashError('Ingresa tu cedula para continuar'); return }
+    const status = (cedulaStatus === 'found' || cedulaStatus === 'new') ? cedulaStatus : await lookupCedula(cedula)
+    if (status === 'error') return
+    enterStore(status)
   }
 
   const logoShapeRadius: Record<string, string> = { circle: '50%', rounded: '8px', square: '0px' }
@@ -840,7 +848,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   setCustomerName(''); setCustomerPhone(''); setCustomerAddress('')
                   setLocationState('idle'); setCustomerLat(null); setCustomerLng(null); setLocationLabel('')
                 }}
-                onBlur={e => lookupCedula(e.target.value.trim())}
+                onBlur={async e => {
+                  const val = e.target.value.trim()
+                  if (!val) return
+                  const status = await lookupCedula(val)
+                  if (status === 'found') enterStore('found')
+                }}
               />
               {cedulaStatus === 'found' && <div className="sf-splash-cedula-hint found">Te reconocimos{customerName ? `, ${customerName.split(' ')[0]}` : ''}</div>}
               {cedulaStatus === 'new' && <div className="sf-splash-cedula-hint">Eres nuevo por aqui, completa tus datos</div>}

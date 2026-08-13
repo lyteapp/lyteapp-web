@@ -573,31 +573,35 @@ html, body { overflow-x: hidden; }
 
 .sf-welcome-toast {
   position: fixed;
-  top: calc(env(safe-area-inset-top) + 20px);
-  left: 50%;
+  top: 50%;
+  right: 22px;
   z-index: 200; text-align: center; pointer-events: none;
-  background: rgba(15,23,42,0.94); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 18px; padding: 18px 36px;
+  max-width: min(320px, calc(100vw - 44px)); box-sizing: border-box;
+  background: color-mix(in srgb, var(--sf-accent-color, #7C3AED) 16%, rgba(15,23,42,0.92));
+  border: 1px solid color-mix(in srgb, var(--sf-accent-color, #7C3AED) 45%, transparent);
+  border-radius: 20px; padding: 24px 38px;
   box-shadow: 0 24px 60px rgba(0,0,0,0.35);
-  animation: sfWelcomeIn 0.7s cubic-bezier(0.16,1,0.3,1) both;
+  animation: sfWelcomeIn 0.6s cubic-bezier(0.16,1,0.3,1) both;
 }
-.sf-welcome-toast.leaving { animation: sfWelcomeOut 0.5s ease both; }
+.sf-welcome-toast.leaving { animation: sfWelcomeOut 0.5s cubic-bezier(0.4,0,1,1) both; }
 .sf-welcome-label {
-  font-size: 10px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
-  color: rgba(255,255,255,0.5); margin-bottom: 6px;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--sf-accent-color, #7C3AED); margin-bottom: 8px;
 }
 .sf-welcome-name {
-  font-size: 26px; font-weight: 400; font-style: italic;
-  font-family: var(--font-fraunces), serif; color: white; letter-spacing: -0.01em;
+  font-size: 32px; font-weight: 700; color: white; letter-spacing: -0.02em; line-height: 1.1;
 }
 @keyframes sfWelcomeIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(-14px) scale(0.96); }
-  to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  from { opacity: 0; transform: translateY(-50%) translateX(130%); }
+  to   { opacity: 1; transform: translateY(-50%) translateX(0); }
 }
 @keyframes sfWelcomeOut {
-  from { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
-  to   { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(0.97); }
+  from { opacity: 1; transform: translateY(-50%) translateX(0); }
+  to   { opacity: 0; transform: translateY(-50%) translateX(130%); }
+}
+@media (max-width: 640px) {
+  .sf-welcome-toast { padding: 18px 26px; border-radius: 16px; right: 14px; }
+  .sf-welcome-name { font-size: 26px; }
 }
 .sf-splash-btn {
   background: var(--sf-accent-color, #7C3AED); color: white; border: none;

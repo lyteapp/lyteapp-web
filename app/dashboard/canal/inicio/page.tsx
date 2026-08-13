@@ -12,6 +12,12 @@ interface HomePagePill {
   color: string
 }
 
+interface CustomerFields {
+  name: boolean
+  phone: boolean
+  address: boolean
+}
+
 interface HomePageConfig {
   enabled: boolean
   title: string
@@ -22,6 +28,8 @@ interface HomePageConfig {
   bgColor: string
   pills: HomePagePill[]
   transition: string
+  collectCustomerData: boolean
+  customerFields: CustomerFields
 }
 
 const DEFAULTS: HomePageConfig = {
@@ -34,6 +42,8 @@ const DEFAULTS: HomePageConfig = {
   bgColor: '#0F172A',
   pills: [],
   transition: 'slide',
+  collectCustomerData: true,
+  customerFields: { name: true, phone: true, address: true },
 }
 
 const TRANSITIONS = [
@@ -100,6 +110,15 @@ function SplashPreview({ config, storeName, logoUrl }: { config: HomePageConfig;
             {config.subtitle}
           </div>
         )}
+        {config.collectCustomerData && (
+          <div style={{
+            width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.1)',
+            border: '1px solid rgba(255,255,255,0.2)', borderRadius: 100,
+            padding: '9px 14px', fontSize: 11, color: 'rgba(255,255,255,0.55)', marginBottom: 12,
+          }}>
+            Tu cedula de identidad
+          </div>
+        )}
         <div style={{
           background: config.buttonColor || '#7C3AED', color: 'white', fontSize: 12, fontWeight: 700,
           padding: '11px 28px', borderRadius: 100, boxShadow: '0 8px 20px rgba(0,0,0,0.25)',
@@ -150,7 +169,10 @@ export default function InicioPage() {
         setLogoUrl(data.logo_url ?? null)
         const cfg = (data.template_config ?? {}) as Record<string, unknown>
         setBaseConfig(cfg)
-        if (cfg.homePage) setConfig({ ...DEFAULTS, ...(cfg.homePage as Partial<HomePageConfig>) })
+        if (cfg.homePage) {
+          const hp = cfg.homePage as Partial<HomePageConfig>
+          setConfig({ ...DEFAULTS, ...hp, customerFields: { ...DEFAULTS.customerFields, ...(hp.customerFields ?? {}) } })
+        }
       })
   }, [user])
 
@@ -166,6 +188,10 @@ export default function InicioPage() {
   }
   function removePill(id: string) {
     setConfig(c => ({ ...c, pills: c.pills.filter(p => p.id !== id) }))
+  }
+
+  function setField<K extends keyof CustomerFields>(key: K, value: boolean) {
+    setConfig(c => ({ ...c, customerFields: { ...c.customerFields, [key]: value } }))
   }
 
   async function handleUpload(e: { target: { files: FileList | null } }) {
@@ -221,6 +247,50 @@ export default function InicioPage() {
                   </div>
                   <Toggle checked={config.enabled} onChange={v => set('enabled', v)} />
                 </div>
+              </div>
+            </div>
+
+            <div className="cn-section">
+              <div className="cn-section-head">
+                <div className="cn-section-icon">
+                  <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
+                </div>
+                <div>
+                  <div className="cn-section-title">Datos del cliente</div>
+                  <div className="cn-section-sub">Reconoce clientes por su cedula y autocompleta el checkout</div>
+                </div>
+              </div>
+              <div className="cn-section-body">
+                <div className="cn-toggle-row">
+                  <div className="cn-toggle-info">
+                    <div className="cn-toggle-label">Pedir cedula en la pagina de inicio</div>
+                    <div className="cn-toggle-hint">Si el cliente ya compro antes, sus datos se autocompletan en el checkout</div>
+                  </div>
+                  <Toggle checked={config.collectCustomerData} onChange={v => set('collectCustomerData', v)} />
+                </div>
+                {config.collectCustomerData && (
+                  <>
+                    <div className="cn-label" style={{ marginTop: 18, marginBottom: 4 }}>Datos que se guardan y autocompletan</div>
+                    <div className="cn-toggle-row">
+                      <div className="cn-toggle-info">
+                        <div className="cn-toggle-label">Nombre</div>
+                      </div>
+                      <Toggle checked={config.customerFields.name} onChange={v => setField('name', v)} />
+                    </div>
+                    <div className="cn-toggle-row">
+                      <div className="cn-toggle-info">
+                        <div className="cn-toggle-label">Telefono</div>
+                      </div>
+                      <Toggle checked={config.customerFields.phone} onChange={v => setField('phone', v)} />
+                    </div>
+                    <div className="cn-toggle-row">
+                      <div className="cn-toggle-info">
+                        <div className="cn-toggle-label">Direccion</div>
+                      </div>
+                      <Toggle checked={config.customerFields.address} onChange={v => setField('address', v)} />
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 

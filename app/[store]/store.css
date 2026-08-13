@@ -571,19 +571,34 @@ html, body { overflow-x: hidden; }
 .sf-splash-cedula-hint.found { color: #86EFAC; font-weight: 600; }
 .sf-splash-cedula-hint.error { color: #FCA5A5; font-weight: 600; }
 
-.sf-welcome-banner {
-  display: flex; align-items: center; justify-content: center; gap: 10px;
-  background: color-mix(in srgb, var(--sf-accent-color, #7C3AED) 12%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--sf-accent-color, #7C3AED) 20%, transparent);
-  color: var(--sf-accent-color, #7C3AED);
-  padding: 10px 16px; font-size: 13px; font-weight: 600;
-  animation: sfFadeIn 0.4s ease both;
+.sf-welcome-toast {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 20px);
+  left: 50%;
+  z-index: 200; text-align: center; pointer-events: none;
+  background: rgba(15,23,42,0.94); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 18px; padding: 18px 36px;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+  animation: sfWelcomeIn 0.7s cubic-bezier(0.16,1,0.3,1) both;
 }
-.sf-welcome-banner-close {
-  background: none; border: none; cursor: pointer; color: inherit;
-  opacity: 0.6; padding: 0; display: flex; align-items: center;
+.sf-welcome-toast.leaving { animation: sfWelcomeOut 0.5s ease both; }
+.sf-welcome-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+  color: rgba(255,255,255,0.5); margin-bottom: 6px;
 }
-.sf-welcome-banner-close:hover { opacity: 1; }
+.sf-welcome-name {
+  font-size: 26px; font-weight: 400; font-style: italic;
+  font-family: var(--font-fraunces), serif; color: white; letter-spacing: -0.01em;
+}
+@keyframes sfWelcomeIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-14px) scale(0.96); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+@keyframes sfWelcomeOut {
+  from { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(0.97); }
+}
 .sf-splash-btn {
   background: var(--sf-accent-color, #7C3AED); color: white; border: none;
   cursor: pointer; padding: 15px 40px; border-radius: 100px;

@@ -169,7 +169,15 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [customerCedula, setCustomerCedula] = useState('')
   const [cedulaStatus, setCedulaStatus] = useState<'idle' | 'checking' | 'found' | 'new'>('idle')
   const [showWelcome, setShowWelcome] = useState(false)
+  const [welcomeLeaving, setWelcomeLeaving] = useState(false)
   const [splashError, setSplashError] = useState('')
+
+  useEffect(() => {
+    if (!showWelcome) return
+    const t1 = setTimeout(() => setWelcomeLeaving(true), 2600)
+    const t2 = setTimeout(() => { setShowWelcome(false); setWelcomeLeaving(false) }, 3150)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
+  }, [showWelcome])
 
   useEffect(() => {
     if (!catalogEnter) return
@@ -1942,11 +1950,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
       </div>
 
       {showWelcome && customerName.trim() && (
-        <div className="sf-welcome-banner">
-          <span>Bienvenido, {customerName.trim().split(' ')[0]} 👋</span>
-          <button className="sf-welcome-banner-close" onClick={() => setShowWelcome(false)} aria-label="Cerrar">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path strokeLinecap="round" d="M15 5L5 15M5 5l10 10"/></svg>
-          </button>
+        <div className={`sf-welcome-toast${welcomeLeaving ? ' leaving' : ''}`}>
+          <div className="sf-welcome-label">Bienvenido</div>
+          <div className="sf-welcome-name">{customerName.trim().split(' ')[0]}</div>
         </div>
       )}
 

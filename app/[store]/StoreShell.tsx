@@ -100,6 +100,7 @@ type TemplateConfig = {
     imageUrl?: string | null
     bgColor?: string
     pills?: { id: string; label: string; url: string; color?: string }[]
+    transition?: string
   }
 }
 type Store = {
@@ -650,14 +651,15 @@ export default function StoreShell({ store, products, categories = [], initialBc
       try { localStorage.setItem('lyte-cedula', cedula) } catch {}
     }
     setSplashLeaving(true)
-    setTimeout(() => { setCatalogEnter(true); setView('catalog') }, 500)
+    setTimeout(() => { setCatalogEnter(true); setView('catalog') }, 550)
   }
 
   if (view === 'splash') {
     const hp = store.template_config?.homePage ?? {}
+    const transitionId = hp.transition || 'slide'
     return (
       <div
-        className={`sf-splash-screen${splashLeaving ? ' sf-splash-leaving' : ''}`}
+        className={`sf-splash-screen sf-trans-${transitionId}${splashLeaving ? ' sf-splash-leaving' : ''}`}
         style={{
           ...pageStyle,
           background: hp.imageUrl
@@ -1763,7 +1765,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   }
 
   return (
-    <div className={`sf-page sf-tpl-${tpl} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize} sf-vshape-${cfgVariantShape} sf-eshape-${cfgExtraShape}${catalogEnter ? ' sf-catalog-enter' : ''}`} style={pageStyle}>
+    <div className={`sf-page sf-tpl-${tpl} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize} sf-vshape-${cfgVariantShape} sf-eshape-${cfgExtraShape}${catalogEnter ? ` sf-catalog-enter sf-trans-${store.template_config?.homePage?.transition || 'slide'}` : ''}`} style={pageStyle}>
       <div className="sf-topbar">
         <div className="sf-topbar-inner sf-topbar-3col">
           <div className="sf-topbar-slot-left">

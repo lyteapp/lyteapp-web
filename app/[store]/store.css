@@ -474,17 +474,67 @@ html, body { overflow-x: hidden; }
   animation: sfFadeIn 0.5s ease both;
 }
 .sf-splash-screen.sf-splash-leaving {
-  animation: sfSplashOut 0.5s cubic-bezier(0.4,0,0.2,1) forwards;
+  animation-duration: 0.55s;
+  animation-timing-function: cubic-bezier(0.4,0,0.2,1);
+  animation-fill-mode: forwards;
   pointer-events: none;
 }
-@keyframes sfSplashOut {
-  to { opacity: 0; transform: translateX(-30%); }
+.sf-catalog-enter {
+  animation-duration: 0.55s;
+  animation-timing-function: cubic-bezier(0.4,0,0.2,1);
+  animation-fill-mode: both;
 }
-@keyframes sfCatalogIn {
-  from { opacity: 0; transform: translateX(100%); }
-  to   { opacity: 1; transform: translateX(0); }
+
+/* slide — push, like a native app */
+.sf-splash-leaving.sf-trans-slide { animation-name: sfOutSlide; }
+.sf-catalog-enter.sf-trans-slide  { animation-name: sfInSlide; }
+@keyframes sfOutSlide { to { opacity: 0; transform: translateX(-30%); } }
+@keyframes sfInSlide  { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+
+/* fade — simple cross-fade */
+.sf-splash-leaving.sf-trans-fade { animation-name: sfOutFade; }
+.sf-catalog-enter.sf-trans-fade  { animation-name: sfInFade; }
+@keyframes sfOutFade { to { opacity: 0; } }
+@keyframes sfInFade  { from { opacity: 0; } to { opacity: 1; } }
+
+/* zoom — soft forward zoom */
+.sf-splash-leaving.sf-trans-zoom { animation-name: sfOutZoom; }
+.sf-catalog-enter.sf-trans-zoom  { animation-name: sfInZoom; }
+@keyframes sfOutZoom { to { opacity: 0; transform: scale(1.18); } }
+@keyframes sfInZoom  { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+
+/* slide-up — everything moves upward, like a curtain */
+.sf-splash-leaving.sf-trans-slide-up { animation-name: sfOutUp; }
+.sf-catalog-enter.sf-trans-slide-up  { animation-name: sfInUp; }
+@keyframes sfOutUp { to { opacity: 0; transform: translateY(-100%); } }
+@keyframes sfInUp  { from { opacity: 0; transform: translateY(70px); } to { opacity: 1; transform: translateY(0); } }
+
+/* iris — a circle opens to reveal the store */
+.sf-splash-leaving.sf-trans-iris { animation-name: sfOutFade; }
+.sf-catalog-enter.sf-trans-iris  { animation-name: sfInIris; }
+@keyframes sfInIris { from { clip-path: circle(0% at 50% 50%); } to { clip-path: circle(150% at 50% 50%); } }
+
+/* flip — elegant 3D turn */
+.sf-splash-leaving.sf-trans-flip { animation-name: sfOutFlip; }
+.sf-catalog-enter.sf-trans-flip  { animation-name: sfInFlip; }
+@keyframes sfOutFlip { to { opacity: 0; transform: perspective(1000px) rotateY(80deg); } }
+@keyframes sfInFlip  { from { opacity: 0; transform: perspective(1000px) rotateY(-80deg); } to { opacity: 1; transform: perspective(1000px) rotateY(0deg); } }
+
+/* blur — from out of focus to sharp */
+.sf-splash-leaving.sf-trans-blur { animation-name: sfOutBlur; }
+.sf-catalog-enter.sf-trans-blur  { animation-name: sfInBlur; }
+@keyframes sfOutBlur { to { opacity: 0; filter: blur(14px); } }
+@keyframes sfInBlur  { from { opacity: 0; filter: blur(14px); } to { opacity: 1; filter: blur(0); } }
+
+/* bounce — a slide with a playful overshoot */
+.sf-splash-leaving.sf-trans-bounce { animation-name: sfOutSlide; }
+.sf-catalog-enter.sf-trans-bounce  { animation-name: sfInBounce; }
+@keyframes sfInBounce {
+  0%   { opacity: 0; transform: translateX(100%); }
+  55%  { opacity: 1; transform: translateX(-4%); }
+  75%  { transform: translateX(2%); }
+  100% { transform: translateX(0); }
 }
-.sf-catalog-enter { animation: sfCatalogIn 0.5s cubic-bezier(0.4,0,0.2,1) both; }
 .sf-splash-content { max-width: 420px; }
 .sf-splash-logo {
   width: 72px; height: 72px; border-radius: 20px; object-fit: cover;

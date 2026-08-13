@@ -21,6 +21,7 @@ interface HomePageConfig {
   imageUrl: string | null
   bgColor: string
   pills: HomePagePill[]
+  transition: string
 }
 
 const DEFAULTS: HomePageConfig = {
@@ -32,7 +33,19 @@ const DEFAULTS: HomePageConfig = {
   imageUrl: null,
   bgColor: '#0F172A',
   pills: [],
+  transition: 'slide',
 }
+
+const TRANSITIONS = [
+  { id: 'slide',    name: 'Deslizar',    desc: 'Empuja hacia la tienda, como una app nativa' },
+  { id: 'fade',     name: 'Desvanecer',  desc: 'Se desvanece suavemente hacia la tienda' },
+  { id: 'zoom',     name: 'Acercar',     desc: 'Un zoom suave hacia adelante' },
+  { id: 'slide-up', name: 'Subir',       desc: 'Todo se desliza hacia arriba' },
+  { id: 'iris',     name: 'Apertura',    desc: 'Un circulo se abre revelando la tienda' },
+  { id: 'flip',     name: 'Voltear',     desc: 'Un giro elegante en 3D' },
+  { id: 'blur',     name: 'Enfocar',     desc: 'De borroso a nitido, como una camara' },
+  { id: 'bounce',   name: 'Rebote',      desc: 'Un deslizar con un rebote juguetón al final' },
+] as const
 
 const BG_PRESETS = ['#0F172A', '#7C3AED', '#111827', '#064E3B', '#7C2D12', '#1E1B4B']
 const PILL_COLOR_PRESETS = ['#7C3AED', '#2563EB', '#DC2626', '#D97706', '#059669', '#DB2777', '#0F172A', '#64748B']
@@ -355,6 +368,33 @@ export default function InicioPage() {
                       <input ref={bgColorRef} type="color" value={config.bgColor} onChange={e => set('bgColor', e.target.value)} />
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="cn-section">
+              <div className="cn-section-head">
+                <div className="cn-section-icon">
+                  <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4.293 15.707a1 1 0 010-1.414L14.586 4H10a1 1 0 110-2h7a1 1 0 011 1v7a1 1 0 11-2 0V5.414L5.707 15.707a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
+                </div>
+                <div>
+                  <div className="cn-section-title">Transicion</div>
+                  <div className="cn-section-sub">Como pasa el cliente de la pagina de inicio a tu tienda</div>
+                </div>
+              </div>
+              <div className="cn-section-body">
+                <div className="cn-trans-grid">
+                  {TRANSITIONS.map(tr => (
+                    <div
+                      key={tr.id}
+                      className={`cn-trans-card${config.transition === tr.id ? ' selected' : ''}`}
+                      onClick={() => set('transition', tr.id)}
+                    >
+                      <div className={`cn-trans-demo ${tr.id}`}><div className="cn-trans-demo-box" /></div>
+                      <div className="cn-trans-name">{tr.name}</div>
+                      <div className="cn-trans-desc">{tr.desc}</div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>

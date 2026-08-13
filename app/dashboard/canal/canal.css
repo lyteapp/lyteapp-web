@@ -240,9 +240,54 @@
   letter-spacing: 0.04em;
 }
 
+/* ── TRANSITION PICKER ── */
+.cn-trans-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+.cn-trans-card {
+  border: 2px solid rgba(15,23,42,0.08); border-radius: 14px;
+  padding: 10px; cursor: pointer; transition: border-color 0.2s;
+  background: white;
+}
+.cn-trans-card:hover { border-color: rgba(124,58,237,0.3); }
+.cn-trans-card.selected { border-color: #7C3AED; }
+.cn-trans-name { font-size: 12px; font-weight: 700; color: #0F172A; margin-bottom: 2px; }
+.cn-trans-desc { font-size: 11px; color: #94A3B8; line-height: 1.4; }
+
+.cn-trans-demo {
+  width: 100%; height: 60px; border-radius: 9px;
+  background: #1E1B4B; position: relative; overflow: hidden;
+  margin-bottom: 8px;
+}
+.cn-trans-demo-box {
+  position: absolute; inset: 8px; border-radius: 6px;
+  background: linear-gradient(135deg,#7C3AED,#A78BFA);
+}
+.cn-trans-demo.slide    .cn-trans-demo-box { animation: cnDemoSlide 1.6s ease-in-out infinite alternate; }
+.cn-trans-demo.fade     .cn-trans-demo-box { animation: cnDemoFade 1.6s ease-in-out infinite alternate; }
+.cn-trans-demo.zoom     .cn-trans-demo-box { animation: cnDemoZoom 1.6s ease-in-out infinite alternate; }
+.cn-trans-demo.slide-up .cn-trans-demo-box { animation: cnDemoUp 1.6s ease-in-out infinite alternate; }
+.cn-trans-demo.iris     .cn-trans-demo-box { animation: cnDemoIris 1.6s ease-in-out infinite alternate; }
+.cn-trans-demo.flip     .cn-trans-demo-box { animation: cnDemoFlip 1.6s ease-in-out infinite alternate; }
+.cn-trans-demo.blur     .cn-trans-demo-box { animation: cnDemoBlur 1.6s ease-in-out infinite alternate; }
+.cn-trans-demo.bounce   .cn-trans-demo-box { animation: cnDemoBounce 1.6s ease-in-out infinite alternate; }
+
+@keyframes cnDemoSlide { from { transform: translateX(-70%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes cnDemoFade  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes cnDemoZoom  { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes cnDemoUp    { from { transform: translateY(60%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes cnDemoIris  { from { clip-path: circle(0% at 50% 50%); } to { clip-path: circle(75% at 50% 50%); } }
+@keyframes cnDemoFlip  { from { transform: perspective(300px) rotateY(80deg); opacity: 0; } to { transform: perspective(300px) rotateY(0deg); opacity: 1; } }
+@keyframes cnDemoBlur  { from { filter: blur(6px); opacity: 0; } to { filter: blur(0); opacity: 1; } }
+@keyframes cnDemoBounce {
+  0%   { transform: translateX(-70%); opacity: 0; }
+  60%  { transform: translateX(6%); opacity: 1; }
+  80%  { transform: translateX(-3%); }
+  100% { transform: translateX(0); }
+}
+
 @media (max-width: 640px) {
   .cn-two-col { grid-template-columns: 1fr; }
   .cn-template-grid { grid-template-columns: 1fr 1fr; }
+  .cn-trans-grid { grid-template-columns: 1fr 1fr; }
 }
 
 /* ── COMANDAS (co-) ── */

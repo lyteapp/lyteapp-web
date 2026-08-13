@@ -14,7 +14,6 @@ interface HomePagePill {
 
 interface CustomerFields {
   name: boolean
-  lastName: boolean
   phone: boolean
   address: boolean
 }
@@ -44,7 +43,7 @@ const DEFAULTS: HomePageConfig = {
   pills: [],
   transition: 'slide',
   collectCustomerData: true,
-  customerFields: { name: true, lastName: true, phone: true, address: true },
+  customerFields: { name: true, phone: true, address: true },
 }
 
 const TRANSITIONS = [
@@ -114,7 +113,7 @@ function SplashPreview({ config, storeName, logoUrl }: { config: HomePageConfig;
         )}
         {config.collectCustomerData && (
           <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
-            {['Tu cedula de identidad', config.customerFields.name && 'Tu nombre', config.customerFields.lastName && 'Tu apellido', config.customerFields.phone && 'Tu telefono', config.customerFields.address && 'Tu direccion']
+            {['Tu cedula de identidad', config.customerFields.name && 'Tu nombre completo', config.customerFields.phone && 'Tu telefono', config.customerFields.address && 'Tu direccion']
               .filter((v): v is string => !!v)
               .map(placeholder => (
                 <div key={placeholder} style={{
@@ -281,15 +280,9 @@ export default function InicioPage() {
                     <div className="cn-label" style={{ marginTop: 18, marginBottom: 4 }}>Datos obligatorios para entrar</div>
                     <div className="cn-toggle-row">
                       <div className="cn-toggle-info">
-                        <div className="cn-toggle-label">Nombre</div>
+                        <div className="cn-toggle-label">Nombre completo</div>
                       </div>
                       <Toggle checked={config.customerFields.name} onChange={v => setField('name', v)} />
-                    </div>
-                    <div className="cn-toggle-row">
-                      <div className="cn-toggle-info">
-                        <div className="cn-toggle-label">Apellido</div>
-                      </div>
-                      <Toggle checked={config.customerFields.lastName} onChange={v => setField('lastName', v)} />
                     </div>
                     <div className="cn-toggle-row">
                       <div className="cn-toggle-info">

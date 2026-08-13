@@ -73,6 +73,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [unlock])
 
   useEffect(() => {
+    // Tint Safari's own toolbar to match the dashboard so it reads as
+    // one continuous surface instead of a different-colored bar.
+    let tag = document.querySelector('meta[name="theme-color"]')
+    const existed = !!tag
+    const prevContent = tag?.getAttribute('content') ?? null
+    if (!tag) {
+      tag = document.createElement('meta')
+      tag.setAttribute('name', 'theme-color')
+      document.head.appendChild(tag)
+    }
+    tag.setAttribute('content', '#F8F7F4')
+    return () => {
+      if (existed) tag!.setAttribute('content', prevContent!)
+      else tag!.remove()
+    }
+  }, [])
+
+  useEffect(() => {
     if (!loading && !user) router.push('/login')
   }, [user, loading, router])
 

@@ -160,6 +160,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
     store.template_config?.homePage?.enabled ? 'splash' : 'catalog'
   )
   const [splashLeaving, setSplashLeaving] = useState(false)
+  const [customerCedula, setCustomerCedula] = useState('')
+  const [cedulaStatus, setCedulaStatus] = useState<'idle' | 'checking' | 'found' | 'new'>('idle')
   const [customerName, setCustomerName]   = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
   const [customerNotes, setCustomerNotes] = useState('')
@@ -254,6 +256,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
         if (name) setCustomerName(name)
         if (phone) setCustomerPhone(phone)
       }
+      const savedCedula = localStorage.getItem('lyte-cedula')
+      if (savedCedula) setCustomerCedula(savedCedula)
     } catch {}
   }, [])
 
@@ -523,6 +527,18 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
       try { localStorage.setItem('lyte-customer', JSON.stringify({ name: customerName.trim(), phone: customerPhone.trim() })) } catch {}
 
+      if (customerCedula.trim()) {
+        fetch('/api/customer-lookup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            store_id: store.id, cedula: customerCedula.trim(),
+            name: customerName.trim(), phone: customerPhone.trim(),
+            address: customerAddress.trim() || null,
+          }),
+        }).catch(() => {})
+      }
+
       await supabase.from('order_items').insert(
         cartItems.map(i => ({
           order_id: newOrderId, product_id: i.productId ?? i.id,
@@ -604,6 +620,30 @@ export default function StoreShell({ store, products, categories = [], initialBc
   }
 
   // ── SPLASH (home page) ──
+  async function handleSplashStart() {
+    const cedula = customerCedula.trim()
+    if (cedula) {
+      setCedulaStatus('checking')
+      try {
+        const res = await fetch(`/api/customer-lookup?store_id=${store.id}&cedula=${encodeURIComponent(cedula)}`)
+        const json = await res.json()
+        if (json.found && json.customer) {
+          if (json.customer.name)    setCustomerName(json.customer.name)
+          if (json.customer.phone)   setCustomerPhone(json.customer.phone)
+          if (json.customer.address) setCustomerAddress(json.customer.address)
+          setCedulaStatus('found')
+        } else {
+          setCedulaStatus('new')
+        }
+      } catch {
+        setCedulaStatus('idle')
+      }
+      try { localStorage.setItem('lyte-cedula', cedula) } catch {}
+    }
+    setSplashLeaving(true)
+    setTimeout(() => setView('catalog'), 480)
+  }
+
   if (view === 'splash') {
     const hp = store.template_config?.homePage ?? {}
     return (
@@ -620,11 +660,26 @@ export default function StoreShell({ store, products, categories = [], initialBc
           {store.logo_url && <img src={store.logo_url} alt={store.name} className="sf-splash-logo" />}
           <h1 className="sf-splash-title">{hp.title || store.name}</h1>
           {hp.subtitle && <p className="sf-splash-sub">{hp.subtitle}</p>}
+
+          <div className="sf-splash-cedula-wrap">
+            <input
+              className="sf-splash-cedula"
+              type="text"
+              inputMode="numeric"
+              placeholder="Tu cedula de identidad"
+              value={customerCedula}
+              onChange={e => { setCustomerCedula(e.target.value); setCedulaStatus('idle') }}
+            />
+            {cedulaStatus === 'found' && <div className="sf-splash-cedula-hint found">Bienvenido de nuevo{customerName ? `, ${customerName.split(' ')[0]}` : ''}</div>}
+            {cedulaStatus === 'new' && <div className="sf-splash-cedula-hint">Guardaremos tus datos para tu proxima visita</div>}
+          </div>
+
           <button
             className="sf-splash-btn"
-            onClick={() => { setSplashLeaving(true); setTimeout(() => setView('catalog'), 480) }}
+            disabled={cedulaStatus === 'checking'}
+            onClick={handleSplashStart}
           >
-            {hp.buttonLabel || 'Empezar'}
+            {cedulaStatus === 'checking' ? 'Buscando...' : (hp.buttonLabel || 'Empezar')}
           </button>
         </div>
       </div>

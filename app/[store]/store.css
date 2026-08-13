@@ -482,6 +482,19 @@ html, body { overflow-x: hidden; }
 }
 .sf-splash-title { font-size: 30px; font-weight: 800; color: white; letter-spacing: -0.03em; margin-bottom: 12px; line-height: 1.15; }
 .sf-splash-sub { font-size: 15px; color: rgba(255,255,255,0.75); line-height: 1.6; margin-bottom: 32px; }
+.sf-splash-cedula-wrap { margin-bottom: 16px; }
+.sf-splash-cedula {
+  width: 100%; box-sizing: border-box;
+  background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 100px; padding: 14px 20px;
+  font-size: 14px; color: white; text-align: center;
+  font-family: var(--font-geist-sans), sans-serif;
+  outline: none; transition: border-color 0.2s, background 0.2s;
+}
+.sf-splash-cedula::placeholder { color: rgba(255,255,255,0.5); }
+.sf-splash-cedula:focus { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.16); }
+.sf-splash-cedula-hint { font-size: 12px; color: rgba(255,255,255,0.65); margin-top: 8px; }
+.sf-splash-cedula-hint.found { color: #86EFAC; font-weight: 600; }
 .sf-splash-btn {
   background: var(--sf-accent-color, #7C3AED); color: white; border: none;
   cursor: pointer; padding: 15px 40px; border-radius: 100px;
@@ -490,8 +503,9 @@ html, body { overflow-x: hidden; }
   transition: transform 0.2s, box-shadow 0.2s, filter 0.2s;
   box-shadow: 0 8px 24px rgba(0,0,0,0.25);
 }
-.sf-splash-btn:hover { transform: translateY(-2px); filter: brightness(1.05); }
-.sf-splash-btn:active { transform: translateY(0) scale(0.97); }
+.sf-splash-btn:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.05); }
+.sf-splash-btn:active:not(:disabled) { transform: translateY(0) scale(0.97); }
+.sf-splash-btn:disabled { opacity: 0.7; cursor: default; }
 
 /* ── CONFIRMATION ── */
 .sf-confirm-screen {

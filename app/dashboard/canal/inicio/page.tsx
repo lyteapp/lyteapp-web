@@ -112,12 +112,18 @@ function SplashPreview({ config, storeName, logoUrl }: { config: HomePageConfig;
           </div>
         )}
         {config.collectCustomerData && (
-          <div style={{
-            width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.1)',
-            border: '1px solid rgba(255,255,255,0.2)', borderRadius: 100,
-            padding: '9px 14px', fontSize: 11, color: 'rgba(255,255,255,0.55)', marginBottom: 12,
-          }}>
-            Tu cedula de identidad
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+            {['Tu cedula de identidad', config.customerFields.name && 'Tu nombre', config.customerFields.phone && 'Tu telefono', config.customerFields.address && 'Tu direccion']
+              .filter((v): v is string => !!v)
+              .map(placeholder => (
+                <div key={placeholder} style={{
+                  width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.1)',
+                  border: '1px solid rgba(255,255,255,0.2)', borderRadius: 100,
+                  padding: '9px 14px', fontSize: 11, color: 'rgba(255,255,255,0.55)',
+                }}>
+                  {placeholder}
+                </div>
+              ))}
           </div>
         )}
         <div style={{
@@ -258,20 +264,20 @@ export default function InicioPage() {
                 </div>
                 <div>
                   <div className="cn-section-title">Datos del cliente</div>
-                  <div className="cn-section-sub">Reconoce clientes por su cedula y autocompleta el checkout</div>
+                  <div className="cn-section-sub">Pide la identidad del cliente antes de dejarlo entrar y autocompleta el checkout</div>
                 </div>
               </div>
               <div className="cn-section-body">
                 <div className="cn-toggle-row">
                   <div className="cn-toggle-info">
-                    <div className="cn-toggle-label">Pedir cedula en la pagina de inicio</div>
-                    <div className="cn-toggle-hint">Si el cliente ya compro antes, sus datos se autocompletan en el checkout</div>
+                    <div className="cn-toggle-label">Pedir datos en la pagina de inicio</div>
+                    <div className="cn-toggle-hint">El cliente debe ingresar su cedula (y los datos de abajo) para poder entrar. Si ya compro antes, se autocompletan solos.</div>
                   </div>
                   <Toggle checked={config.collectCustomerData} onChange={v => set('collectCustomerData', v)} />
                 </div>
                 {config.collectCustomerData && (
                   <>
-                    <div className="cn-label" style={{ marginTop: 18, marginBottom: 4 }}>Datos que se guardan y autocompletan</div>
+                    <div className="cn-label" style={{ marginTop: 18, marginBottom: 4 }}>Datos obligatorios para entrar</div>
                     <div className="cn-toggle-row">
                       <div className="cn-toggle-info">
                         <div className="cn-toggle-label">Nombre</div>

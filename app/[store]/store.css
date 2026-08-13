@@ -569,6 +569,21 @@ html, body { overflow-x: hidden; }
 .sf-splash-cedula:focus { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.16); }
 .sf-splash-cedula-hint { font-size: 12px; color: rgba(255,255,255,0.65); margin-top: 8px; }
 .sf-splash-cedula-hint.found { color: #86EFAC; font-weight: 600; }
+.sf-splash-cedula-hint.error { color: #FCA5A5; font-weight: 600; }
+
+.sf-welcome-banner {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  background: color-mix(in srgb, var(--sf-accent-color, #7C3AED) 12%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--sf-accent-color, #7C3AED) 20%, transparent);
+  color: var(--sf-accent-color, #7C3AED);
+  padding: 10px 16px; font-size: 13px; font-weight: 600;
+  animation: sfFadeIn 0.4s ease both;
+}
+.sf-welcome-banner-close {
+  background: none; border: none; cursor: pointer; color: inherit;
+  opacity: 0.6; padding: 0; display: flex; align-items: center;
+}
+.sf-welcome-banner-close:hover { opacity: 1; }
 .sf-splash-btn {
   background: var(--sf-accent-color, #7C3AED); color: white; border: none;
   cursor: pointer; padding: 15px 40px; border-radius: 100px;

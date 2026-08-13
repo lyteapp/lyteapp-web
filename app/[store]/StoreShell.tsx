@@ -168,6 +168,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [catalogEnter, setCatalogEnter] = useState(false)
   const [customerCedula, setCustomerCedula] = useState('')
   const [cedulaStatus, setCedulaStatus] = useState<'idle' | 'checking' | 'found' | 'new'>('idle')
+  const [showWelcome, setShowWelcome] = useState(false)
+  const [splashError, setSplashError] = useState('')
 
   useEffect(() => {
     if (!catalogEnter) return
@@ -666,25 +668,48 @@ export default function StoreShell({ store, products, categories = [], initialBc
     address: hp.customerFields?.address !== false,
   }
 
-  async function handleSplashStart() {
-    const cedula = collectCustomerData ? customerCedula.trim() : ''
-    if (cedula) {
-      setCedulaStatus('checking')
-      try {
-        const res = await fetch(`/api/customer-lookup?store_id=${store.id}&cedula=${encodeURIComponent(cedula)}`)
-        const json = await res.json()
-        if (json.found && json.customer) {
-          if (customerFields.name && json.customer.name)       setCustomerName(json.customer.name)
-          if (customerFields.phone && json.customer.phone)     setCustomerPhone(json.customer.phone)
-          if (customerFields.address && json.customer.address) setCustomerAddress(json.customer.address)
-          setCedulaStatus('found')
-        } else {
-          setCedulaStatus('new')
-        }
-      } catch {
-        setCedulaStatus('idle')
+  async function lookupCedula(cedula: string) {
+    if (!cedula) return
+    setCedulaStatus('checking')
+    try {
+      const res = await fetch(`/api/customer-lookup?store_id=${store.id}&cedula=${encodeURIComponent(cedula)}`)
+      const json = await res.json()
+      if (json.found && json.customer) {
+        if (customerFields.name && json.customer.name)       setCustomerName(json.customer.name)
+        if (customerFields.phone && json.customer.phone)     setCustomerPhone(json.customer.phone)
+        if (customerFields.address && json.customer.address) setCustomerAddress(json.customer.address)
+        setCedulaStatus('found')
+      } else {
+        setCedulaStatus('new')
       }
+    } catch {
+      setCedulaStatus('idle')
+    }
+  }
+
+  async function handleSplashStart() {
+    setSplashError('')
+    const cedula = customerCedula.trim()
+
+    if (collectCustomerData) {
+      if (!cedula) { setSplashError('Ingresa tu cedula para continuar'); return }
+      if (cedulaStatus === 'idle') await lookupCedula(cedula)
+      if (customerFields.name && !customerName.trim())       { setSplashError('Ingresa tu nombre para continuar'); return }
+      if (customerFields.phone && !customerPhone.trim())     { setSplashError('Ingresa tu telefono para continuar'); return }
+      if (customerFields.address && !customerAddress.trim()) { setSplashError('Ingresa tu direccion para continuar'); return }
+
       try { localStorage.setItem('lyte-cedula', cedula) } catch {}
+      fetch('/api/customer-lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          store_id: store.id, cedula,
+          name: customerFields.name ? customerName.trim() : null,
+          phone: customerFields.phone ? customerPhone.trim() : null,
+          address: customerFields.address ? (customerAddress.trim() || null) : null,
+        }),
+      }).catch(() => {})
+      setShowWelcome(true)
     }
 
     if (transitionId === 'logo-morph' && splashLogoRef.current) {
@@ -747,9 +772,33 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 placeholder="Tu cedula de identidad"
                 value={customerCedula}
                 onChange={e => { setCustomerCedula(e.target.value); setCedulaStatus('idle') }}
+                onBlur={e => lookupCedula(e.target.value.trim())}
               />
-              {cedulaStatus === 'found' && <div className="sf-splash-cedula-hint found">Bienvenido de nuevo{customerName ? `, ${customerName.split(' ')[0]}` : ''}</div>}
+              {cedulaStatus === 'found' && <div className="sf-splash-cedula-hint found">Te reconocimos{customerName ? `, ${customerName.split(' ')[0]}` : ''}</div>}
               {cedulaStatus === 'new' && <div className="sf-splash-cedula-hint">Guardaremos tus datos para tu proxima visita</div>}
+
+              {customerFields.name && (
+                <input
+                  className="sf-splash-cedula" type="text" placeholder="Tu nombre"
+                  style={{ marginTop: 10 }}
+                  value={customerName} onChange={e => setCustomerName(e.target.value)}
+                />
+              )}
+              {customerFields.phone && (
+                <input
+                  className="sf-splash-cedula" type="tel" placeholder="Tu telefono"
+                  style={{ marginTop: 10 }}
+                  value={customerPhone} onChange={e => setCustomerPhone(e.target.value)}
+                />
+              )}
+              {customerFields.address && (
+                <input
+                  className="sf-splash-cedula" type="text" placeholder="Tu direccion"
+                  style={{ marginTop: 10 }}
+                  value={customerAddress} onChange={e => setCustomerAddress(e.target.value)}
+                />
+              )}
+              {splashError && <div className="sf-splash-cedula-hint error">{splashError}</div>}
             </div>
           )}
 
@@ -1886,6 +1935,15 @@ export default function StoreShell({ store, products, categories = [], initialBc
           </div>
         </div>
       </div>
+
+      {showWelcome && customerName.trim() && (
+        <div className="sf-welcome-banner">
+          <span>Bienvenido, {customerName.trim().split(' ')[0]} 👋</span>
+          <button className="sf-welcome-banner-close" onClick={() => setShowWelcome(false)} aria-label="Cerrar">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path strokeLinecap="round" d="M15 5L5 15M5 5l10 10"/></svg>
+          </button>
+        </div>
+      )}
 
       {store.banner_url && tpl !== 'vitrina' && tpl !== 'catalogo' && (
         <div className="sf-banner"><img src={store.banner_url} alt="Banner" className="sf-banner-img" /></div>

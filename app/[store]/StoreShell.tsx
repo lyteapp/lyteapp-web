@@ -310,8 +310,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
           if (phone) setCustomerPhone(phone)
         }
       }
-      const savedCedula = localStorage.getItem('lyte-cedula')
-      if (savedCedula) setCustomerCedula(savedCedula)
+      // The cedula itself is intentionally never remembered on-device — it
+      // must always be typed fresh so the right person's profile loads.
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -722,7 +722,6 @@ export default function StoreShell({ store, products, categories = [], initialBc
         if (customerFields.address && !customerAddress.trim()) { setSplashError('Ingresa tu direccion para continuar'); return }
       }
 
-      try { localStorage.setItem('lyte-cedula', cedula) } catch {}
       fetch('/api/customer-lookup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

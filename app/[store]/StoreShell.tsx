@@ -318,16 +318,24 @@ export default function StoreShell({ store, products, categories = [], initialBc
   }, [])
 
   useEffect(() => {
-    const ph = customerPhone.replace(/\D/g, '')
-    if (!ph) { setSavedLocations([]); setShowNewLoc(true); return }
+    // Keyed by cedula when the cedula system is on (that's the actual
+    // identity the shopper entered with), falling back to phone for
+    // stores without it — never mixing the two, or two different
+    // cedulas sharing a phone (common while testing) would see each
+    // other's saved locations.
+    const key = collectCustomerData && customerCedula.trim()
+      ? `cedula-${customerCedula.trim()}`
+      : customerPhone.replace(/\D/g, '')
+    if (!key) { setSavedLocations([]); setShowNewLoc(true); return }
     try {
-      const raw = localStorage.getItem(`lyte-locs-${ph}`)
+      const raw = localStorage.getItem(`lyte-locs-${key}`)
       const locs: SavedLocation[] = raw ? JSON.parse(raw) : []
       setSavedLocations(locs)
       setSelectedLocId(null)
       setShowNewLoc(locs.length === 0)
     } catch { setSavedLocations([]); setShowNewLoc(true) }
-  }, [customerPhone])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customerPhone, customerCedula])
 
   useEffect(() => {
     try { localStorage.setItem(`cart-${store.slug}`, JSON.stringify(cart)) } catch {}
@@ -746,10 +754,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
       }).catch(() => {})
 
       if (customerFields.address && customerLat !== null) {
-        const ph = customerPhone.replace(/\D/g, '')
-        if (ph) {
+        const locKey = cedula ? `cedula-${cedula}` : customerPhone.replace(/\D/g, '')
+        if (locKey) {
           try {
-            const raw = localStorage.getItem(`lyte-locs-${ph}`)
+            const raw = localStorage.getItem(`lyte-locs-${locKey}`)
             const existing: SavedLocation[] = raw ? JSON.parse(raw) : []
             const loc: SavedLocation = {
               id: crypto.randomUUID(),
@@ -758,7 +766,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
               lat: customerLat, lng: customerLng,
             }
             const updated = [...existing, loc]
-            localStorage.setItem(`lyte-locs-${ph}`, JSON.stringify(updated))
+            localStorage.setItem(`lyte-locs-${locKey}`, JSON.stringify(updated))
             setSavedLocations(updated)
             setSelectedLocId(loc.id)
           } catch {}
@@ -1147,9 +1155,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
                     <button
                       type="button"
                       onClick={() => {
-                        const ph = customerPhone.replace(/\D/g, '')
+                        const locKey = collectCustomerData && customerCedula.trim() ? `cedula-${customerCedula.trim()}` : customerPhone.replace(/\D/g, '')
                         const updated = savedLocations.filter(l => l.id !== loc.id)
-                        try { localStorage.setItem(`lyte-locs-${ph}`, JSON.stringify(updated)) } catch {}
+                        try { localStorage.setItem(`lyte-locs-${locKey}`, JSON.stringify(updated)) } catch {}
                         setSavedLocations(updated)
                         if (selectedLocId === loc.id) {
                           setSelectedLocId(null)
@@ -1275,7 +1283,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   <input type="text" placeholder="Av. Principal, Edificio X, Apto Y" value={customerAddress} onChange={e => setCustomerAddress(e.target.value)} />
                 </div>
 
-                {!showSavePrompt && customerPhone.replace(/\D/g, '') && (customerLat || customerAddress.trim()) && (
+                {!showSavePrompt && ((collectCustomerData && customerCedula.trim()) || customerPhone.replace(/\D/g, '')) && (customerLat || customerAddress.trim()) && (
                   <button type="button" onClick={() => setShowSavePrompt(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#7C3AED', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, padding: 0, alignSelf: 'flex-start' }}>
                     <svg viewBox="0 0 20 20" fill="currentColor" width="12" height="12">
                       <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
@@ -1295,8 +1303,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
                     <button
                       type="button"
                       onClick={() => {
-                        const ph = customerPhone.replace(/\D/g, '')
-                        if (!ph) return
+                        const locKey = collectCustomerData && customerCedula.trim() ? `cedula-${customerCedula.trim()}` : customerPhone.replace(/\D/g, '')
+                        if (!locKey) return
                         const loc: SavedLocation = {
                           id: crypto.randomUUID(),
                           label: newLocLabel.trim() || customerAddress.trim() || 'Mi ubicacion',
@@ -1305,7 +1313,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                           lng: customerLng,
                         }
                         const updated = [...savedLocations, loc]
-                        try { localStorage.setItem(`lyte-locs-${ph}`, JSON.stringify(updated)) } catch {}
+                        try { localStorage.setItem(`lyte-locs-${locKey}`, JSON.stringify(updated)) } catch {}
                         setSavedLocations(updated)
                         setSelectedLocId(loc.id)
                         setShowNewLoc(false)

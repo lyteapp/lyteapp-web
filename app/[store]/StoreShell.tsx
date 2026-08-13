@@ -103,6 +103,8 @@ type TemplateConfig = {
     transition?: string
     collectCustomerData?: boolean
     customerFields?: { name?: boolean; phone?: boolean; address?: boolean }
+    inactivityTimeout?: { enabled?: boolean; minutes?: number }
+    orderReturnTimeout?: { enabled?: boolean; seconds?: number }
   }
 }
 type Store = {
@@ -695,6 +697,49 @@ export default function StoreShell({ store, products, categories = [], initialBc
     phone: hp.customerFields?.phone !== false,
     address: hp.customerFields?.address !== false,
   }
+
+  // Kiosk-style reset: clears the session and sends the screen back to the
+  // home page (or the catalog, if this store doesn't use one), ready for
+  // the next customer. Used by both the inactivity and post-order timers.
+  function resetToHome() {
+    setCart({})
+    setCustomerName(''); setCustomerPhone(''); setCustomerAddress(''); setCustomerNotes('')
+    setCustomerCedula(''); setCedulaStatus('idle')
+    setSelectedPayment(''); setPaymentFreeText('')
+    setDeliveryTrackId(''); setPickupTrackId('')
+    setLocationState('idle'); setCustomerLat(null); setCustomerLng(null); setLocationLabel('')
+    setPaymentProofFile(null); setPaymentProofPreview(null)
+    setOrderId(''); setError(''); setSplashError('')
+    setShowWelcome(false); setSplashLeaving(false); setCatalogEnter(false)
+    setView(hp.enabled ? 'splash' : 'catalog')
+  }
+
+  // Reset after N minutes of no interaction (tap/click/scroll/key), so the
+  // screen frees up for the next customer if someone walks away mid-browse.
+  useEffect(() => {
+    const cfg = hp.inactivityTimeout
+    if (!cfg?.enabled || !cfg.minutes || view === 'splash') return
+    let timer: ReturnType<typeof setTimeout>
+    const bump = () => {
+      clearTimeout(timer)
+      timer = setTimeout(() => resetToHome(), cfg.minutes! * 60000)
+    }
+    const events: (keyof WindowEventMap)[] = ['mousedown', 'touchstart', 'keydown', 'scroll']
+    events.forEach(ev => window.addEventListener(ev, bump))
+    bump()
+    return () => { clearTimeout(timer); events.forEach(ev => window.removeEventListener(ev, bump)) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, hp.inactivityTimeout?.enabled, hp.inactivityTimeout?.minutes])
+
+  // Reset N seconds after an order is confirmed, so a kiosk hands itself
+  // back to the home page instead of sitting on the confirmation screen.
+  useEffect(() => {
+    const cfg = hp.orderReturnTimeout
+    if (view !== 'confirmed' || !cfg?.enabled || !cfg.seconds) return
+    const t = setTimeout(() => resetToHome(), cfg.seconds * 1000)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, hp.orderReturnTimeout?.enabled, hp.orderReturnTimeout?.seconds])
 
   type CedulaLookupResult = {
     status: 'found' | 'new' | 'error'

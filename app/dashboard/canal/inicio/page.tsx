@@ -18,6 +18,16 @@ interface CustomerFields {
   address: boolean
 }
 
+interface InactivityTimeout {
+  enabled: boolean
+  minutes: number
+}
+
+interface OrderReturnTimeout {
+  enabled: boolean
+  seconds: number
+}
+
 interface HomePageConfig {
   enabled: boolean
   title: string
@@ -30,6 +40,8 @@ interface HomePageConfig {
   transition: string
   collectCustomerData: boolean
   customerFields: CustomerFields
+  inactivityTimeout: InactivityTimeout
+  orderReturnTimeout: OrderReturnTimeout
 }
 
 const DEFAULTS: HomePageConfig = {
@@ -44,6 +56,8 @@ const DEFAULTS: HomePageConfig = {
   transition: 'slide',
   collectCustomerData: true,
   customerFields: { name: true, phone: true, address: true },
+  inactivityTimeout: { enabled: false, minutes: 3 },
+  orderReturnTimeout: { enabled: false, seconds: 15 },
 }
 
 const TRANSITIONS = [
@@ -178,7 +192,12 @@ export default function InicioPage() {
         setBaseConfig(cfg)
         if (cfg.homePage) {
           const hp = cfg.homePage as Partial<HomePageConfig>
-          setConfig({ ...DEFAULTS, ...hp, customerFields: { ...DEFAULTS.customerFields, ...(hp.customerFields ?? {}) } })
+          setConfig({
+            ...DEFAULTS, ...hp,
+            customerFields: { ...DEFAULTS.customerFields, ...(hp.customerFields ?? {}) },
+            inactivityTimeout: { ...DEFAULTS.inactivityTimeout, ...(hp.inactivityTimeout ?? {}) },
+            orderReturnTimeout: { ...DEFAULTS.orderReturnTimeout, ...(hp.orderReturnTimeout ?? {}) },
+          })
         }
       })
   }, [user])
@@ -199,6 +218,13 @@ export default function InicioPage() {
 
   function setField<K extends keyof CustomerFields>(key: K, value: boolean) {
     setConfig(c => ({ ...c, customerFields: { ...c.customerFields, [key]: value } }))
+  }
+
+  function setInactivity<K extends keyof InactivityTimeout>(key: K, value: InactivityTimeout[K]) {
+    setConfig(c => ({ ...c, inactivityTimeout: { ...c.inactivityTimeout, [key]: value } }))
+  }
+  function setOrderReturn<K extends keyof OrderReturnTimeout>(key: K, value: OrderReturnTimeout[K]) {
+    setConfig(c => ({ ...c, orderReturnTimeout: { ...c.orderReturnTimeout, [key]: value } }))
   }
 
   async function handleUpload(e: { target: { files: FileList | null } }) {
@@ -478,6 +504,55 @@ export default function InicioPage() {
                     </div>
                   ))}
                 </div>
+              </div>
+            </div>
+
+            <div className="cn-section">
+              <div className="cn-section-head">
+                <div className="cn-section-icon">
+                  <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" /></svg>
+                </div>
+                <div>
+                  <div className="cn-section-title">Reinicio automatico</div>
+                  <div className="cn-section-sub">Util para tablets o kioscos: regresa solo a la pagina de inicio para el siguiente cliente</div>
+                </div>
+              </div>
+              <div className="cn-section-body">
+                <div className="cn-toggle-row">
+                  <div className="cn-toggle-info">
+                    <div className="cn-toggle-label">Volver a inicio por inactividad</div>
+                    <div className="cn-toggle-hint">Si el cliente no toca la pantalla por un tiempo, regresa a la pagina de inicio</div>
+                  </div>
+                  <Toggle checked={config.inactivityTimeout.enabled} onChange={v => setInactivity('enabled', v)} />
+                </div>
+                {config.inactivityTimeout.enabled && (
+                  <div className="cn-field" style={{ maxWidth: 200, marginTop: 4 }}>
+                    <div className="cn-label">Minutos de inactividad</div>
+                    <input
+                      className="cn-input" type="number" min={1} max={60}
+                      value={config.inactivityTimeout.minutes}
+                      onChange={e => setInactivity('minutes', Math.max(1, Number(e.target.value) || 1))}
+                    />
+                  </div>
+                )}
+
+                <div className="cn-toggle-row">
+                  <div className="cn-toggle-info">
+                    <div className="cn-toggle-label">Volver a inicio despues de confirmar el pedido</div>
+                    <div className="cn-toggle-hint">Una vez el pedido se envia a cocina, regresa a la pagina de inicio automaticamente</div>
+                  </div>
+                  <Toggle checked={config.orderReturnTimeout.enabled} onChange={v => setOrderReturn('enabled', v)} />
+                </div>
+                {config.orderReturnTimeout.enabled && (
+                  <div className="cn-field" style={{ maxWidth: 200, marginTop: 4, marginBottom: 0 }}>
+                    <div className="cn-label">Segundos de espera</div>
+                    <input
+                      className="cn-input" type="number" min={3} max={300}
+                      value={config.orderReturnTimeout.seconds}
+                      onChange={e => setOrderReturn('seconds', Math.max(3, Number(e.target.value) || 3))}
+                    />
+                  </div>
+                )}
               </div>
             </div>
 

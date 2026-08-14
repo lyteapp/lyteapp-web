@@ -261,6 +261,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     }
     setCart(next)
     setShowReorder(false)
+    setView('checkout')
   }
   const [selectedPayment, setSelectedPayment]   = useState('')
   const [paymentFreeText, setPaymentFreeText]   = useState('')

@@ -209,6 +209,17 @@
 .cn-pill-btn:hover { border-color: rgba(124,58,237,0.3); color: #7C3AED; }
 .cn-pill-btn.selected { background: #7C3AED; color: white; border-color: #7C3AED; }
 
+.cn-preview-tabs {
+  display: flex; gap: 4px; background: #F1F0EC; border-radius: 10px; padding: 3px;
+}
+.cn-preview-tab {
+  font-size: 12px; font-weight: 600; padding: 7px 14px; border-radius: 8px;
+  border: none; background: transparent; color: #64748B; cursor: pointer;
+  font-family: var(--font-geist-sans), sans-serif; transition: all 0.15s;
+}
+.cn-preview-tab:hover { color: #0F172A; }
+.cn-preview-tab.active { background: white; color: #0F172A; box-shadow: 0 1px 4px rgba(15,23,42,0.12); }
+
 /* ── ACTIONS ── */
 .cn-actions { display: flex; align-items: center; gap: 12px; margin-top: 24px; }
 .cn-save-btn {

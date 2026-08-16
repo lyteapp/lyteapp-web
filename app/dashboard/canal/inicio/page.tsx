@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../../lib/auth'
-import { REVEAL_FONTS } from '../../../lib/revealFonts'
+import { REVEAL_FONTS, revealFontStack, loadRevealFont } from '../../../lib/revealFonts'
 import '../canal.css'
 
 interface HomePagePill {
@@ -310,6 +310,84 @@ function SplashPreview({
   )
 }
 
+const REVEAL_PREVIEW_NAME = 'Ana'
+
+function RevealPreview({ config, storeName }: { config: HomePageConfig; storeName: string }) {
+  const rv = config.reveal
+  const font = revealFontStack(rv.fontFamily)
+  const letters = REVEAL_PREVIEW_NAME.split('')
+
+  useEffect(() => { loadRevealFont(rv.fontFamily) }, [rv.fontFamily])
+
+  return (
+    <div
+      style={{
+        width: 380, flexShrink: 0,
+        border: '10px solid #1E1E2E', borderRadius: 44,
+        boxShadow: '0 30px 80px rgba(0,0,0,0.3)',
+        overflow: 'hidden', aspectRatio: '380/780',
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        position: 'relative', textAlign: 'center', padding: '40px 24px',
+        background: rv.bgColor || '#111111',
+      }}
+    >
+      <div style={{ position: 'absolute', top: 14, left: 26, right: 26, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: 'white' }}>9:41</span>
+        <span style={{ fontSize: 12, color: 'white' }}>●●●</span>
+      </div>
+
+      <div
+        style={{
+          fontFamily: font ?? "var(--font-fraunces), serif", fontStyle: 'italic', fontSize: 20,
+          color: `color-mix(in srgb, ${rv.accentColor || '#A8A196'} 80%, white 20%)`,
+          marginBottom: 22,
+        }}
+      >
+        {rv.greeting || 'Bienvenido'}
+      </div>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.02em', marginBottom: 22 }}>
+        {letters.map((char, i) => (
+          <span
+            key={i}
+            style={{
+              display: 'inline-block', whiteSpace: 'pre',
+              fontFamily: font ?? "var(--font-fraunces), serif", fontWeight: 500,
+              fontSize: 56, lineHeight: 1, color: rv.nameColor || '#FAF9F7',
+            }}
+          >
+            {char}
+          </span>
+        ))}
+      </div>
+
+      <div style={{
+        width: 64, height: 1, marginBottom: 22,
+        background: `color-mix(in srgb, ${rv.accentColor || '#A8A196'} 80%, black 20%)`,
+      }} />
+
+      <div style={{
+        fontFamily: font ?? "var(--font-geist-sans), sans-serif", fontSize: 15, letterSpacing: '0.14em',
+        textTransform: 'uppercase', color: rv.accentColor || '#A8A196',
+      }}>
+        {rv.subtitlePrefix || 'a'} {storeName || 'tu tienda'}
+      </div>
+
+      {rv.showSkip && (
+        <div style={{
+          position: 'absolute', bottom: 32, right: 36,
+          fontFamily: font ?? "var(--font-geist-sans), sans-serif", fontSize: 12,
+          letterSpacing: '0.08em', textTransform: 'uppercase',
+          color: `color-mix(in srgb, ${rv.accentColor || '#A8A196'} 85%, black 15%)`,
+        }}>
+          {rv.skipLabel || 'Saltar →'}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function InicioPage() {
   const { user } = useAuth()
   const [config, setConfig] = useState<HomePageConfig>(DEFAULTS)
@@ -330,6 +408,7 @@ export default function InicioPage() {
   const revealAccentColorRef = useRef<HTMLInputElement>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [selectedEl, setSelectedEl] = useState<SelectableId | null>(null)
+  const [previewView, setPreviewView] = useState<'splash' | 'reveal'>('splash')
 
   useEffect(() => {
     if (!user) return
@@ -425,13 +504,31 @@ export default function InicioPage() {
 
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, position: 'sticky', top: 24, padding: '4px 24px 24px 0' }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-            Vista previa · toca un elemento y arrastra su esquina para redimensionar
+            {previewView === 'splash'
+              ? 'Vista previa · toca un elemento y arrastra su esquina para redimensionar'
+              : 'Vista previa de la bienvenida animada'}
           </div>
-          <SplashPreview
-            config={config} storeName={storeName} logoUrl={logoUrl}
-            selected={selectedEl} onSelect={setSelectedEl}
-            onResize={setElementSize}
-          />
+
+          {config.transition === 'reveal' && (
+            <div className="cn-preview-tabs" onClick={e => e.stopPropagation()}>
+              <button type="button" className={`cn-preview-tab${previewView === 'splash' ? ' active' : ''}`} onClick={() => setPreviewView('splash')}>
+                Pantalla de inicio
+              </button>
+              <button type="button" className={`cn-preview-tab${previewView === 'reveal' ? ' active' : ''}`} onClick={() => setPreviewView('reveal')}>
+                Bienvenida animada
+              </button>
+            </div>
+          )}
+
+          {previewView === 'reveal' && config.transition === 'reveal' ? (
+            <RevealPreview config={config} storeName={storeName} />
+          ) : (
+            <SplashPreview
+              config={config} storeName={storeName} logoUrl={logoUrl}
+              selected={selectedEl} onSelect={setSelectedEl}
+              onResize={setElementSize}
+            />
+          )}
         </div>
 
         <button

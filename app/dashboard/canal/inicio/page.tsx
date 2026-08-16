@@ -58,6 +58,7 @@ interface RevealConfig {
   fontFamily: string
   seconds: number
   showSkip: boolean
+  logoInsteadOfText: boolean
 }
 
 interface HomePageConfig {
@@ -112,6 +113,7 @@ const DEFAULTS: HomePageConfig = {
     fontFamily: 'default',
     seconds: 3.2,
     showSkip: true,
+    logoInsteadOfText: false,
   },
   elementSizes: { logo: 72, title: 30, subtitle: 15, fields: 14 },
   images: [],
@@ -460,7 +462,7 @@ function SplashPreview({
 
 const REVEAL_PREVIEW_NAME = 'Ana'
 
-function RevealPreview({ config, storeName }: { config: HomePageConfig; storeName: string }) {
+function RevealPreview({ config, storeName, logoUrl }: { config: HomePageConfig; storeName: string; logoUrl: string | null }) {
   const rv = config.reveal
   const font = revealFontStack(rv.fontFamily)
   const letters = REVEAL_PREVIEW_NAME.split('')
@@ -515,12 +517,16 @@ function RevealPreview({ config, storeName }: { config: HomePageConfig; storeNam
         background: `color-mix(in srgb, ${rv.accentColor || '#A8A196'} 80%, black 20%)`,
       }} />
 
-      <div style={{
-        fontFamily: font ?? "var(--font-geist-sans), sans-serif", fontSize: 15, letterSpacing: '0.14em',
-        textTransform: 'uppercase', color: rv.accentColor || '#A8A196',
-      }}>
-        {rv.subtitlePrefix || 'a'} {storeName || 'tu tienda'}
-      </div>
+      {rv.logoInsteadOfText && logoUrl ? (
+        <img src={logoUrl} alt="" style={{ height: 32, width: 'auto', maxWidth: 140, objectFit: 'contain' }} />
+      ) : (
+        <div style={{
+          fontFamily: font ?? "var(--font-geist-sans), sans-serif", fontSize: 15, letterSpacing: '0.14em',
+          textTransform: 'uppercase', color: rv.accentColor || '#A8A196',
+        }}>
+          {rv.subtitlePrefix || 'a'} {storeName || 'tu tienda'}
+        </div>
+      )}
 
       {rv.showSkip && (
         <div style={{
@@ -695,7 +701,7 @@ export default function InicioPage() {
           )}
 
           {previewView === 'reveal' && config.transition === 'reveal' ? (
-            <RevealPreview config={config} storeName={storeName} />
+            <RevealPreview config={config} storeName={storeName} logoUrl={logoUrl} />
           ) : (
             <SplashPreview
               config={config} storeName={storeName} logoUrl={logoUrl}
@@ -1121,12 +1127,24 @@ export default function InicioPage() {
                     <input className="cn-input" value={config.reveal.greeting} onChange={e => setReveal('greeting', e.target.value)}
                       placeholder="Bienvenido" maxLength={30} />
                   </div>
-                  <div className="cn-two-col">
-                    <div className="cn-field">
-                      <div className="cn-label">Antes del nombre de tu tienda</div>
-                      <input className="cn-input" value={config.reveal.subtitlePrefix} onChange={e => setReveal('subtitlePrefix', e.target.value)}
-                        placeholder="a" maxLength={20} />
+                  {logoUrl && (
+                    <div className="cn-toggle-row">
+                      <div className="cn-toggle-info">
+                        <div className="cn-toggle-label">Mostrar el logo en vez del texto</div>
+                        <div className="cn-toggle-hint">Reemplaza &quot;{config.reveal.subtitlePrefix || 'a'} {storeName}&quot; por el logotipo de tu tienda</div>
+                      </div>
+                      <Toggle checked={config.reveal.logoInsteadOfText} onChange={v => setReveal('logoInsteadOfText', v)} />
                     </div>
+                  )}
+
+                  <div className="cn-two-col">
+                    {!config.reveal.logoInsteadOfText && (
+                      <div className="cn-field">
+                        <div className="cn-label">Antes del nombre de tu tienda</div>
+                        <input className="cn-input" value={config.reveal.subtitlePrefix} onChange={e => setReveal('subtitlePrefix', e.target.value)}
+                          placeholder="a" maxLength={20} />
+                      </div>
+                    )}
                     <div className="cn-field">
                       <div className="cn-label">Texto del boton de saltar</div>
                       <input className="cn-input" value={config.reveal.skipLabel} onChange={e => setReveal('skipLabel', e.target.value)}

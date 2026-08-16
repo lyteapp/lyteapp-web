@@ -738,6 +738,10 @@ html, body { overflow-x: hidden; }
   text-transform: uppercase; color: var(--sf-reveal-accent-color, #A8A196);
   opacity: 0; animation: sfRevealFade 0.6s ease both;
 }
+.sf-reveal-logo {
+  height: 32px; width: auto; max-width: 160px; object-fit: contain;
+  opacity: 0; animation: sfRevealFade 0.6s ease both;
+}
 .sf-reveal-skip {
   position: absolute; bottom: calc(env(safe-area-inset-bottom) + 32px); right: 36px;
   background: none; border: none; cursor: pointer;

@@ -125,6 +125,7 @@ type TemplateConfig = {
       fontFamily?: string
       seconds?: number
       showSkip?: boolean
+      logoInsteadOfText?: boolean
     }
   }
 }
@@ -1147,7 +1148,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
             </div>
           )}
           <div className="sf-reveal-line" style={{ animationDelay: `${revealBaseDelay + 0.15}s` }} />
-          <div className="sf-reveal-sub" style={{ animationDelay: `${revealBaseDelay + 0.35}s` }}>{rv.subtitlePrefix || 'a'} {store.name}</div>
+          {rv.logoInsteadOfText && store.logo_url ? (
+            <img
+              src={store.logo_url} alt={store.name} className="sf-reveal-logo"
+              style={{ animationDelay: `${revealBaseDelay + 0.35}s` }}
+            />
+          ) : (
+            <div className="sf-reveal-sub" style={{ animationDelay: `${revealBaseDelay + 0.35}s` }}>{rv.subtitlePrefix || 'a'} {store.name}</div>
+          )}
         </div>
         {revealShowSkip && (
           <button className="sf-reveal-skip" onClick={finishReveal}>{rv.skipLabel || 'Saltar →'}</button>

@@ -112,6 +112,8 @@ type TemplateConfig = {
     inactivityTimeout?: { enabled?: boolean; minutes?: number }
     orderReturnTimeout?: { enabled?: boolean; seconds?: number }
     enableReorder?: boolean
+    revealSeconds?: number
+    revealShowSkip?: boolean
   }
 }
 type Store = {
@@ -170,9 +172,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const t = useT()
   const router = useRouter()
   const [cart, setCart]                   = useState<Record<string, CartItem>>({})
-  const [view, setView]                   = useState<'catalog' | 'checkout' | 'confirmed' | 'splash'>(() =>
+  const [view, setView]                   = useState<'catalog' | 'checkout' | 'confirmed' | 'splash' | 'reveal'>(() =>
     store.template_config?.homePage?.enabled ? 'splash' : 'catalog'
   )
+  const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [splashLeaving, setSplashLeaving] = useState(false)
   const [catalogEnter, setCatalogEnter] = useState(false)
   const [customerCedula, setCustomerCedula] = useState('')
@@ -191,6 +194,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
     const t2 = setTimeout(() => { setShowWelcome(false); setWelcomeLeaving(false) }, 3150)
     return () => { clearTimeout(t1); clearTimeout(t2) }
   }, [showWelcome])
+
+  useEffect(() => {
+    if (view !== 'reveal') return
+    const seconds = store.template_config?.homePage?.revealSeconds ?? 3.2
+    revealTimerRef.current = setTimeout(() => finishReveal(), seconds * 1000)
+    return () => { if (revealTimerRef.current) clearTimeout(revealTimerRef.current) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view])
 
   useEffect(() => {
     if (!catalogEnter) return
@@ -837,8 +848,19 @@ export default function StoreShell({ store, products, categories = [], initialBc
       setTimeout(() => { setCatalogEnter(true); setView('catalog') }, 300)
       return
     }
+    if (transitionId === 'reveal') {
+      setSplashLeaving(true)
+      setTimeout(() => setView('reveal'), 350)
+      return
+    }
     setSplashLeaving(true)
     setTimeout(() => { setCatalogEnter(true); setView('catalog') }, 550)
+  }
+
+  function finishReveal() {
+    if (revealTimerRef.current) clearTimeout(revealTimerRef.current)
+    setCatalogEnter(true)
+    setView('catalog')
   }
 
   function enterStore(status: 'found' | 'new', foundCustomer?: CedulaLookupResult['customer']) {
@@ -1060,6 +1082,36 @@ export default function StoreShell({ store, products, categories = [], initialBc
         </div>
       </div>
       </>
+    )
+  }
+
+  // ── REVEAL (animated name welcome, "reveal" transition only) ──
+  if (view === 'reveal') {
+    const revealName = customerName.trim().split(' ')[0] || ''
+    const revealLetters = revealName.split('').map((char, i) => ({
+      char: char === ' ' ? ' ' : char,
+      delay: 0.35 + i * 0.045,
+    }))
+    const revealBaseDelay = 0.35 + revealLetters.length * 0.045
+    const revealShowSkip = hp.revealShowSkip !== false
+    return (
+      <div className="sf-reveal-screen">
+        <div className="sf-reveal-content">
+          <div className="sf-reveal-greeting">Bienvenido</div>
+          {revealLetters.length > 0 && (
+            <div className="sf-reveal-letters">
+              {revealLetters.map((l, i) => (
+                <span key={i} className="sf-reveal-letter" style={{ animationDelay: `${l.delay}s` }}>{l.char}</span>
+              ))}
+            </div>
+          )}
+          <div className="sf-reveal-line" style={{ animationDelay: `${revealBaseDelay + 0.15}s` }} />
+          <div className="sf-reveal-sub" style={{ animationDelay: `${revealBaseDelay + 0.35}s` }}>a {store.name}</div>
+        </div>
+        {revealShowSkip && (
+          <button className="sf-reveal-skip" onClick={finishReveal}>Saltar →</button>
+        )}
+      </div>
     )
   }
 

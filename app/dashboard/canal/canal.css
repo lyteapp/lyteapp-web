@@ -294,6 +294,17 @@
   55%, 100% { top: 8px; left: 8px; transform: translate(0,0) scale(0.7); border-radius: 4px; }
 }
 
+.cn-trans-demo.reveal { background: #111111; }
+.cn-trans-demo-letters { display: flex; align-items: flex-end; gap: 3px; height: 20px; }
+.cn-trans-demo-letters span {
+  display: block; width: 4px; height: 16px; border-radius: 2px;
+  background: #f5f0e8; animation: cnDemoLetterUp 1.6s ease-in-out infinite;
+}
+@keyframes cnDemoLetterUp {
+  0%, 100% { opacity: 0; transform: translateY(6px); }
+  30%, 70% { opacity: 1; transform: translateY(0); }
+}
+
 /* ── COLLAPSIBLE EDITOR SIDEBAR ── */
 .cn-sidebar-toggle {
   position: sticky; top: 24px;

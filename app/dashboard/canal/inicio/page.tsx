@@ -55,6 +55,8 @@ interface HomePageConfig {
   inactivityTimeout: InactivityTimeout
   orderReturnTimeout: OrderReturnTimeout
   enableReorder: boolean
+  revealSeconds: number
+  revealShowSkip: boolean
   elementSizes: ElementSizes
 }
 
@@ -76,6 +78,8 @@ const DEFAULTS: HomePageConfig = {
   inactivityTimeout: { enabled: false, minutes: 3 },
   orderReturnTimeout: { enabled: false, seconds: 15 },
   enableReorder: false,
+  revealSeconds: 3.2,
+  revealShowSkip: true,
   elementSizes: { logo: 72, title: 30, subtitle: 15, fields: 14 },
 }
 
@@ -89,6 +93,7 @@ const TRANSITIONS = [
   { id: 'blur',     name: 'Enfocar',     desc: 'De borroso a nitido, como una camara' },
   { id: 'bounce',   name: 'Rebote',      desc: 'Un deslizar con un rebote juguetón al final' },
   { id: 'logo-morph', name: 'Logo', desc: 'Tu logo se desliza y se ubica en el encabezado de tu tienda' },
+  { id: 'reveal', name: 'Bienvenida animada', desc: 'Pantalla negra elegante con el nombre del cliente letra por letra' },
 ] as const
 
 const BG_PRESETS = ['#0F172A', '#7C3AED', '#111827', '#064E3B', '#7C2D12', '#1E1B4B']
@@ -714,6 +719,12 @@ export default function InicioPage() {
                       <div className={`cn-trans-demo ${tr.id}`}>
                         {tr.id === 'logo-morph'
                           ? <div className="cn-trans-demo-logo" />
+                          : tr.id === 'reveal'
+                          ? (
+                            <div className="cn-trans-demo-letters">
+                              {[0, 1, 2, 3].map(i => <span key={i} style={{ animationDelay: `${i * 0.12}s` }} />)}
+                            </div>
+                          )
                           : <div className="cn-trans-demo-box" />
                         }
                       </div>
@@ -722,6 +733,27 @@ export default function InicioPage() {
                     </div>
                   ))}
                 </div>
+
+                {config.transition === 'reveal' && (
+                  <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    <div className="cn-field" style={{ marginBottom: 0 }}>
+                      <div className="cn-label">Segundos antes de continuar: {config.revealSeconds.toFixed(1)}s</div>
+                      <input
+                        type="range" min={1.5} max={6} step={0.1}
+                        value={config.revealSeconds}
+                        onChange={e => set('revealSeconds', Number(e.target.value))}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                    <div className="cn-toggle-row" style={{ paddingBottom: 0, borderBottom: 'none' }}>
+                      <div className="cn-toggle-info">
+                        <div className="cn-toggle-label">Mostrar boton de saltar</div>
+                        <div className="cn-toggle-hint">Le permite al cliente pasar a la tienda sin esperar</div>
+                      </div>
+                      <Toggle checked={config.revealShowSkip} onChange={v => set('revealShowSkip', v)} />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

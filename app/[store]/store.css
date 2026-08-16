@@ -696,6 +696,45 @@ html, body { overflow-x: hidden; }
 }
 .sf-splash-pill:hover { background: rgba(255,255,255,0.18); transform: translateY(-1px); }
 
+/* ── REVEAL (animated name welcome) ── */
+@keyframes sfRevealLetterUp { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes sfRevealLineGrow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes sfRevealFade { from { opacity: 0; } to { opacity: 1; } }
+.sf-reveal-screen {
+  height: 100vh; height: 100dvh; overflow: hidden;
+  background: #111111;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  padding: calc(env(safe-area-inset-top) + 24px) 24px 24px;
+}
+.sf-reveal-content { display: flex; flex-direction: column; align-items: center; gap: 22px; text-align: center; }
+.sf-reveal-greeting {
+  font-family: var(--font-fraunces), serif; font-style: italic; font-size: 20px;
+  color: #c9c4b8; opacity: 0; animation: sfRevealFade 0.6s ease 0.1s both;
+}
+.sf-reveal-letters { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.02em; }
+.sf-reveal-letter {
+  display: inline-block; white-space: pre;
+  font-family: var(--font-fraunces), serif; font-weight: 500;
+  font-size: clamp(40px, 12vw, 88px); line-height: 1; color: #faf9f7;
+  opacity: 0; animation: sfRevealLetterUp 0.55s cubic-bezier(0.16,1,0.3,1) both;
+}
+.sf-reveal-line {
+  width: 64px; height: 1px; background: #7d766a; transform-origin: center;
+  opacity: 0; animation: sfRevealLineGrow 0.6s ease both, sfRevealFade 0.1s ease both;
+}
+.sf-reveal-sub {
+  font-family: var(--font-geist-sans), sans-serif; font-size: 15px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: #a8a196; opacity: 0; animation: sfRevealFade 0.6s ease both;
+}
+.sf-reveal-skip {
+  position: absolute; bottom: calc(env(safe-area-inset-bottom) + 32px); right: 36px;
+  background: none; border: none; color: #8a8378; cursor: pointer;
+  font-family: var(--font-geist-sans), sans-serif; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
+  opacity: 0; animation: sfRevealFade 0.6s ease 1s both; transition: color 0.15s;
+}
+.sf-reveal-skip:hover { color: #faf9f7; }
+
 /* ── CONFIRMATION ── */
 .sf-confirm-screen {
   min-height: 100vh; min-height: 100dvh; background: #FAFAF9;

@@ -518,7 +518,7 @@ function RevealPreview({ config, storeName, logoUrl }: { config: HomePageConfig;
       }} />
 
       {rv.logoInsteadOfText && logoUrl ? (
-        <img src={logoUrl} alt="" style={{ height: 32, width: 'auto', maxWidth: 140, objectFit: 'contain' }} />
+        <img src={logoUrl} alt="" style={{ height: 64, width: 'auto', maxWidth: 220, objectFit: 'contain' }} />
       ) : (
         <div style={{
           fontFamily: font ?? "var(--font-geist-sans), sans-serif", fontSize: 15, letterSpacing: '0.14em',

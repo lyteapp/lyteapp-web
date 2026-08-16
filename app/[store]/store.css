@@ -706,7 +706,7 @@ html, body { overflow-x: hidden; }
   opacity: 0; animation: sfRevealFade 0.6s ease both;
 }
 .sf-reveal-logo {
-  height: 32px; width: auto; max-width: 160px; object-fit: contain;
+  height: 64px; width: auto; max-width: 240px; object-fit: contain;
   opacity: 0; animation: sfRevealFade 0.6s ease both;
 }
 .sf-reveal-skip {

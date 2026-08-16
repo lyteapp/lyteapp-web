@@ -41,6 +41,8 @@ interface HomePageConfig {
   collectCustomerData: boolean
   customerFields: CustomerFields
   inputTextColor: string
+  inputBgColor: string
+  inputShape: 'pill' | 'square' | 'outline'
   inactivityTimeout: InactivityTimeout
   orderReturnTimeout: OrderReturnTimeout
   enableReorder: boolean
@@ -59,6 +61,8 @@ const DEFAULTS: HomePageConfig = {
   collectCustomerData: true,
   customerFields: { name: true, phone: true, address: true },
   inputTextColor: '#FFFFFF',
+  inputBgColor: '#FFFFFF',
+  inputShape: 'pill',
   inactivityTimeout: { enabled: false, minutes: 3 },
   orderReturnTimeout: { enabled: false, seconds: 15 },
   enableReorder: false,
@@ -79,6 +83,11 @@ const TRANSITIONS = [
 const BG_PRESETS = ['#0F172A', '#7C3AED', '#111827', '#064E3B', '#7C2D12', '#1E1B4B']
 const PILL_COLOR_PRESETS = ['#7C3AED', '#2563EB', '#DC2626', '#D97706', '#059669', '#DB2777', '#0F172A', '#64748B']
 const TEXT_COLOR_PRESETS = ['#FFFFFF', '#0F172A', '#F1F5F9', '#7C3AED', '#FDE68A']
+const INPUT_SHAPES = [
+  { id: 'pill' as const,    name: 'Pill' },
+  { id: 'square' as const,  name: 'Cuadrado' },
+  { id: 'outline' as const, name: 'Con borde' },
+]
 
 function newPill(): HomePagePill {
   return { id: crypto.randomUUID(), label: '', url: '', color: '#7C3AED' }
@@ -136,8 +145,12 @@ function SplashPreview({ config, storeName, logoUrl }: { config: HomePageConfig;
               .filter((v): v is string => !!v)
               .map(placeholder => (
                 <div key={placeholder} style={{
-                  width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.1)',
-                  border: '1px solid rgba(255,255,255,0.2)', borderRadius: 100,
+                  width: '100%', boxSizing: 'border-box',
+                  background: config.inputShape === 'outline' ? 'transparent' : `color-mix(in srgb, ${config.inputBgColor || '#FFFFFF'} 12%, transparent)`,
+                  border: config.inputShape === 'outline'
+                    ? `1.5px solid color-mix(in srgb, ${config.inputBgColor || '#FFFFFF'} 65%, transparent)`
+                    : `1px solid color-mix(in srgb, ${config.inputBgColor || '#FFFFFF'} 20%, transparent)`,
+                  borderRadius: config.inputShape === 'square' ? 4 : config.inputShape === 'outline' ? 10 : 100,
                   padding: '9px 14px', fontSize: 11,
                   color: `color-mix(in srgb, ${config.inputTextColor || '#FFFFFF'} 55%, transparent)`,
                 }}>
@@ -183,6 +196,7 @@ export default function InicioPage() {
   const bgColorRef = useRef<HTMLInputElement>(null)
   const buttonColorRef = useRef<HTMLInputElement>(null)
   const inputTextColorRef = useRef<HTMLInputElement>(null)
+  const inputBgColorRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!user) return
@@ -324,6 +338,35 @@ export default function InicioPage() {
                         {TEXT_COLOR_PRESETS.includes(config.inputTextColor) ? '+' : null}
                         <input ref={inputTextColorRef} type="color" value={config.inputTextColor} onChange={e => set('inputTextColor', e.target.value)} />
                       </div>
+                    </div>
+
+                    <div className="cn-label" style={{ marginTop: 18, marginBottom: 8 }}>Color del fondo de los campos</div>
+                    <div className="cn-colors" style={{ marginBottom: 4 }}>
+                      {TEXT_COLOR_PRESETS.map(c => (
+                        <div key={c} className={`cn-color-swatch${config.inputBgColor === c ? ' selected' : ''}`}
+                          style={{ background: c, border: '1px solid rgba(15,23,42,0.12)' }} onClick={() => set('inputBgColor', c)} />
+                      ))}
+                      <div
+                        className="cn-color-custom"
+                        style={{ background: TEXT_COLOR_PRESETS.includes(config.inputBgColor) ? undefined : config.inputBgColor }}
+                        onClick={() => inputBgColorRef.current?.click()}
+                      >
+                        {TEXT_COLOR_PRESETS.includes(config.inputBgColor) ? '+' : null}
+                        <input ref={inputBgColorRef} type="color" value={config.inputBgColor} onChange={e => set('inputBgColor', e.target.value)} />
+                      </div>
+                    </div>
+
+                    <div className="cn-label" style={{ marginTop: 18, marginBottom: 8 }}>Forma de los campos</div>
+                    <div className="cn-pill-row" style={{ marginBottom: 4 }}>
+                      {INPUT_SHAPES.map(s => (
+                        <button
+                          key={s.id} type="button"
+                          className={`cn-pill-btn${config.inputShape === s.id ? ' selected' : ''}`}
+                          onClick={() => set('inputShape', s.id)}
+                        >
+                          {s.name}
+                        </button>
+                      ))}
                     </div>
 
                     <div className="cn-label" style={{ marginTop: 18, marginBottom: 4 }}>Datos obligatorios para entrar</div>

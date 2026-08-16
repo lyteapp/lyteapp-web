@@ -106,6 +106,8 @@ type TemplateConfig = {
     collectCustomerData?: boolean
     customerFields?: { name?: boolean; phone?: boolean; address?: boolean }
     inputTextColor?: string
+    inputBgColor?: string
+    inputShape?: 'pill' | 'square' | 'outline'
     inactivityTimeout?: { enabled?: boolean; minutes?: number }
     orderReturnTimeout?: { enabled?: boolean; seconds?: number }
     enableReorder?: boolean
@@ -943,7 +945,13 @@ export default function StoreShell({ store, products, categories = [], initialBc
           {hp.subtitle && <p className="sf-splash-sub">{hp.subtitle}</p>}
 
           {collectCustomerData && (
-            <div className="sf-splash-cedula-wrap" style={{ '--sf-splash-input-color': hp.inputTextColor || '#FFFFFF' } as React.CSSProperties}>
+            <div
+              className={`sf-splash-cedula-wrap sf-splash-shape-${hp.inputShape || 'pill'}`}
+              style={{
+                '--sf-splash-input-color': hp.inputTextColor || '#FFFFFF',
+                '--sf-splash-input-bg': hp.inputBgColor || '#FFFFFF',
+              } as React.CSSProperties}
+            >
               <input
                 className="sf-splash-cedula"
                 type="text"

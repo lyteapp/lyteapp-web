@@ -559,14 +559,28 @@ html, body { overflow-x: hidden; }
 .sf-splash-cedula-wrap { margin-bottom: 16px; }
 .sf-splash-cedula {
   width: 100%; box-sizing: border-box;
-  background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+  background: color-mix(in srgb, var(--sf-splash-input-bg, white) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--sf-splash-input-bg, white) 20%, transparent);
   border-radius: 100px; padding: 14px 20px;
   font-size: 14px; color: var(--sf-splash-input-color, white); text-align: center;
   font-family: var(--font-geist-sans), sans-serif;
   outline: none; transition: border-color 0.2s, background 0.2s;
 }
 .sf-splash-cedula::placeholder { color: color-mix(in srgb, var(--sf-splash-input-color, white) 55%, transparent); }
-.sf-splash-cedula:focus { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.16); }
+.sf-splash-cedula:focus {
+  border-color: color-mix(in srgb, var(--sf-splash-input-bg, white) 50%, transparent);
+  background: color-mix(in srgb, var(--sf-splash-input-bg, white) 18%, transparent);
+}
+
+.sf-splash-shape-square .sf-splash-cedula { border-radius: 4px; }
+.sf-splash-shape-outline .sf-splash-cedula { border-radius: 10px; }
+.sf-splash-shape-outline .sf-splash-cedula:not(.sf-splash-location-btn) {
+  background: transparent;
+  border: 1.5px solid color-mix(in srgb, var(--sf-splash-input-bg, white) 65%, transparent);
+}
+.sf-splash-shape-outline .sf-splash-cedula:not(.sf-splash-location-btn):focus {
+  background: color-mix(in srgb, var(--sf-splash-input-bg, white) 8%, transparent);
+}
 .sf-splash-cedula-hint { font-size: 12px; color: rgba(255,255,255,0.65); margin-top: 8px; }
 .sf-splash-cedula-hint.found { color: #86EFAC; font-weight: 600; }
 .sf-splash-location-btn {

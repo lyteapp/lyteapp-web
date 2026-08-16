@@ -1102,6 +1102,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
             </div>
           )}
         </div>
+        <a className="sf-powered-by" href="https://lyte-app.com" target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}>
+          <img src="/logo.png" alt="" />
+          <span>Powered by <strong>LYTE APP</strong></span>
+        </a>
       </div>
       </>
     )
@@ -1150,6 +1154,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
         {revealShowSkip && (
           <button className="sf-reveal-skip" onClick={finishReveal}>{rv.skipLabel || 'Saltar →'}</button>
         )}
+        <a className="sf-powered-by" href="https://lyte-app.com" target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}>
+          <img src="/logo.png" alt="" />
+          <span>Powered by <strong>LYTE APP</strong></span>
+        </a>
       </div>
     )
   }

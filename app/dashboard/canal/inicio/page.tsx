@@ -456,6 +456,21 @@ function SplashPreview({
           </div>
         )}
       </div>
+      <PoweredByBadge />
+    </div>
+  )
+}
+
+function PoweredByBadge() {
+  return (
+    <div style={{
+      position: 'absolute', left: 0, right: 0, bottom: 14, zIndex: 3,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+      fontSize: 10, letterSpacing: '0.02em', color: 'rgba(255,255,255,0.45)',
+      fontFamily: 'var(--font-geist-sans), sans-serif',
+    }}>
+      <img src="/logo.png" alt="" style={{ height: 12, width: 'auto', opacity: 0.7, display: 'block' }} />
+      <span>Powered by <strong style={{ color: 'rgba(255,255,255,0.65)' }}>LYTE APP</strong></span>
     </div>
   )
 }
@@ -538,6 +553,7 @@ function RevealPreview({ config, storeName, logoUrl }: { config: HomePageConfig;
           {rv.skipLabel || 'Saltar →'}
         </div>
       )}
+      <PoweredByBadge />
     </div>
   )
 }

@@ -491,6 +491,12 @@ html, body { overflow-x: hidden; }
   text-align: center;
   font-family: var(--font-geist-sans), sans-serif;
   animation: sfFadeIn 0.5s ease both;
+  position: relative;
+}
+.sf-splash-images-layer { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.sf-splash-photo {
+  position: absolute; object-fit: cover; border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
 }
 .sf-splash-screen.sf-splash-leaving {
   animation-duration: 0.55s;
@@ -563,6 +569,7 @@ html, body { overflow-x: hidden; }
   max-width: 420px; max-height: 100%; width: 100%;
   overflow-y: auto; overflow-x: hidden;
   scrollbar-width: none;
+  position: relative; z-index: 1;
 }
 .sf-splash-content::-webkit-scrollbar { display: none; }
 .sf-splash-logo {

@@ -110,6 +110,7 @@ type TemplateConfig = {
     inputBgColor?: string
     inputShape?: 'pill' | 'square' | 'outline'
     elementSizes?: { logo?: number; title?: number; subtitle?: number; fields?: number }
+    images?: { id: string; url: string; x: number; y: number; width: number; height: number; flipped?: boolean }[]
     inactivityTimeout?: { enabled?: boolean; minutes?: number }
     orderReturnTimeout?: { enabled?: boolean; seconds?: number }
     enableReorder?: boolean
@@ -977,6 +978,20 @@ export default function StoreShell({ store, products, categories = [], initialBc
             : (hp.bgColor || '#0F172A'),
         }}
       >
+        {hp.images && hp.images.length > 0 && (
+          <div className="sf-splash-images-layer">
+            {hp.images.map(img => (
+              <img
+                key={img.id} src={img.url} alt=""
+                className="sf-splash-photo"
+                style={{
+                  left: img.x, top: img.y, width: img.width, height: img.height,
+                  transform: img.flipped ? 'scaleX(-1)' : undefined,
+                }}
+              />
+            ))}
+          </div>
+        )}
         <div className="sf-splash-content">
           {store.logo_url && (
             <img

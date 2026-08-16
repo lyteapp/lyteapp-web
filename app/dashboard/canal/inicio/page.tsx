@@ -36,6 +36,16 @@ interface ElementSizes {
   fields: number
 }
 
+interface HomePageImage {
+  id: string
+  url: string
+  x: number
+  y: number
+  width: number
+  height: number
+  flipped: boolean
+}
+
 type SelectableId = 'logo' | 'title' | 'subtitle' | 'fields'
 
 interface RevealConfig {
@@ -70,6 +80,7 @@ interface HomePageConfig {
   enableReorder: boolean
   reveal: RevealConfig
   elementSizes: ElementSizes
+  images: HomePageImage[]
 }
 
 const DEFAULTS: HomePageConfig = {
@@ -102,6 +113,11 @@ const DEFAULTS: HomePageConfig = {
     showSkip: true,
   },
   elementSizes: { logo: 72, title: 30, subtitle: 15, fields: 14 },
+  images: [],
+}
+
+function newImage(url: string): HomePageImage {
+  return { id: crypto.randomUUID(), url, x: 110, y: 250, width: 160, height: 160, flipped: false }
 }
 
 const TRANSITIONS = [
@@ -182,13 +198,132 @@ function ResizeHandle({ onDrag }: { onDrag: (delta: number) => void }) {
   )
 }
 
+function ResizeHandleXY({ onDrag }: { onDrag: (dx: number, dy: number) => void }) {
+  function handlePointerDown(e: React.PointerEvent) {
+    e.stopPropagation()
+    e.preventDefault()
+    const startX = e.clientX
+    const startY = e.clientY
+    function onMove(ev: PointerEvent) {
+      onDrag(ev.clientX - startX, ev.clientY - startY)
+    }
+    function onUp() {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+  }
+  return (
+    <div
+      onPointerDown={handlePointerDown}
+      style={{
+        position: 'absolute', right: -9, bottom: -9, width: 16, height: 16,
+        borderRadius: '50%', background: '#7C3AED', border: '2px solid white',
+        cursor: 'nwse-resize', boxShadow: '0 2px 6px rgba(0,0,0,0.35)', zIndex: 6,
+      }}
+    />
+  )
+}
+
+const photoIconBtnStyle: React.CSSProperties = {
+  width: 24, height: 24, borderRadius: '50%', border: '2px solid white',
+  background: '#1E1E2E', color: 'white', fontSize: 13, lineHeight: 1,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  cursor: 'pointer', boxShadow: '0 2px 6px rgba(0,0,0,0.35)', padding: 0,
+}
+
+function PhotoItem({
+  img, selected, onSelect, onUpdate, onRemove,
+}: {
+  img: HomePageImage
+  selected: boolean
+  onSelect: () => void
+  onUpdate: (patch: Partial<HomePageImage>) => void
+  onRemove: () => void
+}) {
+  function handlePointerDown(e: React.PointerEvent) {
+    e.stopPropagation()
+    onSelect()
+    const startX = e.clientX
+    const startY = e.clientY
+    const startPosX = img.x
+    const startPosY = img.y
+    function onMove(ev: PointerEvent) {
+      onUpdate({ x: startPosX + (ev.clientX - startX), y: startPosY + (ev.clientY - startY) })
+    }
+    function onUp() {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+  }
+
+  function startResize() {
+    const startW = img.width
+    const startH = img.height
+    return (dx: number, dy: number) => onUpdate({
+      width: Math.max(30, Math.round(startW + dx)),
+      height: Math.max(30, Math.round(startH + dy)),
+    })
+  }
+
+  return (
+    <div
+      onPointerDown={handlePointerDown}
+      onClick={e => e.stopPropagation()}
+      style={{
+        position: 'absolute', left: img.x, top: img.y, width: img.width, height: img.height,
+        pointerEvents: 'auto', cursor: 'move',
+        outline: selected ? '2px dashed #7C3AED' : 'none', outlineOffset: 3,
+      }}
+    >
+      <img
+        src={img.url} alt="" draggable={false}
+        style={{
+          width: '100%', height: '100%', objectFit: 'cover', borderRadius: 10,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.25)', display: 'block',
+          transform: img.flipped ? 'scaleX(-1)' : undefined,
+          userSelect: 'none', pointerEvents: 'none',
+        }}
+      />
+      {selected && (
+        <>
+          <div style={{ position: 'absolute', top: -14, right: -14, display: 'flex', gap: 4 }}>
+            <button
+              type="button" title="Voltear"
+              onPointerDown={e => e.stopPropagation()}
+              onClick={e => { e.stopPropagation(); onUpdate({ flipped: !img.flipped }) }}
+              style={photoIconBtnStyle}
+            >⇋</button>
+            <button
+              type="button" title="Eliminar"
+              onPointerDown={e => e.stopPropagation()}
+              onClick={e => { e.stopPropagation(); onRemove() }}
+              style={{ ...photoIconBtnStyle, background: '#DC2626' }}
+            >×</button>
+          </div>
+          <ResizeHandleXY onDrag={startResize()} />
+        </>
+      )}
+    </div>
+  )
+}
+
 function SplashPreview({
   config, storeName, logoUrl, selected, onSelect, onResize,
+  images, selectedImageId, onSelectImage, onUpdateImage, onRemoveImage,
 }: {
   config: HomePageConfig; storeName: string; logoUrl: string | null
   selected: SelectableId | null
   onSelect: (id: SelectableId | null) => void
   onResize: (id: SelectableId, size: number) => void
+  images: HomePageImage[]
+  selectedImageId: string | null
+  onSelectImage: (id: string | null) => void
+  onUpdateImage: (id: string, patch: Partial<HomePageImage>) => void
+  onRemoveImage: (id: string) => void
 }) {
   function startResize(id: SelectableId) {
     const [min, max] = SIZE_LIMITS[id]
@@ -208,7 +343,7 @@ function SplashPreview({
 
   return (
     <div
-      onClick={() => onSelect(null)}
+      onClick={() => { onSelect(null); onSelectImage(null) }}
       style={{
         width: 380, flexShrink: 0,
         border: '10px solid #1E1E2E', borderRadius: 44,
@@ -221,11 +356,21 @@ function SplashPreview({
         position: 'relative',
       }}
     >
-      <div style={{ position: 'absolute', top: 14, left: 26, right: 26, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
+        {images.map(img => (
+          <PhotoItem
+            key={img.id} img={img} selected={selectedImageId === img.id}
+            onSelect={() => onSelectImage(img.id)}
+            onUpdate={patch => onUpdateImage(img.id, patch)}
+            onRemove={() => onRemoveImage(img.id)}
+          />
+        ))}
+      </div>
+      <div style={{ position: 'absolute', top: 14, left: 26, right: 26, display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 1 }}>
         <span style={{ fontSize: 13, fontWeight: 600, color: 'white' }}>9:41</span>
         <span style={{ fontSize: 12, color: 'white' }}>●●●</span>
       </div>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 30px', textAlign: 'center' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 30px', textAlign: 'center', position: 'relative', zIndex: 1 }}>
 
         {logoUrl && (
           <div
@@ -398,7 +543,9 @@ export default function InicioPage() {
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
   const [uploading, setUploading] = useState(false)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  const photoFileRef = useRef<HTMLInputElement>(null)
   const bgColorRef = useRef<HTMLInputElement>(null)
   const buttonColorRef = useRef<HTMLInputElement>(null)
   const inputTextColorRef = useRef<HTMLInputElement>(null)
@@ -408,6 +555,7 @@ export default function InicioPage() {
   const revealAccentColorRef = useRef<HTMLInputElement>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [selectedEl, setSelectedEl] = useState<SelectableId | null>(null)
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
   const [previewView, setPreviewView] = useState<'splash' | 'reveal'>('splash')
 
   useEffect(() => {
@@ -470,6 +618,19 @@ export default function InicioPage() {
     setConfig(c => ({ ...c, reveal: { ...c.reveal, [key]: value } }))
   }
 
+  function addImage(url: string) {
+    const img = newImage(url)
+    setConfig(c => ({ ...c, images: [...c.images, img] }))
+    setSelectedImageId(img.id)
+  }
+  function updateImage(id: string, patch: Partial<HomePageImage>) {
+    setConfig(c => ({ ...c, images: c.images.map(im => im.id === id ? { ...im, ...patch } : im) }))
+  }
+  function removeImage(id: string) {
+    setConfig(c => ({ ...c, images: c.images.filter(im => im.id !== id) }))
+    setSelectedImageId(sel => sel === id ? null : sel)
+  }
+
   async function handleUpload(e: { target: { files: FileList | null } }) {
     const file = e.target.files?.[0]
     if (!file || !user) return
@@ -477,6 +638,16 @@ export default function InicioPage() {
     try { set('imageUrl', await uploadFile(file, user.id, 'homepage')) }
     catch { setError('No se pudo subir la imagen.') }
     setUploading(false)
+  }
+
+  async function handlePhotoUpload(e: { target: { files: FileList | null; value?: string } }) {
+    const file = e.target.files?.[0]
+    if (!file || !user) return
+    setUploadingPhoto(true)
+    try { addImage(await uploadFile(file, user.id, 'homepage-photos')) }
+    catch { setError('No se pudo subir la foto.') }
+    setUploadingPhoto(false)
+    if (photoFileRef.current) photoFileRef.current.value = ''
   }
 
   async function save(e: { preventDefault(): void }) {
@@ -500,7 +671,7 @@ export default function InicioPage() {
         <div className="cn-desc">Una pantalla de bienvenida que se muestra antes de tu tienda, con un boton para entrar.</div>
       </div>
 
-      <div style={{ display: 'flex', gap: 0, alignItems: 'flex-start', position: 'relative' }} onClick={() => setSelectedEl(null)}>
+      <div style={{ display: 'flex', gap: 0, alignItems: 'flex-start', position: 'relative' }} onClick={() => { setSelectedEl(null); setSelectedImageId(null) }}>
 
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, position: 'sticky', top: 24, padding: '4px 24px 24px 0' }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
@@ -527,6 +698,9 @@ export default function InicioPage() {
               config={config} storeName={storeName} logoUrl={logoUrl}
               selected={selectedEl} onSelect={setSelectedEl}
               onResize={setElementSize}
+              images={config.images} selectedImageId={selectedImageId}
+              onSelectImage={setSelectedImageId}
+              onUpdateImage={updateImage} onRemoveImage={removeImage}
             />
           )}
         </div>
@@ -820,6 +994,62 @@ export default function InicioPage() {
                       <input ref={bgColorRef} type="color" value={config.bgColor} onChange={e => set('bgColor', e.target.value)} />
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="cn-section">
+              <div className="cn-section-head">
+                <div className="cn-section-icon">
+                  <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm2 3a1 1 0 100 2 1 1 0 000-2zm-1 8l3.5-4.5 2.5 3 3-4L17 15H5z" clipRule="evenodd" /></svg>
+                </div>
+                <div>
+                  <div className="cn-section-title">Fotos</div>
+                  <div className="cn-section-sub">Agrega fotos y arrastralas, redimensionalas o voltealas en la vista previa</div>
+                </div>
+              </div>
+              <div className="cn-section-body">
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button type="button" className="cn-upload-btn" onClick={() => photoFileRef.current?.click()} disabled={uploadingPhoto}>
+                    {uploadingPhoto ? 'Subiendo...' : '+ Subir foto'}
+                  </button>
+                  {logoUrl && (
+                    <button type="button" className="cn-upload-btn" onClick={() => addImage(logoUrl)}>
+                      + Agregar mi logo
+                    </button>
+                  )}
+                  <input ref={photoFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoUpload} />
+                </div>
+
+                {config.images.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 16 }}>
+                    {config.images.map(img => (
+                      <div
+                        key={img.id}
+                        onClick={() => setSelectedImageId(img.id)}
+                        style={{
+                          position: 'relative', width: 56, height: 56, borderRadius: 10, overflow: 'hidden',
+                          cursor: 'pointer', flexShrink: 0,
+                          outline: selectedImageId === img.id ? '2px solid #7C3AED' : '1px solid rgba(15,23,42,0.09)',
+                          outlineOffset: 2,
+                        }}
+                      >
+                        <img src={img.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', transform: img.flipped ? 'scaleX(-1)' : undefined }} />
+                        <button
+                          type="button" title="Eliminar"
+                          onClick={e => { e.stopPropagation(); removeImage(img.id) }}
+                          style={{
+                            position: 'absolute', top: -6, right: -6, width: 18, height: 18, borderRadius: '50%',
+                            border: '2px solid white', background: '#DC2626', color: 'white', fontSize: 11, lineHeight: 1,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0,
+                          }}
+                        >×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="cn-toggle-hint" style={{ marginTop: 12 }}>
+                  Selecciona una foto (aqui o en la vista previa) para arrastrarla, cambiar su tamaño desde la esquina o voltearla.
                 </div>
               </div>
             </div>

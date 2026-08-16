@@ -37,6 +37,17 @@ interface ElementSizes {
 
 type SelectableId = 'logo' | 'title' | 'subtitle' | 'fields'
 
+interface RevealConfig {
+  greeting: string
+  subtitlePrefix: string
+  skipLabel: string
+  bgColor: string
+  nameColor: string
+  accentColor: string
+  seconds: number
+  showSkip: boolean
+}
+
 interface HomePageConfig {
   enabled: boolean
   title: string
@@ -55,8 +66,7 @@ interface HomePageConfig {
   inactivityTimeout: InactivityTimeout
   orderReturnTimeout: OrderReturnTimeout
   enableReorder: boolean
-  revealSeconds: number
-  revealShowSkip: boolean
+  reveal: RevealConfig
   elementSizes: ElementSizes
 }
 
@@ -78,8 +88,16 @@ const DEFAULTS: HomePageConfig = {
   inactivityTimeout: { enabled: false, minutes: 3 },
   orderReturnTimeout: { enabled: false, seconds: 15 },
   enableReorder: false,
-  revealSeconds: 3.2,
-  revealShowSkip: true,
+  reveal: {
+    greeting: 'Bienvenido',
+    subtitlePrefix: 'a',
+    skipLabel: 'Saltar →',
+    bgColor: '#111111',
+    nameColor: '#FAF9F7',
+    accentColor: '#A8A196',
+    seconds: 3.2,
+    showSkip: true,
+  },
   elementSizes: { logo: 72, title: 30, subtitle: 15, fields: 14 },
 }
 
@@ -304,6 +322,9 @@ export default function InicioPage() {
   const buttonColorRef = useRef<HTMLInputElement>(null)
   const inputTextColorRef = useRef<HTMLInputElement>(null)
   const inputBgColorRef = useRef<HTMLInputElement>(null)
+  const revealBgColorRef = useRef<HTMLInputElement>(null)
+  const revealNameColorRef = useRef<HTMLInputElement>(null)
+  const revealAccentColorRef = useRef<HTMLInputElement>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [selectedEl, setSelectedEl] = useState<SelectableId | null>(null)
 
@@ -328,6 +349,7 @@ export default function InicioPage() {
             inactivityTimeout: { ...DEFAULTS.inactivityTimeout, ...(hp.inactivityTimeout ?? {}) },
             orderReturnTimeout: { ...DEFAULTS.orderReturnTimeout, ...(hp.orderReturnTimeout ?? {}) },
             elementSizes: { ...DEFAULTS.elementSizes, ...(hp.elementSizes ?? {}) },
+            reveal: { ...DEFAULTS.reveal, ...(hp.reveal ?? {}) },
           })
         }
       })
@@ -360,6 +382,10 @@ export default function InicioPage() {
 
   function setElementSize(id: SelectableId, size: number) {
     setConfig(c => ({ ...c, elementSizes: { ...c.elementSizes, [id]: size } }))
+  }
+
+  function setReveal<K extends keyof RevealConfig>(key: K, value: RevealConfig[K]) {
+    setConfig(c => ({ ...c, reveal: { ...c.reveal, [key]: value } }))
   }
 
   async function handleUpload(e: { target: { files: FileList | null } }) {
@@ -733,29 +759,106 @@ export default function InicioPage() {
                     </div>
                   ))}
                 </div>
-
-                {config.transition === 'reveal' && (
-                  <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', gap: 16 }}>
-                    <div className="cn-field" style={{ marginBottom: 0 }}>
-                      <div className="cn-label">Segundos antes de continuar: {config.revealSeconds.toFixed(1)}s</div>
-                      <input
-                        type="range" min={1.5} max={6} step={0.1}
-                        value={config.revealSeconds}
-                        onChange={e => set('revealSeconds', Number(e.target.value))}
-                        style={{ width: '100%' }}
-                      />
-                    </div>
-                    <div className="cn-toggle-row" style={{ paddingBottom: 0, borderBottom: 'none' }}>
-                      <div className="cn-toggle-info">
-                        <div className="cn-toggle-label">Mostrar boton de saltar</div>
-                        <div className="cn-toggle-hint">Le permite al cliente pasar a la tienda sin esperar</div>
-                      </div>
-                      <Toggle checked={config.revealShowSkip} onChange={v => set('revealShowSkip', v)} />
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
+
+            {config.transition === 'reveal' && (
+              <div className="cn-section">
+                <div className="cn-section-head">
+                  <div className="cn-section-icon">
+                    <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 2a1 1 0 01.967.744L14.146 15.2 17.5 13.134a1 1 0 11.998 1.732l-4.5 2.598a1 1 0 01-1.465-.744L10 7.8l-2.533 8.92a1 1 0 01-1.465.744l-4.5-2.598a1 1 0 11.998-1.732l3.354 2.066L9.033 2.744A1 1 0 0110 2z" clipRule="evenodd" /></svg>
+                  </div>
+                  <div>
+                    <div className="cn-section-title">Bienvenida animada</div>
+                    <div className="cn-section-sub">Personaliza la pantalla negra con el nombre del cliente letra por letra</div>
+                  </div>
+                </div>
+                <div className="cn-section-body">
+                  <div className="cn-field">
+                    <div className="cn-label">Texto de saludo</div>
+                    <input className="cn-input" value={config.reveal.greeting} onChange={e => setReveal('greeting', e.target.value)}
+                      placeholder="Bienvenido" maxLength={30} />
+                  </div>
+                  <div className="cn-two-col">
+                    <div className="cn-field">
+                      <div className="cn-label">Antes del nombre de tu tienda</div>
+                      <input className="cn-input" value={config.reveal.subtitlePrefix} onChange={e => setReveal('subtitlePrefix', e.target.value)}
+                        placeholder="a" maxLength={20} />
+                    </div>
+                    <div className="cn-field">
+                      <div className="cn-label">Texto del boton de saltar</div>
+                      <input className="cn-input" value={config.reveal.skipLabel} onChange={e => setReveal('skipLabel', e.target.value)}
+                        placeholder="Saltar →" maxLength={20} />
+                    </div>
+                  </div>
+
+                  <div className="cn-label" style={{ marginBottom: 8 }}>Color de fondo</div>
+                  <div className="cn-colors" style={{ marginBottom: 16 }}>
+                    {BG_PRESETS.map(c => (
+                      <div key={c} className={`cn-color-swatch${config.reveal.bgColor === c ? ' selected' : ''}`}
+                        style={{ background: c }} onClick={() => setReveal('bgColor', c)} />
+                    ))}
+                    <div
+                      className="cn-color-custom"
+                      style={{ background: BG_PRESETS.includes(config.reveal.bgColor) ? undefined : config.reveal.bgColor }}
+                      onClick={() => revealBgColorRef.current?.click()}
+                    >
+                      {BG_PRESETS.includes(config.reveal.bgColor) ? '+' : null}
+                      <input ref={revealBgColorRef} type="color" value={config.reveal.bgColor} onChange={e => setReveal('bgColor', e.target.value)} />
+                    </div>
+                  </div>
+
+                  <div className="cn-label" style={{ marginBottom: 8 }}>Color del nombre</div>
+                  <div className="cn-colors" style={{ marginBottom: 16 }}>
+                    {TEXT_COLOR_PRESETS.map(c => (
+                      <div key={c} className={`cn-color-swatch${config.reveal.nameColor === c ? ' selected' : ''}`}
+                        style={{ background: c, border: '1px solid rgba(15,23,42,0.12)' }} onClick={() => setReveal('nameColor', c)} />
+                    ))}
+                    <div
+                      className="cn-color-custom"
+                      style={{ background: TEXT_COLOR_PRESETS.includes(config.reveal.nameColor) ? undefined : config.reveal.nameColor }}
+                      onClick={() => revealNameColorRef.current?.click()}
+                    >
+                      {TEXT_COLOR_PRESETS.includes(config.reveal.nameColor) ? '+' : null}
+                      <input ref={revealNameColorRef} type="color" value={config.reveal.nameColor} onChange={e => setReveal('nameColor', e.target.value)} />
+                    </div>
+                  </div>
+
+                  <div className="cn-label" style={{ marginBottom: 8 }}>Color de acento (saludo, linea y subtitulo)</div>
+                  <div className="cn-colors" style={{ marginBottom: 4 }}>
+                    {TEXT_COLOR_PRESETS.map(c => (
+                      <div key={c} className={`cn-color-swatch${config.reveal.accentColor === c ? ' selected' : ''}`}
+                        style={{ background: c, border: '1px solid rgba(15,23,42,0.12)' }} onClick={() => setReveal('accentColor', c)} />
+                    ))}
+                    <div
+                      className="cn-color-custom"
+                      style={{ background: TEXT_COLOR_PRESETS.includes(config.reveal.accentColor) ? undefined : config.reveal.accentColor }}
+                      onClick={() => revealAccentColorRef.current?.click()}
+                    >
+                      {TEXT_COLOR_PRESETS.includes(config.reveal.accentColor) ? '+' : null}
+                      <input ref={revealAccentColorRef} type="color" value={config.reveal.accentColor} onChange={e => setReveal('accentColor', e.target.value)} />
+                    </div>
+                  </div>
+
+                  <div className="cn-field" style={{ marginTop: 18, marginBottom: 0 }}>
+                    <div className="cn-label">Segundos antes de continuar: {config.reveal.seconds.toFixed(1)}s</div>
+                    <input
+                      type="range" min={1.5} max={6} step={0.1}
+                      value={config.reveal.seconds}
+                      onChange={e => setReveal('seconds', Number(e.target.value))}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                  <div className="cn-toggle-row" style={{ paddingBottom: 0, borderBottom: 'none' }}>
+                    <div className="cn-toggle-info">
+                      <div className="cn-toggle-label">Mostrar boton de saltar</div>
+                      <div className="cn-toggle-hint">Le permite al cliente pasar a la tienda sin esperar</div>
+                    </div>
+                    <Toggle checked={config.reveal.showSkip} onChange={v => setReveal('showSkip', v)} />
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="cn-section">
               <div className="cn-section-head">

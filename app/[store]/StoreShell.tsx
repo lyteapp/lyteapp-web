@@ -112,8 +112,16 @@ type TemplateConfig = {
     inactivityTimeout?: { enabled?: boolean; minutes?: number }
     orderReturnTimeout?: { enabled?: boolean; seconds?: number }
     enableReorder?: boolean
-    revealSeconds?: number
-    revealShowSkip?: boolean
+    reveal?: {
+      greeting?: string
+      subtitlePrefix?: string
+      skipLabel?: string
+      bgColor?: string
+      nameColor?: string
+      accentColor?: string
+      seconds?: number
+      showSkip?: boolean
+    }
   }
 }
 type Store = {
@@ -197,7 +205,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
   useEffect(() => {
     if (view !== 'reveal') return
-    const seconds = store.template_config?.homePage?.revealSeconds ?? 3.2
+    const seconds = store.template_config?.homePage?.reveal?.seconds ?? 3.2
     revealTimerRef.current = setTimeout(() => finishReveal(), seconds * 1000)
     return () => { if (revealTimerRef.current) clearTimeout(revealTimerRef.current) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1093,11 +1101,19 @@ export default function StoreShell({ store, products, categories = [], initialBc
       delay: 0.35 + i * 0.045,
     }))
     const revealBaseDelay = 0.35 + revealLetters.length * 0.045
-    const revealShowSkip = hp.revealShowSkip !== false
+    const rv = hp.reveal ?? {}
+    const revealShowSkip = rv.showSkip !== false
     return (
-      <div className="sf-reveal-screen">
+      <div
+        className="sf-reveal-screen"
+        style={{
+          '--sf-reveal-bg': rv.bgColor || '#111111',
+          '--sf-reveal-name-color': rv.nameColor || '#FAF9F7',
+          '--sf-reveal-accent-color': rv.accentColor || '#A8A196',
+        } as React.CSSProperties}
+      >
         <div className="sf-reveal-content">
-          <div className="sf-reveal-greeting">Bienvenido</div>
+          <div className="sf-reveal-greeting">{rv.greeting || 'Bienvenido'}</div>
           {revealLetters.length > 0 && (
             <div className="sf-reveal-letters">
               {revealLetters.map((l, i) => (
@@ -1106,10 +1122,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
             </div>
           )}
           <div className="sf-reveal-line" style={{ animationDelay: `${revealBaseDelay + 0.15}s` }} />
-          <div className="sf-reveal-sub" style={{ animationDelay: `${revealBaseDelay + 0.35}s` }}>a {store.name}</div>
+          <div className="sf-reveal-sub" style={{ animationDelay: `${revealBaseDelay + 0.35}s` }}>{rv.subtitlePrefix || 'a'} {store.name}</div>
         </div>
         {revealShowSkip && (
-          <button className="sf-reveal-skip" onClick={finishReveal}>Saltar →</button>
+          <button className="sf-reveal-skip" onClick={finishReveal}>{rv.skipLabel || 'Saltar →'}</button>
         )}
       </div>
     )

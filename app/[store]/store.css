@@ -702,7 +702,7 @@ html, body { overflow-x: hidden; }
 @keyframes sfRevealFade { from { opacity: 0; } to { opacity: 1; } }
 .sf-reveal-screen {
   height: 100vh; height: 100dvh; overflow: hidden;
-  background: #111111;
+  background: var(--sf-reveal-bg, #111111);
   display: flex; align-items: center; justify-content: center;
   position: relative;
   padding: calc(env(safe-area-inset-top) + 24px) 24px 24px;
@@ -710,30 +710,35 @@ html, body { overflow-x: hidden; }
 .sf-reveal-content { display: flex; flex-direction: column; align-items: center; gap: 22px; text-align: center; }
 .sf-reveal-greeting {
   font-family: var(--font-fraunces), serif; font-style: italic; font-size: 20px;
-  color: #c9c4b8; opacity: 0; animation: sfRevealFade 0.6s ease 0.1s both;
+  color: color-mix(in srgb, var(--sf-reveal-accent-color, #A8A196) 80%, white 20%);
+  opacity: 0; animation: sfRevealFade 0.6s ease 0.1s both;
 }
 .sf-reveal-letters { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.02em; }
 .sf-reveal-letter {
   display: inline-block; white-space: pre;
   font-family: var(--font-fraunces), serif; font-weight: 500;
-  font-size: clamp(40px, 12vw, 88px); line-height: 1; color: #faf9f7;
+  font-size: clamp(40px, 12vw, 88px); line-height: 1; color: var(--sf-reveal-name-color, #FAF9F7);
   opacity: 0; animation: sfRevealLetterUp 0.55s cubic-bezier(0.16,1,0.3,1) both;
 }
 .sf-reveal-line {
-  width: 64px; height: 1px; background: #7d766a; transform-origin: center;
+  width: 64px; height: 1px;
+  background: color-mix(in srgb, var(--sf-reveal-accent-color, #A8A196) 80%, black 20%);
+  transform-origin: center;
   opacity: 0; animation: sfRevealLineGrow 0.6s ease both, sfRevealFade 0.1s ease both;
 }
 .sf-reveal-sub {
   font-family: var(--font-geist-sans), sans-serif; font-size: 15px; letter-spacing: 0.14em;
-  text-transform: uppercase; color: #a8a196; opacity: 0; animation: sfRevealFade 0.6s ease both;
+  text-transform: uppercase; color: var(--sf-reveal-accent-color, #A8A196);
+  opacity: 0; animation: sfRevealFade 0.6s ease both;
 }
 .sf-reveal-skip {
   position: absolute; bottom: calc(env(safe-area-inset-bottom) + 32px); right: 36px;
-  background: none; border: none; color: #8a8378; cursor: pointer;
+  background: none; border: none; cursor: pointer;
+  color: color-mix(in srgb, var(--sf-reveal-accent-color, #A8A196) 85%, black 15%);
   font-family: var(--font-geist-sans), sans-serif; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
   opacity: 0; animation: sfRevealFade 0.6s ease 1s both; transition: color 0.15s;
 }
-.sf-reveal-skip:hover { color: #faf9f7; }
+.sf-reveal-skip:hover { color: var(--sf-reveal-name-color, #FAF9F7); }
 
 /* ── CONFIRMATION ── */
 .sf-confirm-screen {

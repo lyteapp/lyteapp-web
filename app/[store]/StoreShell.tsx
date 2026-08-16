@@ -126,6 +126,8 @@ type TemplateConfig = {
       seconds?: number
       showSkip?: boolean
       logoInsteadOfText?: boolean
+      elementSizes?: { greeting?: number; name?: number; line?: number; subtitle?: number }
+      elementPositions?: { greeting?: { x: number; y: number }; name?: { x: number; y: number }; line?: { x: number; y: number }; subtitle?: { x: number; y: number } }
     }
   }
 }
@@ -1129,22 +1131,49 @@ export default function StoreShell({ store, products, categories = [], initialBc
         } as React.CSSProperties}
       >
         <div className="sf-reveal-content">
-          <div className="sf-reveal-greeting">{rv.greeting || 'Bienvenido'}</div>
+          <div
+            className="sf-reveal-greeting"
+            style={{
+              left: rv.elementPositions?.greeting?.x ?? 30, top: rv.elementPositions?.greeting?.y ?? 300,
+              width: 320, fontSize: rv.elementSizes?.greeting, animationDelay: '0.1s',
+            }}
+          >{rv.greeting || 'Bienvenido'}</div>
           {revealLetters.length > 0 && (
-            <div className="sf-reveal-letters">
+            <div
+              className="sf-reveal-letters"
+              style={{ left: rv.elementPositions?.name?.x ?? 20, top: rv.elementPositions?.name?.y ?? 335, width: 340 }}
+            >
               {revealLetters.map((l, i) => (
-                <span key={i} className="sf-reveal-letter" style={{ animationDelay: `${l.delay}s` }}>{l.char}</span>
+                <span
+                  key={i} className="sf-reveal-letter"
+                  style={{ fontSize: rv.elementSizes?.name, animationDelay: `${l.delay}s` }}
+                >{l.char}</span>
               ))}
             </div>
           )}
-          <div className="sf-reveal-line" style={{ animationDelay: `${revealBaseDelay + 0.15}s` }} />
+          <div
+            className="sf-reveal-line"
+            style={{
+              left: rv.elementPositions?.line?.x ?? 158, top: rv.elementPositions?.line?.y ?? 415,
+              width: rv.elementSizes?.line ?? 64, animationDelay: `${revealBaseDelay + 0.15}s`,
+            }}
+          />
           {rv.logoInsteadOfText && store.logo_url ? (
             <img
               src={store.logo_url} alt={store.name} className="sf-reveal-logo"
-              style={{ animationDelay: `${revealBaseDelay + 0.35}s` }}
+              style={{
+                left: rv.elementPositions?.subtitle?.x ?? 30, top: rv.elementPositions?.subtitle?.y ?? 435,
+                height: rv.elementSizes?.subtitle ?? 32, animationDelay: `${revealBaseDelay + 0.35}s`,
+              }}
             />
           ) : (
-            <div className="sf-reveal-sub" style={{ animationDelay: `${revealBaseDelay + 0.35}s` }}>{rv.subtitlePrefix || 'a'} {store.name}</div>
+            <div
+              className="sf-reveal-sub"
+              style={{
+                left: rv.elementPositions?.subtitle?.x ?? 30, top: rv.elementPositions?.subtitle?.y ?? 435,
+                width: 320, fontSize: rv.elementSizes?.subtitle, animationDelay: `${revealBaseDelay + 0.35}s`,
+              }}
+            >{rv.subtitlePrefix || 'a'} {store.name}</div>
           )}
         </div>
         {revealShowSkip && (

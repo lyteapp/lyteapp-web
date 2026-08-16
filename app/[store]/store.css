@@ -709,14 +709,14 @@ html, body { overflow-x: hidden; }
 }
 .sf-reveal-content { display: flex; flex-direction: column; align-items: center; gap: 22px; text-align: center; }
 .sf-reveal-greeting {
-  font-family: var(--font-fraunces), serif; font-style: italic; font-size: 20px;
+  font-family: var(--sf-reveal-font, var(--font-fraunces), serif); font-style: italic; font-size: 20px;
   color: color-mix(in srgb, var(--sf-reveal-accent-color, #A8A196) 80%, white 20%);
   opacity: 0; animation: sfRevealFade 0.6s ease 0.1s both;
 }
 .sf-reveal-letters { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.02em; }
 .sf-reveal-letter {
   display: inline-block; white-space: pre;
-  font-family: var(--font-fraunces), serif; font-weight: 500;
+  font-family: var(--sf-reveal-font, var(--font-fraunces), serif); font-weight: 500;
   font-size: clamp(40px, 12vw, 88px); line-height: 1; color: var(--sf-reveal-name-color, #FAF9F7);
   opacity: 0; animation: sfRevealLetterUp 0.55s cubic-bezier(0.16,1,0.3,1) both;
 }
@@ -727,7 +727,7 @@ html, body { overflow-x: hidden; }
   opacity: 0; animation: sfRevealLineGrow 0.6s ease both, sfRevealFade 0.1s ease both;
 }
 .sf-reveal-sub {
-  font-family: var(--font-geist-sans), sans-serif; font-size: 15px; letter-spacing: 0.14em;
+  font-family: var(--sf-reveal-font, var(--font-geist-sans), sans-serif); font-size: 15px; letter-spacing: 0.14em;
   text-transform: uppercase; color: var(--sf-reveal-accent-color, #A8A196);
   opacity: 0; animation: sfRevealFade 0.6s ease both;
 }
@@ -735,7 +735,7 @@ html, body { overflow-x: hidden; }
   position: absolute; bottom: calc(env(safe-area-inset-bottom) + 32px); right: 36px;
   background: none; border: none; cursor: pointer;
   color: color-mix(in srgb, var(--sf-reveal-accent-color, #A8A196) 85%, black 15%);
-  font-family: var(--font-geist-sans), sans-serif; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
+  font-family: var(--sf-reveal-font, var(--font-geist-sans), sans-serif); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
   opacity: 0; animation: sfRevealFade 0.6s ease 1s both; transition: color 0.15s;
 }
 .sf-reveal-skip:hover { color: var(--sf-reveal-name-color, #FAF9F7); }

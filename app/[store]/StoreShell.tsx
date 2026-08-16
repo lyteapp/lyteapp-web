@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useT } from '../lib/LocaleProvider'
+import { revealFontStack, loadRevealFont } from '../lib/revealFonts'
 import LocationMapPicker from './LocationMapPicker'
 
 const supabase = createClient(
@@ -119,6 +120,7 @@ type TemplateConfig = {
       bgColor?: string
       nameColor?: string
       accentColor?: string
+      fontFamily?: string
       seconds?: number
       showSkip?: boolean
     }
@@ -210,6 +212,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
     return () => { if (revealTimerRef.current) clearTimeout(revealTimerRef.current) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view])
+
+  useEffect(() => {
+    loadRevealFont(store.template_config?.homePage?.reveal?.fontFamily)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store.template_config?.homePage?.reveal?.fontFamily])
 
   useEffect(() => {
     if (!catalogEnter) return
@@ -1103,6 +1110,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     const revealBaseDelay = 0.35 + revealLetters.length * 0.045
     const rv = hp.reveal ?? {}
     const revealShowSkip = rv.showSkip !== false
+    const revealFont = revealFontStack(rv.fontFamily)
     return (
       <div
         className="sf-reveal-screen"
@@ -1110,6 +1118,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           '--sf-reveal-bg': rv.bgColor || '#111111',
           '--sf-reveal-name-color': rv.nameColor || '#FAF9F7',
           '--sf-reveal-accent-color': rv.accentColor || '#A8A196',
+          ...(revealFont ? { '--sf-reveal-font': revealFont } : {}),
         } as React.CSSProperties}
       >
         <div className="sf-reveal-content">

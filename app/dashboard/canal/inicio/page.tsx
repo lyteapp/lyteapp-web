@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../../lib/auth'
+import { REVEAL_FONTS } from '../../../lib/revealFonts'
 import '../canal.css'
 
 interface HomePagePill {
@@ -44,6 +45,7 @@ interface RevealConfig {
   bgColor: string
   nameColor: string
   accentColor: string
+  fontFamily: string
   seconds: number
   showSkip: boolean
 }
@@ -95,6 +97,7 @@ const DEFAULTS: HomePageConfig = {
     bgColor: '#111111',
     nameColor: '#FAF9F7',
     accentColor: '#A8A196',
+    fontFamily: 'default',
     seconds: 3.2,
     showSkip: true,
   },
@@ -790,6 +793,15 @@ export default function InicioPage() {
                       <input className="cn-input" value={config.reveal.skipLabel} onChange={e => setReveal('skipLabel', e.target.value)}
                         placeholder="Saltar →" maxLength={20} />
                     </div>
+                  </div>
+
+                  <div className="cn-field">
+                    <div className="cn-label">Tipo de letra</div>
+                    <select className="cn-select" value={config.reveal.fontFamily} onChange={e => setReveal('fontFamily', e.target.value)}>
+                      {REVEAL_FONTS.map(f => (
+                        <option key={f.id} value={f.id}>{f.name}</option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="cn-label" style={{ marginBottom: 8 }}>Color de fondo</div>

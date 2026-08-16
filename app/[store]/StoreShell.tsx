@@ -108,6 +108,7 @@ type TemplateConfig = {
     inputTextColor?: string
     inputBgColor?: string
     inputShape?: 'pill' | 'square' | 'outline'
+    elementSizes?: { logo?: number; title?: number; subtitle?: number; fields?: number }
     inactivityTimeout?: { enabled?: boolean; minutes?: number }
     orderReturnTimeout?: { enabled?: boolean; seconds?: number }
     enableReorder?: boolean
@@ -940,9 +941,15 @@ export default function StoreShell({ store, products, categories = [], initialBc
         }}
       >
         <div className="sf-splash-content">
-          {store.logo_url && <img ref={splashLogoRef} src={store.logo_url} alt={store.name} className={`sf-splash-logo${logoMorphStart ? ' sf-splash-logo-hidden' : ''}`} />}
-          <h1 className="sf-splash-title">{hp.title || store.name}</h1>
-          {hp.subtitle && <p className="sf-splash-sub">{hp.subtitle}</p>}
+          {store.logo_url && (
+            <img
+              ref={splashLogoRef} src={store.logo_url} alt={store.name}
+              className={`sf-splash-logo${logoMorphStart ? ' sf-splash-logo-hidden' : ''}`}
+              style={hp.elementSizes?.logo ? { width: hp.elementSizes.logo, height: hp.elementSizes.logo } : undefined}
+            />
+          )}
+          <h1 className="sf-splash-title" style={hp.elementSizes?.title ? { fontSize: hp.elementSizes.title } : undefined}>{hp.title || store.name}</h1>
+          {hp.subtitle && <p className="sf-splash-sub" style={hp.elementSizes?.subtitle ? { fontSize: hp.elementSizes.subtitle } : undefined}>{hp.subtitle}</p>}
 
           {collectCustomerData && (
             <div
@@ -950,6 +957,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
               style={{
                 '--sf-splash-input-color': hp.inputTextColor || '#FFFFFF',
                 '--sf-splash-input-bg': hp.inputBgColor || '#FFFFFF',
+                '--sf-splash-input-size': `${hp.elementSizes?.fields || 14}px`,
               } as React.CSSProperties}
             >
               <input

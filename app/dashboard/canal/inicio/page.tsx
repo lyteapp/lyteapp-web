@@ -28,6 +28,15 @@ interface OrderReturnTimeout {
   seconds: number
 }
 
+interface ElementSizes {
+  logo: number
+  title: number
+  subtitle: number
+  fields: number
+}
+
+type SelectableId = 'logo' | 'title' | 'subtitle' | 'fields'
+
 interface HomePageConfig {
   enabled: boolean
   title: string
@@ -46,6 +55,7 @@ interface HomePageConfig {
   inactivityTimeout: InactivityTimeout
   orderReturnTimeout: OrderReturnTimeout
   enableReorder: boolean
+  elementSizes: ElementSizes
 }
 
 const DEFAULTS: HomePageConfig = {
@@ -66,6 +76,7 @@ const DEFAULTS: HomePageConfig = {
   inactivityTimeout: { enabled: false, minutes: 3 },
   orderReturnTimeout: { enabled: false, seconds: 15 },
   enableReorder: false,
+  elementSizes: { logo: 72, title: 30, subtitle: 15, fields: 14 },
 }
 
 const TRANSITIONS = [
@@ -110,37 +121,126 @@ async function uploadFile(file: File, userId: string, folder: string) {
   return supabase.storage.from('store-assets').getPublicUrl(path).data.publicUrl
 }
 
-function SplashPreview({ config, storeName, logoUrl }: { config: HomePageConfig; storeName: string; logoUrl: string | null }) {
+const SIZE_LIMITS: Record<SelectableId, [number, number]> = {
+  logo: [32, 140],
+  title: [16, 56],
+  subtitle: [10, 28],
+  fields: [10, 22],
+}
+
+function ResizeHandle({ onDrag }: { onDrag: (delta: number) => void }) {
+  function handlePointerDown(e: React.PointerEvent) {
+    e.stopPropagation()
+    e.preventDefault()
+    const startX = e.clientX
+    const startY = e.clientY
+    function onMove(ev: PointerEvent) {
+      onDrag(((ev.clientX - startX) + (ev.clientY - startY)) / 2)
+    }
+    function onUp() {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+  }
   return (
-    <div style={{
-      width: 300, flexShrink: 0,
-      border: '10px solid #1E1E2E', borderRadius: 36,
-      boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
-      overflow: 'hidden', maxHeight: 640, aspectRatio: '300/620',
-      display: 'flex', flexDirection: 'column',
-      background: config.imageUrl
-        ? `linear-gradient(rgba(15,23,42,0.25), rgba(15,23,42,0.55)), url(${config.imageUrl}) center/cover no-repeat`
-        : config.bgColor,
-      position: 'relative',
-    }}>
-      <div style={{ position: 'absolute', top: 10, left: 20, right: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 11, fontWeight: 600, color: 'white' }}>9:41</span>
-        <span style={{ fontSize: 10, color: 'white' }}>●●●</span>
+    <div
+      onPointerDown={handlePointerDown}
+      style={{
+        position: 'absolute', right: -9, bottom: -9, width: 16, height: 16,
+        borderRadius: '50%', background: '#7C3AED', border: '2px solid white',
+        cursor: 'nwse-resize', boxShadow: '0 2px 6px rgba(0,0,0,0.35)', zIndex: 6,
+      }}
+    />
+  )
+}
+
+function SplashPreview({
+  config, storeName, logoUrl, selected, onSelect, onResize,
+}: {
+  config: HomePageConfig; storeName: string; logoUrl: string | null
+  selected: SelectableId | null
+  onSelect: (id: SelectableId | null) => void
+  onResize: (id: SelectableId, size: number) => void
+}) {
+  function startResize(id: SelectableId) {
+    const [min, max] = SIZE_LIMITS[id]
+    const startSize = config.elementSizes[id]
+    return (delta: number) => onResize(id, Math.min(max, Math.max(min, Math.round(startSize + delta))))
+  }
+
+  function selectableStyle(id: SelectableId, extraOffset = 4): React.CSSProperties {
+    return {
+      position: 'relative', display: 'inline-block', cursor: 'pointer',
+      outline: selected === id ? '2px dashed #7C3AED' : 'none',
+      outlineOffset: extraOffset,
+    }
+  }
+
+  const sizes = config.elementSizes
+
+  return (
+    <div
+      onClick={() => onSelect(null)}
+      style={{
+        width: 380, flexShrink: 0,
+        border: '10px solid #1E1E2E', borderRadius: 44,
+        boxShadow: '0 30px 80px rgba(0,0,0,0.3)',
+        overflow: 'hidden', aspectRatio: '380/780',
+        display: 'flex', flexDirection: 'column',
+        background: config.imageUrl
+          ? `linear-gradient(rgba(15,23,42,0.25), rgba(15,23,42,0.55)), url(${config.imageUrl}) center/cover no-repeat`
+          : config.bgColor,
+        position: 'relative',
+      }}
+    >
+      <div style={{ position: 'absolute', top: 14, left: 26, right: 26, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: 'white' }}>9:41</span>
+        <span style={{ fontSize: 12, color: 'white' }}>●●●</span>
       </div>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 24px', textAlign: 'center' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 30px', textAlign: 'center' }}>
+
         {logoUrl && (
-          <img src={logoUrl} alt="" style={{ width: 52, height: 52, borderRadius: 14, objectFit: 'cover', marginBottom: 18, boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }} />
-        )}
-        <div style={{ fontSize: 20, fontWeight: 800, color: 'white', letterSpacing: '-0.03em', lineHeight: 1.15, marginBottom: 8 }}>
-          {config.title || storeName || 'Tu tienda'}
-        </div>
-        {config.subtitle && (
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', lineHeight: 1.5, marginBottom: 22 }}>
-            {config.subtitle}
+          <div
+            onClick={e => { e.stopPropagation(); onSelect('logo') }}
+            style={{ ...selectableStyle('logo'), marginBottom: 22, borderRadius: 14 }}
+          >
+            <img src={logoUrl} alt="" style={{ width: sizes.logo, height: sizes.logo, borderRadius: 14, objectFit: 'cover', display: 'block', boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }} />
+            {selected === 'logo' && <ResizeHandle onDrag={startResize('logo')} />}
           </div>
         )}
+
+        <div
+          onClick={e => { e.stopPropagation(); onSelect('title') }}
+          style={{ ...selectableStyle('title'), marginBottom: 10 }}
+        >
+          <div style={{ fontSize: sizes.title, fontWeight: 800, color: 'white', letterSpacing: '-0.03em', lineHeight: 1.15 }}>
+            {config.title || storeName || 'Tu tienda'}
+          </div>
+          {selected === 'title' && <ResizeHandle onDrag={startResize('title')} />}
+        </div>
+
+        {config.subtitle && (
+          <div
+            onClick={e => { e.stopPropagation(); onSelect('subtitle') }}
+            style={{ ...selectableStyle('subtitle'), marginBottom: 26 }}
+          >
+            <div style={{ fontSize: sizes.subtitle, color: 'rgba(255,255,255,0.75)', lineHeight: 1.5 }}>
+              {config.subtitle}
+            </div>
+            {selected === 'subtitle' && <ResizeHandle onDrag={startResize('subtitle')} />}
+          </div>
+        )}
+
         {config.collectCustomerData && (
-          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+          <div
+            onClick={e => { e.stopPropagation(); onSelect('fields') }}
+            style={{
+              ...selectableStyle('fields', 8), width: '100%', display: 'flex', flexDirection: 'column', gap: 8,
+              marginBottom: 14, borderRadius: 8,
+            }}
+          >
             {['Tu cedula de identidad', config.customerFields.name && 'Tu nombre completo', config.customerFields.phone && 'Tu telefono', config.customerFields.address && 'Tu direccion']
               .filter((v): v is string => !!v)
               .map(placeholder => (
@@ -151,26 +251,28 @@ function SplashPreview({ config, storeName, logoUrl }: { config: HomePageConfig;
                     ? `1.5px solid color-mix(in srgb, ${config.inputBgColor || '#FFFFFF'} 65%, transparent)`
                     : `1px solid color-mix(in srgb, ${config.inputBgColor || '#FFFFFF'} 20%, transparent)`,
                   borderRadius: config.inputShape === 'square' ? 4 : config.inputShape === 'outline' ? 10 : 100,
-                  padding: '9px 14px', fontSize: 11,
+                  padding: `${sizes.fields}px ${sizes.fields * 1.4}px`, fontSize: sizes.fields,
                   color: `color-mix(in srgb, ${config.inputTextColor || '#FFFFFF'} 55%, transparent)`,
                 }}>
                   {placeholder}
                 </div>
               ))}
+            {selected === 'fields' && <ResizeHandle onDrag={startResize('fields')} />}
           </div>
         )}
+
         <div style={{
-          background: config.buttonColor || '#7C3AED', color: 'white', fontSize: 12, fontWeight: 700,
-          padding: '11px 28px', borderRadius: 100, boxShadow: '0 8px 20px rgba(0,0,0,0.25)',
+          background: config.buttonColor || '#7C3AED', color: 'white', fontSize: 14, fontWeight: 700,
+          padding: '13px 32px', borderRadius: 100, boxShadow: '0 8px 20px rgba(0,0,0,0.25)',
         }}>
           {config.buttonLabel || 'Empezar'}
         </div>
         {config.pills.filter(p => p.label.trim()).length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12, width: '100%' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14, width: '100%' }}>
             {config.pills.filter(p => p.label.trim()).map(p => (
               <div key={p.id} style={{
                 background: 'rgba(255,255,255,0.12)', border: `1.5px solid ${p.color}`, color: 'white',
-                fontSize: 11, fontWeight: 600, padding: '8px 20px', borderRadius: 100,
+                fontSize: 12, fontWeight: 600, padding: '9px 22px', borderRadius: 100,
               }}>
                 {p.label}
               </div>
@@ -197,6 +299,8 @@ export default function InicioPage() {
   const buttonColorRef = useRef<HTMLInputElement>(null)
   const inputTextColorRef = useRef<HTMLInputElement>(null)
   const inputBgColorRef = useRef<HTMLInputElement>(null)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [selectedEl, setSelectedEl] = useState<SelectableId | null>(null)
 
   useEffect(() => {
     if (!user) return
@@ -218,6 +322,7 @@ export default function InicioPage() {
             customerFields: { ...DEFAULTS.customerFields, ...(hp.customerFields ?? {}) },
             inactivityTimeout: { ...DEFAULTS.inactivityTimeout, ...(hp.inactivityTimeout ?? {}) },
             orderReturnTimeout: { ...DEFAULTS.orderReturnTimeout, ...(hp.orderReturnTimeout ?? {}) },
+            elementSizes: { ...DEFAULTS.elementSizes, ...(hp.elementSizes ?? {}) },
           })
         }
       })
@@ -246,6 +351,10 @@ export default function InicioPage() {
   }
   function setOrderReturn<K extends keyof OrderReturnTimeout>(key: K, value: OrderReturnTimeout[K]) {
     setConfig(c => ({ ...c, orderReturnTimeout: { ...c.orderReturnTimeout, [key]: value } }))
+  }
+
+  function setElementSize(id: SelectableId, size: number) {
+    setConfig(c => ({ ...c, elementSizes: { ...c.elementSizes, [id]: size } }))
   }
 
   async function handleUpload(e: { target: { files: FileList | null } }) {
@@ -278,9 +387,31 @@ export default function InicioPage() {
         <div className="cn-desc">Una pantalla de bienvenida que se muestra antes de tu tienda, con un boton para entrar.</div>
       </div>
 
-      <div style={{ display: 'flex', gap: 40, alignItems: 'flex-start' }}>
+      <div style={{ display: 'flex', gap: 0, alignItems: 'flex-start', position: 'relative' }} onClick={() => setSelectedEl(null)}>
 
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, position: 'sticky', top: 24, padding: '4px 24px 24px 0' }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+            Vista previa · toca un elemento y arrastra su esquina para redimensionar
+          </div>
+          <SplashPreview
+            config={config} storeName={storeName} logoUrl={logoUrl}
+            selected={selectedEl} onSelect={setSelectedEl}
+            onResize={setElementSize}
+          />
+        </div>
+
+        <button
+          type="button"
+          className="cn-sidebar-toggle"
+          onClick={e => { e.stopPropagation(); setSidebarOpen(o => !o) }}
+          aria-label={sidebarOpen ? 'Cerrar panel' : 'Abrir panel'}
+        >
+          <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" style={{ transform: sidebarOpen ? 'none' : 'rotate(180deg)' }}>
+            <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+          </svg>
+        </button>
+
+        <div className={`cn-sidebar${sidebarOpen ? ' open' : ''}`} onClick={e => e.stopPropagation()}>
           <form onSubmit={save}>
 
             <div className="cn-section">
@@ -651,11 +782,6 @@ export default function InicioPage() {
               </button>
             </div>
           </form>
-        </div>
-
-        <div style={{ position: 'sticky', top: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Vista previa</div>
-          <SplashPreview config={config} storeName={storeName} logoUrl={logoUrl} />
         </div>
 
       </div>

@@ -561,8 +561,9 @@ html, body { overflow-x: hidden; }
   width: 100%; box-sizing: border-box;
   background: color-mix(in srgb, var(--sf-splash-input-bg, white) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--sf-splash-input-bg, white) 20%, transparent);
-  border-radius: 100px; padding: 14px 20px;
-  font-size: 14px; color: var(--sf-splash-input-color, white); text-align: center;
+  border-radius: 100px;
+  padding: var(--sf-splash-input-size, 14px) calc(var(--sf-splash-input-size, 14px) * 1.4);
+  font-size: var(--sf-splash-input-size, 14px); color: var(--sf-splash-input-color, white); text-align: center;
   font-family: var(--font-geist-sans), sans-serif;
   outline: none; transition: border-color 0.2s, background 0.2s;
 }

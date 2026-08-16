@@ -294,6 +294,27 @@
   55%, 100% { top: 8px; left: 8px; transform: translate(0,0) scale(0.7); border-radius: 4px; }
 }
 
+/* ── COLLAPSIBLE EDITOR SIDEBAR ── */
+.cn-sidebar-toggle {
+  position: sticky; top: 24px;
+  width: 26px; height: 46px; flex-shrink: 0;
+  border-radius: 8px; border: 1px solid rgba(15,23,42,0.1);
+  background: white; color: #64748B; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  margin-right: 10px; transition: background 0.15s, color 0.15s;
+  box-shadow: 0 2px 8px rgba(15,23,42,0.06);
+}
+.cn-sidebar-toggle:hover { background: #F5F3FF; color: #7C3AED; }
+.cn-sidebar {
+  width: 400px; flex-shrink: 0; box-sizing: border-box;
+  max-height: calc(100vh - 48px);
+  position: sticky; top: 24px;
+  overflow: hidden;
+  transition: width 0.25s ease, opacity 0.2s ease;
+}
+.cn-sidebar.open { overflow-y: auto; overflow-x: hidden; }
+.cn-sidebar:not(.open) { width: 0; opacity: 0; pointer-events: none; }
+
 @media (max-width: 640px) {
   .cn-two-col { grid-template-columns: 1fr; }
   .cn-template-grid { grid-template-columns: 1fr 1fr; }

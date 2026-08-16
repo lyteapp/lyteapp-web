@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useT } from '../lib/LocaleProvider'
 import { revealFontStack, loadRevealFont } from '../lib/revealFonts'
+import { isLightColor, poweredByColors } from '../lib/colorContrast'
 import LocationMapPicker from './LocationMapPicker'
 
 const supabase = createClient(
@@ -958,6 +959,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   }
 
   if (view === 'splash') {
+    const splashPoweredColors = poweredByColors(!hp.imageUrl && isLightColor(hp.bgColor || '#0F172A'))
     return (
       <>
       {renderLogoMorphOverlay()}
@@ -1102,9 +1104,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
             </div>
           )}
         </div>
-        <a className="sf-powered-by" href="https://lyte-app.com" target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}>
+        <a className="sf-powered-by" href="https://lyte-app.com" target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ color: splashPoweredColors.text }}>
           <img src="/logo.png" alt="" />
-          <span>Powered by <strong>LYTE APP</strong></span>
+          <span>Powered by <strong style={{ color: splashPoweredColors.strong }}>LYTE APP</strong></span>
         </a>
       </div>
       </>
@@ -1122,6 +1124,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     const rv = hp.reveal ?? {}
     const revealShowSkip = rv.showSkip !== false
     const revealFont = revealFontStack(rv.fontFamily)
+    const revealPoweredColors = poweredByColors(isLightColor(rv.bgColor || '#111111'))
     return (
       <div
         className="sf-reveal-screen"
@@ -1154,9 +1157,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
         {revealShowSkip && (
           <button className="sf-reveal-skip" onClick={finishReveal}>{rv.skipLabel || 'Saltar →'}</button>
         )}
-        <a className="sf-powered-by" href="https://lyte-app.com" target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}>
+        <a className="sf-powered-by" href="https://lyte-app.com" target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ color: revealPoweredColors.text }}>
           <img src="/logo.png" alt="" />
-          <span>Powered by <strong>LYTE APP</strong></span>
+          <span>Powered by <strong style={{ color: revealPoweredColors.strong }}>LYTE APP</strong></span>
         </a>
       </div>
     )

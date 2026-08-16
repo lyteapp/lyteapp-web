@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../../lib/auth'
 import { REVEAL_FONTS, revealFontStack, loadRevealFont } from '../../../lib/revealFonts'
+import { isLightColor, poweredByColors } from '../../../lib/colorContrast'
 import '../canal.css'
 
 interface HomePagePill {
@@ -456,21 +457,22 @@ function SplashPreview({
           </div>
         )}
       </div>
-      <PoweredByBadge />
+      <PoweredByBadge isLight={!config.imageUrl && isLightColor(config.bgColor || '#0F172A')} />
     </div>
   )
 }
 
-function PoweredByBadge() {
+function PoweredByBadge({ isLight }: { isLight: boolean }) {
+  const colors = poweredByColors(isLight)
   return (
     <div style={{
       position: 'absolute', left: 0, right: 0, bottom: 14, zIndex: 3,
       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-      fontSize: 10, letterSpacing: '0.02em', color: 'rgba(255,255,255,0.45)',
+      fontSize: 11, letterSpacing: '0.02em', color: colors.text,
       fontFamily: 'var(--font-geist-sans), sans-serif',
     }}>
-      <img src="/logo.png" alt="" style={{ height: 12, width: 'auto', opacity: 0.7, display: 'block' }} />
-      <span>Powered by <strong style={{ color: 'rgba(255,255,255,0.65)' }}>LYTE APP</strong></span>
+      <img src="/logo.png" alt="" style={{ height: 13, width: 'auto', opacity: 0.9, display: 'block' }} />
+      <span>Powered by <strong style={{ color: colors.strong }}>LYTE APP</strong></span>
     </div>
   )
 }
@@ -553,7 +555,7 @@ function RevealPreview({ config, storeName, logoUrl }: { config: HomePageConfig;
           {rv.skipLabel || 'Saltar →'}
         </div>
       )}
-      <PoweredByBadge />
+      <PoweredByBadge isLight={isLightColor(rv.bgColor || '#111111')} />
     </div>
   )
 }

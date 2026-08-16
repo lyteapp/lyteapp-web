@@ -486,7 +486,7 @@ html, body { overflow-x: hidden; }
 .sf-splash-screen {
   height: 100vh; height: 100dvh;
   overflow: hidden;
-  display: flex; align-items: center; justify-content: center;
+  display: flex; align-items: flex-end; justify-content: center;
   padding: calc(env(safe-area-inset-top) + 24px) 24px 24px;
   text-align: center;
   font-family: var(--font-geist-sans), sans-serif;
@@ -572,9 +572,11 @@ html, body { overflow-x: hidden; }
   position: relative; z-index: 1;
 }
 .sf-splash-content::-webkit-scrollbar { display: none; }
+.sf-splash-elements-layer { position: absolute; inset: 0; z-index: 2; }
 .sf-splash-logo {
+  position: absolute;
   width: 72px; height: 72px; border-radius: 20px; object-fit: cover;
-  margin: 0 auto 24px; display: block; box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  margin: 0; display: block; box-shadow: 0 8px 32px rgba(0,0,0,0.25);
 }
 .sf-splash-logo-hidden { opacity: 0; }
 .sf-nav-logo-hidden { opacity: 0; }
@@ -585,9 +587,15 @@ html, body { overflow-x: hidden; }
               width 0.6s cubic-bezier(0.4,0,0.2,1), height 0.6s cubic-bezier(0.4,0,0.2,1),
               border-radius 0.6s cubic-bezier(0.4,0,0.2,1);
 }
-.sf-splash-title { font-size: 30px; font-weight: 800; color: white; letter-spacing: -0.03em; margin-bottom: 12px; line-height: 1.15; }
-.sf-splash-sub { font-size: 15px; color: rgba(255,255,255,0.75); line-height: 1.6; margin-bottom: 32px; }
-.sf-splash-cedula-wrap { margin-bottom: 16px; }
+.sf-splash-title {
+  position: absolute; width: 320px; max-width: calc(100vw - 60px);
+  font-size: 30px; font-weight: 800; color: white; letter-spacing: -0.03em; margin: 0; line-height: 1.15;
+}
+.sf-splash-sub {
+  position: absolute; width: 320px; max-width: calc(100vw - 60px);
+  font-size: 15px; color: rgba(255,255,255,0.75); line-height: 1.6; margin: 0;
+}
+.sf-splash-cedula-wrap { position: absolute; width: 320px; max-width: calc(100vw - 60px); margin: 0; }
 .sf-splash-cedula {
   width: 100%; box-sizing: border-box;
   background: color-mix(in srgb, var(--sf-splash-input-bg, white) 12%, transparent);

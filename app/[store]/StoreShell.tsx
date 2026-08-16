@@ -110,6 +110,7 @@ type TemplateConfig = {
     inputBgColor?: string
     inputShape?: 'pill' | 'square' | 'outline'
     elementSizes?: { logo?: number; title?: number; subtitle?: number; fields?: number }
+    elementPositions?: { logo?: { x: number; y: number }; title?: { x: number; y: number }; subtitle?: { x: number; y: number }; fields?: { x: number; y: number } }
     showLogo?: boolean
     images?: { id: string; url: string; x: number; y: number; width: number; height: number; flipped?: boolean }[]
     inactivityTimeout?: { enabled?: boolean; minutes?: number }
@@ -984,21 +985,39 @@ export default function StoreShell({ store, products, categories = [], initialBc
             ))}
           </div>
         )}
-        <div className="sf-splash-content">
+        <div className="sf-splash-elements-layer">
           {store.logo_url && hp.showLogo !== false && (
             <img
               ref={splashLogoRef} src={store.logo_url} alt={store.name}
               className={`sf-splash-logo${logoMorphStart ? ' sf-splash-logo-hidden' : ''}`}
-              style={hp.elementSizes?.logo ? { width: hp.elementSizes.logo, height: hp.elementSizes.logo } : undefined}
+              style={{
+                left: hp.elementPositions?.logo?.x ?? 154, top: hp.elementPositions?.logo?.y ?? 60,
+                ...(hp.elementSizes?.logo ? { width: hp.elementSizes.logo, height: hp.elementSizes.logo } : {}),
+              }}
             />
           )}
-          <h1 className="sf-splash-title" style={hp.elementSizes?.title ? { fontSize: hp.elementSizes.title } : undefined}>{hp.title || store.name}</h1>
-          {hp.subtitle && <p className="sf-splash-sub" style={hp.elementSizes?.subtitle ? { fontSize: hp.elementSizes.subtitle } : undefined}>{hp.subtitle}</p>}
+          <h1
+            className="sf-splash-title"
+            style={{
+              left: hp.elementPositions?.title?.x ?? 30, top: hp.elementPositions?.title?.y ?? 148,
+              ...(hp.elementSizes?.title ? { fontSize: hp.elementSizes.title } : {}),
+            }}
+          >{hp.title || store.name}</h1>
+          {hp.subtitle && (
+            <p
+              className="sf-splash-sub"
+              style={{
+                left: hp.elementPositions?.subtitle?.x ?? 30, top: hp.elementPositions?.subtitle?.y ?? 210,
+                ...(hp.elementSizes?.subtitle ? { fontSize: hp.elementSizes.subtitle } : {}),
+              }}
+            >{hp.subtitle}</p>
+          )}
 
           {collectCustomerData && (
             <div
               className={`sf-splash-cedula-wrap sf-splash-shape-${hp.inputShape || 'pill'}`}
               style={{
+                left: hp.elementPositions?.fields?.x ?? 30, top: hp.elementPositions?.fields?.y ?? 290,
                 '--sf-splash-input-color': hp.inputTextColor || '#FFFFFF',
                 '--sf-splash-input-bg': hp.inputBgColor || '#FFFFFF',
                 '--sf-splash-input-size': `${hp.elementSizes?.fields || 14}px`,
@@ -1075,7 +1094,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
               {splashError && <div className="sf-splash-cedula-hint error">{splashError}</div>}
             </div>
           )}
+        </div>
 
+        <div className="sf-splash-content">
           <button
             className="sf-splash-btn"
             style={hp.buttonColor ? { background: hp.buttonColor } : undefined}

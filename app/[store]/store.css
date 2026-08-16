@@ -1,6 +1,21 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { overflow-x: hidden; }
 
+/* Installed PWA uses black-translucent (so the home page can blend with
+   its own background), which forces white status bar icons everywhere —
+   including over the catalog/checkout's light background, where they'd
+   otherwise be unreadable. This strip keeps them legible there without
+   affecting the splash screen (which never renders it). */
+.sf-statusbar-strip {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: env(safe-area-inset-top);
+  background: rgba(15,23,42,0.5);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  z-index: 999;
+  pointer-events: none;
+}
+
 .sf-page {
   --sf-accent-color: var(--sf-accent-color, #7C3AED);
   min-height: 100vh;
@@ -15,6 +30,7 @@ html, body { overflow-x: hidden; }
 .sf-topbar {
   background: white;
   border-bottom: 1px solid rgba(15,23,42,0.07);
+  padding-top: env(safe-area-inset-top);
 }
 .sf-topbar-inner {
   max-width: 1100px; margin: 0 auto;
@@ -64,6 +80,7 @@ html, body { overflow-x: hidden; }
   background: white;
   border-bottom: 1px solid rgba(15,23,42,0.07);
   position: sticky; top: 0; z-index: 50;
+  padding-top: env(safe-area-inset-top);
 }
 .sf-nav-inner {
   max-width: 1100px; margin: 0 auto;
@@ -467,9 +484,11 @@ html, body { overflow-x: hidden; }
 
 /* ── HOME SPLASH ── */
 .sf-splash-screen {
-  min-height: 100vh; min-height: 100dvh;
+  height: 100vh; height: 100dvh;
+  overflow: hidden;
   display: flex; align-items: center; justify-content: center;
-  padding: 24px; text-align: center;
+  padding: calc(env(safe-area-inset-top) + 24px) 24px 24px;
+  text-align: center;
   font-family: var(--font-geist-sans), sans-serif;
   animation: sfFadeIn 0.5s ease both;
 }
@@ -540,7 +559,12 @@ html, body { overflow-x: hidden; }
 .sf-splash-leaving.sf-trans-logo-morph { animation-name: sfOutFade; }
 .sf-catalog-enter.sf-trans-logo-morph  { animation-name: sfInFade; }
 
-.sf-splash-content { max-width: 420px; }
+.sf-splash-content {
+  max-width: 420px; max-height: 100%; width: 100%;
+  overflow-y: auto; overflow-x: hidden;
+  scrollbar-width: none;
+}
+.sf-splash-content::-webkit-scrollbar { display: none; }
 .sf-splash-logo {
   width: 72px; height: 72px; border-radius: 20px; object-fit: cover;
   margin: 0 auto 24px; display: block; box-shadow: 0 8px 32px rgba(0,0,0,0.25);
@@ -674,9 +698,10 @@ html, body { overflow-x: hidden; }
 
 /* ── CONFIRMATION ── */
 .sf-confirm-screen {
-  min-height: 100vh; background: #FAFAF9;
+  min-height: 100vh; min-height: 100dvh; background: #FAFAF9;
   display: flex; align-items: center; justify-content: center;
-  padding: 24px; font-family: var(--font-geist-sans), sans-serif;
+  padding: calc(env(safe-area-inset-top) + 24px) 24px 24px;
+  font-family: var(--font-geist-sans), sans-serif;
 }
 .sf-confirm-card {
   background: white; border: 1px solid rgba(15,23,42,0.08);

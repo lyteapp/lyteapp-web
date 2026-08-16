@@ -1065,6 +1065,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
   // ── CONFIRMED ──
   if (view === 'confirmed') return (
+    <>
+    <div className="sf-statusbar-strip" />
     <div className="sf-confirm-screen">
       <div className="sf-confirm-card">
         <div className="sf-confirm-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 32, height: 32 }}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg></div>
@@ -1106,6 +1108,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
         <Link href="/" className="sf-confirm-link">{t('store.confirmed.link')}</Link>
       </div>
     </div>
+    </>
   )
 
   // Product modal extra price (for footer price display)
@@ -1122,6 +1125,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
   // ── CHECKOUT ──
   if (view === 'checkout') return (
+    <>
+    <div className="sf-statusbar-strip" />
     <div className={`sf-page sf-tpl-${store.template ?? 'clasico'} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize} sf-vshape-${cfgVariantShape} sf-eshape-${cfgExtraShape}`} style={pageStyle}>
       {showMapPicker && mapboxToken && (
         <LocationMapPicker
@@ -1816,6 +1821,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
         </a>
       )}
     </div>
+    </>
   )
 
   // ── CATALOG ──
@@ -2115,6 +2121,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   return (
     <>
     {renderLogoMorphOverlay()}
+    <div className="sf-statusbar-strip" />
     <div className={`sf-page sf-tpl-${tpl} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize} sf-vshape-${cfgVariantShape} sf-eshape-${cfgExtraShape}${catalogEnter ? ` sf-catalog-enter sf-trans-${store.template_config?.homePage?.transition || 'slide'}` : ''}`} style={pageStyle}>
       <div className="sf-topbar">
         <div className="sf-topbar-inner sf-topbar-3col">

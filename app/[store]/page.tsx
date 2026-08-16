@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: { params: Promise<{ store: st
     manifest: `/api/store-manifest/${slug}`,
     appleWebApp: {
       capable: true,
-      statusBarStyle: 'default' as const,
+      statusBarStyle: 'black-translucent' as const,
       title: data.name,
     },
     ...(data.logo_url && {

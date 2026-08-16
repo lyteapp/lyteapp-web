@@ -110,6 +110,7 @@ type TemplateConfig = {
     inputBgColor?: string
     inputShape?: 'pill' | 'square' | 'outline'
     elementSizes?: { logo?: number; title?: number; subtitle?: number; fields?: number }
+    showLogo?: boolean
     images?: { id: string; url: string; x: number; y: number; width: number; height: number; flipped?: boolean }[]
     inactivityTimeout?: { enabled?: boolean; minutes?: number }
     orderReturnTimeout?: { enabled?: boolean; seconds?: number }
@@ -993,7 +994,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           </div>
         )}
         <div className="sf-splash-content">
-          {store.logo_url && (
+          {store.logo_url && hp.showLogo !== false && (
             <img
               ref={splashLogoRef} src={store.logo_url} alt={store.name}
               className={`sf-splash-logo${logoMorphStart ? ' sf-splash-logo-hidden' : ''}`}

@@ -81,6 +81,7 @@ interface HomePageConfig {
   reveal: RevealConfig
   elementSizes: ElementSizes
   images: HomePageImage[]
+  showLogo: boolean
 }
 
 const DEFAULTS: HomePageConfig = {
@@ -114,6 +115,7 @@ const DEFAULTS: HomePageConfig = {
   },
   elementSizes: { logo: 72, title: 30, subtitle: 15, fields: 14 },
   images: [],
+  showLogo: true,
 }
 
 function newImage(url: string): HomePageImage {
@@ -336,6 +338,7 @@ function SplashPreview({
       position: 'relative', display: 'inline-block', cursor: 'pointer',
       outline: selected === id ? '2px dashed #7C3AED' : 'none',
       outlineOffset: extraOffset,
+      pointerEvents: 'auto',
     }
   }
 
@@ -370,9 +373,9 @@ function SplashPreview({
         <span style={{ fontSize: 13, fontWeight: 600, color: 'white' }}>9:41</span>
         <span style={{ fontSize: 12, color: 'white' }}>●●●</span>
       </div>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 30px', textAlign: 'center', position: 'relative', zIndex: 1 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 30px', textAlign: 'center', position: 'relative', zIndex: 1, pointerEvents: 'none' }}>
 
-        {logoUrl && (
+        {logoUrl && config.showLogo && (
           <div
             onClick={e => { e.stopPropagation(); onSelect('logo') }}
             style={{ ...selectableStyle('logo'), marginBottom: 22, borderRadius: 14 }}
@@ -861,6 +864,15 @@ export default function InicioPage() {
                 </div>
               </div>
               <div className="cn-section-body">
+                {logoUrl && (
+                  <div className="cn-toggle-row">
+                    <div className="cn-toggle-info">
+                      <div className="cn-toggle-label">Mostrar logotipo</div>
+                      <div className="cn-toggle-hint">Muestra tu logo en la parte superior de la pantalla de inicio</div>
+                    </div>
+                    <Toggle checked={config.showLogo} onChange={v => set('showLogo', v)} />
+                  </div>
+                )}
                 <div className="cn-field">
                   <div className="cn-label">Titulo</div>
                   <input className="cn-input" value={config.title} onChange={e => set('title', e.target.value)}

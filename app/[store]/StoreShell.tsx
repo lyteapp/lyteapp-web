@@ -193,20 +193,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [catalogEnter, setCatalogEnter] = useState(false)
   const [customerCedula, setCustomerCedula] = useState('')
   const [cedulaStatus, setCedulaStatus] = useState<'idle' | 'checking' | 'found' | 'new'>('idle')
-  const [showWelcome, setShowWelcome] = useState(false)
-  const [welcomeLeaving, setWelcomeLeaving] = useState(false)
   const [splashError, setSplashError] = useState('')
   const [locationLabel, setLocationLabel] = useState('')
   const [lastOrder, setLastOrder] = useState<LastOrder | null>(null)
   const [showReorder, setShowReorder] = useState(false)
   const reorderCheckedRef = useRef(false)
-
-  useEffect(() => {
-    if (!showWelcome) return
-    const t1 = setTimeout(() => setWelcomeLeaving(true), 2600)
-    const t2 = setTimeout(() => { setShowWelcome(false); setWelcomeLeaving(false) }, 3150)
-    return () => { clearTimeout(t1); clearTimeout(t2) }
-  }, [showWelcome])
 
   useEffect(() => {
     if (view !== 'reveal') return
@@ -792,7 +783,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     setLocationState('idle'); setCustomerLat(null); setCustomerLng(null); setLocationLabel('')
     setPaymentProofFile(null); setPaymentProofPreview(null)
     setOrderId(''); setError(''); setSplashError('')
-    setShowWelcome(false); setSplashLeaving(false); setCatalogEnter(false)
+    setSplashLeaving(false); setCatalogEnter(false)
     setView(hp.enabled ? 'splash' : 'catalog')
   }
 
@@ -929,7 +920,6 @@ export default function StoreShell({ store, products, categories = [], initialBc
         } catch {}
       }
     }
-    setShowWelcome(true)
     proceedToTransition()
   }
 
@@ -2273,13 +2263,6 @@ export default function StoreShell({ store, products, categories = [], initialBc
           </div>
         </div>
       </div>
-
-      {showWelcome && customerName.trim() && (
-        <div className={`sf-welcome-toast${welcomeLeaving ? ' leaving' : ''}`}>
-          <div className="sf-welcome-label">Bienvenido</div>
-          <div className="sf-welcome-name">{customerName.trim().split(' ')[0]}</div>
-        </div>
-      )}
 
       {showReorder && lastOrder && (
         <div className="sf-reorder-banner">

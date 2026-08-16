@@ -40,6 +40,7 @@ interface HomePageConfig {
   transition: string
   collectCustomerData: boolean
   customerFields: CustomerFields
+  inputTextColor: string
   inactivityTimeout: InactivityTimeout
   orderReturnTimeout: OrderReturnTimeout
   enableReorder: boolean
@@ -57,6 +58,7 @@ const DEFAULTS: HomePageConfig = {
   transition: 'slide',
   collectCustomerData: true,
   customerFields: { name: true, phone: true, address: true },
+  inputTextColor: '#FFFFFF',
   inactivityTimeout: { enabled: false, minutes: 3 },
   orderReturnTimeout: { enabled: false, seconds: 15 },
   enableReorder: false,
@@ -76,6 +78,7 @@ const TRANSITIONS = [
 
 const BG_PRESETS = ['#0F172A', '#7C3AED', '#111827', '#064E3B', '#7C2D12', '#1E1B4B']
 const PILL_COLOR_PRESETS = ['#7C3AED', '#2563EB', '#DC2626', '#D97706', '#059669', '#DB2777', '#0F172A', '#64748B']
+const TEXT_COLOR_PRESETS = ['#FFFFFF', '#0F172A', '#F1F5F9', '#7C3AED', '#FDE68A']
 
 function newPill(): HomePagePill {
   return { id: crypto.randomUUID(), label: '', url: '', color: '#7C3AED' }
@@ -135,7 +138,8 @@ function SplashPreview({ config, storeName, logoUrl }: { config: HomePageConfig;
                 <div key={placeholder} style={{
                   width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.1)',
                   border: '1px solid rgba(255,255,255,0.2)', borderRadius: 100,
-                  padding: '9px 14px', fontSize: 11, color: 'rgba(255,255,255,0.55)',
+                  padding: '9px 14px', fontSize: 11,
+                  color: `color-mix(in srgb, ${config.inputTextColor || '#FFFFFF'} 55%, transparent)`,
                 }}>
                   {placeholder}
                 </div>
@@ -178,6 +182,7 @@ export default function InicioPage() {
   const fileRef = useRef<HTMLInputElement>(null)
   const bgColorRef = useRef<HTMLInputElement>(null)
   const buttonColorRef = useRef<HTMLInputElement>(null)
+  const inputTextColorRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!user) return
@@ -305,6 +310,22 @@ export default function InicioPage() {
                 </div>
                 {config.collectCustomerData && (
                   <>
+                    <div className="cn-label" style={{ marginTop: 18, marginBottom: 8 }}>Color del texto de los campos</div>
+                    <div className="cn-colors" style={{ marginBottom: 4 }}>
+                      {TEXT_COLOR_PRESETS.map(c => (
+                        <div key={c} className={`cn-color-swatch${config.inputTextColor === c ? ' selected' : ''}`}
+                          style={{ background: c, border: '1px solid rgba(15,23,42,0.12)' }} onClick={() => set('inputTextColor', c)} />
+                      ))}
+                      <div
+                        className="cn-color-custom"
+                        style={{ background: TEXT_COLOR_PRESETS.includes(config.inputTextColor) ? undefined : config.inputTextColor }}
+                        onClick={() => inputTextColorRef.current?.click()}
+                      >
+                        {TEXT_COLOR_PRESETS.includes(config.inputTextColor) ? '+' : null}
+                        <input ref={inputTextColorRef} type="color" value={config.inputTextColor} onChange={e => set('inputTextColor', e.target.value)} />
+                      </div>
+                    </div>
+
                     <div className="cn-label" style={{ marginTop: 18, marginBottom: 4 }}>Datos obligatorios para entrar</div>
                     <div className="cn-toggle-row">
                       <div className="cn-toggle-info">

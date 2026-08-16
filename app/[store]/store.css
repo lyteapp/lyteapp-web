@@ -561,17 +561,18 @@ html, body { overflow-x: hidden; }
   width: 100%; box-sizing: border-box;
   background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
   border-radius: 100px; padding: 14px 20px;
-  font-size: 14px; color: white; text-align: center;
+  font-size: 14px; color: var(--sf-splash-input-color, white); text-align: center;
   font-family: var(--font-geist-sans), sans-serif;
   outline: none; transition: border-color 0.2s, background 0.2s;
 }
-.sf-splash-cedula::placeholder { color: rgba(255,255,255,0.5); }
+.sf-splash-cedula::placeholder { color: color-mix(in srgb, var(--sf-splash-input-color, white) 55%, transparent); }
 .sf-splash-cedula:focus { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.16); }
 .sf-splash-cedula-hint { font-size: 12px; color: rgba(255,255,255,0.65); margin-top: 8px; }
 .sf-splash-cedula-hint.found { color: #86EFAC; font-weight: 600; }
 .sf-splash-location-btn {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   cursor: pointer; background: var(--sf-accent-color, #7C3AED); border-color: transparent;
+  color: white;
 }
 .sf-splash-location-btn:hover { filter: brightness(1.08); }
 .sf-splash-cedula-hint.error { color: #FCA5A5; font-weight: 600; }

@@ -681,14 +681,13 @@ html, body { overflow-x: hidden; }
   position: relative;
   padding: calc(env(safe-area-inset-top) + 24px) 24px 24px;
 }
-.sf-reveal-content { position: absolute; inset: 0; text-align: center; }
+.sf-reveal-content { display: flex; flex-direction: column; align-items: center; gap: 22px; text-align: center; }
 .sf-reveal-greeting {
-  position: absolute; max-width: calc(100vw - 60px);
   font-family: var(--sf-reveal-font, var(--font-fraunces), serif); font-style: italic; font-size: 20px;
   color: color-mix(in srgb, var(--sf-reveal-accent-color, #A8A196) 80%, white 20%);
   opacity: 0; animation: sfRevealFade 0.6s ease 0.1s both;
 }
-.sf-reveal-letters { position: absolute; max-width: calc(100vw - 40px); display: flex; flex-wrap: wrap; justify-content: center; gap: 0.02em; }
+.sf-reveal-letters { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.02em; }
 .sf-reveal-letter {
   display: inline-block; white-space: pre;
   font-family: var(--sf-reveal-font, var(--font-fraunces), serif); font-weight: 500;
@@ -696,20 +695,17 @@ html, body { overflow-x: hidden; }
   opacity: 0; animation: sfRevealLetterUp 0.55s cubic-bezier(0.16,1,0.3,1) both;
 }
 .sf-reveal-line {
-  position: absolute;
   width: 64px; height: 1px;
   background: color-mix(in srgb, var(--sf-reveal-accent-color, #A8A196) 80%, black 20%);
   transform-origin: center;
   opacity: 0; animation: sfRevealLineGrow 0.6s ease both, sfRevealFade 0.1s ease both;
 }
 .sf-reveal-sub {
-  position: absolute; max-width: calc(100vw - 60px);
   font-family: var(--sf-reveal-font, var(--font-geist-sans), sans-serif); font-size: 15px; letter-spacing: 0.14em;
   text-transform: uppercase; color: var(--sf-reveal-accent-color, #A8A196);
   opacity: 0; animation: sfRevealFade 0.6s ease both;
 }
 .sf-reveal-logo {
-  position: absolute;
   height: 32px; width: auto; max-width: 160px; object-fit: contain;
   opacity: 0; animation: sfRevealFade 0.6s ease both;
 }

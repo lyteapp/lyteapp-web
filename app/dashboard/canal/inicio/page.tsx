@@ -48,22 +48,6 @@ interface HomePageImage {
 
 type SelectableId = 'logo' | 'title' | 'subtitle' | 'fields'
 
-type RevealSelectableId = 'greeting' | 'name' | 'line' | 'subtitle'
-
-interface RevealElementSizes {
-  greeting: number
-  name: number
-  line: number
-  subtitle: number
-}
-
-interface RevealElementPositions {
-  greeting: { x: number; y: number }
-  name: { x: number; y: number }
-  line: { x: number; y: number }
-  subtitle: { x: number; y: number }
-}
-
 interface RevealConfig {
   greeting: string
   subtitlePrefix: string
@@ -75,8 +59,6 @@ interface RevealConfig {
   seconds: number
   showSkip: boolean
   logoInsteadOfText: boolean
-  elementSizes: RevealElementSizes
-  elementPositions: RevealElementPositions
 }
 
 interface HomePageConfig {
@@ -132,13 +114,6 @@ const DEFAULTS: HomePageConfig = {
     seconds: 3.2,
     showSkip: true,
     logoInsteadOfText: false,
-    elementSizes: { greeting: 20, name: 56, line: 64, subtitle: 15 },
-    elementPositions: {
-      greeting: { x: 30, y: 300 },
-      name: { x: 20, y: 335 },
-      line: { x: 158, y: 415 },
-      subtitle: { x: 30, y: 435 },
-    },
   },
   elementSizes: { logo: 72, title: 30, subtitle: 15, fields: 14 },
   images: [],
@@ -197,13 +172,6 @@ const SIZE_LIMITS: Record<SelectableId, [number, number]> = {
   title: [16, 56],
   subtitle: [10, 28],
   fields: [10, 22],
-}
-
-const REVEAL_SIZE_LIMITS: Record<RevealSelectableId, [number, number]> = {
-  greeting: [12, 32],
-  name: [32, 120],
-  line: [20, 160],
-  subtitle: [10, 80],
 }
 
 function ResizeHandle({ onDrag }: { onDrag: (delta: number) => void }) {
@@ -494,65 +462,23 @@ function SplashPreview({
 
 const REVEAL_PREVIEW_NAME = 'Ana'
 
-function RevealPreview({
-  config, storeName, logoUrl, selected, onSelect, onResize, onMove,
-}: {
-  config: HomePageConfig; storeName: string; logoUrl: string | null
-  selected: RevealSelectableId | null
-  onSelect: (id: RevealSelectableId | null) => void
-  onResize: (id: RevealSelectableId, size: number) => void
-  onMove: (id: RevealSelectableId, x: number, y: number) => void
-}) {
+function RevealPreview({ config, storeName, logoUrl }: { config: HomePageConfig; storeName: string; logoUrl: string | null }) {
   const rv = config.reveal
   const font = revealFontStack(rv.fontFamily)
   const letters = REVEAL_PREVIEW_NAME.split('')
-  const sizes = rv.elementSizes
-  const positions = rv.elementPositions
 
   useEffect(() => { loadRevealFont(rv.fontFamily) }, [rv.fontFamily])
 
-  function startResize(id: RevealSelectableId) {
-    const [min, max] = REVEAL_SIZE_LIMITS[id]
-    const startSize = sizes[id]
-    return (delta: number) => onResize(id, Math.min(max, Math.max(min, Math.round(startSize + delta))))
-  }
-
-  function startDrag(id: RevealSelectableId) {
-    return (e: React.PointerEvent) => {
-      e.stopPropagation()
-      onSelect(id)
-      const startX = e.clientX
-      const startY = e.clientY
-      const startPos = positions[id]
-      function onMoveP(ev: PointerEvent) {
-        onMove(id, Math.round(startPos.x + (ev.clientX - startX)), Math.round(startPos.y + (ev.clientY - startY)))
-      }
-      function onUp() {
-        window.removeEventListener('pointermove', onMoveP)
-        window.removeEventListener('pointerup', onUp)
-      }
-      window.addEventListener('pointermove', onMoveP)
-      window.addEventListener('pointerup', onUp)
-    }
-  }
-
-  function elStyle(id: RevealSelectableId, width?: number): React.CSSProperties {
-    const pos = positions[id]
-    return {
-      position: 'absolute', left: pos.x, top: pos.y, ...(width ? { width } : {}),
-      cursor: 'move', outline: selected === id ? '2px dashed #7C3AED' : 'none', outlineOffset: 4,
-    }
-  }
-
   return (
     <div
-      onClick={() => onSelect(null)}
       style={{
         width: 380, flexShrink: 0,
         border: '10px solid #1E1E2E', borderRadius: 44,
         boxShadow: '0 30px 80px rgba(0,0,0,0.3)',
         overflow: 'hidden', aspectRatio: '380/780',
-        position: 'relative', textAlign: 'center',
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        position: 'relative', textAlign: 'center', padding: '40px 24px',
         background: rv.bgColor || '#111111',
       }}
     >
@@ -562,67 +488,43 @@ function RevealPreview({
       </div>
 
       <div
-        onClick={e => { e.stopPropagation(); onSelect('greeting') }}
-        onPointerDown={startDrag('greeting')}
         style={{
-          ...elStyle('greeting', 320),
-          fontFamily: font ?? "var(--font-fraunces), serif", fontStyle: 'italic', fontSize: sizes.greeting,
+          fontFamily: font ?? "var(--font-fraunces), serif", fontStyle: 'italic', fontSize: 20,
           color: `color-mix(in srgb, ${rv.accentColor || '#A8A196'} 80%, white 20%)`,
+          marginBottom: 22,
         }}
       >
         {rv.greeting || 'Bienvenido'}
-        {selected === 'greeting' && <ResizeHandle onDrag={startResize('greeting')} />}
       </div>
 
-      <div
-        onClick={e => { e.stopPropagation(); onSelect('name') }}
-        onPointerDown={startDrag('name')}
-        style={{ ...elStyle('name', 340), display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.02em' }}
-      >
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.02em', marginBottom: 22 }}>
         {letters.map((char, i) => (
           <span
             key={i}
             style={{
               display: 'inline-block', whiteSpace: 'pre',
               fontFamily: font ?? "var(--font-fraunces), serif", fontWeight: 500,
-              fontSize: sizes.name, lineHeight: 1, color: rv.nameColor || '#FAF9F7',
+              fontSize: 56, lineHeight: 1, color: rv.nameColor || '#FAF9F7',
             }}
           >
             {char}
           </span>
         ))}
-        {selected === 'name' && <ResizeHandle onDrag={startResize('name')} />}
       </div>
 
-      <div
-        onClick={e => { e.stopPropagation(); onSelect('line') }}
-        onPointerDown={startDrag('line')}
-        style={{ ...elStyle('line'), width: sizes.line, height: 1, background: `color-mix(in srgb, ${rv.accentColor || '#A8A196'} 80%, black 20%)` }}
-      >
-        {selected === 'line' && <ResizeHandle onDrag={startResize('line')} />}
-      </div>
+      <div style={{
+        width: 64, height: 1, marginBottom: 22,
+        background: `color-mix(in srgb, ${rv.accentColor || '#A8A196'} 80%, black 20%)`,
+      }} />
 
       {rv.logoInsteadOfText && logoUrl ? (
-        <div
-          onClick={e => { e.stopPropagation(); onSelect('subtitle') }}
-          onPointerDown={startDrag('subtitle')}
-          style={elStyle('subtitle', 320)}
-        >
-          <img src={logoUrl} alt="" draggable={false} style={{ height: sizes.subtitle, width: 'auto', maxWidth: '100%', objectFit: 'contain', display: 'inline-block' }} />
-          {selected === 'subtitle' && <ResizeHandle onDrag={startResize('subtitle')} />}
-        </div>
+        <img src={logoUrl} alt="" style={{ height: 32, width: 'auto', maxWidth: 140, objectFit: 'contain' }} />
       ) : (
-        <div
-          onClick={e => { e.stopPropagation(); onSelect('subtitle') }}
-          onPointerDown={startDrag('subtitle')}
-          style={{
-            ...elStyle('subtitle', 320),
-            fontFamily: font ?? "var(--font-geist-sans), sans-serif", fontSize: sizes.subtitle, letterSpacing: '0.14em',
-            textTransform: 'uppercase', color: rv.accentColor || '#A8A196',
-          }}
-        >
+        <div style={{
+          fontFamily: font ?? "var(--font-geist-sans), sans-serif", fontSize: 15, letterSpacing: '0.14em',
+          textTransform: 'uppercase', color: rv.accentColor || '#A8A196',
+        }}>
           {rv.subtitlePrefix || 'a'} {storeName || 'tu tienda'}
-          {selected === 'subtitle' && <ResizeHandle onDrag={startResize('subtitle')} />}
         </div>
       )}
 
@@ -663,7 +565,6 @@ export default function InicioPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [selectedEl, setSelectedEl] = useState<SelectableId | null>(null)
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
-  const [selectedRevealEl, setSelectedRevealEl] = useState<RevealSelectableId | null>(null)
   const [previewView, setPreviewView] = useState<'splash' | 'reveal'>('splash')
 
   useEffect(() => {
@@ -687,11 +588,7 @@ export default function InicioPage() {
             inactivityTimeout: { ...DEFAULTS.inactivityTimeout, ...(hp.inactivityTimeout ?? {}) },
             orderReturnTimeout: { ...DEFAULTS.orderReturnTimeout, ...(hp.orderReturnTimeout ?? {}) },
             elementSizes: { ...DEFAULTS.elementSizes, ...(hp.elementSizes ?? {}) },
-            reveal: {
-              ...DEFAULTS.reveal, ...(hp.reveal ?? {}),
-              elementSizes: { ...DEFAULTS.reveal.elementSizes, ...(hp.reveal?.elementSizes ?? {}) },
-              elementPositions: { ...DEFAULTS.reveal.elementPositions, ...(hp.reveal?.elementPositions ?? {}) },
-            },
+            reveal: { ...DEFAULTS.reveal, ...(hp.reveal ?? {}) },
           })
         }
       })
@@ -728,14 +625,6 @@ export default function InicioPage() {
 
   function setReveal<K extends keyof RevealConfig>(key: K, value: RevealConfig[K]) {
     setConfig(c => ({ ...c, reveal: { ...c.reveal, [key]: value } }))
-  }
-
-  function setRevealElementSize(id: RevealSelectableId, size: number) {
-    setConfig(c => ({ ...c, reveal: { ...c.reveal, elementSizes: { ...c.reveal.elementSizes, [id]: size } } }))
-  }
-
-  function setRevealElementPosition(id: RevealSelectableId, x: number, y: number) {
-    setConfig(c => ({ ...c, reveal: { ...c.reveal, elementPositions: { ...c.reveal.elementPositions, [id]: { x, y } } } }))
   }
 
   function addImage(url: string) {
@@ -791,13 +680,13 @@ export default function InicioPage() {
         <div className="cn-desc">Una pantalla de bienvenida que se muestra antes de tu tienda, con un boton para entrar.</div>
       </div>
 
-      <div style={{ display: 'flex', gap: 0, alignItems: 'flex-start', position: 'relative' }} onClick={() => { setSelectedEl(null); setSelectedImageId(null); setSelectedRevealEl(null) }}>
+      <div style={{ display: 'flex', gap: 0, alignItems: 'flex-start', position: 'relative' }} onClick={() => { setSelectedEl(null); setSelectedImageId(null) }}>
 
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, position: 'sticky', top: 24, padding: '4px 24px 24px 0' }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
             {previewView === 'splash'
               ? 'Vista previa · toca un elemento y arrastra su esquina para redimensionar'
-              : 'Vista previa · arrastra los elementos para moverlos o su esquina para redimensionar'}
+              : 'Vista previa de la bienvenida animada'}
           </div>
 
           {config.transition === 'reveal' && (
@@ -812,11 +701,7 @@ export default function InicioPage() {
           )}
 
           {previewView === 'reveal' && config.transition === 'reveal' ? (
-            <RevealPreview
-              config={config} storeName={storeName} logoUrl={logoUrl}
-              selected={selectedRevealEl} onSelect={setSelectedRevealEl}
-              onResize={setRevealElementSize} onMove={setRevealElementPosition}
-            />
+            <RevealPreview config={config} storeName={storeName} logoUrl={logoUrl} />
           ) : (
             <SplashPreview
               config={config} storeName={storeName} logoUrl={logoUrl}

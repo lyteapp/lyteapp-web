@@ -36,13 +36,6 @@ interface ElementSizes {
   fields: number
 }
 
-interface ElementPosition {
-  x: number
-  y: number
-}
-
-type ElementPositions = Record<SelectableId, ElementPosition>
-
 interface HomePageImage {
   id: string
   url: string
@@ -88,7 +81,6 @@ interface HomePageConfig {
   enableReorder: boolean
   reveal: RevealConfig
   elementSizes: ElementSizes
-  elementPositions: ElementPositions
   images: HomePageImage[]
   showLogo: boolean
 }
@@ -124,12 +116,6 @@ const DEFAULTS: HomePageConfig = {
     logoInsteadOfText: false,
   },
   elementSizes: { logo: 72, title: 30, subtitle: 15, fields: 14 },
-  elementPositions: {
-    logo: { x: 154, y: 60 },
-    title: { x: 30, y: 148 },
-    subtitle: { x: 30, y: 210 },
-    fields: { x: 30, y: 290 },
-  },
   images: [],
   showLogo: true,
 }
@@ -330,14 +316,13 @@ function PhotoItem({
 }
 
 function SplashPreview({
-  config, storeName, logoUrl, selected, onSelect, onResize, onMoveElement,
+  config, storeName, logoUrl, selected, onSelect, onResize,
   images, selectedImageId, onSelectImage, onUpdateImage, onRemoveImage,
 }: {
   config: HomePageConfig; storeName: string; logoUrl: string | null
   selected: SelectableId | null
   onSelect: (id: SelectableId | null) => void
   onResize: (id: SelectableId, size: number) => void
-  onMoveElement: (id: SelectableId, x: number, y: number) => void
   images: HomePageImage[]
   selectedImageId: string | null
   onSelectImage: (id: string | null) => void
@@ -350,31 +335,11 @@ function SplashPreview({
     return (delta: number) => onResize(id, Math.min(max, Math.max(min, Math.round(startSize + delta))))
   }
 
-  function startDrag(id: SelectableId) {
-    return (e: React.PointerEvent) => {
-      e.stopPropagation()
-      onSelect(id)
-      const startX = e.clientX
-      const startY = e.clientY
-      const startPos = config.elementPositions[id]
-      function onMove(ev: PointerEvent) {
-        onMoveElement(id, Math.round(startPos.x + (ev.clientX - startX)), Math.round(startPos.y + (ev.clientY - startY)))
-      }
-      function onUp() {
-        window.removeEventListener('pointermove', onMove)
-        window.removeEventListener('pointerup', onUp)
-      }
-      window.addEventListener('pointermove', onMove)
-      window.addEventListener('pointerup', onUp)
-    }
-  }
-
-  function selectableStyle(id: SelectableId): React.CSSProperties {
-    const pos = config.elementPositions[id]
+  function selectableStyle(id: SelectableId, extraOffset = 4): React.CSSProperties {
     return {
-      position: 'absolute', left: pos.x, top: pos.y, cursor: 'move',
+      position: 'relative', display: 'inline-block', cursor: 'pointer',
       outline: selected === id ? '2px dashed #7C3AED' : 'none',
-      outlineOffset: 4,
+      outlineOffset: extraOffset,
       pointerEvents: 'auto',
     }
   }
@@ -410,22 +375,21 @@ function SplashPreview({
         <span style={{ fontSize: 13, fontWeight: 600, color: 'white' }}>9:41</span>
         <span style={{ fontSize: 12, color: 'white' }}>●●●</span>
       </div>
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 2 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 30px', textAlign: 'center', position: 'relative', zIndex: 1, pointerEvents: 'none' }}>
+
         {logoUrl && config.showLogo && (
           <div
             onClick={e => { e.stopPropagation(); onSelect('logo') }}
-            onPointerDown={startDrag('logo')}
-            style={{ ...selectableStyle('logo'), borderRadius: 14 }}
+            style={{ ...selectableStyle('logo'), marginBottom: 22, borderRadius: 14 }}
           >
-            <img src={logoUrl} alt="" draggable={false} style={{ width: sizes.logo, height: sizes.logo, borderRadius: 14, objectFit: 'cover', display: 'block', boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }} />
+            <img src={logoUrl} alt="" style={{ width: sizes.logo, height: sizes.logo, borderRadius: 14, objectFit: 'cover', display: 'block', boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }} />
             {selected === 'logo' && <ResizeHandle onDrag={startResize('logo')} />}
           </div>
         )}
 
         <div
           onClick={e => { e.stopPropagation(); onSelect('title') }}
-          onPointerDown={startDrag('title')}
-          style={{ ...selectableStyle('title'), width: 320, textAlign: 'center' }}
+          style={{ ...selectableStyle('title'), marginBottom: 10 }}
         >
           <div style={{ fontSize: sizes.title, fontWeight: 800, color: 'white', letterSpacing: '-0.03em', lineHeight: 1.15 }}>
             {config.title || storeName || 'Tu tienda'}
@@ -436,8 +400,7 @@ function SplashPreview({
         {config.subtitle && (
           <div
             onClick={e => { e.stopPropagation(); onSelect('subtitle') }}
-            onPointerDown={startDrag('subtitle')}
-            style={{ ...selectableStyle('subtitle'), width: 320, textAlign: 'center' }}
+            style={{ ...selectableStyle('subtitle'), marginBottom: 26 }}
           >
             <div style={{ fontSize: sizes.subtitle, color: 'rgba(255,255,255,0.75)', lineHeight: 1.5 }}>
               {config.subtitle}
@@ -449,10 +412,9 @@ function SplashPreview({
         {config.collectCustomerData && (
           <div
             onClick={e => { e.stopPropagation(); onSelect('fields') }}
-            onPointerDown={startDrag('fields')}
             style={{
-              ...selectableStyle('fields'), width: 320, display: 'flex', flexDirection: 'column', gap: 8,
-              borderRadius: 8,
+              ...selectableStyle('fields', 8), width: '100%', display: 'flex', flexDirection: 'column', gap: 8,
+              marginBottom: 14, borderRadius: 8,
             }}
           >
             {['Tu cedula de identidad', config.customerFields.name && 'Tu nombre completo', config.customerFields.phone && 'Tu telefono', config.customerFields.address && 'Tu direccion']
@@ -474,9 +436,7 @@ function SplashPreview({
             {selected === 'fields' && <ResizeHandle onDrag={startResize('fields')} />}
           </div>
         )}
-      </div>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', padding: '40px 30px', textAlign: 'center', position: 'relative', zIndex: 1, pointerEvents: 'none' }}>
         <div style={{
           background: config.buttonColor || '#7C3AED', color: 'white', fontSize: 14, fontWeight: 700,
           padding: '13px 32px', borderRadius: 100, boxShadow: '0 8px 20px rgba(0,0,0,0.25)',
@@ -628,7 +588,6 @@ export default function InicioPage() {
             inactivityTimeout: { ...DEFAULTS.inactivityTimeout, ...(hp.inactivityTimeout ?? {}) },
             orderReturnTimeout: { ...DEFAULTS.orderReturnTimeout, ...(hp.orderReturnTimeout ?? {}) },
             elementSizes: { ...DEFAULTS.elementSizes, ...(hp.elementSizes ?? {}) },
-            elementPositions: { ...DEFAULTS.elementPositions, ...(hp.elementPositions ?? {}) },
             reveal: { ...DEFAULTS.reveal, ...(hp.reveal ?? {}) },
           })
         }
@@ -662,10 +621,6 @@ export default function InicioPage() {
 
   function setElementSize(id: SelectableId, size: number) {
     setConfig(c => ({ ...c, elementSizes: { ...c.elementSizes, [id]: size } }))
-  }
-
-  function setElementPosition(id: SelectableId, x: number, y: number) {
-    setConfig(c => ({ ...c, elementPositions: { ...c.elementPositions, [id]: { x, y } } }))
   }
 
   function setReveal<K extends keyof RevealConfig>(key: K, value: RevealConfig[K]) {
@@ -751,7 +706,7 @@ export default function InicioPage() {
             <SplashPreview
               config={config} storeName={storeName} logoUrl={logoUrl}
               selected={selectedEl} onSelect={setSelectedEl}
-              onResize={setElementSize} onMoveElement={setElementPosition}
+              onResize={setElementSize}
               images={config.images} selectedImageId={selectedImageId}
               onSelectImage={setSelectedImageId}
               onUpdateImage={updateImage} onRemoveImage={removeImage}

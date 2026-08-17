@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@supabase/supabase-js'
+import { QRCodeSVG } from 'qrcode.react'
 import '../store.css'
 
 const supabase = createClient(
@@ -30,11 +31,13 @@ function PedidoContent() {
   const [showTrackBtn, setShowTrackBtn] = useState(true)
   const [showMapBtn, setShowMapBtn] = useState(false)
   const [mapUrl, setMapUrl] = useState<string | null>(null)
+  const [queueBoard, setQueueBoard] = useState<{ enabled: boolean; title?: string } | null>(null)
+  const [origin] = useState(() => (typeof window !== 'undefined' ? window.location.origin : ''))
 
   useEffect(() => {
     supabase
       .from('stores')
-      .select('map_url, checkout_settings')
+      .select('map_url, checkout_settings, template_config')
       .eq('slug', storeSlug)
       .maybeSingle()
       .then(({ data }) => {
@@ -44,6 +47,10 @@ function PedidoContent() {
         setShowTrackBtn(cs.showTrackBtn !== false)
         setShowMapBtn(Boolean(cs.showMapBtn))
         setMapUrl((data.map_url as string | null) ?? null)
+        const tc = (data.template_config as Record<string, unknown>) ?? {}
+        const tracking = (tc.trackingConfig as Record<string, unknown>) ?? {}
+        const qb = (tracking.queueBoard as { enabled?: boolean; title?: string } | undefined) ?? undefined
+        if (qb?.enabled) setQueueBoard({ enabled: true, title: qb.title })
       })
   }, [storeSlug])
 
@@ -75,6 +82,20 @@ function PedidoContent() {
             </svg>
             Rastrear mi pedido
           </a>
+        )}
+
+        {queueBoard?.enabled && origin && (
+          <div style={{ textAlign: 'center', marginTop: 4, marginBottom: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', marginBottom: 10 }}>
+              {queueBoard.title || 'Ver estado de pedidos'}
+            </div>
+            <QRCodeSVG
+              value={`${origin}/${storeSlug}/estado`}
+              size={160}
+              bgColor="#ffffff"
+              fgColor="#0F172A"
+            />
+          </div>
         )}
 
         {showWhatsappBtn && waParam && (

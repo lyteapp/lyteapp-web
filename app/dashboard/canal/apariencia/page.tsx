@@ -43,6 +43,26 @@ const TR_SIZES = [
   { id: 'lg', name: 'Grande'  },
 ]
 
+interface QueueBoardConfig {
+  enabled: boolean
+  title: string
+  subtitle: string
+  preparingLabel: string
+  readyLabel: string
+  customerDisplay: 'firstName' | 'fullName' | 'code'
+  showLogo: boolean
+}
+
+const DEFAULT_QUEUE_BOARD: QueueBoardConfig = {
+  enabled: false,
+  title: 'Estado de pedidos',
+  subtitle: 'Actualizado en tiempo real',
+  preparingLabel: 'En preparación',
+  readyLabel: 'Listo',
+  customerDisplay: 'firstName',
+  showLogo: true,
+}
+
 interface TrackingConfig {
   mode: 'status' | 'location'
   accentColor: string
@@ -55,6 +75,7 @@ interface TrackingConfig {
   dotColor:              string
   statusDotSize:         'sm' | 'md' | 'lg'
   locationDotSize:       'sm' | 'md' | 'lg'
+  queueBoard: QueueBoardConfig
 }
 
 const DEFAULT_TR_CONFIG: TrackingConfig = {
@@ -69,6 +90,7 @@ const DEFAULT_TR_CONFIG: TrackingConfig = {
   dotColor:              '#10B981',
   statusDotSize:         'md',
   locationDotSize:       'md',
+  queueBoard: DEFAULT_QUEUE_BOARD,
 }
 
 const CONN_OPTS = [
@@ -122,6 +144,21 @@ const GOOGLE_FONT_URLS: Record<string, string> = {
 }
 const FONT_SCALE_NUM: Record<string, number> = { sm: 0.875, md: 1, lg: 1.125 }
 
+const QUEUE_DISPLAY_OPTS = [
+  { id: 'fullName' as const,  label: 'Nombre completo' },
+  { id: 'firstName' as const, label: 'Solo primer nombre' },
+  { id: 'code'      as const, label: 'Solo código' },
+]
+
+function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <label className="cn-toggle">
+      <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} />
+      <span className="cn-toggle-track" />
+    </label>
+  )
+}
+
 export default function Apariencia() {
   const { user } = useAuth()
   const [template, setTemplate]             = useState('clasico')
@@ -132,12 +169,15 @@ export default function Apariencia() {
   const [variantShape, setVariantShape]     = useState<'pill' | 'rounded' | 'square'>('pill')
   const [extraShape, setExtraShape]         = useState<'rounded' | 'pill' | 'square'>('rounded')
   const [trConfig, setTrConfig]             = useState<TrackingConfig>(DEFAULT_TR_CONFIG)
+  const [activePanel, setActivePanel]       = useState<'status' | 'location' | 'queue'>('status')
+  const [storeSlug, setStoreSlug]           = useState('')
   const [storeLogo, setStoreLogo]           = useState<string | null>(null)
   const [saving, setSaving]                 = useState(false)
   const [success, setSuccess]               = useState(false)
   const [error, setError]                   = useState('')
   const [isMobile, setIsMobile]             = useState(false)
   const [mobileTab, setMobileTab]           = useState<'preview' | 'config'>('preview')
+  const [copiedUrl, setCopiedUrl]           = useState(false)
   const trAccentRef = useRef<HTMLInputElement>(null)
   const trDotRef    = useRef<HTMLInputElement>(null)
 
@@ -152,7 +192,7 @@ export default function Apariencia() {
     if (!user) return
     supabase
       .from('stores')
-      .select('id,template,brand_color,template_config,logo_url')
+      .select('id,slug,template,brand_color,template_config,logo_url')
       .eq('owner_id', user.id)
       .maybeSingle()
       .then(async ({ data }) => {
@@ -160,12 +200,17 @@ export default function Apariencia() {
         if (data.template)    setTemplate(data.template)
         if (data.brand_color) setColor(data.brand_color)
         if (data.logo_url)    setStoreLogo(data.logo_url as string)
+        if (data.slug)        setStoreSlug(data.slug as string)
         const cfg = (data.template_config ?? {}) as Record<string, unknown>
         setBaseConfig(cfg)
         if (cfg.categoryPhotoShapes) setCategoryShapes(cfg.categoryPhotoShapes as Record<string, string>)
         if (cfg.variantShape) setVariantShape(cfg.variantShape as 'pill' | 'rounded' | 'square')
         if (cfg.extraShape)   setExtraShape(cfg.extraShape as 'rounded' | 'pill' | 'square')
-        if (cfg.trackingConfig) setTrConfig({ ...DEFAULT_TR_CONFIG, ...(cfg.trackingConfig as Partial<TrackingConfig>) })
+        if (cfg.trackingConfig) {
+          const raw = cfg.trackingConfig as Partial<TrackingConfig>
+          setTrConfig({ ...DEFAULT_TR_CONFIG, ...raw, queueBoard: { ...DEFAULT_QUEUE_BOARD, ...(raw.queueBoard ?? {}) } })
+          if (raw.mode) setActivePanel(raw.mode)
+        }
         const { data: cats } = await supabase
           .from('categories').select('id,name')
           .eq('store_id', data.id).order('position', { ascending: true })
@@ -214,6 +259,17 @@ export default function Apariencia() {
     setSaving(false)
   }
 
+  function setQueueBoard<K extends keyof QueueBoardConfig>(key: K, value: QueueBoardConfig[K]) {
+    setTrConfig(p => ({ ...p, queueBoard: { ...p.queueBoard, [key]: value } }))
+  }
+
+  function copyQueueUrl() {
+    const url = `${window.location.origin}/${storeSlug}/estado`
+    navigator.clipboard.writeText(url)
+    setCopiedUrl(true)
+    setTimeout(() => setCopiedUrl(false), 1500)
+  }
+
   void template; void color; void categories; void categoryShapes; void setTemplate; void setColor; void setCategoryShapes
 
   // ── Shared: phone screen contents ────────────────────────────────────
@@ -224,11 +280,11 @@ export default function Apariencia() {
       height: 580,
       position: 'relative',
       fontFamily: previewFont,
-      background: trConfig.mode === 'location' ? mapPreset.bg : trConfig.bgColor,
+      background: activePanel === 'location' ? mapPreset.bg : trConfig.bgColor,
     }}>
 
       {/* ── Location mode preview ── */}
-      {trConfig.mode === 'location' && (
+      {activePanel === 'location' && (
         <div style={{ position: 'absolute', inset: 0 }}>
           {/* Map SVG */}
           <svg viewBox="0 0 480 540" preserveAspectRatio="xMidYMid slice" style={{ position: 'absolute', inset: 0, width: '100%', height: '56%' }}>
@@ -357,7 +413,7 @@ export default function Apariencia() {
       )}
 
       {/* ── Status mode preview — mirrors tracking.css exactly at ~0.78x scale ── */}
-      {trConfig.mode === 'status' && (
+      {activePanel === 'status' && (
         <div style={{
           height: '100%', overflowY: 'auto', scrollbarWidth: 'none' as const,
           display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -550,6 +606,68 @@ export default function Apariencia() {
           </div>
         </div>
       )}
+
+      {/* ── Queue board preview — public "all orders" screen ── */}
+      {activePanel === 'queue' && (
+        <div style={{
+          height: '100%', overflowY: 'auto', scrollbarWidth: 'none' as const,
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          padding: '18px 14px 32px',
+        }}>
+          {trConfig.queueBoard.showLogo && (
+            <div style={{ width: 40, height: 40, borderRadius: '50%', border: '2px solid white', overflow: 'hidden', background: '#F1F5F9', marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(15,23,42,0.08)' }}>
+              {storeLogo
+                ? <img src={storeLogo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <svg viewBox="0 0 20 20" fill={trConfig.accentColor} width="18" height="18">
+                    <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zm14 4H2v7a2 2 0 002 2h12a2 2 0 002-2V8zm-8 3a1 1 0 011 1v2a1 1 0 01-2 0v-2a1 1 0 011-1z" clipRule="evenodd"/>
+                  </svg>
+              }
+            </div>
+          )}
+          <div style={{ fontSize: fs(15), fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', textAlign: 'center', marginBottom: 3 }}>
+            {trConfig.queueBoard.title || 'Estado de pedidos'}
+          </div>
+          <div style={{ fontSize: fs(10), color: '#94A3B8', textAlign: 'center', marginBottom: 16 }}>
+            {trConfig.queueBoard.subtitle || 'Actualizado en tiempo real'}
+          </div>
+
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {[
+              { label: trConfig.queueBoard.preparingLabel || 'En preparación', items: ['#A3F2', '#B190'], color: '#F59E0B' },
+              { label: trConfig.queueBoard.readyLabel || 'Listo',              items: ['#C204'],          color: '#10B981' },
+            ].map(col => (
+              <div key={col.label} style={{ width: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: col.color, flexShrink: 0 }} />
+                  <span style={{ fontSize: fs(9), fontWeight: 700, color: '#64748B', textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>
+                    {col.label}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {col.items.map(code => (
+                    <div key={code} style={{
+                      width: '100%', background: 'white', borderRadius: 12, padding: '10px 12px',
+                      boxShadow: '0 2px 10px rgba(15,23,42,0.06)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                        <span style={{ fontSize: fs(9), fontWeight: 700, color: trConfig.accentColor, background: trConfig.accentColor + '14', borderRadius: 5, padding: '2px 6px' }}>{code}</span>
+                        <span style={{ fontSize: fs(10), fontWeight: 600, color: '#0F172A' }}>
+                          {trConfig.queueBoard.customerDisplay === 'code' ? '' : trConfig.queueBoard.customerDisplay === 'fullName' ? 'Maria Garcia' : 'Maria'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ textAlign: 'center', fontSize: fs(9), color: '#94A3B8', marginTop: 18 }}>
+            Powered by <strong style={{ color: '#64748B' }}>LyteApp</strong>
+          </div>
+        </div>
+      )}
     </div>
   )
 
@@ -587,17 +705,25 @@ export default function Apariencia() {
                 <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
               </svg>
             )},
+            { id: 'queue', label: 'Cola pública', icon: (
+              <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13">
+                <path d="M9 2a1 1 0 00-1 1v1H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V6a2 2 0 00-2-2h-3V3a1 1 0 10-2 0v1H9V3a1 1 0 00-1-1H9zm-2 8h2v2H7v-2zm4 0h2v2h-2v-2zm-4 4h2v2H7v-2zm4 0h2v2h-2v-2z" />
+              </svg>
+            )},
           ] as const).map(opt => (
             <button
               key={opt.id}
               type="button"
-              onClick={() => setTrConfig(p => ({ ...p, mode: opt.id }))}
+              onClick={() => {
+                setActivePanel(opt.id)
+                if (opt.id !== 'queue') setTrConfig(p => ({ ...p, mode: opt.id }))
+              }}
               style={{
                 flex: 1, padding: '8px 0', borderRadius: 8, border: 'none', cursor: 'pointer',
-                background: trConfig.mode === opt.id ? 'white' : 'transparent',
-                boxShadow: trConfig.mode === opt.id ? '0 1px 4px rgba(15,23,42,0.1)' : 'none',
+                background: activePanel === opt.id ? 'white' : 'transparent',
+                boxShadow: activePanel === opt.id ? '0 1px 4px rgba(15,23,42,0.1)' : 'none',
                 fontSize: 12, fontWeight: 600,
-                color: trConfig.mode === opt.id ? '#0F172A' : '#94A3B8',
+                color: activePanel === opt.id ? '#0F172A' : '#94A3B8',
                 fontFamily: 'var(--font-geist-sans), sans-serif',
                 transition: 'all 0.15s',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
@@ -613,6 +739,8 @@ export default function Apariencia() {
       {/* scrollable controls */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 0' }}>
 
+        {activePanel !== 'queue' && (
+        <>
         {/* Map style */}
         <div className="cn-field">
           <div className="cn-label">Estilo del mapa</div>
@@ -929,6 +1057,118 @@ export default function Apariencia() {
             })}
           </div>
         </div>
+        </>
+        )}
+
+        {activePanel === 'queue' && (
+        <>
+        {/* Enable toggle */}
+        <div className="cn-toggle-row">
+          <div className="cn-toggle-info">
+            <div className="cn-toggle-label">Activar pantalla pública de cola</div>
+            <div className="cn-toggle-hint">Muestra el estado de todos los pedidos activos de la tienda al escanear el QR en &quot;Pedido confirmado&quot;</div>
+          </div>
+          <Toggle checked={trConfig.queueBoard.enabled} onChange={v => setQueueBoard('enabled', v)} />
+        </div>
+
+        {/* Title / subtitle */}
+        <div className="cn-field">
+          <div className="cn-label">Título</div>
+          <input
+            type="text"
+            className="cn-input"
+            value={trConfig.queueBoard.title}
+            onChange={e => setQueueBoard('title', e.target.value)}
+            placeholder="Estado de pedidos"
+          />
+        </div>
+        <div className="cn-field">
+          <div className="cn-label">Subtítulo</div>
+          <input
+            type="text"
+            className="cn-input"
+            value={trConfig.queueBoard.subtitle}
+            onChange={e => setQueueBoard('subtitle', e.target.value)}
+            placeholder="Actualizado en tiempo real"
+          />
+        </div>
+
+        {/* Column labels */}
+        <div className="cn-field">
+          <div className="cn-label">Etiqueta columna &quot;en preparación&quot;</div>
+          <input
+            type="text"
+            className="cn-input"
+            value={trConfig.queueBoard.preparingLabel}
+            onChange={e => setQueueBoard('preparingLabel', e.target.value)}
+            placeholder="En preparación"
+          />
+        </div>
+        <div className="cn-field">
+          <div className="cn-label">Etiqueta columna &quot;listo&quot;</div>
+          <input
+            type="text"
+            className="cn-input"
+            value={trConfig.queueBoard.readyLabel}
+            onChange={e => setQueueBoard('readyLabel', e.target.value)}
+            placeholder="Listo"
+          />
+        </div>
+
+        {/* Customer display */}
+        <div className="cn-field">
+          <div className="cn-label">Cómo mostrar al cliente</div>
+          <div className="cn-pill-row" style={{ flexWrap: 'wrap' }}>
+            {QUEUE_DISPLAY_OPTS.map(o => (
+              <button
+                key={o.id}
+                type="button"
+                className={`cn-pill-btn${trConfig.queueBoard.customerDisplay === o.id ? ' selected' : ''}`}
+                onClick={() => setQueueBoard('customerDisplay', o.id)}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Show logo */}
+        <div className="cn-toggle-row">
+          <div className="cn-toggle-info">
+            <div className="cn-toggle-label">Mostrar logo de la tienda</div>
+          </div>
+          <Toggle checked={trConfig.queueBoard.showLogo} onChange={v => setQueueBoard('showLogo', v)} />
+        </div>
+
+        {/* Public URL */}
+        {storeSlug && (
+          <div className="cn-field">
+            <div className="cn-label">Enlace público</div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <div style={{
+                flex: 1, background: '#F8F7F4', border: '1px solid rgba(15,23,42,0.09)',
+                borderRadius: 10, padding: '11px 14px', fontSize: 13, color: '#64748B',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {`lyte-app.com/${storeSlug}/estado`}
+              </div>
+              <button
+                type="button"
+                onClick={copyQueueUrl}
+                style={{
+                  padding: '0 16px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                  background: copiedUrl ? '#10B981' : trConfig.accentColor, color: 'white',
+                  fontSize: 12, fontWeight: 600, fontFamily: 'var(--font-geist-sans), sans-serif',
+                  transition: 'background 0.15s', flexShrink: 0,
+                }}
+              >
+                {copiedUrl ? 'Copiado' : 'Copiar'}
+              </button>
+            </div>
+          </div>
+        )}
+        </>
+        )}
 
       </div>
     </>

@@ -68,7 +68,7 @@ function PedidoContent() {
           {waParam && showWhatsappBtn ? 'Toca el boton para enviarlo por WhatsApp.' : ''}
         </p>
 
-        {showTrackBtn && (deliveryId || pickupId) && (
+        {showTrackBtn && (deliveryId || pickupId) && !queueBoard?.enabled && (
           <a
             href={pickupId ? `/order/${pickupId}` : `/delivery/${deliveryId}`}
             style={{

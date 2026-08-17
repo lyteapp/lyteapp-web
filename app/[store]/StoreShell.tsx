@@ -1084,7 +1084,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
             disabled={cedulaStatus === 'checking'}
             onClick={handleSplashStart}
           >
-            {cedulaStatus === 'checking' ? 'Buscando...' : (hp.buttonLabel || 'Empezar')}
+            <span>{cedulaStatus === 'checking' ? 'Buscando...' : (hp.buttonLabel || 'Empezar')}</span>
+            {cedulaStatus !== 'checking' && (
+              <svg className="sf-splash-btn-arrow" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+                <path d="M4 10h12M12 5l5 5-5 5" />
+              </svg>
+            )}
           </button>
 
           {(hp.pills ?? []).filter(p => p.label?.trim() && p.url?.trim()).length > 0 && (

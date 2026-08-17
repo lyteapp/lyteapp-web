@@ -441,8 +441,12 @@ function SplashPreview({
         <div style={{
           background: config.buttonColor || '#7C3AED', color: 'white', fontSize: 14, fontWeight: 700,
           padding: '13px 32px', borderRadius: 100,
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
         }}>
-          {config.buttonLabel || 'Empezar'}
+          <span>{config.buttonLabel || 'Empezar'}</span>
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15">
+            <path d="M4 10h12M12 5l5 5-5 5" />
+          </svg>
         </div>
         {config.pills.filter(p => p.label.trim()).length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14, width: '100%' }}>

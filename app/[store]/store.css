@@ -655,7 +655,10 @@ html, body { overflow-x: hidden; }
   font-size: 15px; font-weight: 700; letter-spacing: -0.01em;
   font-family: var(--font-geist-sans), sans-serif;
   transition: transform 0.2s, filter 0.2s;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
 }
+.sf-splash-btn-arrow { flex-shrink: 0; transition: transform 0.2s; }
+.sf-splash-btn:hover:not(:disabled) .sf-splash-btn-arrow { transform: translateX(3px); }
 .sf-splash-btn:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.05); }
 .sf-splash-btn:active:not(:disabled) { transform: translateY(0) scale(0.97); }
 .sf-splash-btn:disabled { opacity: 0.7; cursor: default; }

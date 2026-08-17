@@ -440,7 +440,7 @@ function SplashPreview({
 
         <div style={{
           background: config.buttonColor || '#7C3AED', color: 'white', fontSize: 14, fontWeight: 700,
-          padding: '13px 32px', borderRadius: 100, boxShadow: '0 8px 20px rgba(0,0,0,0.25)',
+          padding: '13px 32px', borderRadius: 100,
         }}>
           {config.buttonLabel || 'Empezar'}
         </div>

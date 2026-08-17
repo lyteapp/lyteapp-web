@@ -31,7 +31,7 @@ function PedidoContent() {
   const [showTrackBtn, setShowTrackBtn] = useState(true)
   const [showMapBtn, setShowMapBtn] = useState(false)
   const [mapUrl, setMapUrl] = useState<string | null>(null)
-  const [queueBoard, setQueueBoard] = useState<{ enabled: boolean; title?: string } | null>(null)
+  const [queueBoard, setQueueBoard] = useState<{ enabled: boolean } | null>(null)
   const [origin] = useState(() => (typeof window !== 'undefined' ? window.location.origin : ''))
 
   useEffect(() => {
@@ -49,8 +49,8 @@ function PedidoContent() {
         setMapUrl((data.map_url as string | null) ?? null)
         const tc = (data.template_config as Record<string, unknown>) ?? {}
         const tracking = (tc.trackingConfig as Record<string, unknown>) ?? {}
-        const qb = (tracking.queueBoard as { enabled?: boolean; title?: string } | undefined) ?? undefined
-        if (qb?.enabled) setQueueBoard({ enabled: true, title: qb.title })
+        const qb = (tracking.queueBoard as { enabled?: boolean } | undefined) ?? undefined
+        if (qb?.enabled) setQueueBoard({ enabled: true })
       })
   }, [storeSlug])
 
@@ -87,7 +87,7 @@ function PedidoContent() {
         {queueBoard?.enabled && origin && (
           <div style={{ textAlign: 'center', marginTop: 4, marginBottom: 12 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', marginBottom: 10 }}>
-              {queueBoard.title || 'Ver estado de pedidos'}
+              Escanea aqui para saber el estatus de tu pedido
             </div>
             <QRCodeSVG
               value={`${origin}/${storeSlug}/estado`}

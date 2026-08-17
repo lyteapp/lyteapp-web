@@ -33,6 +33,7 @@ function PedidoContent() {
   const [mapUrl, setMapUrl] = useState<string | null>(null)
   const [queueBoard, setQueueBoard] = useState<{ enabled: boolean } | null>(null)
   const [origin] = useState(() => (typeof window !== 'undefined' ? window.location.origin : ''))
+  const [settingsLoaded, setSettingsLoaded] = useState(false)
 
   useEffect(() => {
     supabase
@@ -41,7 +42,7 @@ function PedidoContent() {
       .eq('slug', storeSlug)
       .maybeSingle()
       .then(({ data }) => {
-        if (!data) return
+        if (!data) { setSettingsLoaded(true); return }
         const cs = (data.checkout_settings as Record<string, unknown>) ?? {}
         setShowWhatsappBtn(cs.showWhatsappBtn !== false)
         setShowTrackBtn(cs.showTrackBtn !== false)
@@ -51,6 +52,7 @@ function PedidoContent() {
         const tracking = (tc.trackingConfig as Record<string, unknown>) ?? {}
         const qb = (tracking.queueBoard as { enabled?: boolean } | undefined) ?? undefined
         if (qb?.enabled) setQueueBoard({ enabled: true })
+        setSettingsLoaded(true)
       })
   }, [storeSlug])
 
@@ -65,10 +67,10 @@ function PedidoContent() {
         <h1 className="sf-confirm-title">Pedido confirmado</h1>
         <p className="sf-confirm-sub">
           {orderId ? `Pedido #${orderId} recibido.` : 'Tu pedido fue recibido.'}{' '}
-          {waParam && showWhatsappBtn ? 'Toca el boton para enviarlo por WhatsApp.' : ''}
+          {settingsLoaded && waParam && showWhatsappBtn ? 'Toca el boton para enviarlo por WhatsApp.' : ''}
         </p>
 
-        {showTrackBtn && (deliveryId || pickupId) && !queueBoard?.enabled && (
+        {settingsLoaded && showTrackBtn && (deliveryId || pickupId) && !queueBoard?.enabled && (
           <a
             href={pickupId ? `/order/${pickupId}` : `/delivery/${deliveryId}`}
             style={{
@@ -84,7 +86,7 @@ function PedidoContent() {
           </a>
         )}
 
-        {queueBoard?.enabled && origin && (
+        {settingsLoaded && queueBoard?.enabled && origin && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 4, marginBottom: 12 }}>
             <div style={{ fontSize: 17, fontWeight: 700, color: '#0F172A', marginBottom: 14, lineHeight: 1.4 }}>
               Escanea aqui para saber el estatus de tu pedido
@@ -98,14 +100,14 @@ function PedidoContent() {
           </div>
         )}
 
-        {showWhatsappBtn && waParam && (
+        {settingsLoaded && showWhatsappBtn && waParam && (
           <a href={waParam} className="sf-confirm-wa">
             {WA_ICON}
             Enviar pedido por WhatsApp
           </a>
         )}
 
-        {showMapBtn && mapUrl && (
+        {settingsLoaded && showMapBtn && mapUrl && (
           <a
             href={mapUrl}
             target="_blank"

@@ -27,15 +27,25 @@ function PedidoContent() {
   const deliveryId = searchParams.get('delivery')
   const pickupId = searchParams.get('pickup')
 
-  const [showWhatsappBtn, setShowWhatsappBtn] = useState(true)
-  const [showTrackBtn, setShowTrackBtn] = useState(true)
-  const [showMapBtn, setShowMapBtn] = useState(false)
-  const [mapUrl, setMapUrl] = useState<string | null>(null)
-  const [queueBoard, setQueueBoard] = useState<{ enabled: boolean } | null>(null)
+  // The checkout page already has these settings loaded — when it links here it
+  // passes them along so this page can render instantly instead of re-fetching
+  // the store row it just came from. Fall back to fetching only when the
+  // params are absent (e.g. a bookmarked or shared link without them).
+  const swaParam = searchParams.get('swa')
+  const hasParams = swaParam !== null
+
+  const [showWhatsappBtn, setShowWhatsappBtn] = useState(hasParams ? swaParam !== '0' : true)
+  const [showTrackBtn, setShowTrackBtn] = useState(hasParams ? searchParams.get('st') !== '0' : true)
+  const [showMapBtn, setShowMapBtn] = useState(hasParams ? searchParams.get('sm') === '1' : false)
+  const [mapUrl, setMapUrl] = useState<string | null>(hasParams ? (searchParams.get('mu') || null) : null)
+  const [queueBoard, setQueueBoard] = useState<{ enabled: boolean } | null>(
+    hasParams && searchParams.get('qb') === '1' ? { enabled: true } : null
+  )
   const [origin] = useState(() => (typeof window !== 'undefined' ? window.location.origin : ''))
-  const [settingsLoaded, setSettingsLoaded] = useState(false)
+  const [settingsLoaded, setSettingsLoaded] = useState(hasParams)
 
   useEffect(() => {
+    if (hasParams) return
     supabase
       .from('stores')
       .select('map_url, checkout_settings, template_config')
@@ -54,7 +64,7 @@ function PedidoContent() {
         if (qb?.enabled) setQueueBoard({ enabled: true })
         setSettingsLoaded(true)
       })
-  }, [storeSlug])
+  }, [storeSlug, hasParams])
 
   return (
     <div className="sf-confirm-screen">

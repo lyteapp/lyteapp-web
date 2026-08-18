@@ -201,6 +201,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const reorderCheckedRef = useRef(false)
 
   useEffect(() => {
+    if (store.whatsapp) router.prefetch(`/${store.slug}/pedido`)
+  }, [store.whatsapp, store.slug, router])
+
+  useEffect(() => {
     if (view !== 'reveal') return
     const seconds = store.template_config?.homePage?.reveal?.seconds ?? 3.2
     revealTimerRef.current = setTimeout(() => finishReveal(), seconds * 1000)
@@ -682,7 +686,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
         }).catch(() => {})
       }
 
-      await supabase.from('order_items').insert(
+      const orderItemsPromise = supabase.from('order_items').insert(
         cartItems.map(i => ({
           order_id: newOrderId, product_id: i.productId ?? i.id,
           product_name: i.name, product_price: i.price,
@@ -724,23 +728,26 @@ export default function StoreShell({ store, products, categories = [], initialBc
         ...(isPickup ? ['', 'Sigue el estado de tu pedido:', `https://lyte-app.com/order/${newOrderId}`] : []),
       ]
 
-      // Create delivery record only for domicilio
-      if (!isPickup && newDeliveryId) {
-        await fetch('/api/delivery', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: newDeliveryId,
-            store_id: store.id,
-            order_id: newOrderId,
-            customer_name: customerName.trim(),
-            customer_phone: customerPhone.trim(),
-            delivery_address: customerAddress.trim(),
-            customer_lat: customerLat,
-            customer_lng: customerLng,
-          }),
-        }).catch(() => {})
-      }
+      // Create delivery record only for domicilio — runs alongside order_items,
+      // neither depends on the other's result
+      const deliveryPromise = (!isPickup && newDeliveryId)
+        ? fetch('/api/delivery', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: newDeliveryId,
+              store_id: store.id,
+              order_id: newOrderId,
+              customer_name: customerName.trim(),
+              customer_phone: customerPhone.trim(),
+              delivery_address: customerAddress.trim(),
+              customer_lat: customerLat,
+              customer_lng: customerLng,
+            }),
+          }).catch(() => {})
+        : Promise.resolve()
+
+      await Promise.all([orderItemsPromise, deliveryPromise])
 
       const shortId = newOrderId.slice(0, 8).toUpperCase()
       setOrderId(shortId); setCart({})
@@ -752,7 +759,21 @@ export default function StoreShell({ store, products, categories = [], initialBc
         const trackParam = isPickup
           ? `pickup=${newOrderId}`
           : `delivery=${newDeliveryId}`
-        router.push(`/${store.slug}/pedido?id=${shortId}&${trackParam}&wa=${encodeURIComponent(`https://wa.me/${num}?text=${encodeURIComponent(lines.join('\n'))}`)}`)
+        // Pass already-loaded settings along so the confirmation page can render
+        // instantly instead of re-fetching the store row it just came from.
+        const csAny = (store.checkout_settings ?? {}) as Record<string, unknown>
+        const mapUrlAny = (store as unknown as { map_url?: string | null }).map_url ?? ''
+        const queueBoardEnabled = Boolean(
+          (store.template_config as unknown as { trackingConfig?: { queueBoard?: { enabled?: boolean } } })
+            ?.trackingConfig?.queueBoard?.enabled
+        )
+        const settingsParams =
+          `&swa=${csAny.showWhatsappBtn === false ? 0 : 1}` +
+          `&st=${csAny.showTrackBtn === false ? 0 : 1}` +
+          `&sm=${csAny.showMapBtn ? 1 : 0}` +
+          `&mu=${encodeURIComponent(mapUrlAny)}` +
+          `&qb=${queueBoardEnabled ? 1 : 0}`
+        router.push(`/${store.slug}/pedido?id=${shortId}&${trackParam}&wa=${encodeURIComponent(`https://wa.me/${num}?text=${encodeURIComponent(lines.join('\n'))}`)}${settingsParams}`)
       } else {
         setView('confirmed')
       }

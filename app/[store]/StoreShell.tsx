@@ -686,7 +686,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
         }).catch(() => {})
       }
 
-      const orderItemsPromise = supabase.from('order_items').insert(
+      // Not awaited: the order itself is already saved, and these details
+      // aren't needed to show the confirmation screen or build the WhatsApp
+      // message (which is built from cart state below, not from this insert).
+      supabase.from('order_items').insert(
         cartItems.map(i => ({
           order_id: newOrderId, product_id: i.productId ?? i.id,
           product_name: i.name, product_price: i.price,
@@ -694,7 +697,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           subtotal: +((i.price + i.extraPrice) * i.quantity).toFixed(2),
           selected_options: i.selectedOptions ?? null,
         }))
-      )
+      ).then(({ error }) => { if (error) console.error('order_items insert failed', error) })
 
       // Comanda lines
       const newDeliveryId = isPickup ? null : crypto.randomUUID()
@@ -728,26 +731,25 @@ export default function StoreShell({ store, products, categories = [], initialBc
         ...(isPickup ? ['', 'Sigue el estado de tu pedido:', `https://lyte-app.com/order/${newOrderId}`] : []),
       ]
 
-      // Create delivery record only for domicilio — runs alongside order_items,
-      // neither depends on the other's result
-      const deliveryPromise = (!isPickup && newDeliveryId)
-        ? fetch('/api/delivery', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              id: newDeliveryId,
-              store_id: store.id,
-              order_id: newOrderId,
-              customer_name: customerName.trim(),
-              customer_phone: customerPhone.trim(),
-              delivery_address: customerAddress.trim(),
-              customer_lat: customerLat,
-              customer_lng: customerLng,
-            }),
-          }).catch(() => {})
-        : Promise.resolve()
-
-      await Promise.all([orderItemsPromise, deliveryPromise])
+      // Create delivery record only for domicilio — not awaited, same reasoning
+      // as order_items above: the tracking link works as soon as this lands,
+      // which is well before the customer would tap it.
+      if (!isPickup && newDeliveryId) {
+        fetch('/api/delivery', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: newDeliveryId,
+            store_id: store.id,
+            order_id: newOrderId,
+            customer_name: customerName.trim(),
+            customer_phone: customerPhone.trim(),
+            delivery_address: customerAddress.trim(),
+            customer_lat: customerLat,
+            customer_lng: customerLng,
+          }),
+        }).catch(() => {})
+      }
 
       const shortId = newOrderId.slice(0, 8).toUpperCase()
       setOrderId(shortId); setCart({})

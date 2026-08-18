@@ -840,6 +840,26 @@ export default function StoreShell({ store, products, categories = [], initialBc
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, hp.orderReturnTimeout?.enabled, hp.orderReturnTimeout?.seconds])
 
+  // Visible countdown for the timer above — purely cosmetic, the actual
+  // reset is driven by the setTimeout in the effect above. State updates are
+  // deferred via setTimeout(fn, 0) rather than called synchronously in the
+  // effect body, same pattern as the reveal-screen timers.
+  const [returnCountdown, setReturnCountdown] = useState<number | null>(null)
+  useEffect(() => {
+    const cfg = hp.orderReturnTimeout
+    if (view !== 'confirmed' || !cfg?.enabled || !cfg.seconds) {
+      const t = setTimeout(() => setReturnCountdown(null), 0)
+      return () => clearTimeout(t)
+    }
+    const seconds = cfg.seconds
+    const t0 = setTimeout(() => setReturnCountdown(seconds), 0)
+    const interval = setInterval(() => {
+      setReturnCountdown(s => (s !== null && s > 0 ? s - 1 : s))
+    }, 1000)
+    return () => { clearTimeout(t0); clearInterval(interval) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, hp.orderReturnTimeout?.enabled, hp.orderReturnTimeout?.seconds])
+
   type CedulaLookupResult = {
     status: 'found' | 'new' | 'error'
     customer?: { name?: string | null; phone?: string | null; address?: string | null }
@@ -1204,6 +1224,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
         <div className="sf-confirm-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 32, height: 32 }}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg></div>
         <h1 className="sf-confirm-title">{t('store.confirmed.title')}</h1>
         <p className="sf-confirm-sub">{t('store.confirmed.sub', { id: orderId })}</p>
+        {returnCountdown !== null && (
+          <div className="sf-confirm-countdown">Volviendo al inicio en {returnCountdown}s</div>
+        )}
         {deliveryTrackId && (
           <a
             href={`/delivery/${deliveryTrackId}`}

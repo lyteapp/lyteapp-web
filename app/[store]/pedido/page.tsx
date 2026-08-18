@@ -80,6 +80,23 @@ function PedidoContent() {
     return () => clearTimeout(t)
   }, [returnSeconds, storeSlug, router])
 
+  // Visible countdown for the timer above — purely cosmetic, the actual
+  // reset is driven by the setTimeout in the effect above. State updates are
+  // deferred via setTimeout(fn, 0) rather than called synchronously in the
+  // effect body, same pattern as the in-app confirmation screen.
+  const [returnCountdown, setReturnCountdown] = useState<number | null>(null)
+  useEffect(() => {
+    if (!returnSeconds) {
+      const t = setTimeout(() => setReturnCountdown(null), 0)
+      return () => clearTimeout(t)
+    }
+    const t0 = setTimeout(() => setReturnCountdown(returnSeconds), 0)
+    const interval = setInterval(() => {
+      setReturnCountdown(s => (s !== null && s > 0 ? s - 1 : s))
+    }, 1000)
+    return () => { clearTimeout(t0); clearInterval(interval) }
+  }, [returnSeconds])
+
   return (
     <div className="sf-confirm-screen">
       <div className="sf-confirm-card">
@@ -93,6 +110,9 @@ function PedidoContent() {
           {orderId ? `Pedido #${orderId} recibido.` : 'Tu pedido fue recibido.'}{' '}
           {settingsLoaded && waParam && showWhatsappBtn ? 'Toca el boton para enviarlo por WhatsApp.' : ''}
         </p>
+        {returnCountdown !== null && (
+          <div className="sf-confirm-countdown">Volviendo al inicio en {returnCountdown}s</div>
+        )}
 
         {settingsLoaded && showTrackBtn && (deliveryId || pickupId) && !queueBoard?.enabled && (
           <a

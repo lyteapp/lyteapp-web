@@ -769,12 +769,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
           (store.template_config as unknown as { trackingConfig?: { queueBoard?: { enabled?: boolean } } })
             ?.trackingConfig?.queueBoard?.enabled
         )
+        const returnTimeout = hp.orderReturnTimeout
         const settingsParams =
           `&swa=${csAny.showWhatsappBtn === false ? 0 : 1}` +
           `&st=${csAny.showTrackBtn === false ? 0 : 1}` +
           `&sm=${csAny.showMapBtn ? 1 : 0}` +
           `&mu=${encodeURIComponent(mapUrlAny)}` +
-          `&qb=${queueBoardEnabled ? 1 : 0}`
+          `&qb=${queueBoardEnabled ? 1 : 0}` +
+          (returnTimeout?.enabled && returnTimeout.seconds ? `&ret=${returnTimeout.seconds}` : '')
         router.push(`/${store.slug}/pedido?id=${shortId}&${trackParam}&wa=${encodeURIComponent(`https://wa.me/${num}?text=${encodeURIComponent(lines.join('\n'))}`)}${settingsParams}`)
       } else {
         setView('confirmed')

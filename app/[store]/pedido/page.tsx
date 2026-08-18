@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useEffect, useState } from 'react'
-import { useParams, useSearchParams } from 'next/navigation'
+import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@supabase/supabase-js'
 import { QRCodeSVG } from 'qrcode.react'
@@ -21,6 +21,7 @@ const WA_ICON = (
 function PedidoContent() {
   const params = useParams()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const storeSlug = params.store as string
   const waParam = searchParams.get('wa')
   const orderId = searchParams.get('id')
@@ -33,6 +34,7 @@ function PedidoContent() {
   // params are absent (e.g. a bookmarked or shared link without them).
   const swaParam = searchParams.get('swa')
   const hasParams = swaParam !== null
+  const retParam = searchParams.get('ret')
 
   const [showWhatsappBtn, setShowWhatsappBtn] = useState(hasParams ? swaParam !== '0' : true)
   const [showTrackBtn, setShowTrackBtn] = useState(hasParams ? searchParams.get('st') !== '0' : true)
@@ -41,6 +43,7 @@ function PedidoContent() {
   const [queueBoard, setQueueBoard] = useState<{ enabled: boolean } | null>(
     hasParams && searchParams.get('qb') === '1' ? { enabled: true } : null
   )
+  const [returnSeconds, setReturnSeconds] = useState<number | null>(hasParams ? (Number(retParam) || null) : null)
   const [origin] = useState(() => (typeof window !== 'undefined' ? window.location.origin : ''))
   const [settingsLoaded, setSettingsLoaded] = useState(hasParams)
 
@@ -62,9 +65,20 @@ function PedidoContent() {
         const tracking = (tc.trackingConfig as Record<string, unknown>) ?? {}
         const qb = (tracking.queueBoard as { enabled?: boolean } | undefined) ?? undefined
         if (qb?.enabled) setQueueBoard({ enabled: true })
+        const hp = (tc.homePage as Record<string, unknown>) ?? {}
+        const ort = (hp.orderReturnTimeout as { enabled?: boolean; seconds?: number } | undefined) ?? undefined
+        if (ort?.enabled && ort.seconds) setReturnSeconds(ort.seconds)
         setSettingsLoaded(true)
       })
   }, [storeSlug, hasParams])
+
+  // Kiosk mode: hand the screen back to the home page N seconds after
+  // showing the confirmation, same as the in-app confirmation screen does.
+  useEffect(() => {
+    if (!returnSeconds) return
+    const t = setTimeout(() => router.push(`/${storeSlug}`), returnSeconds * 1000)
+    return () => clearTimeout(t)
+  }, [returnSeconds, storeSlug, router])
 
   return (
     <div className="sf-confirm-screen">

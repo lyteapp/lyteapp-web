@@ -701,16 +701,33 @@ export default function StoreShell({ store, products, categories = [], initialBc
         }
       }
 
-      const { error: oErr } = await supabase.from('orders').insert({
-        id: newOrderId, store_id: store.id,
-        customer_name: customerName.trim(), customer_phone: customerPhone.trim(),
-        customer_notes: customerNotes.trim() || null,
-        payment_method: paymentLabel || null, total: orderTotal, status: 'pending',
-        delivery_type: isPickup ? 'pickup' : 'delivery',
-        payment_proof_url: proofUrl,
-        payment_status: proofUrl ? 'pending' : null,
+      // Goes through our own server instead of straight from the customer's
+      // connection to Supabase — one hop the customer's (often mobile, often
+      // slower) network doesn't have to make, and it also creates order_items
+      // server-side in the same request instead of a second client call.
+      const orderRes = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: newOrderId, store_id: store.id,
+          customer_name: customerName.trim(), customer_phone: customerPhone.trim(),
+          customer_notes: customerNotes.trim() || null,
+          payment_method: paymentLabel || null, total: orderTotal,
+          delivery_type: isPickup ? 'pickup' : 'delivery',
+          payment_proof_url: proofUrl,
+          items: cartItems.map(i => ({
+            product_id: i.productId ?? i.id,
+            product_name: i.name, product_price: i.price,
+            quantity: i.quantity,
+            subtotal: +((i.price + i.extraPrice) * i.quantity).toFixed(2),
+            selected_options: i.selectedOptions ?? null,
+          })),
+        }),
       })
-      if (oErr) throw new Error(oErr.message)
+      if (!orderRes.ok) {
+        const { error: orderErrMsg } = await orderRes.json().catch(() => ({ error: 'No se pudo crear el pedido' }))
+        throw new Error(orderErrMsg)
+      }
 
       if (!collectCustomerData) {
         try { localStorage.setItem('lyte-customer', JSON.stringify({ name: customerName.trim(), phone: customerPhone.trim() })) } catch {}
@@ -728,19 +745,6 @@ export default function StoreShell({ store, products, categories = [], initialBc
           }),
         }).catch(() => {})
       }
-
-      // Not awaited: the order itself is already saved, and these details
-      // aren't needed to show the confirmation screen or build the WhatsApp
-      // message (which is built from cart state below, not from this insert).
-      supabase.from('order_items').insert(
-        cartItems.map(i => ({
-          order_id: newOrderId, product_id: i.productId ?? i.id,
-          product_name: i.name, product_price: i.price,
-          quantity: i.quantity,
-          subtotal: +((i.price + i.extraPrice) * i.quantity).toFixed(2),
-          selected_options: i.selectedOptions ?? null,
-        }))
-      ).then(({ error }) => { if (error) console.error('order_items insert failed', error) })
 
       // Comanda lines
       const newDeliveryId = isPickup ? null : crypto.randomUUID()

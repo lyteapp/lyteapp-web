@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, Fragment } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useT } from '../lib/LocaleProvider'
 import { revealFontStack, loadRevealFont } from '../lib/revealFonts'
 import { isLightColor, poweredByColors } from '../lib/colorContrast'
@@ -217,9 +217,14 @@ const IG_ICON = (
 export default function StoreShell({ store, products, categories = [], initialBcvRate = null, initialDeliveryZones = [], mapboxToken = '' }: { store: Store; products: Product[]; categories: { id: string; name: string; position: number }[]; initialBcvRate?: number | null; initialDeliveryZones?: DeliveryZone[]; mapboxToken?: string }) {
   const t = useT()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  // The dashboard's storefront preview links here with ?preview=1 so it always
+  // opens straight on the catalog, skipping the home splash screen — that
+  // preview is for editing the storefront's own appearance, not the splash.
+  const isDashboardPreview = searchParams.get('preview') === '1'
   const [cart, setCart]                   = useState<Record<string, CartItem>>({})
   const [view, setView]                   = useState<'catalog' | 'checkout' | 'confirmed' | 'splash' | 'reveal'>(() =>
-    store.template_config?.homePage?.enabled ? 'splash' : 'catalog'
+    (!isDashboardPreview && store.template_config?.homePage?.enabled) ? 'splash' : 'catalog'
   )
   const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [splashLeaving, setSplashLeaving] = useState(false)

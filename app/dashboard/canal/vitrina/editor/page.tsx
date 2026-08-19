@@ -503,7 +503,7 @@ export default function EditorPage() {
                 <iframe
                   ref={iframeRef}
                   key={iframeKey}
-                  src={`/${storeSlug}`}
+                  src={`/${storeSlug}?preview=1`}
                   className="ed-preview-iframe"
                   title="Vista previa"
                   onLoad={() => applyPreview()}

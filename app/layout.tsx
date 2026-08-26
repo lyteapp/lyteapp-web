@@ -66,9 +66,14 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // data-scroll-behavior: Next 16 no longer forces scroll-behavior:auto during
+  // route transitions, so the landing's `html { scroll-behavior: smooth }` would
+  // animate the scroll-to-top on every navigation. This hands that control back
+  // to Next while leaving smooth scrolling intact for the landing's anchor links.
   return (
     <html
       lang="es"
+      data-scroll-behavior="smooth"
       className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} ${poppins.variable} ${playfair.variable} ${montserrat.variable} ${lato.variable} ${merriweather.variable} ${raleway.variable} ${nunito.variable} ${oswald.variable} ${cormorant.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">

@@ -42,6 +42,8 @@ export type ConfigTipo = {
   /** Placeholder for a line's name, in this partida's own language. */
   ejemplo: string
   tituloDesglose: string
+  /** Lines can be counted: quantity × unit cost instead of a flat amount. */
+  articulos?: boolean
 }
 
 export const TIPOS: ConfigTipo[] = [
@@ -64,8 +66,9 @@ export const TIPOS: ConfigTipo[] = [
     id: 'inventario', label: 'Inventario', lado: 'activo',
     descripcion: 'Mercancía valorada. Un renglón por categoría, con su monto.',
     formas: ['USD', 'VES'],
-    ejemplo: 'Ej: inventario al mayor, al detal',
+    ejemplo: 'Ej: producto o categoría',
     tituloDesglose: 'Qué hay en inventario',
+    articulos: true,
   },
   {
     id: 'activo_otro', label: 'Otro activo', lado: 'activo',
@@ -112,7 +115,18 @@ export type Tasas = { mercado: number; bcv: number }
    bolívares to the dollar this particular line converts at. Empty falls back to
    the corte's market rate. It deliberately does not touch BCV-settled lines,
    where two rates are in play and "the rate" would be ambiguous. */
-export type Detalle = { id: string; nombre: string; monto: string; moneda: Moneda; tasa: string }
+export type Detalle = {
+  id: string
+  nombre: string
+  monto: string
+  moneda: Moneda
+  tasa: string
+  /* Only kinds that itemise use these. When both are filled they replace
+     `monto`, so a line is either counted (quantity × unit cost) or valued
+     outright — never half of each. */
+  cantidad: string
+  costo: string
+}
 
 /* A partida is either a single amount typed straight into the sheet, or a
    breakdown that adds up. `detalles` being non-empty is what decides which:
@@ -162,7 +176,7 @@ export const monedaPorDefecto = (tipo: TipoPartida): Moneda =>
 export const nuevaPartida = (tipo: TipoPartida = 'activo_otro'): Partida =>
   ({ id: nuevoId(), nombre: '', tipo, monto: '', moneda: monedaPorDefecto(tipo), tasa: '', detalles: [] })
 export const nuevoDetalle = (moneda: Moneda = 'USD'): Detalle =>
-  ({ id: nuevoId(), nombre: '', monto: '', moneda, tasa: '' })
+  ({ id: nuevoId(), nombre: '', monto: '', moneda, tasa: '', cantidad: '', costo: '' })
 
 /* `fecha` starts empty on purpose: the sheet is prerendered, so seeding it with
    new Date() would bake the build date into the HTML and then disagree with the
@@ -250,7 +264,16 @@ export function nominalUSD(monto: number, moneda: Moneda, tasas: Tasas, tasaLine
   return monto
 }
 
-export const montoDetalle = (d: Detalle, tasas: Tasas) => aUSD(parseNum(d.monto), d.moneda, tasas, d.tasa)
+/* A line's amount before any currency conversion: quantity × unit cost when
+   both are given, otherwise the amount typed directly. */
+export function brutoDetalle(d: Detalle): number {
+  const cantidad = parseNum(d.cantidad)
+  const costo = parseNum(d.costo)
+  return cantidad !== 0 && costo !== 0 ? cantidad * costo : parseNum(d.monto)
+}
+
+export const montoDetalle = (d: Detalle, tasas: Tasas) =>
+  aUSD(brutoDetalle(d), d.moneda, tasas, d.tasa)
 
 /** A partida's real value in USD. Lines that can't be converted are left out. */
 export function montoPartida(p: Partida, tasas: Tasas): number {
@@ -266,16 +289,19 @@ export function montoPartida(p: Partida, tasas: Tasas): number {
 /** True when something here needs a rate that isn't loaded. */
 export function partidaSinTasa(p: Partida, tasas: Tasas): boolean {
   if (p.detalles.length) {
-    return p.detalles.some(d => parseNum(d.monto) !== 0 && montoDetalle(d, tasas) === null)
+    return p.detalles.some(d => brutoDetalle(d) !== 0 && montoDetalle(d, tasas) === null)
   }
   return parseNum(p.monto) !== 0 && aUSD(parseNum(p.monto), p.moneda, tasas, p.tasa) === null
 }
 
 /** What the partida would be worth if every line settled at face value. */
 export function nominalPartida(p: Partida, tasas: Tasas): number {
-  const lineas = p.detalles.length ? p.detalles : [{ monto: p.monto, moneda: p.moneda, tasa: p.tasa }]
-  return lineas.reduce((acc, d) => {
-    const v = nominalUSD(parseNum(d.monto), d.moneda, tasas, d.tasa)
+  if (!p.detalles.length) {
+    const v = nominalUSD(parseNum(p.monto), p.moneda, tasas, p.tasa)
+    return v === null ? 0 : v
+  }
+  return p.detalles.reduce((acc, d) => {
+    const v = nominalUSD(brutoDetalle(d), d.moneda, tasas, d.tasa)
     return v === null ? acc : acc + v
   }, 0)
 }
@@ -434,6 +460,8 @@ export function normalizarCorte(raw: unknown): Corte {
               monto: typeof x.monto === 'string' ? x.monto : '',
               moneda: moneda(x.moneda),
               tasa: typeof x.tasa === 'string' ? x.tasa : '',
+              cantidad: typeof x.cantidad === 'string' ? x.cantidad : '',
+              costo: typeof x.costo === 'string' ? x.costo : '',
             }
           })
         : []

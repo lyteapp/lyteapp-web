@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useBalance } from '../../BalanceProvider'
 import {
-  MONEDAS, SECCIONES, aUSD, buscarPartida, configTipo, money, montoDetalle, montoPartida,
+  MONEDAS, SECCIONES, aUSD, brutoDetalle, buscarPartida, configTipo, money, montoDetalle, montoPartida,
   tiposDe,
   monedaPorDefecto, nominalPartida, nominalUSD, nuevoDetalle, parseNum, tasasDe,
   type Detalle, type Moneda, type TipoPartida,
@@ -40,6 +40,7 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
   const formas = MONEDAS.filter(m => cfg.formas.includes(m.id))
   const usaBcv = cfg.formas.includes('USD_BCV')
   const ofreceBs = cfg.formas.includes('VES')
+  const porArticulos = cfg.articulos === true
   const desglosado = partida.detalles.length > 0
   const tasas = tasasDe(corte)
 
@@ -54,18 +55,20 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
     const lineas = (desglosado ? partida.detalles : [partida]).filter(
       d => d.moneda === m.id && parseNum(d.monto) !== 0,
     )
+    const bruto = (d: { monto: string; cantidad?: string; costo?: string }) =>
+      'cantidad' in d ? brutoDetalle(d as Detalle) : parseNum(d.monto)
     const sumar = (fn: (monto: number, moneda: Moneda, tasa: string) => number | null) =>
       lineas.reduce((a, d) => {
-        const v = fn(parseNum(d.monto), d.moneda, d.tasa)
+        const v = fn(bruto(d), d.moneda, d.tasa)
         return v === null ? a : a + v
       }, 0)
     return {
       forma: m,
       cantidad: lineas.length,
-      original: lineas.reduce((a, d) => a + parseNum(d.monto), 0),
+      original: lineas.reduce((a, d) => a + bruto(d), 0),
       nominal: sumar((mo, md, tl) => nominalUSD(mo, md, tasas, tl)),
       real: sumar((mo, md, tl) => aUSD(mo, md, tasas, tl)),
-      faltan: lineas.some(d => aUSD(parseNum(d.monto), d.moneda, tasas, d.tasa) === null),
+      faltan: lineas.some(d => aUSD(bruto(d), d.moneda, tasas, d.tasa) === null),
     }
   }).filter(g => g.cantidad > 0)
 
@@ -215,7 +218,9 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
                   <tr>
                     <th>Renglón</th>
                     <th style={{ width: 172 }}>{seccion.lado === 'activo' ? 'Se cobra en' : 'Se paga en'}</th>
-                    <th className="r" style={{ width: 124 }}>Monto</th>
+                    {porArticulos && <th className="r" style={{ width: 92 }}>Cantidad</th>}
+                    {porArticulos && <th className="r" style={{ width: 110 }}>Costo unit.</th>}
+                    <th className="r" style={{ width: 124 }}>{porArticulos ? 'Subtotal' : 'Monto'}</th>
                     {ofreceBs && <th className="r" style={{ width: 106 }}>Tasa</th>}
                     {usaBcv && <th className="r" style={{ width: 108 }}>Nominal</th>}
                     <th className="r" style={{ width: 116 }}>Valor real</th>
@@ -224,9 +229,11 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
                 </thead>
                 <tbody>
                   {partida.detalles.map(d => {
-                    const monto = parseNum(d.monto)
-                    const real = monto ? montoDetalle(d, tasas) : 0
-                    const nom = monto ? nominalUSD(monto, d.moneda, tasas) : 0
+                    const bruto = brutoDetalle(d)
+                    const contado = parseNum(d.cantidad) !== 0 && parseNum(d.costo) !== 0
+                    const monto = bruto
+                    const real = bruto ? montoDetalle(d, tasas) : 0
+                    const nom = bruto ? nominalUSD(bruto, d.moneda, tasas, d.tasa) : 0
                     const castigada = real !== null && nom !== null && nom - real > 0.005
                     return (
                       <tr key={d.id}>
@@ -247,16 +254,44 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
                             {formas.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
                           </select>
                         </td>
+                        {porArticulos && (
+                          <td className="r">
+                            <input
+                              className="bal-cell num r"
+                              inputMode="decimal"
+                              placeholder="—"
+                              value={d.cantidad}
+                              onChange={e => editarDetalle(d.id, { cantidad: e.target.value })}
+                            />
+                          </td>
+                        )}
+                        {porArticulos && (
+                          <td className="r">
+                            <input
+                              className="bal-cell num r"
+                              inputMode="decimal"
+                              placeholder="—"
+                              value={d.costo}
+                              onChange={e => editarDetalle(d.id, { costo: e.target.value })}
+                            />
+                          </td>
+                        )}
                         <td className="r">
-                          <input
-                            className="bal-cell num r"
-                            inputMode="decimal"
-                            placeholder="0.00"
-                            value={d.monto}
-                            onChange={e => editarDetalle(d.id, { monto: e.target.value })}
-                            onBlur={() => formatearDetalle(d.id)}
-                            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); agregarDetalle() } }}
-                          />
+                          {contado ? (
+                            /* Derived from quantity × cost — typing over it would
+                               contradict the two numbers beside it. */
+                            <span className="bal-cell-derivado num">{bruto.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          ) : (
+                            <input
+                              className="bal-cell num r"
+                              inputMode="decimal"
+                              placeholder="0.00"
+                              value={d.monto}
+                              onChange={e => editarDetalle(d.id, { monto: e.target.value })}
+                              onBlur={() => formatearDetalle(d.id)}
+                              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); agregarDetalle() } }}
+                            />
+                          )}
                         </td>
                         {ofreceBs && (
                           <td className="r">
@@ -304,6 +339,15 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
             </div>
             <button className="bal-addbtn" onClick={agregarDetalle}>+ Agregar renglón</button>
           </div>
+
+          {porArticulos && (
+            <p className="bal-hint">
+              Podés cargar cada artículo con su cantidad y su costo unitario — el subtotal
+              se calcula solo — o dejar esas dos columnas vacías y escribir el monto del
+              renglón directo. Si querés un único número para todo el inventario, borrá los
+              renglones y cargalo como monto de la partida.
+            </p>
+          )}
 
           {usaBcv && (
             <p className="bal-hint">

@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Duplicados que genera la sincronización de iCloud/Dropbox ("page 2.tsx").
+# Se colaron en un commit una vez; que no vuelva a pasar.
+* 2.*
+* 3.*
+* 4.*

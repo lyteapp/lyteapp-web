@@ -425,6 +425,10 @@
 .bal-row input:focus { outline: none; box-shadow: inset 0 -2px 0 var(--activo); }
 .bal-row input::placeholder { color: var(--ink-faint); }
 
+/* Visible by default rather than revealed on hover. The reveal reads nicely on
+   a desktop list, but the button also lives in table rows and on touch, where
+   there is no hover at all — and a delete you cannot find is a delete that
+   doesn't exist. Muted until pointed at keeps it quiet without hiding it. */
 .bal-del {
   flex: none;
   width: 22px;
@@ -436,11 +440,14 @@
   color: var(--ink-faint);
   font-size: 17px;
   line-height: 1;
-  opacity: 0;
-  transition: opacity .12s;
+  opacity: 0.45;
+  transition: opacity .12s, background .12s, color .12s;
 }
 .bal-row:hover .bal-del,
-.bal-row:focus-within .bal-del { opacity: 1; }
+.bal-row:focus-within .bal-del,
+.bal-table tr:hover .bal-del,
+.bal-table tr:focus-within .bal-del,
+.bal-cierre-meta:hover .bal-del { opacity: 1; }
 .bal-del:hover { background: #FBECEA; color: var(--alert); }
 .bal-del:focus-visible { opacity: 1; outline: 2px solid var(--ink); outline-offset: 1px; }
 

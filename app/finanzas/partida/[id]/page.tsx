@@ -39,6 +39,24 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
   const tasaCorte = parseNum(corte.tasa)
   const total = montoPartida(partida, tasaCorte)
 
+  /* Grouped by the currency each line is actually collected in. The consolidated
+     total answers "how much is this worth"; this answers "how much of it comes
+     in dollars and how much in bolívares", which is a different question and the
+     one that matters for receivables. */
+  const porMoneda = MONEDAS.map(m => {
+    const lineas = partida.detalles.filter(d => d.moneda === m.id && parseNum(d.monto) !== 0)
+    return {
+      moneda: m,
+      cantidad: lineas.length,
+      original: lineas.reduce((a, d) => a + parseNum(d.monto), 0),
+      usd: lineas.reduce((a, d) => {
+        const v = montoDetalle(d, tasaCorte)
+        return v === null ? a : a + v
+      }, 0),
+      faltan: lineas.some(d => montoDetalle(d, tasaCorte) === null),
+    }
+  }).filter(g => g.cantidad > 0)
+
   function setDetalles(detalles: Detalle[]) {
     editarPartida(sec, id, { detalles })
   }
@@ -189,6 +207,45 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
             </div>
             <button className="bal-addbtn" onClick={agregarDetalle}>+ Agregar renglón</button>
           </div>
+
+          {porMoneda.length > 1 && (
+            <div className="bal-block" style={{ marginTop: 16 }}>
+              <div className="bal-blockhead">
+                <h2>Por moneda</h2>
+                <span className="bal-tot num">{money(total)}</span>
+              </div>
+              <div className="bal-table-wrap">
+                <table className="bal-table">
+                  <thead>
+                    <tr>
+                      <th>Se cobra en</th>
+                      <th className="r" style={{ width: 90 }}>Renglones</th>
+                      <th className="r" style={{ width: 150 }}>Monto original</th>
+                      <th className="r" style={{ width: 120 }}>En USD</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {porMoneda.map(g => (
+                      <tr key={g.moneda.id}>
+                        <td>
+                          <span className="bal-dot" style={{ background: g.moneda.id === 'VES' ? '#D97706' : '#10B981' }} />
+                          {' '}{g.moneda.label}
+                        </td>
+                        <td className="r num">{g.cantidad}</td>
+                        <td className="r num">
+                          {g.original.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {g.moneda.simbolo}
+                        </td>
+                        <td className="r num">
+                          {money(g.usd)}
+                          {g.faltan && <span className="bal-tag bal-tag-baja">falta tasa</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           <p className="bal-hint">
             Lo que está en dólares se toma tal cual. Lo que está en bolívares se divide por

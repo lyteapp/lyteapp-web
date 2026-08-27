@@ -6,8 +6,9 @@ import { useRouter } from 'next/navigation'
 import { useBalance } from '../../BalanceProvider'
 import {
   MONEDAS, SECCIONES, aUSD, buscarPartida, configTipo, money, montoDetalle, montoPartida,
+  tiposDe,
   monedaPorDefecto, nominalPartida, nominalUSD, nuevoDetalle, parseNum, tasasDe,
-  type Detalle, type Moneda,
+  type Detalle, type Moneda, type TipoPartida,
 } from '../../balance'
 
 export default function PartidaPage({ params }: { params: Promise<{ id: string }> }) {
@@ -72,6 +73,21 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
     editarPartida(sec, id, { detalles })
   }
 
+  /* Changing the kind can leave a settlement form that the new kind doesn't
+     offer — cash has no "collected at BCV". Rather than keep an amount in a form
+     its own dropdown can no longer show, anything orphaned is moved to the new
+     kind's default, where it is at least visible and correctable. */
+  function cambiarTipo(tipo: TipoPartida) {
+    const permitidas = configTipo(tipo).formas
+    const porDefecto = monedaPorDefecto(tipo)
+    const valida = (m: Moneda) => (permitidas.includes(m) ? m : porDefecto)
+    editarPartida(sec, id, {
+      tipo,
+      moneda: valida(partida.moneda),
+      detalles: partida.detalles.map(d => ({ ...d, moneda: valida(d.moneda) })),
+    })
+  }
+
   /* Adding the first line carries the single amount and how it settles into it,
      so switching to a breakdown never silently drops or reclassifies a figure. */
   function agregarDetalle() {
@@ -128,6 +144,21 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
           )}
         </div>
       </header>
+
+      <div className="bal-tipo-cambio">
+        <label>
+          <span>Tipo de partida</span>
+          <select
+            value={partida.tipo}
+            onChange={e => cambiarTipo(e.target.value as TipoPartida)}
+          >
+            {tiposDe(seccion.lado).map(t => (
+              <option key={t.id} value={t.id}>{t.label}</option>
+            ))}
+          </select>
+        </label>
+        <p className="bal-tipo-cambio-desc">{cfg.descripcion}</p>
+      </div>
 
       {/* Editable here as well as on the sheet: these are the numbers you have in
           front of you while loading a partida, and walking back to the header to

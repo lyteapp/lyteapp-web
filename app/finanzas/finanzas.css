@@ -1402,3 +1402,39 @@ select.bal-cell {
   color: var(--ok);
 }
 .bal-calculo-total b { font-size: 19px; font-weight: 700; }
+
+/* ===== CAMBIAR EL TIPO DE UNA PARTIDA ===== */
+.bal-tipo-cambio {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.bal-tipo-cambio label { display: flex; align-items: center; gap: 8px; }
+.bal-tipo-cambio label span {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.bal-tipo-cambio select {
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: white;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  padding: 7px 10px;
+  cursor: pointer;
+}
+.bal-tipo-cambio select:focus { outline: none; border-color: var(--activo); }
+.bal-tipo-cambio-desc {
+  flex: 1;
+  min-width: 200px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink-faint);
+  margin: 0;
+}

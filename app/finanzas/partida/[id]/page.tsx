@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useBalance } from '../../BalanceProvider'
 import {
   MONEDAS, SECCIONES, aUSD, brutoDetalle, buscarPartida, configTipo, money, montoDetalle, montoPartida,
-  tiposDe,
+  tasasLinea, tiposDe,
   monedaPorDefecto, nominalPartida, nominalUSD, nuevoDetalle, parseNum, tasasDe,
   type Detalle, type Moneda, type TipoPartida,
 } from '../../balance'
@@ -57,18 +57,19 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
     )
     const bruto = (d: { monto: string; cantidad?: string; costo?: string }) =>
       'cantidad' in d ? brutoDetalle(d as Detalle) : parseNum(d.monto)
-    const sumar = (fn: (monto: number, moneda: Moneda, tasa: string) => number | null) =>
-      lineas.reduce((a, d) => {
-        const v = fn(bruto(d), d.moneda, d.tasa)
-        return v === null ? a : a + v
-      }, 0)
     return {
       forma: m,
       cantidad: lineas.length,
       original: lineas.reduce((a, d) => a + bruto(d), 0),
-      nominal: sumar((mo, md, tl) => nominalUSD(mo, md, tasas, tl)),
-      real: sumar((mo, md, tl) => aUSD(mo, md, tasas, tl)),
-      faltan: lineas.some(d => aUSD(bruto(d), d.moneda, tasas, d.tasa) === null),
+      nominal: lineas.reduce((a, d) => {
+        const v = nominalUSD(bruto(d), d.moneda, tasasLinea(tasas, d))
+        return v === null ? a : a + v
+      }, 0),
+      real: lineas.reduce((a, d) => {
+        const v = aUSD(bruto(d), d.moneda, tasasLinea(tasas, d))
+        return v === null ? a : a + v
+      }, 0),
+      faltan: lineas.some(d => aUSD(bruto(d), d.moneda, tasasLinea(tasas, d)) === null),
     }
   }).filter(g => g.cantidad > 0)
 
@@ -221,9 +222,13 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
                     {porArticulos && <th className="r" style={{ width: 92 }}>Cantidad</th>}
                     {porArticulos && <th className="r" style={{ width: 110 }}>Costo unit.</th>}
                     <th className="r" style={{ width: 124 }}>{porArticulos ? 'Subtotal' : 'Monto'}</th>
-                    {ofreceBs && <th className="r" style={{ width: 106 }}>Tasa</th>}
-                    {usaBcv && <th className="r" style={{ width: 108 }}>Nominal</th>}
-                    <th className="r" style={{ width: 116 }}>Valor real</th>
+                    {usaBcv
+                      ? (<>
+                          <th className="r" style={{ width: 104 }}>Tasa BCV</th>
+                          <th className="r" style={{ width: 104 }}>Tasa Binance</th>
+                        </>)
+                      : ofreceBs && <th className="r" style={{ width: 106 }}>Tasa</th>}
+                    <th className="r" style={{ width: 120 }}>{usaBcv ? 'Total en USD' : 'Valor real'}</th>
                     <th style={{ width: 30 }} />
                   </tr>
                 </thead>
@@ -233,7 +238,7 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
                     const contado = parseNum(d.cantidad) !== 0 && parseNum(d.costo) !== 0
                     const monto = bruto
                     const real = bruto ? montoDetalle(d, tasas) : 0
-                    const nom = bruto ? nominalUSD(bruto, d.moneda, tasas, d.tasa) : 0
+                    const nom = bruto ? nominalUSD(bruto, d.moneda, tasasLinea(tasas, d)) : 0
                     const castigada = real !== null && nom !== null && nom - real > 0.005
                     return (
                       <tr key={d.id}>
@@ -293,7 +298,33 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
                             />
                           )}
                         </td>
-                        {ofreceBs && (
+                        {usaBcv && (
+                          <td className="r">
+                            {d.moneda === 'USD_BCV' ? (
+                              <input
+                                className="bal-cell num r"
+                                inputMode="decimal"
+                                placeholder={tasas.bcv > 0 ? String(tasas.bcv) : 'BCV'}
+                                value={d.tasaBcv}
+                                onChange={e => editarDetalle(d.id, { tasaBcv: e.target.value })}
+                              />
+                            ) : <span className="bal-delta-flat">—</span>}
+                          </td>
+                        )}
+                        {usaBcv && (
+                          <td className="r">
+                            {d.moneda === 'USD_BCV' || d.moneda === 'VES' ? (
+                              <input
+                                className="bal-cell num r"
+                                inputMode="decimal"
+                                placeholder={tasas.mercado > 0 ? String(tasas.mercado) : 'Binance'}
+                                value={d.tasa}
+                                onChange={e => editarDetalle(d.id, { tasa: e.target.value })}
+                              />
+                            ) : <span className="bal-delta-flat">—</span>}
+                          </td>
+                        )}
+                        {!usaBcv && ofreceBs && (
                           <td className="r">
                             {d.moneda === 'VES' ? (
                               <input
@@ -309,11 +340,7 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
                             ) : <span className="bal-delta-flat">—</span>}
                           </td>
                         )}
-                        {usaBcv && (
-                          <td className="r num bal-nominal">
-                            {monto === 0 ? '—' : nom === null ? '—' : money(nom)}
-                          </td>
-                        )}
+
                         <td className={`r num${castigada ? ' bal-v-salida' : ''}`}>
                           {monto === 0
                             ? <span className="bal-delta-flat">—</span>
@@ -352,7 +379,9 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
           {usaBcv && (
             <p className="bal-hint">
               Los renglones marcados <b>{seccion.lado === 'activo' ? 'a cobrar' : 'a pagar'} en bolívares a tasa BCV </b>
-              se calculan como monto × tasa BCV ÷ tasa Binance
+              se calculan como monto × tasa BCV ÷ tasa Binance. Cada renglón puede llevar
+              sus propias tasas; si las dejás vacías usa las del corte, que aparecen como
+              sugerencia en el campo
               {tasas.bcv > 0 && tasas.mercado > 0
                 ? `. Con las tasas de arriba, $100 quedan en ${((100 * tasas.bcv) / tasas.mercado).toFixed(2)}.`
                 : '. Cargá las dos tasas para que se calculen.'}
@@ -487,9 +516,9 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
               <div className="bal-equivalente">
                 <span>Valor real</span>
                 <b className="num">
-                  {aUSD(parseNum(partida.monto), partida.moneda, tasas, partida.tasa) === null
+                  {aUSD(parseNum(partida.monto), partida.moneda, tasasLinea(tasas, partida)) === null
                     ? 'falta la tasa'
-                    : money(aUSD(parseNum(partida.monto), partida.moneda, tasas, partida.tasa)!)}
+                    : money(aUSD(parseNum(partida.monto), partida.moneda, tasasLinea(tasas, partida))!)}
                 </b>
               </div>
             )}

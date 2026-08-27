@@ -120,7 +120,10 @@ export type Detalle = {
   nombre: string
   monto: string
   moneda: Moneda
+  /** Bolívares-per-dollar this line is valued at. Empty falls back to the corte. */
   tasa: string
+  /** Official rate for this line, when it settles at BCV. Empty falls back to the corte. */
+  tasaBcv: string
   /* Only kinds that itemise use these. When both are filled they replace
      `monto`, so a line is either counted (quantity × unit cost) or valued
      outright — never half of each. */
@@ -138,6 +141,7 @@ export type Partida = {
   monto: string
   moneda: Moneda
   tasa: string
+  tasaBcv: string
   detalles: Detalle[]
 }
 
@@ -174,9 +178,9 @@ export const monedaPorDefecto = (tipo: TipoPartida): Moneda =>
   (tipo === 'cxc' || tipo === 'cxp' ? 'USD_BCV' : 'USD')
 
 export const nuevaPartida = (tipo: TipoPartida = 'activo_otro'): Partida =>
-  ({ id: nuevoId(), nombre: '', tipo, monto: '', moneda: monedaPorDefecto(tipo), tasa: '', detalles: [] })
+  ({ id: nuevoId(), nombre: '', tipo, monto: '', moneda: monedaPorDefecto(tipo), tasa: '', tasaBcv: '', detalles: [] })
 export const nuevoDetalle = (moneda: Moneda = 'USD'): Detalle =>
-  ({ id: nuevoId(), nombre: '', monto: '', moneda, tasa: '', cantidad: '', costo: '' })
+  ({ id: nuevoId(), nombre: '', monto: '', moneda, tasa: '', tasaBcv: '', cantidad: '', costo: '' })
 
 /* `fecha` starts empty on purpose: the sheet is prerendered, so seeding it with
    new Date() would bake the build date into the HTML and then disagree with the
@@ -246,21 +250,30 @@ export const tasasDe = (c: Corte): Tasas => ({
 
    Returns null when a needed rate is missing. Null is not zero: an unknown rate
    left as nothing would quietly understate the sheet, so callers surface it. */
-export function aUSD(monto: number, moneda: Moneda, tasas: Tasas, tasaLinea = ''): number | null {
-  if (moneda === 'USD' || moneda === 'USDT') return monto
-  if (moneda === 'VES') {
-    const propia = parseNum(tasaLinea)
-    const tasa = propia > 0 ? propia : tasas.mercado
-    return tasa > 0 ? monto / tasa : null
+/* A line's own rates win over the corte's, each independently: a payable can be
+   negotiated at its own official rate while still being valued at the market
+   rate everyone else uses. Resolving both up front keeps the conversion itself
+   a single expression with no per-call overrides to forget. */
+export function tasasLinea(tasas: Tasas, l: { tasa?: string; tasaBcv?: string }): Tasas {
+  const mercado = parseNum(l.tasa ?? '')
+  const bcv = parseNum(l.tasaBcv ?? '')
+  return {
+    mercado: mercado > 0 ? mercado : tasas.mercado,
+    bcv: bcv > 0 ? bcv : tasas.bcv,
   }
-  // USD_BCV: both rates come from the corte — see the note on Detalle.tasa.
+}
+
+export function aUSD(monto: number, moneda: Moneda, tasas: Tasas): number | null {
+  if (moneda === 'USD' || moneda === 'USDT') return monto
+  if (moneda === 'VES') return tasas.mercado > 0 ? monto / tasas.mercado : null
+  // USD_BCV: yields monto × bcv bolívares, worth that ÷ mercado.
   if (tasas.mercado > 0 && tasas.bcv > 0) return (monto * tasas.bcv) / tasas.mercado
   return null
 }
 
 /** Face value: what the line says, before the settlement discount. */
-export function nominalUSD(monto: number, moneda: Moneda, tasas: Tasas, tasaLinea = ''): number | null {
-  if (moneda === 'VES') return aUSD(monto, 'VES', tasas, tasaLinea)
+export function nominalUSD(monto: number, moneda: Moneda, tasas: Tasas): number | null {
+  if (moneda === 'VES') return aUSD(monto, 'VES', tasas)
   return monto
 }
 
@@ -273,7 +286,7 @@ export function brutoDetalle(d: Detalle): number {
 }
 
 export const montoDetalle = (d: Detalle, tasas: Tasas) =>
-  aUSD(brutoDetalle(d), d.moneda, tasas, d.tasa)
+  aUSD(brutoDetalle(d), d.moneda, tasasLinea(tasas, d))
 
 /** A partida's real value in USD. Lines that can't be converted are left out. */
 export function montoPartida(p: Partida, tasas: Tasas): number {
@@ -283,7 +296,7 @@ export function montoPartida(p: Partida, tasas: Tasas): number {
       return v === null ? acc : acc + v
     }, 0)
   }
-  return aUSD(parseNum(p.monto), p.moneda, tasas, p.tasa) ?? 0
+  return aUSD(parseNum(p.monto), p.moneda, tasasLinea(tasas, p)) ?? 0
 }
 
 /** True when something here needs a rate that isn't loaded. */
@@ -291,17 +304,17 @@ export function partidaSinTasa(p: Partida, tasas: Tasas): boolean {
   if (p.detalles.length) {
     return p.detalles.some(d => brutoDetalle(d) !== 0 && montoDetalle(d, tasas) === null)
   }
-  return parseNum(p.monto) !== 0 && aUSD(parseNum(p.monto), p.moneda, tasas, p.tasa) === null
+  return parseNum(p.monto) !== 0 && aUSD(parseNum(p.monto), p.moneda, tasasLinea(tasas, p)) === null
 }
 
 /** What the partida would be worth if every line settled at face value. */
 export function nominalPartida(p: Partida, tasas: Tasas): number {
   if (!p.detalles.length) {
-    const v = nominalUSD(parseNum(p.monto), p.moneda, tasas, p.tasa)
+    const v = nominalUSD(parseNum(p.monto), p.moneda, tasasLinea(tasas, p))
     return v === null ? 0 : v
   }
   return p.detalles.reduce((acc, d) => {
-    const v = nominalUSD(brutoDetalle(d), d.moneda, tasas, d.tasa)
+    const v = nominalUSD(brutoDetalle(d), d.moneda, tasasLinea(tasas, d))
     return v === null ? acc : acc + v
   }, 0)
 }
@@ -460,6 +473,7 @@ export function normalizarCorte(raw: unknown): Corte {
               monto: typeof x.monto === 'string' ? x.monto : '',
               moneda: moneda(x.moneda),
               tasa: typeof x.tasa === 'string' ? x.tasa : '',
+              tasaBcv: typeof x.tasaBcv === 'string' ? x.tasaBcv : '',
               cantidad: typeof x.cantidad === 'string' ? x.cantidad : '',
               costo: typeof x.costo === 'string' ? x.costo : '',
             }
@@ -477,6 +491,7 @@ export function normalizarCorte(raw: unknown): Corte {
         monto: typeof p.monto === 'string' ? p.monto : '',
         moneda: moneda(p.moneda),
         tasa: typeof p.tasa === 'string' ? p.tasa : '',
+        tasaBcv: typeof p.tasaBcv === 'string' ? p.tasaBcv : '',
         detalles,
       }
     })

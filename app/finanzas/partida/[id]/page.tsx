@@ -38,6 +38,7 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
      hand has no "collected at BCV" — you are already holding the bolívares. */
   const formas = MONEDAS.filter(m => cfg.formas.includes(m.id))
   const usaBcv = cfg.formas.includes('USD_BCV')
+  const ofreceBs = cfg.formas.includes('VES')
   const desglosado = partida.detalles.length > 0
   const tasas = tasasDe(corte)
 
@@ -52,18 +53,18 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
     const lineas = (desglosado ? partida.detalles : [partida]).filter(
       d => d.moneda === m.id && parseNum(d.monto) !== 0,
     )
-    const sumar = (fn: (monto: number, moneda: Moneda) => number | null) =>
+    const sumar = (fn: (monto: number, moneda: Moneda, tasa: string) => number | null) =>
       lineas.reduce((a, d) => {
-        const v = fn(parseNum(d.monto), d.moneda)
+        const v = fn(parseNum(d.monto), d.moneda, d.tasa)
         return v === null ? a : a + v
       }, 0)
     return {
       forma: m,
       cantidad: lineas.length,
       original: lineas.reduce((a, d) => a + parseNum(d.monto), 0),
-      nominal: sumar((mo, md) => nominalUSD(mo, md, tasas)),
-      real: sumar((mo, md) => aUSD(mo, md, tasas)),
-      faltan: lineas.some(d => aUSD(parseNum(d.monto), d.moneda, tasas) === null),
+      nominal: sumar((mo, md, tl) => nominalUSD(mo, md, tasas, tl)),
+      real: sumar((mo, md, tl) => aUSD(mo, md, tasas, tl)),
+      faltan: lineas.some(d => aUSD(parseNum(d.monto), d.moneda, tasas, d.tasa) === null),
     }
   }).filter(g => g.cantidad > 0)
 
@@ -75,8 +76,8 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
      so switching to a breakdown never silently drops or reclassifies a figure. */
   function agregarDetalle() {
     if (!desglosado && parseNum(partida.monto)) {
-      setDetalles([{ ...nuevoDetalle(), monto: parseNum(partida.monto).toFixed(2), moneda: partida.moneda }])
-      editarPartida(sec, id, { monto: '' })
+      setDetalles([{ ...nuevoDetalle(), monto: parseNum(partida.monto).toFixed(2), moneda: partida.moneda, tasa: partida.tasa }])
+      editarPartida(sec, id, { monto: '', tasa: '' })
       return
     }
     setDetalles([...partida.detalles, nuevoDetalle()])
@@ -156,6 +157,7 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
                     <th>Renglón</th>
                     <th style={{ width: 172 }}>{seccion.lado === 'activo' ? 'Se cobra en' : 'Se paga en'}</th>
                     <th className="r" style={{ width: 124 }}>Monto</th>
+                    {ofreceBs && <th className="r" style={{ width: 106 }}>Tasa</th>}
                     {usaBcv && <th className="r" style={{ width: 108 }}>Nominal</th>}
                     <th className="r" style={{ width: 116 }}>Valor real</th>
                     <th style={{ width: 30 }} />
@@ -197,6 +199,22 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
                             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); agregarDetalle() } }}
                           />
                         </td>
+                        {ofreceBs && (
+                          <td className="r">
+                            {d.moneda === 'VES' ? (
+                              <input
+                                className="bal-cell num r"
+                                inputMode="decimal"
+                                placeholder={tasas.mercado > 0 ? String(tasas.mercado) : 'Bs/USD'}
+                                value={d.tasa}
+                                onChange={e => editarDetalle(d.id, { tasa: e.target.value })}
+                                onBlur={() => editarDetalle(d.id, {
+                                  tasa: d.tasa.trim() === '' ? '' : String(parseNum(d.tasa)),
+                                })}
+                              />
+                            ) : <span className="bal-delta-flat">—</span>}
+                          </td>
+                        )}
                         {usaBcv && (
                           <td className="r num bal-nominal">
                             {monto === 0 ? '—' : nom === null ? '—' : money(nom)}
@@ -294,13 +312,26 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
               {MONEDAS.find(m => m.id === partida.moneda)?.ayuda}
             </p>
 
+            {partida.moneda === 'VES' && (
+              <div className="bal-monto-fila" style={{ marginTop: 10 }}>
+                <span className="bal-monto-etiqueta">Tasa Bs/USD</span>
+                <input
+                  className="bal-monto-directo num"
+                  inputMode="decimal"
+                  placeholder={tasas.mercado > 0 ? String(tasas.mercado) : 'Sin tasa del corte'}
+                  value={partida.tasa}
+                  onChange={e => editarPartida(sec, id, { tasa: e.target.value })}
+                />
+              </div>
+            )}
+
             {parseNum(partida.monto) !== 0 && partida.moneda !== 'USD' && (
               <div className="bal-equivalente">
                 <span>Valor real</span>
                 <b className="num">
-                  {aUSD(parseNum(partida.monto), partida.moneda, tasas) === null
+                  {aUSD(parseNum(partida.monto), partida.moneda, tasas, partida.tasa) === null
                     ? 'falta la tasa'
-                    : money(aUSD(parseNum(partida.monto), partida.moneda, tasas)!)}
+                    : money(aUSD(parseNum(partida.monto), partida.moneda, tasas, partida.tasa)!)}
                 </b>
               </div>
             )}

@@ -811,3 +811,130 @@ a.bal-act { display: inline-flex; align-items: center; text-decoration: none; }
   .fz-intro-title { font-size: 25px; }
   .fz-content { padding: 20px 16px 48px; }
 }
+
+/* ===== GRÁFICO DE EVOLUCIÓN ===== */
+.bal-chart { position: relative; margin: 10px 0 6px; }
+.bal-chart-svg { width: 100%; height: auto; display: block; overflow: visible; }
+
+.bal-chart-tick {
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: 10.5px;
+  fill: var(--ink-faint);
+}
+.bal-chart-serie {
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.bal-chart-tip {
+  position: absolute;
+  top: 8px;
+  background: #0F172A;
+  color: white;
+  border-radius: 9px;
+  padding: 9px 11px;
+  font-size: 11.5px;
+  pointer-events: none;
+  z-index: 5;
+  min-width: 132px;
+  box-shadow: 0 8px 24px -10px rgba(15,23,42,.5);
+}
+.bal-chart-tip-date {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94A3B8;
+  margin-bottom: 5px;
+}
+.bal-chart-tip-row { display: flex; align-items: center; gap: 7px; padding: 2px 0; }
+.bal-chart-tip-k { color: #CBD5E1; }
+.bal-chart-tip-v { margin-left: auto; font-weight: 600; }
+
+.bal-legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  margin-top: 4px;
+}
+.bal-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ===== TABLAS ===== */
+.bal-table-wrap { overflow-x: auto; margin-top: 16px; }
+.bal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  min-width: 460px;
+}
+.bal-table th {
+  text-align: left;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--ink-faint);
+  padding: 0 12px 7px;
+  border-bottom: 1px solid var(--rule);
+  white-space: nowrap;
+}
+.bal-table td {
+  padding: 9px 12px;
+  border-bottom: 1px dotted var(--rule);
+  color: var(--ink);
+}
+.bal-table tr:last-child td { border-bottom: 0; }
+.bal-table .r { text-align: right; }
+.bal-table td em { color: var(--ink-faint); font-style: italic; }
+.bal-sin-cambio td { color: var(--ink-faint); }
+
+.bal-empty-row { padding: 18px 16px; font-size: 12.5px; color: var(--ink-faint); }
+
+/* ===== SELECTOR DE DOS CORTES ===== */
+.bal-compare-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 26px 0 12px;
+}
+.bal-compare-picks { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.bal-compare-arrow { color: var(--ink-faint); font-size: 15px; }
+
+.bal-cards-diff { margin-top: 6px; border: 1px solid var(--rule); }
+.bal-card-foot {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 5px;
+  font-size: 11.5px;
+}
+.bal-card-from { color: var(--ink-faint); }
+
+/* ===== DELTAS ===== */
+.bal-delta-up   { color: var(--ok); font-weight: 600; }
+.bal-delta-down { color: var(--alert); font-weight: 600; }
+.bal-delta-flat { color: var(--ink-faint); }
+.bal-delta-pct { opacity: 0.75; font-weight: 500; }
+
+.bal-tag {
+  display: inline-block;
+  margin-left: 7px;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-radius: 5px;
+  padding: 2px 5px;
+  vertical-align: middle;
+}
+.bal-tag-nueva { background: #EDF7F2; color: var(--ok); }
+.bal-tag-baja  { background: #FBEDEA; color: var(--alert); }
+
+@media print {
+  .bal-chart-tip { display: none !important; }
+}

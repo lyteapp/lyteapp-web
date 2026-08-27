@@ -11,7 +11,7 @@ import {
 
 export default function BalanceGeneral() {
   const {
-    corte, setCorte, cortes, guardar, abrir, eliminar, empezarEnBlanco,
+    corte, setCorte, cortes, guardar, abrir, eliminar, empezarEnBlanco, nuevoDesdeEste,
     agregarPartida, editarPartida, borrarPartida,
   } = useBalance()
   const router = useRouter()
@@ -211,6 +211,10 @@ export default function BalanceGeneral() {
           {fechasGuardadas.map(f => <option key={f} value={f}>{fechaLarga(f)}</option>)}
         </select>
         <button className="bal-act" onClick={eliminar}>Eliminar corte</button>
+        <button className="bal-act" onClick={nuevoDesdeEste} title="Copia esta estructura con la fecha de hoy">
+          Nuevo corte desde este
+        </button>
+        <Link href="/finanzas/comparacion" className="bal-act">Comparar cortes</Link>
         <span className="bal-spacer" />
         <button className="bal-act" onClick={descargarCSV}>Descargar CSV</button>
         <button className="bal-act" onClick={() => window.print()}>Imprimir / PDF</button>

@@ -122,6 +122,89 @@ export function buscarPartida(corte: Corte, id: string): { sec: SeccionId; parti
   return null
 }
 
+/* ── comparación entre cortes ── */
+
+/* Strips accents too, so "Préstamo" and "Prestamo" match. */
+const normalizarNombre = (s: string) =>
+  s.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+
+export type EstadoFila = 'igual' | 'cambio' | 'nueva' | 'eliminada'
+
+export type FilaComparacion = {
+  nombre: string
+  montoA: number
+  montoB: number
+  delta: number
+  /** null when there is nothing to grow from — a new partida has no % change. */
+  pct: number | null
+  estado: EstadoFila
+}
+
+/* Partidas are matched by identity first, so a corte duplicated from an earlier
+   one lines up exactly even after a rename. Falling back to the normalised name
+   is what lets two independently-typed cortes still be compared, accepting that
+   "Efectivo " and "efectivo" are the same line. */
+function emparejar(a: Partida[], b: Partida[]): FilaComparacion[] {
+  const filas: FilaComparacion[] = []
+  const usados = new Set<string>()
+
+  const porId = new Map(b.map(p => [p.id, p]))
+  const porNombre = new Map<string, Partida>()
+  for (const p of b) {
+    const k = normalizarNombre(p.nombre)
+    if (k && !porNombre.has(k)) porNombre.set(k, p)
+  }
+
+  for (const pa of a) {
+    const pb = porId.get(pa.id) ?? (pa.nombre ? porNombre.get(normalizarNombre(pa.nombre)) : undefined)
+    const montoA = montoPartida(pa)
+    if (pb) {
+      usados.add(pb.id)
+      const montoB = montoPartida(pb)
+      const delta = montoB - montoA
+      filas.push({
+        nombre: pb.nombre || pa.nombre,
+        montoA, montoB, delta,
+        pct: montoA !== 0 ? (delta / Math.abs(montoA)) * 100 : null,
+        estado: Math.abs(delta) < 0.005 ? 'igual' : 'cambio',
+      })
+    } else {
+      filas.push({
+        nombre: pa.nombre, montoA, montoB: 0, delta: -montoA,
+        pct: null, estado: 'eliminada',
+      })
+    }
+  }
+
+  for (const pb of b) {
+    if (usados.has(pb.id)) continue
+    const montoB = montoPartida(pb)
+    filas.push({
+      nombre: pb.nombre, montoA: 0, montoB, delta: montoB,
+      pct: null, estado: 'nueva',
+    })
+  }
+
+  return filas.filter(f => f.nombre || f.montoA || f.montoB)
+}
+
+export function compararCortes(a: Corte, b: Corte) {
+  return SECCIONES.map(sec => {
+    const filas = emparejar(a[sec.id], b[sec.id])
+    return {
+      sec,
+      filas,
+      totalA: totalSeccion(a[sec.id]),
+      totalB: totalSeccion(b[sec.id]),
+    }
+  })
+}
+
+/** Copies a corte's structure forward, keeping partida identity so the two compare exactly. */
+export function duplicarCorte(c: Corte, fecha: string): Corte {
+  return { ...c, fecha, ac: [...c.ac], anc: [...c.anc], pc: [...c.pc], pnc: [...c.pnc] }
+}
+
 /* Saved cortes predate `detalles`, and a hand-edited localStorage blob can be
    anything at all — so everything is coerced back into shape on read rather
    than trusted. */

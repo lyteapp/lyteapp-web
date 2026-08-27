@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import {
   type Corte, type Partida, type SeccionId,
-  corteVacio, hoy, nuevaPartida, normalizarCorte,
+  corteVacio, duplicarCorte, hoy, nuevaPartida, normalizarCorte,
 } from './balance'
 
 const CLAVE_CORTES = 'lyte:balance-general:cortes'
@@ -18,6 +18,7 @@ type Ctx = {
   abrir: (fecha: string) => void
   eliminar: () => void
   empezarEnBlanco: () => void
+  nuevoDesdeEste: () => void
   agregarPartida: (sec: SeccionId) => Partida
   editarPartida: (sec: SeccionId, id: string, cambios: Partial<Partida>) => void
   borrarPartida: (sec: SeccionId, id: string) => void
@@ -119,6 +120,14 @@ export default function BalanceProvider({ children }: { children: React.ReactNod
     aviso('Listo, tienes un balance en blanco.')
   }, [aviso])
 
+  /* Carries the whole structure forward under today's date. Partida identity
+     survives, which is what lets the two cortes be compared line by line
+     instead of guessed at by name. */
+  const nuevoDesdeEste = useCallback(() => {
+    setCorte(c => duplicarCorte(c, hoy()))
+    aviso('Corte nuevo con la misma estructura. Actualizá los montos y guardá.')
+  }, [aviso])
+
   const agregarPartida = useCallback((sec: SeccionId) => {
     const p = nuevaPartida()
     setCorte(c => ({ ...c, [sec]: [...c[sec], p] }))
@@ -136,7 +145,7 @@ export default function BalanceProvider({ children }: { children: React.ReactNod
   return (
     <BalanceCtx.Provider value={{
       corte, setCorte, cortes, listo,
-      guardar, abrir, eliminar, empezarEnBlanco,
+      guardar, abrir, eliminar, empezarEnBlanco, nuevoDesdeEste,
       agregarPartida, editarPartida, borrarPartida, aviso,
     }}>
       {children}

@@ -4,21 +4,31 @@
 
 export type SeccionId = 'ac' | 'anc' | 'pc' | 'pnc'
 
-/* The sheet is expressed in dollars, but what it counts often isn't: cash in
-   USD is already dollars, a bolívar bank balance has to be converted. So an
-   amount carries the currency it was counted in. */
-export type Moneda = 'USD' | 'VES' | 'USDT'
+/* The sheet is expressed in dollars, but what it counts often isn't — and worse,
+   a figure can be denominated in dollars yet be worth less than it says.
 
-export const MONEDAS: { id: Moneda; label: string; simbolo: string }[] = [
-  { id: 'USD',  label: 'Dólares',   simbolo: '$'  },
-  { id: 'VES',  label: 'Bolívares', simbolo: 'Bs' },
-  { id: 'USDT', label: 'USDT',      simbolo: '₮'  },
+   A receivable of $100 collected in bolívares at the official rate hands over
+   $100 × BCV bolívares, and those bolívares are only worth what the market pays
+   for them. At 791,32 official and 950 market that $100 settles at $83,29. The
+   gap is real money, so `moneda` records how a line settles, not just what it
+   is written in. */
+export type Moneda = 'USD' | 'USD_BCV' | 'VES' | 'USDT'
+
+export const MONEDAS: { id: Moneda; label: string; simbolo: string; ayuda: string }[] = [
+  { id: 'USD',     label: 'Dólares',          simbolo: '$',  ayuda: 'Se cobra en dólares. Vale lo que dice.' },
+  { id: 'USD_BCV', label: 'Dólares a tasa BCV', simbolo: '$', ayuda: 'Monto en dólares que se cobra en bolívares a la tasa BCV. Se valora al cambio real.' },
+  { id: 'VES',     label: 'Bolívares',        simbolo: 'Bs', ayuda: 'Monto ya expresado en bolívares. Se valora al cambio real.' },
+  { id: 'USDT',    label: 'USDT',             simbolo: '₮',  ayuda: 'Se toma uno a uno con el dólar.' },
 ]
 
+/** The two rates a corte needs: what bolívares are really worth, and the official one. */
+export type Tasas = { mercado: number; bcv: number }
+
 /* Amounts stay raw strings so a field can hold whatever is mid-typing;
-   parseNum() is the single place that turns one into a number.
-   `tasa` is a per-line override; empty means "use the corte's rate". */
-export type Detalle = { id: string; nombre: string; monto: string; moneda: Moneda; tasa: string }
+   parseNum() is the single place that turns one into a number. Rates live on the
+   corte, not the line: one cut-off date has one official rate and one market
+   rate, and repeating them per row invites them to drift apart. */
+export type Detalle = { id: string; nombre: string; monto: string; moneda: Moneda }
 
 /* A partida is either a single amount typed straight into the sheet, or a
    breakdown that adds up. `detalles` being non-empty is what decides which:
@@ -28,15 +38,16 @@ export type Partida = {
   nombre: string
   monto: string
   moneda: Moneda
-  tasa: string
   detalles: Detalle[]
 }
 
 export type Corte = {
   empresa: string
   fecha: string
-  /** Bs per USD at the cut-off date. Every bolívar figure falls back to it. */
-  tasa: string
+  /** Bs per USD the market actually pays (Binance/paralelo). Values every bolívar. */
+  tasaMercado: string
+  /** Official Bs per USD. Only decides how many bolívares a BCV-settled figure yields. */
+  tasaBcv: string
   capitalManual: string | null
   ac: Partida[]
   anc: Partida[]
@@ -56,8 +67,8 @@ export const IDS: SeccionId[] = ['ac', 'anc', 'pc', 'pnc']
 let contador = 0
 export const nuevoId = () => `p${Date.now().toString(36)}${(contador++).toString(36)}`
 
-export const nuevaPartida = (): Partida => ({ id: nuevoId(), nombre: '', monto: '', moneda: 'USD', tasa: '', detalles: [] })
-export const nuevoDetalle = (): Detalle => ({ id: nuevoId(), nombre: '', monto: '', moneda: 'USD', tasa: '' })
+export const nuevaPartida = (): Partida => ({ id: nuevoId(), nombre: '', monto: '', moneda: 'USD', detalles: [] })
+export const nuevoDetalle = (): Detalle => ({ id: nuevoId(), nombre: '', monto: '', moneda: 'USD' })
 
 /* `fecha` starts empty on purpose: the sheet is prerendered, so seeding it with
    new Date() would bake the build date into the HTML and then disagree with the
@@ -65,7 +76,8 @@ export const nuevoDetalle = (): Detalle => ({ id: nuevoId(), nombre: '', monto: 
 export const corteVacio = (): Corte => ({
   empresa: '',
   fecha: '',
-  tasa: '',
+  tasaMercado: '',
+  tasaBcv: '',
   capitalManual: null,
   ac: [nuevaPartida()],
   anc: [nuevaPartida()],
@@ -108,51 +120,73 @@ export function fechaLarga(iso: string): string {
 
 /* ── conversión a dólares ── */
 
-/** The rate a line converts at: its own override, else the corte's. */
-export function tasaEfectiva(tasaPropia: string, tasaCorte: number): number {
-  const t = parseNum(tasaPropia)
-  return t > 0 ? t : tasaCorte
-}
+export const tasasDe = (c: Corte): Tasas => ({
+  mercado: parseNum(c.tasaMercado),
+  bcv: parseNum(c.tasaBcv),
+})
 
-/* Returns null when a bolívar figure has no rate to convert with. Null is not
-   zero: a missing rate is unknown, and totalling it as nothing would quietly
-   understate the sheet. Callers surface it instead. */
-export function aUSD(monto: number, moneda: Moneda, tasaPropia: string, tasaCorte: number): number | null {
+/* What a figure is really worth in dollars.
+
+   `USD_BCV` is the case that isn't obvious: the amount is written in dollars but
+   settles in bolívares at the official rate, so it yields `monto × bcv`
+   bolívares, and those are worth `÷ mercado`. Net effect: the nominal amount is
+   scaled by bcv/mercado. When the official rate lags the market — which is the
+   whole reason to track it — that scale is below 1 and the receivable is worth
+   less than its face value.
+
+   Returns null when a needed rate is missing. Null is not zero: an unknown rate
+   left as nothing would quietly understate the sheet, so callers surface it. */
+export function aUSD(monto: number, moneda: Moneda, tasas: Tasas): number | null {
   if (moneda === 'USD' || moneda === 'USDT') return monto
-  const tasa = tasaEfectiva(tasaPropia, tasaCorte)
-  return tasa > 0 ? monto / tasa : null
+  if (moneda === 'VES') return tasas.mercado > 0 ? monto / tasas.mercado : null
+  // USD_BCV
+  if (tasas.mercado > 0 && tasas.bcv > 0) return (monto * tasas.bcv) / tasas.mercado
+  return null
 }
 
-export const montoDetalle = (d: Detalle, tasaCorte: number) =>
-  aUSD(parseNum(d.monto), d.moneda, d.tasa, tasaCorte)
+/** Face value: what the line says, before the settlement discount. */
+export function nominalUSD(monto: number, moneda: Moneda, tasas: Tasas): number | null {
+  if (moneda === 'VES') return tasas.mercado > 0 ? monto / tasas.mercado : null
+  return monto
+}
 
-/** A partida's amount in USD: the breakdown's sum when there is one, else its
-    own field. Lines that can't be converted are left out, not counted as zero. */
-export function montoPartida(p: Partida, tasaCorte: number): number {
+export const montoDetalle = (d: Detalle, tasas: Tasas) => aUSD(parseNum(d.monto), d.moneda, tasas)
+
+/** A partida's real value in USD. Lines that can't be converted are left out. */
+export function montoPartida(p: Partida, tasas: Tasas): number {
   if (p.detalles.length) {
     return p.detalles.reduce((acc, d) => {
-      const v = montoDetalle(d, tasaCorte)
+      const v = montoDetalle(d, tasas)
       return v === null ? acc : acc + v
     }, 0)
   }
-  return aUSD(parseNum(p.monto), p.moneda, p.tasa, tasaCorte) ?? 0
+  return aUSD(parseNum(p.monto), p.moneda, tasas) ?? 0
 }
 
-/** True when something in this partida is in bolívares with no usable rate. */
-export function partidaSinTasa(p: Partida, tasaCorte: number): boolean {
+/** True when something here needs a rate that isn't loaded. */
+export function partidaSinTasa(p: Partida, tasas: Tasas): boolean {
   if (p.detalles.length) {
-    return p.detalles.some(d => parseNum(d.monto) !== 0 && montoDetalle(d, tasaCorte) === null)
+    return p.detalles.some(d => parseNum(d.monto) !== 0 && montoDetalle(d, tasas) === null)
   }
-  return parseNum(p.monto) !== 0 && aUSD(parseNum(p.monto), p.moneda, p.tasa, tasaCorte) === null
+  return parseNum(p.monto) !== 0 && aUSD(parseNum(p.monto), p.moneda, tasas) === null
 }
 
-export const totalSeccion = (rows: Partida[], tasaCorte: number) =>
-  rows.reduce((acc, p) => acc + montoPartida(p, tasaCorte), 0)
+/** What the partida would be worth if every line settled at face value. */
+export function nominalPartida(p: Partida, tasas: Tasas): number {
+  const lineas = p.detalles.length ? p.detalles : [{ monto: p.monto, moneda: p.moneda }]
+  return lineas.reduce((acc, d) => {
+    const v = nominalUSD(parseNum(d.monto), d.moneda, tasas)
+    return v === null ? acc : acc + v
+  }, 0)
+}
+
+export const totalSeccion = (rows: Partida[], tasas: Tasas) =>
+  rows.reduce((acc, p) => acc + montoPartida(p, tasas), 0)
 
 export function calcular(corte: Corte) {
-  const tasaCorte = parseNum(corte.tasa)
-  const ac = totalSeccion(corte.ac, tasaCorte), anc = totalSeccion(corte.anc, tasaCorte)
-  const pc = totalSeccion(corte.pc, tasaCorte), pnc = totalSeccion(corte.pnc, tasaCorte)
+  const tasas = tasasDe(corte)
+  const ac = totalSeccion(corte.ac, tasas), anc = totalSeccion(corte.anc, tasas)
+  const pc = totalSeccion(corte.pc, tasas), pnc = totalSeccion(corte.pnc, tasas)
   const activos = ac + anc
   const pasivos = pc + pnc
   const manual = corte.capitalManual !== null
@@ -161,10 +195,14 @@ export function calcular(corte: Corte) {
   const pctPasivo = base ? (Math.abs(pasivos) / base) * 100 : 0
   return {
     ac, anc, pc, pnc, activos, pasivos, capital, manual,
-    tasaCorte,
+    tasas,
     /* Surfaced so the sheet can say a figure is missing rather than show a
        total that quietly excludes it. */
-    sinTasa: IDS.flatMap(id => corte[id].filter(p => partidaSinTasa(p, tasaCorte))),
+    sinTasa: IDS.flatMap(id => corte[id].filter(p => partidaSinTasa(p, tasas))),
+    /* Face value minus real value: what the BCV settlement spread costs across
+       the whole sheet. Zero when nothing settles at the official rate. */
+    mermaBcv: IDS.reduce((acc, id) => acc + corte[id].reduce(
+      (a, p) => a + (nominalPartida(p, tasas) - montoPartida(p, tasas)), 0), 0),
     pctPasivo,
     pctCapital: 100 - pctPasivo,
     descuadre: activos - (pasivos + capital),
@@ -205,7 +243,7 @@ export type FilaComparacion = {
    one lines up exactly even after a rename. Falling back to the normalised name
    is what lets two independently-typed cortes still be compared, accepting that
    "Efectivo " and "efectivo" are the same line. */
-function emparejar(a: Partida[], b: Partida[], tasaA: number, tasaB: number): FilaComparacion[] {
+function emparejar(a: Partida[], b: Partida[], tasaA: Tasas, tasaB: Tasas): FilaComparacion[] {
   const filas: FilaComparacion[] = []
   const usados = new Set<string>()
 
@@ -251,7 +289,7 @@ function emparejar(a: Partida[], b: Partida[], tasaA: number, tasaB: number): Fi
 
 export function compararCortes(a: Corte, b: Corte) {
   // Each corte converts at its own cut-off rate, never at a shared one.
-  const tasaA = parseNum(a.tasa), tasaB = parseNum(b.tasa)
+  const tasaA = tasasDe(a), tasaB = tasasDe(b)
   return SECCIONES.map(sec => {
     const filas = emparejar(a[sec.id], b[sec.id], tasaA, tasaB)
     return {
@@ -271,7 +309,8 @@ export function duplicarCorte(c: Corte, fecha: string): Corte {
 /* Saved cortes predate `detalles`, and a hand-edited localStorage blob can be
    anything at all — so everything is coerced back into shape on read rather
    than trusted. */
-const moneda = (v: unknown): Moneda => (v === 'VES' || v === 'USDT' ? v : 'USD')
+const moneda = (v: unknown): Moneda =>
+  (v === 'VES' || v === 'USDT' || v === 'USD_BCV' ? v : 'USD')
 
 export function normalizarCorte(raw: unknown): Corte {
   const base = corteVacio()
@@ -290,7 +329,6 @@ export function normalizarCorte(raw: unknown): Corte {
               nombre: typeof x.nombre === 'string' ? x.nombre : '',
               monto: typeof x.monto === 'string' ? x.monto : '',
               moneda: moneda(x.moneda),
-              tasa: typeof x.tasa === 'string' ? x.tasa : '',
             }
           })
         : []
@@ -299,7 +337,6 @@ export function normalizarCorte(raw: unknown): Corte {
         nombre: typeof p.nombre === 'string' ? p.nombre : '',
         monto: typeof p.monto === 'string' ? p.monto : '',
         moneda: moneda(p.moneda),
-        tasa: typeof p.tasa === 'string' ? p.tasa : '',
         detalles,
       }
     })
@@ -308,7 +345,11 @@ export function normalizarCorte(raw: unknown): Corte {
   return {
     empresa: typeof o.empresa === 'string' ? o.empresa : '',
     fecha: typeof o.fecha === 'string' ? o.fecha : '',
-    tasa: typeof o.tasa === 'string' ? o.tasa : '',
+    /* Cortes saved before the split had one rate, which was the one bolívares
+       were valued at — so it becomes the market rate, not the official one. */
+    tasaMercado: typeof o.tasaMercado === 'string' ? o.tasaMercado
+      : typeof o.tasa === 'string' ? o.tasa : '',
+    tasaBcv: typeof o.tasaBcv === 'string' ? o.tasaBcv : '',
     capitalManual: typeof o.capitalManual === 'string' ? o.capitalManual : null,
     ac: partidas(o.ac),
     anc: partidas(o.anc),

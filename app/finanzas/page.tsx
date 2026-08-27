@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useBalance } from './BalanceProvider'
 import {
   SECCIONES, calcular, fechaLarga, money, moneyShort, montoDetalle, montoPartida, parseNum, totalSeccion,
-  type Partida, type SeccionId,
+  type Partida, type SeccionId, type Tasas,
 } from './balance'
 
 export default function BalanceGeneral() {
@@ -32,18 +32,18 @@ export default function BalanceGeneral() {
 
     for (const s of SECCIONES) {
       for (const p of corte[s.id]) {
-        if (!p.nombre && !montoPartida(p, t.tasaCorte)) continue
+        if (!p.nombre && !montoPartida(p, t.tasas)) continue
         if (p.detalles.length) {
           for (const d of p.detalles) {
             if (!d.nombre && !parseNum(d.monto)) continue
-            lineas.push([s.titulo, p.nombre, d.nombre, d.moneda, parseNum(d.monto).toFixed(2), (montoDetalle(d, t.tasaCorte) ?? 0).toFixed(2)].map(campo).join(','))
+            lineas.push([s.titulo, p.nombre, d.nombre, d.moneda, parseNum(d.monto).toFixed(2), (montoDetalle(d, t.tasas) ?? 0).toFixed(2)].map(campo).join(','))
           }
-          lineas.push([s.titulo, `${p.nombre} — subtotal`, '', montoPartida(p, t.tasaCorte).toFixed(2)].map(campo).join(','))
+          lineas.push([s.titulo, `${p.nombre} — subtotal`, '', montoPartida(p, t.tasas).toFixed(2)].map(campo).join(','))
         } else {
-          lineas.push([s.titulo, p.nombre, '', montoPartida(p, t.tasaCorte).toFixed(2)].map(campo).join(','))
+          lineas.push([s.titulo, p.nombre, '', montoPartida(p, t.tasas).toFixed(2)].map(campo).join(','))
         }
       }
-      lineas.push([`${s.titulo} — total`, '', '', totalSeccion(corte[s.id], t.tasaCorte).toFixed(2)].map(campo).join(','))
+      lineas.push([`${s.titulo} — total`, '', '', totalSeccion(corte[s.id], t.tasas).toFixed(2)].map(campo).join(','))
     }
 
     lineas.push('')
@@ -90,13 +90,23 @@ export default function BalanceGeneral() {
             />
           </label>
           <label className="bal-field bal-field-tasa">
-            <span>Tasa Bs/USD</span>
+            <span>Tasa BCV</span>
             <input
               className="num"
               inputMode="decimal"
               placeholder="0.00"
-              value={corte.tasa}
-              onChange={e => setCorte(c => ({ ...c, tasa: e.target.value }))}
+              value={corte.tasaBcv}
+              onChange={e => setCorte(c => ({ ...c, tasaBcv: e.target.value }))}
+            />
+          </label>
+          <label className="bal-field bal-field-tasa">
+            <span>Tasa real</span>
+            <input
+              className="num"
+              inputMode="decimal"
+              placeholder="0.00"
+              value={corte.tasaMercado}
+              onChange={e => setCorte(c => ({ ...c, tasaMercado: e.target.value }))}
             />
           </label>
         </div>
@@ -108,7 +118,19 @@ export default function BalanceGeneral() {
             ? 'Hay una partida en bolívares sin tasa para convertir'
             : `Hay ${t.sinTasa.length} partidas en bolívares sin tasa para convertir`}
           {' '}({t.sinTasa.map(p => p.nombre || 'sin nombre').join(', ')}).
-          No están sumadas en ningún total. Cargá la tasa del corte arriba, o una propia en cada renglón.
+          No están sumadas en ningún total. Cargá las tasas del corte arriba.
+        </div>
+      )}
+
+      {t.mermaBcv > 0.005 && (
+        <div className="bal-merma">
+          <div>
+            <div className="bal-eyebrow">Costo de cobrar a tasa BCV</div>
+            <div className="bal-merma-nota">
+              Lo que se cobra en bolívares al cambio oficial vale menos de lo que dice su monto.
+            </div>
+          </div>
+          <div className="bal-merma-v num">−{moneyShort(t.mermaBcv)}</div>
         </div>
       )}
 
@@ -164,7 +186,7 @@ export default function BalanceGeneral() {
       <div className="bal-ledger">
         <div className="bal-col">
           {SECCIONES.filter(s => s.lado === 'activo').map(sec => (
-            <Bloque key={sec.id} sec={sec} partidas={corte[sec.id]} tasaCorte={t.tasaCorte}
+            <Bloque key={sec.id} sec={sec} partidas={corte[sec.id]} tasas={t.tasas}
               onEditar={editarPartida} onBorrar={borrarPartida}
               onAgregar={s => { const p = agregarPartida(s); router.push(`/finanzas/partida/${p.id}`) }} />
           ))}
@@ -172,7 +194,7 @@ export default function BalanceGeneral() {
 
         <div className="bal-col">
           {SECCIONES.filter(s => s.lado === 'pasivo').map(sec => (
-            <Bloque key={sec.id} sec={sec} partidas={corte[sec.id]} tasaCorte={t.tasaCorte}
+            <Bloque key={sec.id} sec={sec} partidas={corte[sec.id]} tasas={t.tasas}
               onEditar={editarPartida} onBorrar={borrarPartida}
               onAgregar={s => { const p = agregarPartida(s); router.push(`/finanzas/partida/${p.id}`) }} />
           ))}
@@ -250,11 +272,11 @@ export default function BalanceGeneral() {
 }
 
 function Bloque({
-  sec, partidas, tasaCorte, onEditar, onBorrar, onAgregar,
+  sec, partidas, tasas, onEditar, onBorrar, onAgregar,
 }: {
   sec: { id: SeccionId; titulo: string; lado: 'activo' | 'pasivo' }
   partidas: Partida[]
-  tasaCorte: number
+  tasas: Tasas
   onEditar: (sec: SeccionId, id: string, cambios: Partial<Partida>) => void
   onBorrar: (sec: SeccionId, id: string) => void
   onAgregar: (sec: SeccionId) => void
@@ -263,7 +285,7 @@ function Bloque({
     <div className={`bal-block bal-side-${sec.lado}`}>
       <div className="bal-blockhead">
         <h2>{sec.titulo}</h2>
-        <span className="bal-tot num">{money(totalSeccion(partidas, tasaCorte))}</span>
+        <span className="bal-tot num">{money(totalSeccion(partidas, tasas))}</span>
       </div>
 
       <div className="bal-rows">
@@ -282,7 +304,7 @@ function Bloque({
                 /* Derived from the breakdown, so it is shown rather than typed —
                    the link is the way in to change it. */
                 <Link href={`/finanzas/partida/${p.id}`} className="bal-row-derived num" title="Ver desglose">
-                  {money(montoPartida(p, tasaCorte))}
+                  {money(montoPartida(p, tasas))}
                   <span className="bal-row-count">{p.detalles.length}</span>
                 </Link>
               ) : (

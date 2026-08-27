@@ -4,18 +4,39 @@
 
 export type SeccionId = 'ac' | 'anc' | 'pc' | 'pnc'
 
+/* The sheet is expressed in dollars, but what it counts often isn't: cash in
+   USD is already dollars, a bolívar bank balance has to be converted. So an
+   amount carries the currency it was counted in. */
+export type Moneda = 'USD' | 'VES' | 'USDT'
+
+export const MONEDAS: { id: Moneda; label: string; simbolo: string }[] = [
+  { id: 'USD',  label: 'Dólares',   simbolo: '$'  },
+  { id: 'VES',  label: 'Bolívares', simbolo: 'Bs' },
+  { id: 'USDT', label: 'USDT',      simbolo: '₮'  },
+]
+
 /* Amounts stay raw strings so a field can hold whatever is mid-typing;
-   parseNum() is the single place that turns one into a number. */
-export type Detalle = { id: string; nombre: string; monto: string }
+   parseNum() is the single place that turns one into a number.
+   `tasa` is a per-line override; empty means "use the corte's rate". */
+export type Detalle = { id: string; nombre: string; monto: string; moneda: Moneda; tasa: string }
 
 /* A partida is either a single amount typed straight into the sheet, or a
    breakdown that adds up. `detalles` being non-empty is what decides which:
    once there is a breakdown, `monto` is ignored. */
-export type Partida = { id: string; nombre: string; monto: string; detalles: Detalle[] }
+export type Partida = {
+  id: string
+  nombre: string
+  monto: string
+  moneda: Moneda
+  tasa: string
+  detalles: Detalle[]
+}
 
 export type Corte = {
   empresa: string
   fecha: string
+  /** Bs per USD at the cut-off date. Every bolívar figure falls back to it. */
+  tasa: string
   capitalManual: string | null
   ac: Partida[]
   anc: Partida[]
@@ -35,8 +56,8 @@ export const IDS: SeccionId[] = ['ac', 'anc', 'pc', 'pnc']
 let contador = 0
 export const nuevoId = () => `p${Date.now().toString(36)}${(contador++).toString(36)}`
 
-export const nuevaPartida = (): Partida => ({ id: nuevoId(), nombre: '', monto: '', detalles: [] })
-export const nuevoDetalle = (): Detalle => ({ id: nuevoId(), nombre: '', monto: '' })
+export const nuevaPartida = (): Partida => ({ id: nuevoId(), nombre: '', monto: '', moneda: 'USD', tasa: '', detalles: [] })
+export const nuevoDetalle = (): Detalle => ({ id: nuevoId(), nombre: '', monto: '', moneda: 'USD', tasa: '' })
 
 /* `fecha` starts empty on purpose: the sheet is prerendered, so seeding it with
    new Date() would bake the build date into the HTML and then disagree with the
@@ -44,6 +65,7 @@ export const nuevoDetalle = (): Detalle => ({ id: nuevoId(), nombre: '', monto: 
 export const corteVacio = (): Corte => ({
   empresa: '',
   fecha: '',
+  tasa: '',
   capitalManual: null,
   ac: [nuevaPartida()],
   anc: [nuevaPartida()],
@@ -84,18 +106,53 @@ export function fechaLarga(iso: string): string {
   return `${parseInt(p[2], 10)} de ${meses[parseInt(p[1], 10) - 1] ?? p[1]} ${p[0]}`
 }
 
-/** A partida's amount: the breakdown's sum when there is one, else its own field. */
-export function montoPartida(p: Partida): number {
-  return p.detalles.length
-    ? p.detalles.reduce((acc, d) => acc + parseNum(d.monto), 0)
-    : parseNum(p.monto)
+/* ── conversión a dólares ── */
+
+/** The rate a line converts at: its own override, else the corte's. */
+export function tasaEfectiva(tasaPropia: string, tasaCorte: number): number {
+  const t = parseNum(tasaPropia)
+  return t > 0 ? t : tasaCorte
 }
 
-export const totalSeccion = (rows: Partida[]) => rows.reduce((acc, p) => acc + montoPartida(p), 0)
+/* Returns null when a bolívar figure has no rate to convert with. Null is not
+   zero: a missing rate is unknown, and totalling it as nothing would quietly
+   understate the sheet. Callers surface it instead. */
+export function aUSD(monto: number, moneda: Moneda, tasaPropia: string, tasaCorte: number): number | null {
+  if (moneda === 'USD' || moneda === 'USDT') return monto
+  const tasa = tasaEfectiva(tasaPropia, tasaCorte)
+  return tasa > 0 ? monto / tasa : null
+}
+
+export const montoDetalle = (d: Detalle, tasaCorte: number) =>
+  aUSD(parseNum(d.monto), d.moneda, d.tasa, tasaCorte)
+
+/** A partida's amount in USD: the breakdown's sum when there is one, else its
+    own field. Lines that can't be converted are left out, not counted as zero. */
+export function montoPartida(p: Partida, tasaCorte: number): number {
+  if (p.detalles.length) {
+    return p.detalles.reduce((acc, d) => {
+      const v = montoDetalle(d, tasaCorte)
+      return v === null ? acc : acc + v
+    }, 0)
+  }
+  return aUSD(parseNum(p.monto), p.moneda, p.tasa, tasaCorte) ?? 0
+}
+
+/** True when something in this partida is in bolívares with no usable rate. */
+export function partidaSinTasa(p: Partida, tasaCorte: number): boolean {
+  if (p.detalles.length) {
+    return p.detalles.some(d => parseNum(d.monto) !== 0 && montoDetalle(d, tasaCorte) === null)
+  }
+  return parseNum(p.monto) !== 0 && aUSD(parseNum(p.monto), p.moneda, p.tasa, tasaCorte) === null
+}
+
+export const totalSeccion = (rows: Partida[], tasaCorte: number) =>
+  rows.reduce((acc, p) => acc + montoPartida(p, tasaCorte), 0)
 
 export function calcular(corte: Corte) {
-  const ac = totalSeccion(corte.ac), anc = totalSeccion(corte.anc)
-  const pc = totalSeccion(corte.pc), pnc = totalSeccion(corte.pnc)
+  const tasaCorte = parseNum(corte.tasa)
+  const ac = totalSeccion(corte.ac, tasaCorte), anc = totalSeccion(corte.anc, tasaCorte)
+  const pc = totalSeccion(corte.pc, tasaCorte), pnc = totalSeccion(corte.pnc, tasaCorte)
   const activos = ac + anc
   const pasivos = pc + pnc
   const manual = corte.capitalManual !== null
@@ -104,6 +161,10 @@ export function calcular(corte: Corte) {
   const pctPasivo = base ? (Math.abs(pasivos) / base) * 100 : 0
   return {
     ac, anc, pc, pnc, activos, pasivos, capital, manual,
+    tasaCorte,
+    /* Surfaced so the sheet can say a figure is missing rather than show a
+       total that quietly excludes it. */
+    sinTasa: IDS.flatMap(id => corte[id].filter(p => partidaSinTasa(p, tasaCorte))),
     pctPasivo,
     pctCapital: 100 - pctPasivo,
     descuadre: activos - (pasivos + capital),
@@ -144,7 +205,7 @@ export type FilaComparacion = {
    one lines up exactly even after a rename. Falling back to the normalised name
    is what lets two independently-typed cortes still be compared, accepting that
    "Efectivo " and "efectivo" are the same line. */
-function emparejar(a: Partida[], b: Partida[]): FilaComparacion[] {
+function emparejar(a: Partida[], b: Partida[], tasaA: number, tasaB: number): FilaComparacion[] {
   const filas: FilaComparacion[] = []
   const usados = new Set<string>()
 
@@ -157,10 +218,10 @@ function emparejar(a: Partida[], b: Partida[]): FilaComparacion[] {
 
   for (const pa of a) {
     const pb = porId.get(pa.id) ?? (pa.nombre ? porNombre.get(normalizarNombre(pa.nombre)) : undefined)
-    const montoA = montoPartida(pa)
+    const montoA = montoPartida(pa, tasaA)
     if (pb) {
       usados.add(pb.id)
-      const montoB = montoPartida(pb)
+      const montoB = montoPartida(pb, tasaB)
       const delta = montoB - montoA
       filas.push({
         nombre: pb.nombre || pa.nombre,
@@ -178,7 +239,7 @@ function emparejar(a: Partida[], b: Partida[]): FilaComparacion[] {
 
   for (const pb of b) {
     if (usados.has(pb.id)) continue
-    const montoB = montoPartida(pb)
+    const montoB = montoPartida(pb, tasaB)
     filas.push({
       nombre: pb.nombre, montoA: 0, montoB, delta: montoB,
       pct: null, estado: 'nueva',
@@ -189,13 +250,15 @@ function emparejar(a: Partida[], b: Partida[]): FilaComparacion[] {
 }
 
 export function compararCortes(a: Corte, b: Corte) {
+  // Each corte converts at its own cut-off rate, never at a shared one.
+  const tasaA = parseNum(a.tasa), tasaB = parseNum(b.tasa)
   return SECCIONES.map(sec => {
-    const filas = emparejar(a[sec.id], b[sec.id])
+    const filas = emparejar(a[sec.id], b[sec.id], tasaA, tasaB)
     return {
       sec,
       filas,
-      totalA: totalSeccion(a[sec.id]),
-      totalB: totalSeccion(b[sec.id]),
+      totalA: totalSeccion(a[sec.id], tasaA),
+      totalB: totalSeccion(b[sec.id], tasaB),
     }
   })
 }
@@ -208,6 +271,8 @@ export function duplicarCorte(c: Corte, fecha: string): Corte {
 /* Saved cortes predate `detalles`, and a hand-edited localStorage blob can be
    anything at all — so everything is coerced back into shape on read rather
    than trusted. */
+const moneda = (v: unknown): Moneda => (v === 'VES' || v === 'USDT' ? v : 'USD')
+
 export function normalizarCorte(raw: unknown): Corte {
   const base = corteVacio()
   if (!raw || typeof raw !== 'object') return base
@@ -224,6 +289,8 @@ export function normalizarCorte(raw: unknown): Corte {
               id: typeof x.id === 'string' ? x.id : nuevoId(),
               nombre: typeof x.nombre === 'string' ? x.nombre : '',
               monto: typeof x.monto === 'string' ? x.monto : '',
+              moneda: moneda(x.moneda),
+              tasa: typeof x.tasa === 'string' ? x.tasa : '',
             }
           })
         : []
@@ -231,6 +298,8 @@ export function normalizarCorte(raw: unknown): Corte {
         id: typeof p.id === 'string' ? p.id : nuevoId(),
         nombre: typeof p.nombre === 'string' ? p.nombre : '',
         monto: typeof p.monto === 'string' ? p.monto : '',
+        moneda: moneda(p.moneda),
+        tasa: typeof p.tasa === 'string' ? p.tasa : '',
         detalles,
       }
     })
@@ -239,6 +308,7 @@ export function normalizarCorte(raw: unknown): Corte {
   return {
     empresa: typeof o.empresa === 'string' ? o.empresa : '',
     fecha: typeof o.fecha === 'string' ? o.fecha : '',
+    tasa: typeof o.tasa === 'string' ? o.tasa : '',
     capitalManual: typeof o.capitalManual === 'string' ? o.capitalManual : null,
     ac: partidas(o.ac),
     anc: partidas(o.anc),

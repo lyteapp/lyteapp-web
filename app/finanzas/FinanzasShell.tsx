@@ -7,7 +7,7 @@ import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
 import BalanceProvider, { useBalance } from './BalanceProvider'
 import FlujoProvider from './FlujoProvider'
-import { SECCIONES, buscarPartida, money, montoPartida, totalSeccion, type Corte, type SeccionId } from './balance'
+import { SECCIONES, buscarPartida, money, montoPartida, parseNum, totalSeccion, type Corte, type SeccionId } from './balance'
 
 export default function FinanzasShell({ children }: { children: React.ReactNode }) {
   return (
@@ -108,6 +108,7 @@ function Shell({ children }: { children: React.ReactNode }) {
    as a real sheet is loaded. */
 function Arbol() {
   const { corte, agregarPartida } = useBalance()
+  const tasaCorte = parseNum(corte.tasa)
   const pathname = usePathname()
   const router = useRouter()
   const [abiertas, setAbiertas] = useState<Record<SeccionId, boolean>>({
@@ -151,7 +152,7 @@ function Arbol() {
                   <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                 </svg>
                 <span className="fz-group-title">{sec.titulo}</span>
-                <span className="fz-group-total num">{money(totalSeccion(partidas))}</span>
+                <span className="fz-group-total num">{money(totalSeccion(partidas, tasaCorte))}</span>
               </button>
 
               {abierta && (
@@ -165,7 +166,7 @@ function Arbol() {
                         className={`fz-leaf${pathname === href ? ' active' : ''}`}
                       >
                         <span className="fz-leaf-name">{p.nombre || <em>Sin nombre</em>}</span>
-                        <span className="fz-leaf-amt num">{money(montoPartida(p))}</span>
+                        <span className="fz-leaf-amt num">{money(montoPartida(p, tasaCorte))}</span>
                       </Link>
                     )
                   })}

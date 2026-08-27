@@ -6,12 +6,15 @@ import Link from 'next/link'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
 import BalanceProvider, { useBalance } from './BalanceProvider'
+import FlujoProvider from './FlujoProvider'
 import { SECCIONES, buscarPartida, money, montoPartida, totalSeccion, type Corte } from './balance'
 
 export default function FinanzasShell({ children }: { children: React.ReactNode }) {
   return (
     <BalanceProvider>
-      <Shell>{children}</Shell>
+      <FlujoProvider>
+        <Shell>{children}</Shell>
+      </FlujoProvider>
     </BalanceProvider>
   )
 }
@@ -133,6 +136,22 @@ function Arbol() {
         Flujo de caja
       </Link>
 
+      <div className="fz-subnav">
+        {[
+          { href: '/finanzas/flujo/detal',  label: 'Cierre al detal' },
+          { href: '/finanzas/flujo/mayor',  label: 'Cobranzas al mayor' },
+          { href: '/finanzas/flujo/gastos', label: 'Gastos' },
+        ].map(s => (
+          <Link
+            key={s.href}
+            href={s.href}
+            className={`fz-subnav-item${pathname === s.href ? ' active' : ''}`}
+          >
+            {s.label}
+          </Link>
+        ))}
+      </div>
+
       {SECCIONES.map(sec => {
         const partidas = corte[sec.id]
         return (
@@ -180,6 +199,9 @@ function tituloDe(pathname: string, corte: Corte): string {
   if (pathname === '/finanzas') return 'Balance general'
   if (pathname === '/finanzas/comparacion') return 'Comparación'
   if (pathname === '/finanzas/flujo') return 'Flujo de caja'
+  if (pathname === '/finanzas/flujo/detal') return 'Cierre al detal'
+  if (pathname === '/finanzas/flujo/mayor') return 'Cobranzas al mayor'
+  if (pathname === '/finanzas/flujo/gastos') return 'Gastos'
   const m = pathname.match(/^\/finanzas\/partida\/(.+)$/)
   if (m) {
     const hallazgo = buscarPartida(corte, m[1])

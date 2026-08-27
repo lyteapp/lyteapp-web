@@ -938,3 +938,68 @@ a.bal-act { display: inline-flex; align-items: center; text-decoration: none; }
 @media print {
   .bal-chart-tip { display: none !important; }
 }
+
+/* ===== FLUJO DE CAJA ===== */
+.bal-cards-4 { grid-template-columns: repeat(4, 1fr); }
+
+.bal-dot-entrada { background: #15795A; }
+.bal-dot-salida  { background: #B4453A; }
+.bal-v-entrada { color: #15795A; }
+.bal-v-salida  { color: #B4453A; }
+
+.bal-alerta {
+  margin-top: 14px;
+  padding: 10px 13px;
+  border-radius: 9px;
+  background: #FBEDEA;
+  color: var(--alert);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+/* Celdas editables dentro de la tabla: sin marco hasta que las tocás, para que
+   la tabla siga leyéndose como tabla y no como un formulario. */
+.bal-cell {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--ink);
+  padding: 2px 0;
+  min-width: 0;
+}
+.bal-cell:focus { outline: none; box-shadow: inset 0 -2px 0 var(--activo); }
+.bal-cell::placeholder { color: var(--ink-faint); }
+.bal-cell.r { text-align: right; }
+
+.bal-flujo-table td { padding: 6px 12px; }
+
+.bal-monto-cell { display: flex; align-items: center; gap: 4px; }
+.bal-signo {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .12s, color .12s;
+}
+.bal-signo-entrada { background: #EDF7F2; color: #15795A; }
+.bal-signo-salida  { background: #FBEDEA; color: #B4453A; }
+.bal-signo:hover { border-color: currentColor; }
+
+.bal-add-row { display: flex; gap: 8px; margin: 8px 16px 12px; }
+.bal-add-row .bal-addbtn { margin: 0; width: auto; flex: 1; }
+.bal-add-entrada:hover { border-color: #15795A; color: #15795A; background: #F1FBF6; }
+.bal-add-salida:hover  { border-color: #B4453A; color: #B4453A; background: #FDF4F3; }
+
+@media (max-width: 900px) {
+  .bal-cards-4 { grid-template-columns: 1fr 1fr; }
+}

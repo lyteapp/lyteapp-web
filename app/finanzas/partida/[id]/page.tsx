@@ -14,7 +14,7 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
   // Next 16 removed the synchronous fallback: params is a Promise, and a client
   // component can't be async, so it gets unwrapped with use().
   const { id } = use(params)
-  const { corte, listo, editarPartida, borrarPartida, aviso } = useBalance()
+  const { corte, setCorte, listo, editarPartida, borrarPartida, aviso } = useBalance()
   const router = useRouter()
 
   const hallazgo = buscarPartida(corte, id)
@@ -129,11 +129,39 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
         </div>
       </header>
 
+      {/* Editable here as well as on the sheet: these are the numbers you have in
+          front of you while loading a partida, and walking back to the header to
+          type them breaks the task. Both write to the corte, so there is still
+          one rate per cut-off date, not one per screen. */}
       <div className="bal-tasas-linea">
-        <span>Tasas del corte:</span>
-        {usaBcv && <b className="num">BCV {tasas.bcv > 0 ? tasas.bcv : '—'}</b>}
-        <b className="num">Real {tasas.mercado > 0 ? tasas.mercado : '—'}</b>
-        <Link href="/finanzas">Cambiar</Link>
+        <span className="bal-tasas-titulo">Tasas del corte</span>
+        {usaBcv && (
+          <label className="bal-tasa-campo">
+            <span>BCV</span>
+            <input
+              className="num"
+              inputMode="decimal"
+              placeholder="0.00"
+              value={corte.tasaBcv}
+              onChange={e => setCorte(c => ({ ...c, tasaBcv: e.target.value }))}
+            />
+          </label>
+        )}
+        <label className="bal-tasa-campo">
+          <span>Binance</span>
+          <input
+            className="num"
+            inputMode="decimal"
+            placeholder="0.00"
+            value={corte.tasaMercado}
+            onChange={e => setCorte(c => ({ ...c, tasaMercado: e.target.value }))}
+          />
+        </label>
+        {usaBcv && tasas.bcv > 0 && tasas.mercado > 0 && (
+          <span className="bal-tasa-formula num">
+            × {tasas.bcv} ÷ {tasas.mercado} = ×{(tasas.bcv / tasas.mercado).toFixed(4)}
+          </span>
+        )}
       </div>
 
       {faltanTasas && (
@@ -245,6 +273,16 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
             </div>
             <button className="bal-addbtn" onClick={agregarDetalle}>+ Agregar renglón</button>
           </div>
+
+          {usaBcv && (
+            <p className="bal-hint">
+              Los renglones marcados <b>{seccion.lado === 'activo' ? 'a cobrar' : 'a pagar'} en bolívares a tasa BCV </b>
+              se calculan como monto × tasa BCV ÷ tasa Binance
+              {tasas.bcv > 0 && tasas.mercado > 0
+                ? `. Con las tasas de arriba, $100 quedan en ${((100 * tasas.bcv) / tasas.mercado).toFixed(2)}.`
+                : '. Cargá las dos tasas para que se calculen.'}
+            </p>
+          )}
 
           {porForma.length > 1 && (
             <div className="bal-block" style={{ marginTop: 16 }}>

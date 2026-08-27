@@ -100,7 +100,7 @@ export default function BalanceGeneral() {
             />
           </label>
           <label className="bal-field bal-field-tasa">
-            <span>Tasa real</span>
+            <span>Tasa Binance</span>
             <input
               className="num"
               inputMode="decimal"

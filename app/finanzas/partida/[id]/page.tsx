@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useBalance } from '../../BalanceProvider'
 import {
   MONEDAS, SECCIONES, aUSD, buscarPartida, configTipo, money, montoDetalle, montoPartida,
-  nominalPartida, nominalUSD, nuevoDetalle, parseNum, tasasDe,
+  monedaPorDefecto, nominalPartida, nominalUSD, nuevoDetalle, parseNum, tasasDe,
   type Detalle, type Moneda,
 } from '../../balance'
 
@@ -76,11 +76,11 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
      so switching to a breakdown never silently drops or reclassifies a figure. */
   function agregarDetalle() {
     if (!desglosado && parseNum(partida.monto)) {
-      setDetalles([{ ...nuevoDetalle(), monto: parseNum(partida.monto).toFixed(2), moneda: partida.moneda, tasa: partida.tasa }])
+      setDetalles([{ ...nuevoDetalle(partida.moneda), monto: parseNum(partida.monto).toFixed(2), moneda: partida.moneda, tasa: partida.tasa }])
       editarPartida(sec, id, { monto: '', tasa: '' })
       return
     }
-    setDetalles([...partida.detalles, nuevoDetalle()])
+    setDetalles([...partida.detalles, nuevoDetalle(monedaPorDefecto(partida.tipo))])
   }
 
   function editarDetalle(detId: string, cambios: Partial<Detalle>) {
@@ -350,6 +350,51 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
               {MONEDAS.find(m => m.id === partida.moneda)?.ayuda}
             </p>
 
+            {partida.moneda === 'USD_BCV' && (
+              <div className="bal-calculo">
+                <div className="bal-calculo-fila">
+                  <span>Monto a cobrar</span>
+                  <b className="num">{money(parseNum(partida.monto))}</b>
+                </div>
+                <div className="bal-calculo-fila">
+                  <span>× Tasa BCV</span>
+                  <input
+                    className="num"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={corte.tasaBcv}
+                    onChange={e => setCorte(c => ({ ...c, tasaBcv: e.target.value }))}
+                  />
+                </div>
+                <div className="bal-calculo-fila">
+                  <span>÷ Tasa Binance</span>
+                  <input
+                    className="num"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={corte.tasaMercado}
+                    onChange={e => setCorte(c => ({ ...c, tasaMercado: e.target.value }))}
+                  />
+                </div>
+                {tasas.bcv > 0 && tasas.mercado > 0 && parseNum(partida.monto) !== 0 && (
+                  <div className="bal-calculo-paso num">
+                    {money(parseNum(partida.monto))} × {tasas.bcv} = {(parseNum(partida.monto) * tasas.bcv).toLocaleString('en-US', { maximumFractionDigits: 2 })} Bs
+                    {' '}÷ {tasas.mercado}
+                  </div>
+                )}
+                <div className="bal-calculo-total">
+                  <span>Valor real en dólares</span>
+                  <b className="num">
+                    {parseNum(partida.monto) === 0
+                      ? '—'
+                      : aUSD(parseNum(partida.monto), 'USD_BCV', tasas) === null
+                        ? 'faltan las tasas'
+                        : money(aUSD(parseNum(partida.monto), 'USD_BCV', tasas)!)}
+                  </b>
+                </div>
+              </div>
+            )}
+
             {partida.moneda === 'VES' && (
               <div className="bal-monto-fila" style={{ marginTop: 10 }}>
                 <span className="bal-monto-etiqueta">Tasa Bs/USD</span>
@@ -363,7 +408,7 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
               </div>
             )}
 
-            {parseNum(partida.monto) !== 0 && partida.moneda !== 'USD' && (
+            {parseNum(partida.monto) !== 0 && partida.moneda === 'VES' && (
               <div className="bal-equivalente">
                 <span>Valor real</span>
                 <b className="num">

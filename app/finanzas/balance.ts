@@ -153,9 +153,16 @@ export const IDS: SeccionId[] = ['ac', 'anc', 'pc', 'pnc']
 let contador = 0
 export const nuevoId = () => `p${Date.now().toString(36)}${(contador++).toString(36)}`
 
+/* A partida opens in the form its kind normally takes. Receivables and payables
+   here are usually settled in bolívares at the official rate, so they start
+   there instead of on plain dollars, which would silently convert nothing. */
+export const monedaPorDefecto = (tipo: TipoPartida): Moneda =>
+  (tipo === 'cxc' || tipo === 'cxp' ? 'USD_BCV' : 'USD')
+
 export const nuevaPartida = (tipo: TipoPartida = 'activo_otro'): Partida =>
-  ({ id: nuevoId(), nombre: '', tipo, monto: '', moneda: 'USD', tasa: '', detalles: [] })
-export const nuevoDetalle = (): Detalle => ({ id: nuevoId(), nombre: '', monto: '', moneda: 'USD', tasa: '' })
+  ({ id: nuevoId(), nombre: '', tipo, monto: '', moneda: monedaPorDefecto(tipo), tasa: '', detalles: [] })
+export const nuevoDetalle = (moneda: Moneda = 'USD'): Detalle =>
+  ({ id: nuevoId(), nombre: '', monto: '', moneda, tasa: '' })
 
 /* `fecha` starts empty on purpose: the sheet is prerendered, so seeding it with
    new Date() would bake the build date into the HTML and then disagree with the

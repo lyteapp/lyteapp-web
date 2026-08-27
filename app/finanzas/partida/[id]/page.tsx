@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useBalance } from '../../BalanceProvider'
 import {
-  MONEDAS, SECCIONES, aUSD, buscarPartida, money, montoDetalle, montoPartida,
+  MONEDAS, SECCIONES, aUSD, buscarPartida, configTipo, money, montoDetalle, montoPartida,
   nominalPartida, nominalUSD, nuevoDetalle, parseNum, tasasDe,
   type Detalle, type Moneda,
 } from '../../balance'
@@ -33,6 +33,11 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
 
   const { sec, partida } = hallazgo
   const seccion = SECCIONES.find(s => s.id === sec)!
+  const cfg = configTipo(partida.tipo)
+  /* Only the settlement forms this kind of partida can actually take. Cash on
+     hand has no "collected at BCV" — you are already holding the bolívares. */
+  const formas = MONEDAS.filter(m => cfg.formas.includes(m.id))
+  const usaBcv = cfg.formas.includes('USD_BCV')
   const desglosado = partida.detalles.length > 0
   const tasas = tasasDe(corte)
 
@@ -43,7 +48,7 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
   /* Grouped by how each line settles. The consolidated total says what the
      partida is worth; this says how much of it collects in dollars, how much
      collects in bolívares, and what the official-rate settlement costs. */
-  const porForma = MONEDAS.map(m => {
+  const porForma = formas.map(m => {
     const lineas = (desglosado ? partida.detalles : [partida]).filter(
       d => d.moneda === m.id && parseNum(d.monto) !== 0,
     )
@@ -91,7 +96,9 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
     setDetalles(partida.detalles.filter(d => d.id !== detId))
   }
 
-  const faltanTasas = (tasas.mercado <= 0) || (tasas.bcv <= 0 && porForma.some(g => g.forma.id === 'USD_BCV'))
+  const necesitaMercado = porForma.some(g => g.forma.id !== 'USD' && g.forma.id !== 'USDT')
+  const faltanTasas = (necesitaMercado && tasas.mercado <= 0)
+    || (tasas.bcv <= 0 && porForma.some(g => g.forma.id === 'USD_BCV'))
 
   return (
     <div className="bal-wrap bal-detalle">
@@ -100,6 +107,7 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
           <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
         </svg>
         {seccion.titulo}
+        <span className="bal-tipo-tag">{cfg.label}</span>
       </Link>
 
       <header className="bal-detalle-head">
@@ -113,8 +121,8 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
           <div className="bal-eyebrow">Valor real</div>
           <div className="bal-detalle-total-v num">{money(total)}</div>
           {merma > 0.005 && (
-            <div className="bal-detalle-merma">
-              nominal {money(nominal)} · se pierden {money(merma)}
+            <div className={seccion.lado === 'activo' ? 'bal-detalle-merma' : 'bal-detalle-ahorro'}>
+              nominal {money(nominal)} · {seccion.lado === 'activo' ? 'se pierden' : 'te ahorrás'} {money(merma)}
             </div>
           )}
         </div>
@@ -122,7 +130,7 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
 
       <div className="bal-tasas-linea">
         <span>Tasas del corte:</span>
-        <b className="num">BCV {tasas.bcv > 0 ? tasas.bcv : '—'}</b>
+        {usaBcv && <b className="num">BCV {tasas.bcv > 0 ? tasas.bcv : '—'}</b>}
         <b className="num">Real {tasas.mercado > 0 ? tasas.mercado : '—'}</b>
         <Link href="/finanzas">Cambiar</Link>
       </div>
@@ -138,7 +146,7 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
         <>
           <div className="bal-block">
             <div className="bal-blockhead">
-              <h2>Desglose</h2>
+              <h2>{cfg.tituloDesglose}</h2>
               <span className="bal-tot num">{money(total)}</span>
             </div>
             <div className="bal-table-wrap">
@@ -146,9 +154,9 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
                 <thead>
                   <tr>
                     <th>Renglón</th>
-                    <th style={{ width: 172 }}>Se cobra en</th>
+                    <th style={{ width: 172 }}>{seccion.lado === 'activo' ? 'Se cobra en' : 'Se paga en'}</th>
                     <th className="r" style={{ width: 124 }}>Monto</th>
-                    <th className="r" style={{ width: 108 }}>Nominal</th>
+                    {usaBcv && <th className="r" style={{ width: 108 }}>Nominal</th>}
                     <th className="r" style={{ width: 116 }}>Valor real</th>
                     <th style={{ width: 30 }} />
                   </tr>
@@ -164,7 +172,7 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
                         <td>
                           <input
                             className="bal-cell"
-                            placeholder="Ej: cliente, factura"
+                            placeholder={cfg.ejemplo}
                             value={d.nombre}
                             onChange={e => editarDetalle(d.id, { nombre: e.target.value })}
                           />
@@ -175,7 +183,7 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
                             value={d.moneda}
                             onChange={e => editarDetalle(d.id, { moneda: e.target.value as Moneda })}
                           >
-                            {MONEDAS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+                            {formas.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
                           </select>
                         </td>
                         <td className="r">
@@ -189,9 +197,11 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
                             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); agregarDetalle() } }}
                           />
                         </td>
-                        <td className="r num bal-nominal">
-                          {monto === 0 ? '—' : nom === null ? '—' : money(nom)}
-                        </td>
+                        {usaBcv && (
+                          <td className="r num bal-nominal">
+                            {monto === 0 ? '—' : nom === null ? '—' : money(nom)}
+                          </td>
+                        )}
                         <td className={`r num${castigada ? ' bal-v-salida' : ''}`}>
                           {monto === 0
                             ? <span className="bal-delta-flat">—</span>
@@ -221,17 +231,17 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
           {porForma.length > 1 && (
             <div className="bal-block" style={{ marginTop: 16 }}>
               <div className="bal-blockhead">
-                <h2>Cómo se cobra</h2>
+                <h2>{seccion.lado === 'activo' ? 'Cómo se cobra' : 'Cómo se paga'}</h2>
                 <span className="bal-tot num">{money(total)}</span>
               </div>
               <div className="bal-table-wrap">
                 <table className="bal-table">
                   <thead>
                     <tr>
-                      <th>Forma de cobro</th>
+                      <th>{seccion.lado === 'activo' ? 'Forma de cobro' : 'Forma de pago'}</th>
                       <th className="r" style={{ width: 80 }}>Renglones</th>
                       <th className="r" style={{ width: 132 }}>Monto</th>
-                      <th className="r" style={{ width: 104 }}>Nominal</th>
+                      {usaBcv && <th className="r" style={{ width: 104 }}>Nominal</th>}
                       <th className="r" style={{ width: 116 }}>Valor real</th>
                     </tr>
                   </thead>
@@ -243,7 +253,7 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
                         <td className="r num">
                           {g.original.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {g.forma.simbolo}
                         </td>
-                        <td className="r num bal-nominal">{money(g.nominal)}</td>
+                        {usaBcv && <td className="r num bal-nominal">{money(g.nominal)}</td>}
                         <td className="r num">
                           {money(g.real)}
                           {g.faltan && <span className="bal-tag bal-tag-baja">falta tasa</span>}
@@ -266,7 +276,7 @@ export default function PartidaPage({ params }: { params: Promise<{ id: string }
                 value={partida.moneda}
                 onChange={e => editarPartida(sec, id, { moneda: e.target.value as Moneda })}
               >
-                {MONEDAS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+                {formas.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
               </select>
               <input
                 className="bal-monto-directo num"

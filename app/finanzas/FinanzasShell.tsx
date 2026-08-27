@@ -171,15 +171,9 @@ function Arbol() {
                     )
                   })}
 
-                  <button
-                    className="fz-add"
-                    onClick={() => {
-                      const p = agregarPartida(sec.id)
-                      router.push(`/finanzas/partida/${p.id}`)
-                    }}
-                  >
+                  <Link className="fz-add" href={`/finanzas/partida/nueva?sec=${sec.id}`}>
                     + Agregar partida
-                  </button>
+                  </Link>
                 </div>
               )}
             </div>

@@ -122,15 +122,22 @@ export default function BalanceGeneral() {
         </div>
       )}
 
-      {t.mermaBcv > 0.005 && (
+      {(t.mermaActivos > 0.005 || t.ahorroPasivos > 0.005) && (
         <div className="bal-merma">
           <div>
-            <div className="bal-eyebrow">Costo de cobrar a tasa BCV</div>
+            <div className="bal-eyebrow">Efecto de cobrar y pagar a tasa BCV</div>
             <div className="bal-merma-nota">
-              Lo que se cobra en bolívares al cambio oficial vale menos de lo que dice su monto.
+              {t.mermaActivos > 0.005 && (
+                <div>Lo que cobrás en bolívares al cambio oficial vale <b>{moneyShort(t.mermaActivos)}</b> menos de lo que dice.</div>
+              )}
+              {t.ahorroPasivos > 0.005 && (
+                <div>Lo que pagás en bolívares al cambio oficial te cuesta <b>{moneyShort(t.ahorroPasivos)}</b> menos de lo que dice.</div>
+              )}
             </div>
           </div>
-          <div className="bal-merma-v num">−{moneyShort(t.mermaBcv)}</div>
+          <div className={`bal-merma-v num${t.ahorroPasivos - t.mermaActivos >= 0 ? ' bal-v-entrada' : ''}`}>
+            {t.ahorroPasivos - t.mermaActivos >= 0 ? '+' : '−'}{moneyShort(Math.abs(t.ahorroPasivos - t.mermaActivos))}
+          </div>
         </div>
       )}
 
@@ -188,7 +195,7 @@ export default function BalanceGeneral() {
           {SECCIONES.filter(s => s.lado === 'activo').map(sec => (
             <Bloque key={sec.id} sec={sec} partidas={corte[sec.id]} tasas={t.tasas}
               onEditar={editarPartida} onBorrar={borrarPartida}
-              onAgregar={s => { const p = agregarPartida(s); router.push(`/finanzas/partida/${p.id}`) }} />
+              />
           ))}
         </div>
 
@@ -196,7 +203,7 @@ export default function BalanceGeneral() {
           {SECCIONES.filter(s => s.lado === 'pasivo').map(sec => (
             <Bloque key={sec.id} sec={sec} partidas={corte[sec.id]} tasas={t.tasas}
               onEditar={editarPartida} onBorrar={borrarPartida}
-              onAgregar={s => { const p = agregarPartida(s); router.push(`/finanzas/partida/${p.id}`) }} />
+              />
           ))}
 
           <div className="bal-block bal-side-capital">
@@ -272,14 +279,13 @@ export default function BalanceGeneral() {
 }
 
 function Bloque({
-  sec, partidas, tasas, onEditar, onBorrar, onAgregar,
+  sec, partidas, tasas, onEditar, onBorrar,
 }: {
   sec: { id: SeccionId; titulo: string; lado: 'activo' | 'pasivo' }
   partidas: Partida[]
   tasas: Tasas
   onEditar: (sec: SeccionId, id: string, cambios: Partial<Partida>) => void
   onBorrar: (sec: SeccionId, id: string) => void
-  onAgregar: (sec: SeccionId) => void
 }) {
   return (
     <div className={`bal-block bal-side-${sec.lado}`}>
@@ -287,6 +293,10 @@ function Bloque({
         <h2>{sec.titulo}</h2>
         <span className="bal-tot num">{money(totalSeccion(partidas, tasas))}</span>
       </div>
+
+      {partidas.length === 0 && (
+        <div className="bal-empty-row">Todavía no hay partidas en esta sección.</div>
+      )}
 
       <div className="bal-rows">
         {partidas.map(p => {
@@ -317,7 +327,6 @@ function Bloque({
                   onBlur={() => onEditar(sec.id, p.id, {
                     monto: p.monto.trim() === '' ? '' : parseNum(p.monto).toFixed(2),
                   })}
-                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); onAgregar(sec.id) } }}
                 />
               )}
 
@@ -335,7 +344,7 @@ function Bloque({
         })}
       </div>
 
-      <button className="bal-addbtn" onClick={() => onAgregar(sec.id)}>+ Agregar partida</button>
+      <Link className="bal-addbtn" href={`/finanzas/partida/nueva?sec=${sec.id}`}>+ Agregar partida</Link>
     </div>
   )
 }

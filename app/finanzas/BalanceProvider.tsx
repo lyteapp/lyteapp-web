@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import {
-  type Corte, type Partida, type SeccionId,
+  type Corte, type Partida, type SeccionId, type TipoPartida,
   corteVacio, duplicarCorte, hoy, nuevaPartida, normalizarCorte,
 } from './balance'
 
@@ -19,7 +19,7 @@ type Ctx = {
   eliminar: () => void
   empezarEnBlanco: () => void
   nuevoDesdeEste: () => void
-  agregarPartida: (sec: SeccionId) => Partida
+  agregarPartida: (sec: SeccionId, tipo: TipoPartida) => Partida
   editarPartida: (sec: SeccionId, id: string, cambios: Partial<Partida>) => void
   borrarPartida: (sec: SeccionId, id: string) => void
   aviso: (msg: string) => void
@@ -128,8 +128,8 @@ export default function BalanceProvider({ children }: { children: React.ReactNod
     aviso('Corte nuevo con la misma estructura. Actualizá los montos y guardá.')
   }, [aviso])
 
-  const agregarPartida = useCallback((sec: SeccionId) => {
-    const p = nuevaPartida()
+  const agregarPartida = useCallback((sec: SeccionId, tipo: TipoPartida) => {
+    const p = nuevaPartida(tipo)
     setCorte(c => ({ ...c, [sec]: [...c[sec], p] }))
     return p
   }, [])

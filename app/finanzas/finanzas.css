@@ -1272,3 +1272,53 @@ select.bal-cell {
 @media (max-width: 700px) {
   .bal-merma { flex-direction: column; align-items: flex-start; gap: 8px; }
 }
+
+/* ===== SELECTOR DE TIPO DE PARTIDA ===== */
+.bal-tipos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+.bal-tipo {
+  text-align: left;
+  background: white;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  padding: 16px 17px;
+  cursor: pointer;
+  font: inherit;
+  transition: border-color .15s, transform .15s, box-shadow .15s;
+}
+.bal-tipo:hover {
+  border-color: var(--activo);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px -14px rgba(16,35,46,.3);
+}
+.bal-tipo:focus-visible { outline: 2px solid var(--activo); outline-offset: 2px; }
+.bal-tipo-label { font-size: 14.5px; font-weight: 700; color: var(--ink); margin-bottom: 5px; }
+.bal-tipo-desc { font-size: 12.5px; line-height: 1.5; color: var(--ink-soft); }
+.bal-tipo-formas {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--ink-faint);
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 1px solid var(--rule-soft);
+}
+
+/* Etiqueta del tipo en la hoja y en el sidebar */
+.bal-tipo-tag {
+  display: inline-block;
+  margin-left: 7px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 1px 5px;
+  vertical-align: middle;
+}
+
+.bal-detalle-ahorro { font-size: 11px; color: var(--ok); margin-top: 3px; }

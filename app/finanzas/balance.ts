@@ -21,6 +21,87 @@ export const MONEDAS: { id: Moneda; label: string; simbolo: string; ayuda: strin
   { id: 'USDT',    label: 'USDT',             simbolo: '₮',  ayuda: 'Se toma uno a uno con el dólar.' },
 ]
 
+/* ── tipos de partida ──
+   A partida's nature decides how it behaves. Cash you already hold is valued at
+   what bolívares are worth and nothing else; a receivable also depends on the
+   rate it will be collected at; inventory is neither. Offering every option
+   everywhere was the mistake — it put a "collected at BCV" choice on a pile of
+   cash, where it means nothing. */
+
+export type TipoPartida =
+  | 'efectivo' | 'cxc' | 'inventario' | 'activo_otro'
+  | 'cxp' | 'prestamo' | 'pasivo_otro'
+
+export type ConfigTipo = {
+  id: TipoPartida
+  label: string
+  descripcion: string
+  lado: 'activo' | 'pasivo'
+  /** Settlement forms this kind of partida can actually take. */
+  formas: Moneda[]
+  /** Placeholder for a line's name, in this partida's own language. */
+  ejemplo: string
+  tituloDesglose: string
+}
+
+export const TIPOS: ConfigTipo[] = [
+  {
+    id: 'efectivo', label: 'Efectivo y bancos', lado: 'activo',
+    descripcion: 'Plata que ya tenés: caja, cuentas bancarias, Zelle, USDT.',
+    // No BCV here: you are holding the bolívares, not waiting to be paid in them.
+    formas: ['USD', 'VES', 'USDT'],
+    ejemplo: 'Ej: efectivo USD, banco BNC, Zelle',
+    tituloDesglose: 'Dónde está el dinero',
+  },
+  {
+    id: 'cxc', label: 'Cuentas por cobrar', lado: 'activo',
+    descripcion: 'Plata que te deben. Lo que se cobra en bolívares a tasa BCV vale menos de lo que dice.',
+    formas: ['USD', 'USD_BCV', 'VES', 'USDT'],
+    ejemplo: 'Ej: cliente, número de factura',
+    tituloDesglose: 'Quién debe',
+  },
+  {
+    id: 'inventario', label: 'Inventario', lado: 'activo',
+    descripcion: 'Mercancía valorada. Un renglón por categoría, con su monto.',
+    formas: ['USD', 'VES'],
+    ejemplo: 'Ej: inventario al mayor, al detal',
+    tituloDesglose: 'Qué hay en inventario',
+  },
+  {
+    id: 'activo_otro', label: 'Otro activo', lado: 'activo',
+    descripcion: 'Cualquier otra cosa que tenga valor: equipos, depósitos, mejoras.',
+    formas: ['USD', 'VES', 'USDT'],
+    ejemplo: 'Ej: equipos, depósito en garantía',
+    tituloDesglose: 'Desglose',
+  },
+  {
+    id: 'cxp', label: 'Cuentas por pagar', lado: 'pasivo',
+    descripcion: 'Lo que debés a proveedores. Pagar en bolívares a tasa BCV te cuesta menos de lo que dice.',
+    formas: ['USD', 'USD_BCV', 'VES', 'USDT'],
+    ejemplo: 'Ej: proveedor, factura',
+    tituloDesglose: 'A quién le debés',
+  },
+  {
+    id: 'prestamo', label: 'Préstamos', lado: 'pasivo',
+    descripcion: 'Deudas con terceros o socios.',
+    formas: ['USD', 'USD_BCV', 'VES', 'USDT'],
+    ejemplo: 'Ej: nombre del acreedor',
+    tituloDesglose: 'Con quién',
+  },
+  {
+    id: 'pasivo_otro', label: 'Otro pasivo', lado: 'pasivo',
+    descripcion: 'Cualquier otra obligación.',
+    formas: ['USD', 'USD_BCV', 'VES', 'USDT'],
+    ejemplo: 'Ej: concepto',
+    tituloDesglose: 'Desglose',
+  },
+]
+
+export const configTipo = (t: TipoPartida): ConfigTipo =>
+  TIPOS.find(x => x.id === t) ?? TIPOS[3]
+
+export const tiposDe = (lado: 'activo' | 'pasivo') => TIPOS.filter(t => t.lado === lado)
+
 /** The two rates a corte needs: what bolívares are really worth, and the official one. */
 export type Tasas = { mercado: number; bcv: number }
 
@@ -36,6 +117,7 @@ export type Detalle = { id: string; nombre: string; monto: string; moneda: Moned
 export type Partida = {
   id: string
   nombre: string
+  tipo: TipoPartida
   monto: string
   moneda: Moneda
   detalles: Detalle[]
@@ -67,7 +149,8 @@ export const IDS: SeccionId[] = ['ac', 'anc', 'pc', 'pnc']
 let contador = 0
 export const nuevoId = () => `p${Date.now().toString(36)}${(contador++).toString(36)}`
 
-export const nuevaPartida = (): Partida => ({ id: nuevoId(), nombre: '', monto: '', moneda: 'USD', detalles: [] })
+export const nuevaPartida = (tipo: TipoPartida = 'activo_otro'): Partida =>
+  ({ id: nuevoId(), nombre: '', tipo, monto: '', moneda: 'USD', detalles: [] })
 export const nuevoDetalle = (): Detalle => ({ id: nuevoId(), nombre: '', monto: '', moneda: 'USD' })
 
 /* `fecha` starts empty on purpose: the sheet is prerendered, so seeding it with
@@ -79,10 +162,12 @@ export const corteVacio = (): Corte => ({
   tasaMercado: '',
   tasaBcv: '',
   capitalManual: null,
-  ac: [nuevaPartida()],
-  anc: [nuevaPartida()],
-  pc: [nuevaPartida()],
-  pnc: [nuevaPartida()],
+  /* Empty: a partida can't exist before its kind is chosen, so the sheet starts
+     bare instead of seeding rows of an arbitrary type. */
+  ac: [],
+  anc: [],
+  pc: [],
+  pnc: [],
 })
 
 export const hoy = () => new Date().toISOString().slice(0, 10)
@@ -199,9 +284,13 @@ export function calcular(corte: Corte) {
     /* Surfaced so the sheet can say a figure is missing rather than show a
        total that quietly excludes it. */
     sinTasa: IDS.flatMap(id => corte[id].filter(p => partidaSinTasa(p, tasas))),
-    /* Face value minus real value: what the BCV settlement spread costs across
-       the whole sheet. Zero when nothing settles at the official rate. */
-    mermaBcv: IDS.reduce((acc, id) => acc + corte[id].reduce(
+    /* The BCV spread cuts opposite ways. On an asset it is a loss: you are owed
+       $100 and collect bolívares worth $83. On a liability it is a saving: you
+       owe $100 and settle it with bolívares that cost you $83. Netting them into
+       one figure would hide both. */
+    mermaActivos: (['ac', 'anc'] as SeccionId[]).reduce((acc, id) => acc + corte[id].reduce(
+      (a, p) => a + (nominalPartida(p, tasas) - montoPartida(p, tasas)), 0), 0),
+    ahorroPasivos: (['pc', 'pnc'] as SeccionId[]).reduce((acc, id) => acc + corte[id].reduce(
       (a, p) => a + (nominalPartida(p, tasas) - montoPartida(p, tasas)), 0), 0),
     pctPasivo,
     pctCapital: 100 - pctPasivo,
@@ -317,7 +406,7 @@ export function normalizarCorte(raw: unknown): Corte {
   if (!raw || typeof raw !== 'object') return base
   const o = raw as Record<string, unknown>
 
-  const partidas = (v: unknown): Partida[] => {
+  const partidas = (v: unknown, ladoPorDefecto: 'activo' | 'pasivo'): Partida[] => {
     if (!Array.isArray(v)) return []
     return v.map(item => {
       const p = (item ?? {}) as Record<string, unknown>
@@ -332,9 +421,15 @@ export function normalizarCorte(raw: unknown): Corte {
             }
           })
         : []
+      /* Partidas saved before kinds existed default by the section they sit in,
+         which is the closest true statement available. */
+      const tipo: TipoPartida = TIPOS.some(t => t.id === p.tipo)
+        ? (p.tipo as TipoPartida)
+        : (ladoPorDefecto === 'pasivo' ? 'pasivo_otro' : 'activo_otro')
       return {
         id: typeof p.id === 'string' ? p.id : nuevoId(),
         nombre: typeof p.nombre === 'string' ? p.nombre : '',
+        tipo,
         monto: typeof p.monto === 'string' ? p.monto : '',
         moneda: moneda(p.moneda),
         detalles,
@@ -351,9 +446,9 @@ export function normalizarCorte(raw: unknown): Corte {
       : typeof o.tasa === 'string' ? o.tasa : '',
     tasaBcv: typeof o.tasaBcv === 'string' ? o.tasaBcv : '',
     capitalManual: typeof o.capitalManual === 'string' ? o.capitalManual : null,
-    ac: partidas(o.ac),
-    anc: partidas(o.anc),
-    pc: partidas(o.pc),
-    pnc: partidas(o.pnc),
+    ac: partidas(o.ac, 'activo'),
+    anc: partidas(o.anc, 'activo'),
+    pc: partidas(o.pc, 'pasivo'),
+    pnc: partidas(o.pnc, 'pasivo'),
   }
 }

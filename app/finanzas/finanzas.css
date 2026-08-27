@@ -538,12 +538,14 @@
   max-width: 560px;
 }
 
+/* Rendered by the provider, outside .bal-wrap — so it can't use the sheet's
+   custom properties and states its colours outright. */
 .bal-toast {
   position: fixed;
   left: 50%;
   bottom: 26px;
   transform: translateX(-50%);
-  background: var(--ink);
+  background: #0F172A;
   color: white;
   padding: 9px 17px;
   border-radius: 999px;
@@ -578,6 +580,211 @@
 
 @media (prefers-reduced-motion: reduce) {
   .bal-beambar span, .bal-toast { transition: none; animation: none; }
+}
+
+/* ===== ÁRBOL DEL SIDEBAR =====
+   The rail mirrors the sheet's structure so every partida is one click away,
+   and carries its own total so it doubles as a running summary. */
+.fz-nav .num {
+  font-family: var(--font-geist-mono), ui-monospace, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.fz-group { margin-top: 14px; }
+
+.fz-group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 12px 5px 10px;
+  border-left: 2px solid transparent;
+}
+.fz-lado-activo { border-left-color: #10B981; }
+.fz-lado-pasivo { border-left-color: #D97706; }
+
+.fz-group-title {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #94A3B8;
+}
+.fz-group-total { font-size: 11px; font-weight: 600; color: #CBD5E1; }
+
+.fz-group-items { display: flex; flex-direction: column; gap: 1px; margin-top: 2px; }
+
+.fz-leaf {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  color: #94A3B8;
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+.fz-leaf:hover { background: rgba(255,255,255,0.06); color: #E2E8F0; }
+.fz-leaf.active { background: rgba(16,185,129,0.14); color: #6EE7B7; }
+
+.fz-leaf-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fz-leaf-name em { color: #64748B; font-style: italic; }
+.fz-leaf-amt { font-size: 11.5px; flex-shrink: 0; opacity: 0.85; }
+
+.fz-add {
+  margin-top: 2px;
+  padding: 7px 12px;
+  border: 0;
+  background: none;
+  color: #64748B;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 7px;
+  transition: background 0.15s, color 0.15s;
+}
+.fz-add:hover { background: rgba(255,255,255,0.06); color: #10B981; }
+
+.fz-crumb-link {
+  color: #0F172A;
+  font-weight: 600;
+  text-decoration: none;
+}
+.fz-crumb-link:hover { color: #10B981; }
+
+/* ===== FILA CON DESGLOSE (hoja de balance) ===== */
+.bal-row-derived {
+  width: 118px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 9px 0;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.bal-row-derived:hover { color: var(--activo); }
+.bal-row-count {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--ink-faint);
+  background: var(--rule-soft);
+  border-radius: 4px;
+  padding: 1px 4px;
+  font-family: var(--font-geist-sans), sans-serif;
+}
+
+.bal-open {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-faint);
+  border-radius: 5px;
+  opacity: 0;
+  transition: opacity .12s, background .12s, color .12s;
+}
+.bal-open svg { width: 13px; height: 13px; }
+.bal-row:hover .bal-open,
+.bal-row:focus-within .bal-open { opacity: 1; }
+.bal-open:hover { background: #F1FBF7; color: var(--activo); }
+
+/* ===== PÁGINA DE PARTIDA ===== */
+.bal-detalle { max-width: 640px; }
+
+.bal-breadcrumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  text-decoration: none;
+  margin-bottom: 14px;
+}
+.bal-breadcrumb svg { width: 14px; height: 14px; }
+.bal-breadcrumb:hover { color: var(--activo); }
+
+.bal-detalle-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.bal-detalle-name {
+  flex: 1;
+  min-width: 200px;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  background: transparent;
+  font: inherit;
+  font-size: clamp(22px, 3.4vw, 28px);
+  font-weight: 800;
+  letter-spacing: -0.8px;
+  color: var(--ink);
+  padding: 0 0 6px;
+}
+.bal-detalle-name:focus { outline: none; border-bottom-color: var(--activo); }
+.bal-detalle-name::placeholder { color: #CBD5E1; }
+
+.bal-detalle-total { text-align: right; flex-shrink: 0; }
+.bal-detalle-total-v {
+  font-size: 25px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin-top: 2px;
+}
+
+.bal-monto-directo {
+  width: 100%;
+  padding: 11px 13px;
+  border: 1px solid var(--rule);
+  border-radius: 9px;
+  font-size: 18px;
+  font-weight: 600;
+  text-align: right;
+  color: var(--ink);
+}
+.bal-monto-directo:focus { outline: none; border-color: var(--activo); }
+
+.bal-hint {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--ink-faint);
+  margin: 12px 0 0;
+}
+
+.bal-danger { color: var(--alert); }
+.bal-danger:hover { border-color: var(--alert); background: #FDF4F3; }
+
+.bal-loading { color: #94A3B8; font-size: 13px; }
+
+.bal-missing { max-width: 420px; }
+.bal-missing h1 { font-size: 22px; font-weight: 700; color: #0F172A; margin: 0 0 8px; letter-spacing: -0.5px; }
+.bal-missing p { font-size: 13.5px; color: #64748B; margin: 0 0 18px; line-height: 1.6; }
+.bal-missing .bal-act { display: inline-block; text-decoration: none; }
+
+/* Los botones-enlace de acciones comparten el estilo de los botones */
+a.bal-act { display: inline-flex; align-items: center; text-decoration: none; }
+
+@media (max-width: 900px) {
+  .bal-detalle-head { flex-direction: column; align-items: stretch; }
+  .bal-detalle-total { text-align: left; }
 }
 
 /* ===== RESPONSIVE ===== */

@@ -5,15 +5,18 @@ import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
-
-const navItems: { href: string; label: string; soon?: boolean; icon: React.ReactNode }[] = [
-  {
-    href: '/finanzas', label: 'Balance general',
-    icon: <svg viewBox="0 0 20 20" fill="currentColor"><path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z" /><path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z" /></svg>,
-  },
-]
+import BalanceProvider, { useBalance } from './BalanceProvider'
+import { SECCIONES, money, montoPartida, totalSeccion } from './balance'
 
 export default function FinanzasShell({ children }: { children: React.ReactNode }) {
+  return (
+    <BalanceProvider>
+      <Shell>{children}</Shell>
+    </BalanceProvider>
+  )
+}
+
+function Shell({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
@@ -43,8 +46,6 @@ export default function FinanzasShell({ children }: { children: React.ReactNode 
 
   if (!user) return null
 
-  const pageTitle = navItems.find(i => i.href === pathname)?.label ?? 'Balance general'
-
   return (
     <div className="fz-layout">
       <aside className={`fz-sidebar${mobileNav ? ' open' : ''}`}>
@@ -66,20 +67,7 @@ export default function FinanzasShell({ children }: { children: React.ReactNode 
           </button>
         </div>
 
-        <nav className="fz-nav">
-          {navItems.map(item => (
-            <Link
-              key={item.href}
-              href={item.soon ? '#' : item.href}
-              className={`fz-nav-item${pathname === item.href ? ' active' : ''}${item.soon ? ' soon' : ''}`}
-              onClick={item.soon ? (e) => e.preventDefault() : undefined}
-            >
-              {item.icon}
-              {item.label}
-              {item.soon && <span className="fz-soon">pronto</span>}
-            </Link>
-          ))}
-        </nav>
+        <Arbol />
 
         <div className="fz-sidebar-bottom">
           <Link href="/dashboard" className="fz-back">
@@ -99,14 +87,71 @@ export default function FinanzasShell({ children }: { children: React.ReactNode 
             </svg>
           </button>
           <div className="fz-crumb">
-            <span>Finanzas</span>
-            <span className="fz-crumb-sep">›</span>
-            <span className="fz-crumb-here">{pageTitle}</span>
+            <Link href="/finanzas" className="fz-crumb-link">Balance general</Link>
           </div>
         </div>
 
         <div className="fz-content">{children}</div>
       </div>
     </div>
+  )
+}
+
+/* The sheet's structure, navigable: every section lists its partidas, and each
+   one opens its own page. Totals here are the same numbers the sheet shows, so
+   the rail doubles as a running summary. */
+function Arbol() {
+  const { corte, agregarPartida } = useBalance()
+  const pathname = usePathname()
+  const router = useRouter()
+
+  return (
+    <nav className="fz-nav">
+      <Link href="/finanzas" className={`fz-nav-item${pathname === '/finanzas' ? ' active' : ''}`}>
+        <svg viewBox="0 0 20 20" fill="currentColor">
+          <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z" />
+          <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z" />
+        </svg>
+        Balance general
+      </Link>
+
+      {SECCIONES.map(sec => {
+        const partidas = corte[sec.id]
+        return (
+          <div className="fz-group" key={sec.id}>
+            <div className={`fz-group-head fz-lado-${sec.lado}`}>
+              <span className="fz-group-title">{sec.titulo}</span>
+              <span className="fz-group-total num">{money(totalSeccion(partidas))}</span>
+            </div>
+
+            <div className="fz-group-items">
+              {partidas.map(p => {
+                const href = `/finanzas/partida/${p.id}`
+                return (
+                  <Link
+                    key={p.id}
+                    href={href}
+                    className={`fz-leaf${pathname === href ? ' active' : ''}`}
+                  >
+                    <span className="fz-leaf-name">{p.nombre || <em>Sin nombre</em>}</span>
+                    <span className="fz-leaf-amt num">{money(montoPartida(p))}</span>
+                  </Link>
+                )
+              })}
+
+              <button
+                className="fz-add"
+                onClick={() => {
+                  const p = agregarPartida(sec.id)
+                  router.push(`/finanzas/partida/${p.id}`)
+                }}
+              >
+                + Agregar partida
+              </button>
+            </div>
+          </div>
+        )
+      })}
+    </nav>
   )
 }

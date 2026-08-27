@@ -375,6 +375,77 @@ html, body {
 /* ===== PAGE CONTENT ===== */
 .db-content { padding: 28px 32px; flex: 1; }
 
+/* ===== DASHBOARD SHELL — DARK MODE (desktop only) =====
+   Scoped to desktop widths deliberately: the html/body dark-mode lock at
+   the top of this file exists to hide the OS dark background during iOS
+   overscroll bounce, which only matters on mobile — so mobile keeps the
+   light-only shell untouched here. Individual page content (tables,
+   cards, welcome banner, etc.) isn't covered by this pass; only the
+   shell chrome (sidebar, topbar, layout background) switches tone. */
+@media (prefers-color-scheme: dark) and (min-width: 1025px) {
+  html, body { background: #151318; }
+  .db-layout { background: #151318; }
+
+  .db-sidebar { background: #1B1920; border-right-color: rgba(255,255,255,0.08); }
+  .db-sidebar-logo { border-bottom-color: rgba(255,255,255,0.08); }
+  .db-store-info { border-bottom-color: rgba(255,255,255,0.08); }
+
+  .db-brand-mark { background: #C4B5FD; }
+  .db-brand-mark svg { color: #151318; }
+  .db-brand-lyte { color: #F4F3F6; }
+
+  .db-store-block { background: #232028; border-color: rgba(255,255,255,0.08); }
+  .db-store-block:hover { background: #2A2732; }
+  .db-store-name { color: #F4F3F6; }
+  .db-store-url { color: #8B8894; }
+
+  .db-nav-section, .db-nav-label { color: #7C7986; }
+  .db-nav-soon { color: #7C7986; border-color: rgba(255,255,255,0.12); }
+
+  .db-canal-toggle { color: #B4B1BC; }
+  .db-canal-toggle:hover, .db-canal-toggle.open { background: rgba(255,255,255,0.06); color: #F4F3F6; }
+  .db-canal-item { color: #9A97A3; }
+  .db-canal-item::before { background: #4B4854; }
+  .db-canal-item:hover { color: #F4F3F6; background: rgba(255,255,255,0.06); }
+  .db-canal-item:hover::before { background: #C4B5FD; }
+  .db-canal-item.active { color: #C4B5FD; }
+  .db-canal-item.active::before { background: #C4B5FD; }
+
+  .db-nav-item { color: #B4B1BC; }
+  .db-nav-item:hover { background: rgba(255,255,255,0.06); color: #F4F3F6; }
+  .db-nav-item.active { background: #7C3AED; color: white; }
+  .db-nav-item.active svg { color: white; }
+
+  .db-sidebar-bottom { border-top-color: rgba(255,255,255,0.08); }
+  .db-user-row { border-color: rgba(255,255,255,0.08); }
+  .db-user-row:hover { background: rgba(255,255,255,0.06); }
+  .db-user-avatar { background: #C4B5FD; color: #151318; }
+  .db-user-email { color: #F4F3F6; }
+  .db-signout { color: #7C7986; }
+
+  .db-topbar {
+    background: rgba(21,19,24,0.65);
+    border-bottom-color: rgba(255,255,255,0.08);
+  }
+  .db-crumb { color: #7C7986; }
+  .db-crumb-here { color: #F4F3F6; }
+  .db-page-title { color: #F4F3F6; }
+  .db-page-date { color: #7C7986; }
+
+  .db-lang-switch { background: #232028; border-color: rgba(255,255,255,0.1); }
+  .db-lang-switch button { color: #8B8894; }
+  .db-lang-switch button.active { color: #F4F3F6; }
+  .db-lang-sep { background: rgba(255,255,255,0.12); }
+
+  .db-bcv-pill { background: #232028; border-color: rgba(255,255,255,0.1); }
+  .db-bcv-pill .lbl { color: #8B8894; }
+  .db-bcv-pill .value { color: #F4F3F6; }
+
+  .db-icon-btn { background: #232028; border-color: rgba(255,255,255,0.1); color: #B4B1BC; }
+  .db-icon-btn:hover { color: #F4F3F6; border-color: rgba(255,255,255,0.25); }
+  .db-notif-dot { border-color: #232028; }
+}
+
 /* ===== WELCOME BANNER ===== */
 .db-welcome {
   background: #0F172A;

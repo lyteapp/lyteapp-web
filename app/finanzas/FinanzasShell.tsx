@@ -121,37 +121,7 @@ function Arbol() {
         Balance general
       </Link>
 
-      <Link href="/finanzas/comparacion" className={`fz-nav-item${pathname === '/finanzas/comparacion' ? ' active' : ''}`}>
-        <svg viewBox="0 0 20 20" fill="currentColor">
-          <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
-        </svg>
-        Comparación
-      </Link>
-
-      <Link href="/finanzas/flujo" className={`fz-nav-item${pathname === '/finanzas/flujo' ? ' active' : ''}`}>
-        <svg viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" clipRule="evenodd" />
-          <path fillRule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clipRule="evenodd" />
-        </svg>
-        Flujo de caja
-      </Link>
-
-      <div className="fz-subnav">
-        {[
-          { href: '/finanzas/flujo/detal',  label: 'Cierre al detal' },
-          { href: '/finanzas/flujo/mayor',  label: 'Cobranzas al mayor' },
-          { href: '/finanzas/flujo/gastos', label: 'Gastos' },
-        ].map(s => (
-          <Link
-            key={s.href}
-            href={s.href}
-            className={`fz-subnav-item${pathname === s.href ? ' active' : ''}`}
-          >
-            {s.label}
-          </Link>
-        ))}
-      </div>
-
+      <div className="fz-arbol">
       {SECCIONES.map(sec => {
         const partidas = corte[sec.id]
         return (
@@ -189,6 +159,39 @@ function Arbol() {
           </div>
         )
       })}
+      </div>
+
+      <Link href="/finanzas/comparacion" className={`fz-nav-item${pathname === '/finanzas/comparacion' ? ' active' : ''}`}>
+        <svg viewBox="0 0 20 20" fill="currentColor">
+          <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+        </svg>
+        Comparación
+      </Link>
+
+      <Link href="/finanzas/flujo" className={`fz-nav-item${pathname === '/finanzas/flujo' ? ' active' : ''}`}>
+        <svg viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" clipRule="evenodd" />
+          <path fillRule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clipRule="evenodd" />
+        </svg>
+        Flujo de caja
+      </Link>
+
+      <div className="fz-subnav">
+        {[
+          { href: '/finanzas/flujo/detal',  label: 'Cierre al detal' },
+          { href: '/finanzas/flujo/mayor',  label: 'Cobranzas al mayor' },
+          { href: '/finanzas/flujo/gastos', label: 'Gastos' },
+        ].map(s => (
+          <Link
+            key={s.href}
+            href={s.href}
+            className={`fz-subnav-item${pathname === s.href ? ' active' : ''}`}
+          >
+            {s.label}
+          </Link>
+        ))}
+      </div>
+
     </nav>
   )
 }

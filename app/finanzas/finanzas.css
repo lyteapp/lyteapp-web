@@ -594,12 +594,12 @@
 
 .fz-group-head {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 5px 12px 5px 10px;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px 7px 8px;
   border-left: 2px solid transparent;
 }
+.fz-group-head .fz-group-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fz-lado-activo { border-left-color: #10B981; }
 .fz-lado-pasivo { border-left-color: #D97706; }
 
@@ -1149,3 +1149,33 @@ select.bal-cell {
   padding-bottom: 4px;
 }
 .fz-arbol .fz-group:first-child { margin-top: 8px; }
+
+/* ===== SECCIONES COLAPSABLES =====
+   The head is a button now, so it needs the button reset the div never did. */
+.fz-group-head {
+  width: 100%;
+  border: 0;
+  border-left: 2px solid transparent;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 0 7px 7px 0;
+  transition: background 0.15s;
+}
+.fz-group-head:hover { background: rgba(255,255,255,0.05); }
+.fz-group-head:focus-visible { outline: 2px solid #10B981; outline-offset: -2px; }
+
+.fz-group-chevron {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+  color: #64748B;
+  transition: transform 0.18s cubic-bezier(.4,0,.2,1);
+}
+.fz-group-head.open .fz-group-chevron { transform: rotate(90deg); }
+.fz-group-head.open .fz-group-title { color: #CBD5E1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fz-group-chevron { transition: none; }
+}

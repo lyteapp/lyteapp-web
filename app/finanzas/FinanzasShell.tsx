@@ -7,7 +7,7 @@ import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabase'
 import BalanceProvider, { useBalance } from './BalanceProvider'
 import FlujoProvider from './FlujoProvider'
-import { SECCIONES, buscarPartida, money, montoPartida, totalSeccion, type Corte } from './balance'
+import { SECCIONES, buscarPartida, money, montoPartida, totalSeccion, type Corte, type SeccionId } from './balance'
 
 export default function FinanzasShell({ children }: { children: React.ReactNode }) {
   return (
@@ -103,13 +103,28 @@ function Shell({ children }: { children: React.ReactNode }) {
   )
 }
 
-/* The sheet's structure, navigable: every section lists its partidas, and each
-   one opens its own page. Totals here are the same numbers the sheet shows, so
-   the rail doubles as a running summary. */
+/* The rail lists only the four sections; a section's partidas appear when it is
+   opened. With every partida always visible the rail becomes unreadable as soon
+   as a real sheet is loaded. */
 function Arbol() {
   const { corte, agregarPartida } = useBalance()
   const pathname = usePathname()
   const router = useRouter()
+  const [abiertas, setAbiertas] = useState<Record<SeccionId, boolean>>({
+    ac: false, anc: false, pc: false, pnc: false,
+  })
+
+  /* Opening a partida by URL reveals the section holding it, so you are never
+     looking at a collapsed rail with no idea where you are. The updater returns
+     the same object when nothing changes — a fresh one each run would re-trigger
+     this effect through its own `corte` dependency. */
+  useEffect(() => {
+    const m = pathname.match(/^\/finanzas\/partida\/(.+)$/)
+    if (!m) return
+    const hallazgo = buscarPartida(corte, m[1])
+    if (!hallazgo) return
+    setAbiertas(a => (a[hallazgo.sec] ? a : { ...a, [hallazgo.sec]: true }))
+  }, [pathname, corte])
 
   return (
     <nav className="fz-nav">
@@ -122,43 +137,53 @@ function Arbol() {
       </Link>
 
       <div className="fz-arbol">
-      {SECCIONES.map(sec => {
-        const partidas = corte[sec.id]
-        return (
-          <div className="fz-group" key={sec.id}>
-            <div className={`fz-group-head fz-lado-${sec.lado}`}>
-              <span className="fz-group-title">{sec.titulo}</span>
-              <span className="fz-group-total num">{money(totalSeccion(partidas))}</span>
-            </div>
-
-            <div className="fz-group-items">
-              {partidas.map(p => {
-                const href = `/finanzas/partida/${p.id}`
-                return (
-                  <Link
-                    key={p.id}
-                    href={href}
-                    className={`fz-leaf${pathname === href ? ' active' : ''}`}
-                  >
-                    <span className="fz-leaf-name">{p.nombre || <em>Sin nombre</em>}</span>
-                    <span className="fz-leaf-amt num">{money(montoPartida(p))}</span>
-                  </Link>
-                )
-              })}
-
+        {SECCIONES.map(sec => {
+          const partidas = corte[sec.id]
+          const abierta = abiertas[sec.id]
+          return (
+            <div className="fz-group" key={sec.id}>
               <button
-                className="fz-add"
-                onClick={() => {
-                  const p = agregarPartida(sec.id)
-                  router.push(`/finanzas/partida/${p.id}`)
-                }}
+                className={`fz-group-head fz-lado-${sec.lado}${abierta ? ' open' : ''}`}
+                onClick={() => setAbiertas(a => ({ ...a, [sec.id]: !a[sec.id] }))}
+                aria-expanded={abierta}
               >
-                + Agregar partida
+                <svg className="fz-group-chevron" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                </svg>
+                <span className="fz-group-title">{sec.titulo}</span>
+                <span className="fz-group-total num">{money(totalSeccion(partidas))}</span>
               </button>
+
+              {abierta && (
+                <div className="fz-group-items">
+                  {partidas.map(p => {
+                    const href = `/finanzas/partida/${p.id}`
+                    return (
+                      <Link
+                        key={p.id}
+                        href={href}
+                        className={`fz-leaf${pathname === href ? ' active' : ''}`}
+                      >
+                        <span className="fz-leaf-name">{p.nombre || <em>Sin nombre</em>}</span>
+                        <span className="fz-leaf-amt num">{money(montoPartida(p))}</span>
+                      </Link>
+                    )
+                  })}
+
+                  <button
+                    className="fz-add"
+                    onClick={() => {
+                      const p = agregarPartida(sec.id)
+                      router.push(`/finanzas/partida/${p.id}`)
+                    }}
+                  >
+                    + Agregar partida
+                  </button>
+                </div>
+              )}
             </div>
-          </div>
-        )
-      })}
+          )
+        })}
       </div>
 
       <Link href="/finanzas/comparacion" className={`fz-nav-item${pathname === '/finanzas/comparacion' ? ' active' : ''}`}>
@@ -191,7 +216,6 @@ function Arbol() {
           </Link>
         ))}
       </div>
-
     </nav>
   )
 }

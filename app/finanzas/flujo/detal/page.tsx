@@ -230,7 +230,7 @@ function Cierre({ cierre, libro, onTasa, onEditar, onEditarLinea, onBorrar }: {
       </div>
 
       {faltante && (
-        <div className="bal-empty-row" style={{ color: '#B4453A' }}>
+        <div className="bal-empty-row bal-v-salida">
           El total no incluye los montos en bolívares porque falta la tasa del día.
         </div>
       )}

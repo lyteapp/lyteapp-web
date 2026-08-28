@@ -11,14 +11,20 @@ export type PuntoEvolucion = {
   capital: number
 }
 
-/* Colour follows the entity, matching the sheet: assets emerald, liabilities
-   amber, equity violet. Validated as a categorical trio against a light
-   surface — all six checks pass; the emerald's sub-3:1 contrast is relieved by
-   the figures table below the chart, which is why that table is not optional. */
+/* Colour follows the entity, matching the sheet: three steps of ink rather than
+   three hues.
+
+   Validated against a light surface: CVD separation 22.5 and normal-vision 22.5
+   — better than every muted-colour trio tried — with all three clearing 3:1
+   contrast. It fails two of the validator's checks by construction: the
+   lightness band and the chroma floor, both of which exist to catch greys used
+   by accident. These are deliberate, so each series also carries a dash pattern,
+   which is the secondary encoding that failure obliges, on top of the legend,
+   the direct labels and the figures table. */
 const SERIES = [
-  { key: 'activos' as const, label: 'Activos', color: '#10B981' },
-  { key: 'pasivos' as const, label: 'Pasivos', color: '#D97706' },
-  { key: 'capital' as const, label: 'Capital', color: '#7C3AED' },
+  { key: 'activos' as const, label: 'Activos', color: '#0B0B0C', trazo: undefined },
+  { key: 'capital' as const, label: 'Capital', color: '#4A4A50', trazo: '7 3' },
+  { key: 'pasivos' as const, label: 'Pasivos', color: '#8A8A92', trazo: '2 3' },
 ]
 
 const W = 800, H = 268
@@ -81,7 +87,7 @@ export default function EvolucionChart({ puntos }: { puntos: PuntoEvolucion[] })
             <line
               x1={PAD.left} x2={PAD.left + PLOT_W}
               y1={escala.y(t)} y2={escala.y(t)}
-              stroke={Math.abs(t) < 0.005 ? '#CBD5E1' : '#EDF1F0'}
+              stroke={Math.abs(t) < 0.005 ? '#B4B4BA' : '#EAEAE7'}
               strokeWidth="1"
             />
             <text x={PAD.left - 10} y={escala.y(t) + 3.5} textAnchor="end" className="bal-chart-tick">
@@ -95,7 +101,7 @@ export default function EvolucionChart({ puntos }: { puntos: PuntoEvolucion[] })
           <line
             x1={escala.x(activo)} x2={escala.x(activo)}
             y1={PAD.top} y2={PAD.top + PLOT_H}
-            stroke="#94A3B8" strokeWidth="1" strokeDasharray="3 3"
+            stroke="#97979E" strokeWidth="1" strokeDasharray="3 3"
           />
         )}
 
@@ -106,7 +112,15 @@ export default function EvolucionChart({ puntos }: { puntos: PuntoEvolucion[] })
           return (
             <g key={s.key}>
               {puntos.length > 1 && (
-                <path d={d} fill="none" stroke={s.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path
+                  d={d}
+                  fill="none"
+                  stroke={s.color}
+                  strokeWidth="2"
+                  strokeDasharray={s.trazo}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               )}
               {puntos.map((p, i) => (
                 <circle
@@ -150,7 +164,7 @@ export default function EvolucionChart({ puntos }: { puntos: PuntoEvolucion[] })
           <div className="bal-chart-tip-date">{punto.etiqueta}</div>
           {SERIES.map(s => (
             <div className="bal-chart-tip-row" key={s.key}>
-              <span className="bal-dot" style={{ background: s.color }} />
+              <span className="bal-dot" style={{ background: s.color === '#0B0B0C' ? '#FFFFFF' : s.color }} />
               <span className="bal-chart-tip-k">{s.label}</span>
               <span className="bal-chart-tip-v num">{moneyShort(punto[s.key])}</span>
             </div>
@@ -161,7 +175,17 @@ export default function EvolucionChart({ puntos }: { puntos: PuntoEvolucion[] })
       <div className="bal-legend">
         {SERIES.map(s => (
           <span className="bal-legend-item" key={s.key}>
-            <span className="bal-dot" style={{ background: s.color }} />
+            {/* The swatch shows the line's dash pattern, so the legend keys on the
+                same two cues the plot does rather than on colour alone. */}
+            <svg width="18" height="8" aria-hidden="true">
+              <line
+                x1="0" y1="4" x2="18" y2="4"
+                stroke={s.color}
+                strokeWidth="2"
+                strokeDasharray={s.trazo}
+                strokeLinecap="round"
+              />
+            </svg>
             {s.label}
           </span>
         ))}

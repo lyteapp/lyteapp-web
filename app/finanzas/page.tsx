@@ -146,15 +146,15 @@ export default function BalanceGeneral() {
         <div className="bal-cards">
           <div className="bal-card">
             <div className="bal-card-k"><span className="bal-dot bal-dot-activo" /><span className="bal-eyebrow">Total activos</span></div>
-            <div className="bal-card-v num">{moneyShort(t.activos)}</div>
+            <div className="bal-card-v bal-card-v-activo num">{moneyShort(t.activos)}</div>
           </div>
           <div className="bal-card">
             <div className="bal-card-k"><span className="bal-dot bal-dot-pasivo" /><span className="bal-eyebrow">Total pasivos</span></div>
-            <div className="bal-card-v num">{moneyShort(t.pasivos)}</div>
+            <div className="bal-card-v bal-card-v-pasivo num">{moneyShort(t.pasivos)}</div>
           </div>
           <div className="bal-card">
             <div className="bal-card-k"><span className="bal-dot bal-dot-capital" /><span className="bal-eyebrow">Capital</span></div>
-            <div className="bal-card-v num">{moneyShort(t.capital)}</div>
+            <div className="bal-card-v bal-card-v-capital num">{moneyShort(t.capital)}</div>
           </div>
         </div>
 

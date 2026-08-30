@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { ADMIN_SESSION_COOKIE, isAllowedAdminEmail, getEmailFromBearer, verifyAdminSessionToken } from '../../../lib/adminAuth'
+import { ADMIN_SESSION_COOKIE, isAllowedAdminEmail, getEmailFromBearer, verifyAdminSessionToken, errorMessage } from '../../../lib/adminAuth'
 
 export async function GET(req: NextRequest) {
   try {
@@ -82,6 +82,6 @@ export async function GET(req: NextRequest) {
       stores: storesWithActivity,
     })
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+    return NextResponse.json({ error: errorMessage(err) }, { status: 500 })
   }
 }

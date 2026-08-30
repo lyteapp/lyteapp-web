@@ -4,7 +4,7 @@ import { generateRegistrationOptions } from '@simplewebauthn/server'
 import {
   RP_NAME, RP_ID, ADMIN_CHALLENGE_COOKIE,
   isAllowedAdminEmail, getEmailFromBearer, verifyAdminSessionToken,
-  createChallengeToken, ADMIN_SESSION_COOKIE,
+  createChallengeToken, ADMIN_SESSION_COOKIE, errorMessage,
 } from '../../../../lib/adminAuth'
 
 export async function POST(req: NextRequest) {
@@ -52,6 +52,6 @@ export async function POST(req: NextRequest) {
     })
     return res
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+    return NextResponse.json({ error: errorMessage(err) }, { status: 500 })
   }
 }

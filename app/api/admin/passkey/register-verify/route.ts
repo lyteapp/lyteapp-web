@@ -4,7 +4,7 @@ import { verifyRegistrationResponse } from '@simplewebauthn/server'
 import { isoBase64URL } from '@simplewebauthn/server/helpers'
 import {
   RP_ID, RP_ORIGINS, ADMIN_CHALLENGE_COOKIE,
-  isAllowedAdminEmail, verifyChallengeToken,
+  isAllowedAdminEmail, verifyChallengeToken, errorMessage,
 } from '../../../../lib/adminAuth'
 
 export async function POST(req: NextRequest) {
@@ -47,6 +47,6 @@ export async function POST(req: NextRequest) {
     res.cookies.delete(ADMIN_CHALLENGE_COOKIE)
     return res
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+    return NextResponse.json({ error: errorMessage(err) }, { status: 500 })
   }
 }

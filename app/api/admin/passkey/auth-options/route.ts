@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { generateAuthenticationOptions } from '@simplewebauthn/server'
-import { RP_ID, ADMIN_CHALLENGE_COOKIE, createChallengeToken } from '../../../../lib/adminAuth'
+import { RP_ID, ADMIN_CHALLENGE_COOKIE, createChallengeToken, errorMessage } from '../../../../lib/adminAuth'
 
 export async function POST() {
   try {
@@ -18,6 +18,6 @@ export async function POST() {
     })
     return res
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+    return NextResponse.json({ error: errorMessage(err) }, { status: 500 })
   }
 }

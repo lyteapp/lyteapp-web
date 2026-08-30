@@ -12,6 +12,12 @@ export const ADMIN_SESSION_COOKIE = 'lyte_admin_session'
 export const ADMIN_CHALLENGE_COOKIE = 'lyte_admin_challenge'
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
 
+export function errorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message
+  if (err && typeof err === 'object' && 'message' in err) return String((err as { message: unknown }).message)
+  return String(err)
+}
+
 export function isAllowedAdminEmail(email: string): boolean {
   const allowlist = (process.env.ADMIN_EMAILS ?? '')
     .split(',').map(e => e.trim().toLowerCase()).filter(Boolean)

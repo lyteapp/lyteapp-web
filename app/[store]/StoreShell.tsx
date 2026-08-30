@@ -389,11 +389,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
   useEffect(() => {
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !(window.navigator as Navigator & { standalone?: boolean }).standalone
     setIsIos(ios)
-    if (window.matchMedia('(display-mode: standalone)').matches) { setInstalled(true); return }
+    // `display-mode` reflects the TOP-level browsing context per spec, so inside the
+    // dashboard's preview iframe this can report "standalone" just because the dashboard
+    // itself is installed/standalone — not because this storefront is. Skip it there.
+    if (!isDashboardPreview && window.matchMedia('(display-mode: standalone)').matches) { setInstalled(true); return }
     const handler = (e: Event) => { e.preventDefault(); setInstallPrompt(e as Event & { prompt(): void }) }
     window.addEventListener('beforeinstallprompt', handler)
     return () => window.removeEventListener('beforeinstallprompt', handler)
-  }, [])
+  }, [isDashboardPreview])
 
   async function handleInstall() {
     if (isIos) { setShowIosHint(h => !h); return }

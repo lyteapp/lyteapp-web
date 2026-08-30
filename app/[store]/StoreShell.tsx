@@ -476,6 +476,25 @@ export default function StoreShell({ store, products, categories = [], initialBc
     setMatchedZone(hits[0] ?? null)
   }, [customerLat, customerLng, deliveryZones])
 
+  // ── Scroll-spy: highlight whichever category pill matches the section in view ──
+  useEffect(() => {
+    if (view !== 'catalog') return
+    const sections = Array.from(document.querySelectorAll<HTMLElement>('.sf-cat-section[id]'))
+    if (sections.length === 0) return
+    const observer = new IntersectionObserver(
+      entries => {
+        const visible = entries.filter(e => e.isIntersecting)
+        if (visible.length === 0) return
+        const topmost = visible.reduce((a, b) => (a.boundingClientRect.top < b.boundingClientRect.top ? a : b))
+        const id = topmost.target.id
+        setActiveCatId(id === 'cat-other' ? '__other' : id.replace(/^cat-/, ''))
+      },
+      { rootMargin: '-56px 0px -70% 0px', threshold: 0 }
+    )
+    sections.forEach(el => observer.observe(el))
+    return () => observer.disconnect()
+  }, [view])
+
   const cartItems  = Object.values(cart).filter(i => i.quantity > 0)
   const cartCount  = cartItems.reduce((s, i) => s + i.quantity, 0)
   const cartTotal  = cartItems.reduce((s, i) => s + (i.price + i.extraPrice) * i.quantity, 0)

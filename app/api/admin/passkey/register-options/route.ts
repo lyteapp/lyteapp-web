@@ -17,8 +17,11 @@ export async function POST(req: NextRequest) {
     const email = (bearer && await getEmailFromBearer(bearer))
       || (cookieSession && verifyAdminSessionToken(cookieSession))
       || null
-    if (!email || !isAllowedAdminEmail(email)) {
+    if (!email) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+    if (!isAllowedAdminEmail(email)) {
+      return NextResponse.json({ error: 'Ese correo no tiene acceso al panel', email }, { status: 403 })
     }
 
     const supabaseAdmin = createClient(

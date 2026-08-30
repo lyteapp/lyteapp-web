@@ -59,7 +59,10 @@ export default function PortalPage() {
         headers: { Authorization: `Bearer ${session.access_token}` },
       })
       const optionsJson = await optionsRes.json()
-      if (!optionsRes.ok) throw new Error(optionsJson.error ?? 'No autorizado')
+      if (!optionsRes.ok) {
+        const suffix = optionsJson.email ? ` (sesion actual: ${optionsJson.email})` : ''
+        throw new Error((optionsJson.error ?? 'No autorizado') + suffix)
+      }
 
       const regResponse = await startRegistration({ optionsJSON: optionsJson.options })
 

@@ -554,6 +554,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     ...(cfgPriceFontFamily ? { '--sf-price-font': cfgPriceFontFamily } : {}),
     ...(cfg.cardBg      ? { '--sf-card-bg':     cfg.cardBg      } : {}),
     ...(cfg.accentColor ? { '--sf-accent-color': cfg.accentColor } : {}),
+    ...(cfg.pageBg      ? { '--sf-page-bg':      cfg.pageBg      } : {}),
   } as React.CSSProperties
 
   function renderContentBlocks(afterId: string) {
@@ -2549,13 +2550,13 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 <>
                   {catGroupsFiltered.map(({ cat, items }) => (
                     <div key={cat.id} id={`cat-${cat.id}`} className={`sf-cat-section${cfgCategoryShapes[cat.id] ? ` sf-pshape-${cfgCategoryShapes[cat.id]}` : ''}`}>
-                      <h2 className="sf-section-title sf-cat-section-title">{cat.name}</h2>
+                      <h2 className={`sf-section-title sf-cat-section-title${cfgStickyCatNav ? ' sf-cat-section-title-sticky' : ''}`}>{cat.name}</h2>
                       <div className="sf-cat-list">{items.map(renderCatRow)}</div>
                     </div>
                   ))}
                   {uncatGroupFiltered.length > 0 && (
                     <div className="sf-cat-section">
-                      <h2 className="sf-section-title sf-cat-section-title">{t('store.ourProducts')}</h2>
+                      <h2 className={`sf-section-title sf-cat-section-title${cfgStickyCatNav ? ' sf-cat-section-title-sticky' : ''}`}>{t('store.ourProducts')}</h2>
                       <div className="sf-cat-list">{uncatGroupFiltered.map(renderCatRow)}</div>
                     </div>
                   )}

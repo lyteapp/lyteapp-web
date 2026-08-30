@@ -34,6 +34,24 @@ export default function PortalPage() {
     return () => { if (tag && prevHref) tag.setAttribute('href', prevHref) }
   }, [])
 
+  // iOS uses apple-touch-icon (not the manifest icons) as the actual
+  // home-screen icon image — swap it to the purple padlock while here.
+  useEffect(() => {
+    let tag = document.querySelector('link[rel="apple-touch-icon"]')
+    const existed = !!tag
+    const prevHref = tag?.getAttribute('href') ?? null
+    if (!tag) {
+      tag = document.createElement('link')
+      tag.setAttribute('rel', 'apple-touch-icon')
+      document.head.appendChild(tag)
+    }
+    tag.setAttribute('href', '/portal-icon-180.png')
+    return () => {
+      if (existed && prevHref) tag!.setAttribute('href', prevHref)
+      else if (!existed) tag!.remove()
+    }
+  }, [])
+
   async function handleFaceIdLogin() {
     setBusy(true); setMsg('')
     try {

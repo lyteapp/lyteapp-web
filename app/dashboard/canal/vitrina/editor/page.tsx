@@ -51,81 +51,6 @@ const PAGE_FONTS = [
   { id: 'cormorant',    name: 'Lujo'       },
 ]
 
-const TEMPLATES = [
-  {
-    id: 'clasico',
-    name: 'Clasico',
-    desc: 'Limpio y profesional',
-    preview: (
-      <div style={{ background: '#F8F7F4', borderRadius: 6, padding: 6, height: '100%' }}>
-        <div style={{ background: '#fff', borderRadius: 4, padding: 6, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-          <div style={{ width: 14, height: 14, borderRadius: 3, background: '#7C3AED' }} />
-          <div style={{ height: 4, background: '#E2E8F0', borderRadius: 2, flex: 1 }} />
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>
-          {[0,1,2,3].map(i => (
-            <div key={i} style={{ background: '#fff', borderRadius: 4, overflow: 'hidden' }}>
-              <div style={{ height: 20, background: '#F1F5F9' }} />
-              <div style={{ padding: '3px 4px' }}>
-                <div style={{ height: 3, background: '#E2E8F0', borderRadius: 2, marginBottom: 2 }} />
-                <div style={{ height: 3, background: '#F1F5F9', borderRadius: 2, width: '60%' }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    ),
-  },
-  {
-    id: 'oscuro',
-    name: 'Oscuro',
-    desc: 'Elegante y moderno',
-    preview: (
-      <div style={{ background: '#0F172A', borderRadius: 6, padding: 6, height: '100%' }}>
-        <div style={{ background: '#1E293B', borderRadius: 4, padding: 6, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-          <div style={{ width: 14, height: 14, borderRadius: 3, background: '#7C3AED' }} />
-          <div style={{ height: 4, background: '#334155', borderRadius: 2, flex: 1 }} />
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>
-          {[0,1,2,3].map(i => (
-            <div key={i} style={{ background: '#1E293B', borderRadius: 4, overflow: 'hidden' }}>
-              <div style={{ height: 20, background: '#334155' }} />
-              <div style={{ padding: '3px 4px' }}>
-                <div style={{ height: 3, background: '#475569', borderRadius: 2, marginBottom: 2 }} />
-                <div style={{ height: 3, background: '#334155', borderRadius: 2, width: '60%' }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    ),
-  },
-  {
-    id: 'minimal',
-    name: 'Minimal',
-    desc: 'Simple y rapido',
-    preview: (
-      <div style={{ background: '#F8FAFC', borderRadius: 6, padding: 6, height: '100%' }}>
-        <div style={{ background: '#fff', borderRadius: 4, padding: 6, marginBottom: 4, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 4 }}>
-          <div style={{ width: 14, height: 14, borderRadius: 3, background: '#7C3AED' }} />
-          <div style={{ height: 4, background: '#E2E8F0', borderRadius: 2, flex: 1 }} />
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {[0,1,2].map(i => (
-            <div key={i} style={{ background: '#fff', borderRadius: 4, padding: 5, display: 'flex', alignItems: 'center', gap: 4, boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
-              <div style={{ width: 16, height: 16, background: '#F1F5F9', borderRadius: 3, flexShrink: 0 }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ height: 3, background: '#E2E8F0', borderRadius: 2, marginBottom: 2, width: '70%' }} />
-                <div style={{ height: 3, background: '#F1F5F9', borderRadius: 2, width: '40%' }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    ),
-  },
-]
-
 const PHOTO_SHAPES_CAT = [
   { id: 'square', name: 'Redondeada' },
   { id: 'sharp',  name: 'Recta'      },
@@ -170,7 +95,7 @@ export default function EditorPage() {
   const [newBlockPos,  setNewBlockPos]      = useState('top')
   const [newBlockType, setNewBlockType]     = useState<'text' | 'image' | 'video'>('text')
   const [newBlockContent, setNewBlockContent] = useState('')
-  const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'template' | 'price' | 'categories' | 'brand' | 'blocks' | null>(null)
+  const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'price' | 'categories' | 'brand' | 'blocks' | null>(null)
   const [iframeKey, setIframeKey]   = useState(0)
   const [saving, setSaving]         = useState(false)
   const [toolSaved, setToolSaved]   = useState(false)
@@ -391,14 +316,6 @@ export default function EditorPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageBg, cardBg, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, categoryNavStyle, logoShape, logoSizePx])
 
-  // ── Auto-save template (reloads iframe immediately) ───
-  async function handleTemplateSelect(t: string) {
-    setTemplate(t)
-    if (!storeId) return
-    await supabase.from('stores').update({ template: t }).eq('id', storeId)
-    setIframeKey(k => k + 1)
-  }
-
   // ── Auto-save category shape (reloads iframe immediately) ─
   async function handleCategoryShape(catId: string, shape: string | null) {
     const next = { ...categoryShapes }
@@ -565,19 +482,6 @@ export default function EditorPage() {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <rect x="2" y="7" width="9" height="9" rx="2" />
             <circle cx="18" cy="11.5" r="4.5" />
-          </svg>
-        </button>
-
-        {/* Plantilla */}
-        <button
-          className={`ed-tool-btn${activeTool === 'template' ? ' ed-tool-active' : ''}`}
-          title="Plantilla"
-          onClick={() => setActiveTool(p => p === 'template' ? null : 'template')}
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="18" height="5" rx="1" />
-            <rect x="3" y="11" width="8" height="10" rx="1" />
-            <rect x="13" y="11" width="8" height="10" rx="1" />
           </svg>
         </button>
 
@@ -1047,31 +951,6 @@ export default function EditorPage() {
               ))}
             </div>
 
-            <PanelSave />
-          </div>
-        )}
-
-        {/* Panel — Plantilla */}
-        {activeTool === 'template' && (
-          <div className="ed-tool-panel ed-tool-panel-lg">
-            <div className="ed-tp-title">Plantilla</div>
-            <div className="ed-tp-subtitle">Estilo de tu tienda</div>
-            <div className="ed-template-grid">
-              {TEMPLATES.map(t => (
-                <button
-                  key={t.id}
-                  className={`ed-template-card${template === t.id ? ' ed-template-card-active' : ''}`}
-                  onClick={() => handleTemplateSelect(t.id)}
-                >
-                  <div className="ed-template-preview">{t.preview}</div>
-                  <div className="ed-template-foot">
-                    <div className="ed-template-name">{t.name}</div>
-                    <div className="ed-template-desc">{t.desc}</div>
-                  </div>
-                  {template === t.id && <div className="ed-template-check">&#10003;</div>}
-                </button>
-              ))}
-            </div>
             <PanelSave />
           </div>
         )}

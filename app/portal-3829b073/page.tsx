@@ -15,6 +15,10 @@ export default function PortalPage() {
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
 
+  // The manifest/apple-touch-icon links for this route come from
+  // portal-3829b073/layout.tsx (server-rendered), not a client-side swap —
+  // Safari resolves "Add to Home Screen" from what's in the initial HTML
+  // <head>, so changing those tags after mount was too late to matter.
   useEffect(() => {
     const t = setTimeout(() => setSupported(browserSupportsWebAuthn()), 0)
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -22,34 +26,6 @@ export default function PortalPage() {
       setReady(true)
     })
     return () => clearTimeout(t)
-  }, [])
-
-  // The site-wide manifest.json points "Add to Home Screen" at /dashboard —
-  // fine for the main app, wrong here. Swap it to this page's own manifest
-  // while mounted so a shortcut saved from this screen opens back to it.
-  useEffect(() => {
-    const tag = document.querySelector('link[rel="manifest"]')
-    const prevHref = tag?.getAttribute('href') ?? null
-    if (tag) tag.setAttribute('href', '/portal-manifest.json')
-    return () => { if (tag && prevHref) tag.setAttribute('href', prevHref) }
-  }, [])
-
-  // iOS uses apple-touch-icon (not the manifest icons) as the actual
-  // home-screen icon image — swap it to the purple padlock while here.
-  useEffect(() => {
-    let tag = document.querySelector('link[rel="apple-touch-icon"]')
-    const existed = !!tag
-    const prevHref = tag?.getAttribute('href') ?? null
-    if (!tag) {
-      tag = document.createElement('link')
-      tag.setAttribute('rel', 'apple-touch-icon')
-      document.head.appendChild(tag)
-    }
-    tag.setAttribute('href', '/portal-icon-180.png')
-    return () => {
-      if (existed && prevHref) tag!.setAttribute('href', prevHref)
-      else if (!existed) tag!.remove()
-    }
   }, [])
 
   async function handleFaceIdLogin() {

@@ -86,6 +86,7 @@ export default function EditorPage() {
 
   const [categoryNavStyle, setCategoryNavStyle] = useState('pills')
   const [showCatNav, setShowCatNav] = useState(true)
+  const [stickyCatNav, setStickyCatNav] = useState(true)
   const [logoShape,   setLogoShape]   = useState('rounded')
   const [logoSizePx,  setLogoSizePx]  = useState(34)
   const [logoPosition, setLogoPosition] = useState<'left' | 'center' | 'right' | 'none'>('left')
@@ -140,6 +141,7 @@ export default function EditorPage() {
       if (cfg.categoryPhotoShapes) setCategoryShapes(cfg.categoryPhotoShapes as Record<string, string>)
       if (cfg.categoryNavStyle) setCategoryNavStyle(cfg.categoryNavStyle as string)
       if (cfg.showCatNav !== undefined) setShowCatNav(cfg.showCatNav as boolean)
+      if (cfg.stickyCatNav !== undefined) setStickyCatNav(cfg.stickyCatNav as boolean)
       if (cfg.logoShape) setLogoShape(cfg.logoShape as string)
       if ((cfg as Record<string, unknown>).logoSizePx) {
         setLogoSizePx(Number((cfg as Record<string, unknown>).logoSizePx))
@@ -359,7 +361,7 @@ export default function EditorPage() {
       pageBg, cardBg: cardBg || undefined, pageFont, fontSizePx, textAlign,
       photoShape, photoSize,
       priceColor, accentColor, priceFont: priceFont || pageFont, priceSize,
-      categoryNavStyle, showCatNav,
+      categoryNavStyle, showCatNav, stickyCatNav,
       logoShape, logoSizePx, logoPosition, namePosition, showMenuButton,
       headerLayout: undefined,
       contentBlocks: contentBlocks.length > 0 ? contentBlocks : undefined,
@@ -1032,6 +1034,23 @@ export default function EditorPage() {
                 />
                 <div style={{ width: 38, height: 22, borderRadius: 100, background: showCatNav ? '#7C3AED' : '#D1D5DB', transition: 'background 0.2s', cursor: 'pointer', position: 'relative' }}>
                   <div style={{ position: 'absolute', top: 4, left: showCatNav ? 18 : 4, width: 14, height: 14, borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
+                </div>
+              </div>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#F8FAFC', borderRadius: 10, cursor: 'pointer', gap: 12, marginTop: 8 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', lineHeight: 1.2 }}>Anclar al hacer scroll</div>
+                <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 3 }}>La barra queda fija arriba al bajar la pantalla</div>
+              </div>
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <input
+                  type="checkbox"
+                  checked={stickyCatNav}
+                  onChange={e => setStickyCatNav(e.target.checked)}
+                  style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
+                />
+                <div style={{ width: 38, height: 22, borderRadius: 100, background: stickyCatNav ? '#7C3AED' : '#D1D5DB', transition: 'background 0.2s', cursor: 'pointer', position: 'relative' }}>
+                  <div style={{ position: 'absolute', top: 4, left: stickyCatNav ? 18 : 4, width: 14, height: 14, borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
                 </div>
               </div>
             </label>

@@ -175,6 +175,7 @@ html, body { overflow-x: hidden; }
   -webkit-overflow-scrolling: touch;
 }
 .sf-cat-nav::-webkit-scrollbar { display: none; }
+.sf-cat-nav-nosticky { position: static; }
 .sf-cat-nav-inner { display: flex; gap: 2px; }
 .sf-cat-btn {
   flex-shrink: 0; white-space: nowrap; border: none; cursor: pointer;

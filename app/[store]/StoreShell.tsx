@@ -83,6 +83,7 @@ type TemplateConfig = {
   variantShape?: 'pill' | 'rounded' | 'square'
   extraShape?: 'rounded' | 'pill' | 'square'
   showCatNav?: boolean
+  stickyCatNav?: boolean
   showWhatsapp?: boolean
   showInstagram?: boolean
   showMenuButton?: boolean
@@ -530,6 +531,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const cfgPriceSize       = cfg.priceSize ?? 'medium'
   const cfgCategoryShapes  = cfg.categoryPhotoShapes ?? {}
   const cfgCatNavStyle     = cfg.categoryNavStyle ?? 'pills'
+  const cfgStickyCatNav    = cfg.stickyCatNav !== false
   const cfgVariantShape    = cfg.variantShape ?? 'pill'
   const cfgExtraShape      = cfg.extraShape ?? 'rounded'
   const cfgLogoShape   = cfg.logoShape ?? 'rounded'
@@ -2427,7 +2429,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       )}
 
       {hasCats && tpl !== 'catalogo' && cfg.showCatNav !== false && (
-        <nav className={`sf-cat-nav sf-cat-nav-${cfgCatNavStyle}`}>
+        <nav className={`sf-cat-nav sf-cat-nav-${cfgCatNavStyle}${cfgStickyCatNav ? '' : ' sf-cat-nav-nosticky'}`}>
           {catGroups.map(({ cat }) => (
             <button
               key={cat.id}

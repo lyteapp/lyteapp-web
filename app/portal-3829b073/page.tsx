@@ -41,7 +41,7 @@ export default function PortalPage() {
       const result = await verifyRes.json()
       if (!verifyRes.ok || !result.verified) throw new Error(result.error ?? 'No se pudo verificar')
 
-      router.push('/admin')
+      router.push('/dash-306f6b10')
     } catch (err) {
       setMsg(err instanceof Error ? err.message : 'No se pudo iniciar sesion con Face ID')
     }

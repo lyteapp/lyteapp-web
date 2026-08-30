@@ -1,0 +1,5 @@
+{
+  "name": "lyteapp-web",
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "postStartCommand": "bash .devcontainer/notify-entry.sh || true"
+}

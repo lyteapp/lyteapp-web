@@ -24,6 +24,16 @@ export default function PortalPage() {
     return () => clearTimeout(t)
   }, [])
 
+  // The site-wide manifest.json points "Add to Home Screen" at /dashboard —
+  // fine for the main app, wrong here. Swap it to this page's own manifest
+  // while mounted so a shortcut saved from this screen opens back to it.
+  useEffect(() => {
+    const tag = document.querySelector('link[rel="manifest"]')
+    const prevHref = tag?.getAttribute('href') ?? null
+    if (tag) tag.setAttribute('href', '/portal-manifest.json')
+    return () => { if (tag && prevHref) tag.setAttribute('href', prevHref) }
+  }, [])
+
   async function handleFaceIdLogin() {
     setBusy(true); setMsg('')
     try {

@@ -1,0 +1,44 @@
+.tc-page {
+  min-height: 100vh;
+  background: #FAFAF7;
+  padding: 48px 24px 80px;
+  font-family: var(--font-geist-sans), sans-serif;
+}
+.tc-card {
+  max-width: 720px;
+  margin: 0 auto;
+  background: white;
+  border: 1px solid rgba(15,23,42,0.08);
+  border-radius: 24px;
+  padding: 48px;
+  color: #334155;
+  line-height: 1.7;
+}
+.tc-logo { display: inline-flex; text-decoration: none; margin-bottom: 32px; }
+.tc-logo-text { font-size: 20px; font-weight: 700; color: #0F172A; letter-spacing: -0.03em; }
+.tc-logo-text span { color: #7C3AED; }
+
+.tc-title { font-size: 28px; font-weight: 700; color: #0F172A; letter-spacing: -0.03em; margin-bottom: 4px; }
+.tc-updated { font-size: 13px; color: #94A3B8; margin-bottom: 32px; }
+
+.tc-card h2 {
+  font-size: 17px; font-weight: 700; color: #0F172A;
+  letter-spacing: -0.01em;
+  margin: 32px 0 10px;
+}
+.tc-card p { font-size: 14.5px; margin-bottom: 14px; }
+.tc-card ul { margin: 0 0 14px; padding-left: 22px; }
+.tc-card li { font-size: 14.5px; margin-bottom: 8px; }
+.tc-card a { color: #7C3AED; text-decoration: none; font-weight: 500; }
+.tc-card a:hover { text-decoration: underline; }
+
+.tc-back {
+  display: inline-block; margin-top: 24px;
+  font-size: 13.5px; font-weight: 600; color: #7C3AED; text-decoration: none;
+}
+.tc-back:hover { text-decoration: underline; }
+
+@media (max-width: 640px) {
+  .tc-card { padding: 32px 24px; }
+  .tc-title { font-size: 24px; }
+}

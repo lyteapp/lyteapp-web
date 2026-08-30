@@ -15,6 +15,8 @@ export default function Registro() {
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
+  const [termsAccepted, setTermsAccepted] = useState(false)
+  const [termsAcceptedAt, setTermsAcceptedAt] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [resending, setResending] = useState(false)
@@ -27,7 +29,9 @@ export default function Registro() {
   async function sendCode(e: { preventDefault(): void }) {
     e.preventDefault()
     if (!email.trim()) return
+    if (!termsAccepted) { setError('Debes aceptar los términos y condiciones para continuar.'); return }
     setError('')
+    setTermsAcceptedAt(new Date().toISOString())
     setLoading(true)
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
@@ -93,7 +97,10 @@ export default function Registro() {
     if (password !== passwordConfirm) { setError('Las contraseñas no coinciden.'); return }
     setError('')
     setLoading(true)
-    const { error } = await supabase.auth.updateUser({ password })
+    const { error } = await supabase.auth.updateUser({
+      password,
+      data: { terms_accepted_at: termsAcceptedAt ?? new Date().toISOString(), terms_version: 'v1' },
+    })
     if (error) {
       setError(error.message)
       setLoading(false)
@@ -129,13 +136,22 @@ export default function Registro() {
                 />
               </div>
 
+              <label className="reg-terms-check">
+                <input
+                  type="checkbox"
+                  checked={termsAccepted}
+                  onChange={(e) => setTermsAccepted(e.target.checked)}
+                />
+                <span>
+                  He leído y acepto los <Link href="/terminos" target="_blank">Términos y Condiciones</Link> de LyteApp.
+                </span>
+              </label>
+
               {error && <div className="reg-error">{error}</div>}
 
-              <button type="submit" className="btn-reg" disabled={loading}>
+              <button type="submit" className="btn-reg" disabled={loading || !termsAccepted}>
                 <span>{loading ? 'Enviando código...' : 'Continuar →'}</span>
               </button>
-
-              <p className="reg-terms">Al continuar aceptas nuestros términos y política de privacidad.</p>
             </form>
 
             <p className="reg-login">¿Ya tienes cuenta? <Link href="/login">Ingresa aquí →</Link></p>

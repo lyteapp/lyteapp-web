@@ -126,6 +126,28 @@
   line-height: 1.5;
 }
 
+.reg-terms-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-bottom: 16px;
+  cursor: pointer;
+}
+.reg-terms-check input[type="checkbox"] {
+  margin-top: 2px;
+  width: 16px; height: 16px;
+  flex-shrink: 0;
+  accent-color: #7C3AED;
+  cursor: pointer;
+}
+.reg-terms-check span {
+  font-size: 13px;
+  color: #64748B;
+  line-height: 1.5;
+}
+.reg-terms-check a { color: #7C3AED; font-weight: 600; text-decoration: none; }
+.reg-terms-check a:hover { text-decoration: underline; }
+
 .reg-login {
   text-align: center;
   font-size: 13px;

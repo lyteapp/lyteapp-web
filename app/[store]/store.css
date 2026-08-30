@@ -1,5 +1,8 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { overflow-x: hidden; }
+/* overflow-x: hidden here (instead of clip) breaks position:sticky in Safari/iOS —
+   it implicitly makes overflow-y: auto too, turning body into its own scroll
+   container that sticky descendants (.sf-cat-nav, .sf-nav) can't stick against. */
+html, body { overflow-x: clip; }
 
 /* Installed PWA uses black-translucent (so the home page can blend with
    its own background), which forces white status bar icons everywhere —

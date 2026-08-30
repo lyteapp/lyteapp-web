@@ -1,26 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { ADMIN_SESSION_COOKIE, isAllowedAdminEmail, getEmailFromBearer, verifyAdminSessionToken } from '../../../lib/adminAuth'
 
 export async function GET(req: NextRequest) {
   try {
-    const token = (req.headers.get('authorization') ?? '').replace('Bearer ', '').trim()
-    if (!token) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const bearer = (req.headers.get('authorization') ?? '').replace('Bearer ', '').trim()
+    const cookieSession = req.cookies.get(ADMIN_SESSION_COOKIE)?.value ?? ''
 
-    const supabaseAuth = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-      { auth: { persistSession: false } }
-    )
-    const { data: { user }, error: userErr } = await supabaseAuth.auth.getUser(token)
-    if (userErr || !user?.email) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    }
+    let email: string | null = null
+    if (bearer) email = await getEmailFromBearer(bearer)
+    if (!email && cookieSession) email = verifyAdminSessionToken(cookieSession)
 
-    const allowlist = (process.env.ADMIN_EMAILS ?? '')
-      .split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
-    if (!allowlist.includes(user.email.toLowerCase())) {
+    if (!email) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+    if (!isAllowedAdminEmail(email)) {
       return NextResponse.json(
-        { error: 'No tienes acceso a este panel', email: user.email },
+        { error: 'No tienes acceso a este panel', email },
         { status: 403 }
       )
     }

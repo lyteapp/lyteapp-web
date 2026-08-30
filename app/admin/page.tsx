@@ -34,14 +34,16 @@ export default function AdminPage() {
   const [stats, setStats] = useState<Stats | null>(null)
 
   useEffect(() => {
+    // Always attempt the request — even without a Supabase session, the
+    // browser may already carry a valid Face ID (passkey) session cookie.
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) { setStatus('no-session'); return }
       try {
         const res = await fetch('/api/admin/stats', {
-          headers: { Authorization: `Bearer ${session.access_token}` },
+          headers: session ? { Authorization: `Bearer ${session.access_token}` } : {},
         })
         const json = await res.json()
-        if (res.status === 403) { setSessionEmail(json.email ?? session.user.email ?? ''); setStatus('forbidden'); return }
+        if (res.status === 401) { setStatus('no-session'); return }
+        if (res.status === 403) { setSessionEmail(json.email ?? session?.user.email ?? ''); setStatus('forbidden'); return }
         if (!res.ok) { setErrorMsg(json.error ?? 'Error desconocido'); setStatus('error'); return }
         setStats(json)
         setStatus('ready')

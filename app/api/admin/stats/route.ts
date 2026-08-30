@@ -19,7 +19,10 @@ export async function GET(req: NextRequest) {
     const allowlist = (process.env.ADMIN_EMAILS ?? '')
       .split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
     if (!allowlist.includes(user.email.toLowerCase())) {
-      return NextResponse.json({ error: 'No tienes acceso a este panel' }, { status: 403 })
+      return NextResponse.json(
+        { error: 'No tienes acceso a este panel', email: user.email },
+        { status: 403 }
+      )
     }
 
     // Service role from here on — this bypasses RLS on purpose, gated by the

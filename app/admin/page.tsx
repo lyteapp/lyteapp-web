@@ -30,6 +30,7 @@ function fmtDate(iso: string | null) {
 export default function AdminPage() {
   const [status, setStatus] = useState<'loading' | 'no-session' | 'forbidden' | 'error' | 'ready'>('loading')
   const [errorMsg, setErrorMsg] = useState('')
+  const [sessionEmail, setSessionEmail] = useState('')
   const [stats, setStats] = useState<Stats | null>(null)
 
   useEffect(() => {
@@ -40,7 +41,7 @@ export default function AdminPage() {
           headers: { Authorization: `Bearer ${session.access_token}` },
         })
         const json = await res.json()
-        if (res.status === 403) { setStatus('forbidden'); return }
+        if (res.status === 403) { setSessionEmail(json.email ?? session.user.email ?? ''); setStatus('forbidden'); return }
         if (!res.ok) { setErrorMsg(json.error ?? 'Error desconocido'); setStatus('error'); return }
         setStats(json)
         setStatus('ready')
@@ -63,7 +64,12 @@ export default function AdminPage() {
   }
 
   if (status === 'forbidden') {
-    return <div className="adm-center">No tienes acceso a este panel.</div>
+    return (
+      <div className="adm-center">
+        <p>No tienes acceso a este panel.</p>
+        <p style={{ fontSize: 13, color: '#94A3B8' }}>Sesion actual: {sessionEmail || 'desconocido'}</p>
+      </div>
+    )
   }
 
   if (status === 'error') {

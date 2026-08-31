@@ -268,13 +268,7 @@ html, body { overflow-x: clip; }
 .sf-grid-horizontal::-webkit-scrollbar { display: none; }
 .sf-grid-horizontal .sf-card {
   flex: 0 0 46%; min-width: 120px; scroll-snap-align: start;
-  /* opacity only — filter:blur() on this element broke Safari's clip of the
-     nested circular photo shape (border-radius:50% + overflow:visible),
-     showing its square corners instead of a clean circle. */
-  opacity: 0.6; transition: opacity 0.25s ease;
-  will-change: opacity;
 }
-.sf-grid-horizontal .sf-card.sf-carousel-focused { opacity: 1; }
 
 /* Breaks out of .sf-section-inner's padding/max-width to reach the true
    viewport edges, regardless of how much side padding the page has at any

@@ -277,20 +277,25 @@ html, body { overflow-x: clip; }
 .sf-grid-horizontal .sf-card.sf-carousel-focused { opacity: 1; }
 
 .sf-hcarousel-wrap { position: relative; }
+/* Overlaid on the leading card's own image square — same width/aspect-ratio
+   as .sf-grid-horizontal .sf-card (60%, aspect-ratio 1) so it sits centered
+   on that image specifically, not the card's name/price area below it. */
 .sf-hcarousel-hint {
-  position: absolute; bottom: 16px; right: 18px;
-  display: flex; align-items: center; gap: 5px;
-  background: rgba(15,23,42,0.78); color: white;
-  font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
-  padding: 6px 12px 6px 10px; border-radius: 100px;
+  position: absolute; left: 0; top: 0;
+  width: 60%; aspect-ratio: 1;
+  display: flex; align-items: center; justify-content: center;
   pointer-events: none; z-index: 5;
-  animation: sf-hcarousel-nudge 1.3s ease-in-out infinite, sf-hcarousel-fadeout 0.4s ease 3.5s forwards;
+  animation: sf-hcarousel-fadeout 0.4s ease 3.5s forwards;
 }
-.sf-hcarousel-hint svg { animation: sf-hcarousel-nudge 1.3s ease-in-out infinite; }
+.sf-hcarousel-hint-finger {
+  font-size: 34px; line-height: 1;
+  filter: drop-shadow(0 3px 8px rgba(0,0,0,0.4));
+  animation: sf-hcarousel-swipe 1.4s ease-in-out infinite;
+}
 .sf-hcarousel-hint-hidden { animation: sf-hcarousel-fadeout 0.3s ease forwards; }
-@keyframes sf-hcarousel-nudge {
-  0%, 100% { transform: translateX(0); }
-  50%      { transform: translateX(-5px); }
+@keyframes sf-hcarousel-swipe {
+  0%, 100% { transform: translateX(16px); opacity: 0.85; }
+  50%      { transform: translateX(-16px); opacity: 1; }
 }
 @keyframes sf-hcarousel-fadeout {
   to { opacity: 0; visibility: hidden; }

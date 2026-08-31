@@ -674,10 +674,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       <div className="sf-hcarousel-wrap">
         <div className="sf-grid-horizontal">{items.map(renderCard)}</div>
         <div className="sf-hcarousel-hint" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
-            <path d="M13 5l7 7-7 7M4 12h15" />
-          </svg>
-          Desliza
+          <span className="sf-hcarousel-hint-finger">👆</span>
         </div>
         {items.length > 1 && (
           <div className="sf-hcarousel-dots">

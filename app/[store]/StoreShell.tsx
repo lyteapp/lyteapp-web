@@ -79,6 +79,7 @@ type TemplateConfig = {
   priceSize?: 'small' | 'medium' | 'large'
   photoSize?: 'small' | 'medium' | 'large'
   categoryPhotoShapes?: Record<string, string>
+  categorySwipeStyles?: Record<string, string>
   categoryNavStyle?: string
   variantShape?: 'pill' | 'rounded' | 'square'
   extraShape?: 'rounded' | 'pill' | 'square'
@@ -2112,6 +2113,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     const displayImg = variants?.length
       ? (variants[selIdx ?? 0]?.imageUrl || product.image_url)
       : product.image_url
+    const swipeStyle = (product.category_id && cfg.categorySwipeStyles?.[product.category_id]) || 'slide'
     return (
       <div key={product.id} className="sf-card" onClick={() => openProductModal(product)}>
         <div
@@ -2151,11 +2153,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
           onClick={e => { if (swipedRef.current) { e.stopPropagation(); swipedRef.current = false } }}
         >
           {variants?.length ? (
-            <div className="sf-slide-strip"
+            <div className={`sf-slide-strip sf-slide-strip-${swipeStyle}`}
               ref={el => { if (el) stripRefs.current.set(product.id, el); else stripRefs.current.delete(product.id) }}
               style={{ width: `${variants.length * 100}%`, transform: `translateX(-${(selIdx ?? 0) * (100 / variants.length)}%)` }}>
               {variants.map((v, i) => (
-                <div key={i} className="sf-slide-frame" style={{ width: `${100 / variants.length}%` }}>
+                <div key={i} className="sf-slide-frame" style={{ width: `${100 / variants.length}%`, opacity: swipeStyle === 'fade' ? ((selIdx ?? 0) === i ? 1 : 0.2) : undefined }}>
                   {v.imageUrl ? <img src={v.imageUrl} alt={product.name} className="sf-card-img" loading="lazy" /> : <div className="sf-card-img-empty">{PLACEHOLDER}</div>}
                 </div>
               ))}
@@ -2200,6 +2202,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     const displayImg = variants?.length
       ? (variants[selIdx ?? 0]?.imageUrl || product.image_url)
       : product.image_url
+    const swipeStyle = (product.category_id && cfg.categorySwipeStyles?.[product.category_id]) || 'slide'
     return (
       <div key={product.id} className="sf-esc-row" onClick={() => openProductModal(product)}>
         <div
@@ -2239,11 +2242,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
           onClick={e => { if (swipedRef.current) { e.stopPropagation(); swipedRef.current = false } }}
         >
           {variants?.length ? (
-            <div className="sf-slide-strip"
+            <div className={`sf-slide-strip sf-slide-strip-${swipeStyle}`}
               ref={el => { if (el) stripRefs.current.set(product.id, el); else stripRefs.current.delete(product.id) }}
               style={{ width: `${variants.length * 100}%`, transform: `translateX(-${(selIdx ?? 0) * (100 / variants.length)}%)` }}>
               {variants.map((v, i) => (
-                <div key={i} className="sf-slide-frame" style={{ width: `${100 / variants.length}%` }}>
+                <div key={i} className="sf-slide-frame" style={{ width: `${100 / variants.length}%`, opacity: swipeStyle === 'fade' ? ((selIdx ?? 0) === i ? 1 : 0.2) : undefined }}>
                   {v.imageUrl ? <img src={v.imageUrl} alt={product.name} className="sf-esc-img" loading="lazy" /> : <div className="sf-esc-img sf-esc-img-empty">{PLACEHOLDER}</div>}
                 </div>
               ))}
@@ -2285,6 +2288,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     const displayImg = variants?.length
       ? (variants[selIdx ?? 0]?.imageUrl || product.image_url)
       : product.image_url
+    const swipeStyle = (product.category_id && cfg.categorySwipeStyles?.[product.category_id]) || 'slide'
     return (
       <div key={product.id} className="sf-cat-card" onClick={() => openProductModal(product)}>
         <div
@@ -2324,11 +2328,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
           onClick={e => { if (swipedRef.current) { e.stopPropagation(); swipedRef.current = false } }}
         >
           {variants?.length ? (
-            <div className="sf-slide-strip"
+            <div className={`sf-slide-strip sf-slide-strip-${swipeStyle}`}
               ref={el => { if (el) stripRefs.current.set(product.id, el); else stripRefs.current.delete(product.id) }}
               style={{ width: `${variants.length * 100}%`, transform: `translateX(-${(selIdx ?? 0) * (100 / variants.length)}%)` }}>
               {variants.map((v, i) => (
-                <div key={i} className="sf-slide-frame" style={{ width: `${100 / variants.length}%` }}>
+                <div key={i} className="sf-slide-frame" style={{ width: `${100 / variants.length}%`, opacity: swipeStyle === 'fade' ? ((selIdx ?? 0) === i ? 1 : 0.2) : undefined }}>
                   {v.imageUrl ? <img src={v.imageUrl} alt={product.name} className="sf-cat-img" loading="lazy" /> : <div className="sf-cat-img sf-cat-img-empty">{PLACEHOLDER}</div>}
                 </div>
               ))}

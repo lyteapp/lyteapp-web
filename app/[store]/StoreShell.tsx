@@ -507,15 +507,21 @@ export default function StoreShell({ store, products, categories = [], initialBc
     if (rows.length === 0) return
     const cleanups: (() => void)[] = []
     rows.forEach(row => {
+      const cards = Array.from(row.querySelectorAll<HTMLElement>('.sf-card'))
+      const dots  = row.parentElement?.querySelectorAll<HTMLElement>('.sf-hcarousel-dot') ?? null
       const observer = new IntersectionObserver(
         entries => {
           entries.forEach(entry => {
             entry.target.classList.toggle('sf-carousel-focused', entry.isIntersecting)
+            if (entry.isIntersecting && dots) {
+              const idx = cards.indexOf(entry.target as HTMLElement)
+              dots.forEach((dot, i) => dot.classList.toggle('on', i === idx))
+            }
           })
         },
         { root: row, rootMargin: '0px -35% 0px -35%', threshold: 0 }
       )
-      row.querySelectorAll<HTMLElement>('.sf-card').forEach(card => observer.observe(card))
+      cards.forEach(card => observer.observe(card))
       cleanups.push(() => observer.disconnect())
 
       const hint = row.parentElement?.querySelector<HTMLElement>('.sf-hcarousel-hint')
@@ -673,6 +679,13 @@ export default function StoreShell({ store, products, categories = [], initialBc
           </svg>
           Desliza
         </div>
+        {items.length > 1 && (
+          <div className="sf-hcarousel-dots">
+            {items.map((_, i) => (
+              <div key={i} className={`sf-hcarousel-dot${i === 0 ? ' on' : ''}`} />
+            ))}
+          </div>
+        )}
       </div>
     )
   }

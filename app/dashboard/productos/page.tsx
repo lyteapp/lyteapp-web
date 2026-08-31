@@ -34,6 +34,9 @@ type Product = {
   category_id?: string | null
 }
 
+type VariableGroupPreset   = { id: string; name: string; group: VariableGroup }
+type AdditionalGroupPreset = { id: string; name: string; items: Additional[] }
+
 type Category = { id: string; name: string; position: number }
 type Store = { id: string; slug: string }
 
@@ -77,6 +80,17 @@ export default function ProductosPage() {
   const [optColorVariants, setOptColorVariants]       = useState<ColorVariant[]>([])
   const [variantImgUploadIdx, setVariantImgUploadIdx] = useState<number | null>(null)
   const [variantImgUploading, setVariantImgUploading] = useState(false)
+
+  // reusable option-group presets (saved on the store, applied across products)
+  const [checkoutSettings, setCheckoutSettings]           = useState<Record<string, unknown>>({})
+  const [variableGroupPresets, setVariableGroupPresets]     = useState<VariableGroupPreset[]>([])
+  const [additionalGroupPresets, setAdditionalGroupPresets] = useState<AdditionalGroupPreset[]>([])
+  const [applyVarPresetId, setApplyVarPresetId]           = useState('')
+  const [applyAddPresetId, setApplyAddPresetId]           = useState('')
+  const [savingVarPresetFor, setSavingVarPresetFor]       = useState<number | null>(null)
+  const [varPresetNameInput, setVarPresetNameInput]       = useState('')
+  const [savingAddPreset, setSavingAddPreset]             = useState(false)
+  const [addPresetNameInput, setAddPresetNameInput]       = useState('')
   const [mounted, setMounted] = useState(false)
   const imgRef = useRef<HTMLInputElement>(null)
   const variantImgRef = useRef<HTMLInputElement>(null)
@@ -88,12 +102,18 @@ export default function ProductosPage() {
       .from('stores').select('id, slug').eq('owner_id', user!.id).maybeSingle()
     setStore(storeData)
     if (storeData) {
-      const [{ data: prods }, { data: cats }] = await Promise.all([
+      const [{ data: prods }, { data: cats }, { data: storeCs }] = await Promise.all([
         supabase.from('products').select('*').eq('store_id', storeData.id).order('created_at', { ascending: false }),
         supabase.from('categories').select('*').eq('store_id', storeData.id).order('position'),
+        supabase.from('stores').select('checkout_settings').eq('id', storeData.id).maybeSingle(),
       ])
       setProducts(prods ?? [])
       setCategories(cats ?? [])
+      const cs = (storeCs?.checkout_settings && typeof storeCs.checkout_settings === 'object') ? storeCs.checkout_settings as Record<string, unknown> : {}
+      setCheckoutSettings(cs)
+      const presets = (cs.optionPresets && typeof cs.optionPresets === 'object') ? cs.optionPresets as { variableGroups?: VariableGroupPreset[]; additionalGroups?: AdditionalGroupPreset[] } : {}
+      setVariableGroupPresets(presets.variableGroups ?? [])
+      setAdditionalGroupPresets(presets.additionalGroups ?? [])
     }
     setLoading(false)
   }
@@ -170,6 +190,64 @@ export default function ProductosPage() {
     setOptVariables(v => v.filter((_, idx) => idx !== i))
     setChoiceInputs(p => { const n = { ...p }; delete n[i]; return n })
     setIsDirty(true)
+  }
+
+  // --- option-group presets (store-level, reusable across products) ---
+  async function persistOptionPresets(next: { variableGroups: VariableGroupPreset[]; additionalGroups: AdditionalGroupPreset[] }) {
+    if (!store) return
+    const newCs = { ...checkoutSettings, optionPresets: next }
+    await supabase.from('stores').update({ checkout_settings: newCs }).eq('id', store.id)
+    setCheckoutSettings(newCs)
+  }
+
+  function saveVariableGroupPreset(gi: number) {
+    const name = varPresetNameInput.trim()
+    if (!name) return
+    const group = optVariables[gi]
+    const preset: VariableGroupPreset = { id: crypto.randomUUID(), name, group: { label: group.label, choices: group.choices } }
+    const next = [...variableGroupPresets, preset]
+    setVariableGroupPresets(next)
+    persistOptionPresets({ variableGroups: next, additionalGroups: additionalGroupPresets })
+    setSavingVarPresetFor(null); setVarPresetNameInput('')
+  }
+
+  function applyVariableGroupPreset() {
+    const preset = variableGroupPresets.find(p => p.id === applyVarPresetId)
+    if (!preset) return
+    setOptVariables(v => [...v, { label: preset.group.label, choices: preset.group.choices.map(c => ({ ...c })) }])
+    setIsDirty(true)
+    setApplyVarPresetId('')
+  }
+
+  function deleteVariableGroupPreset(id: string) {
+    const next = variableGroupPresets.filter(p => p.id !== id)
+    setVariableGroupPresets(next)
+    persistOptionPresets({ variableGroups: next, additionalGroups: additionalGroupPresets })
+  }
+
+  function saveAdditionalGroupPreset() {
+    const name = addPresetNameInput.trim()
+    const items = optAdditionals.filter(a => a.name.trim())
+    if (!name || items.length === 0) return
+    const preset: AdditionalGroupPreset = { id: crypto.randomUUID(), name, items }
+    const next = [...additionalGroupPresets, preset]
+    setAdditionalGroupPresets(next)
+    persistOptionPresets({ variableGroups: variableGroupPresets, additionalGroups: next })
+    setSavingAddPreset(false); setAddPresetNameInput('')
+  }
+
+  function applyAdditionalGroupPreset() {
+    const preset = additionalGroupPresets.find(p => p.id === applyAddPresetId)
+    if (!preset) return
+    setOptAdditionals(a => [...a, ...preset.items.map(item => ({ ...item }))])
+    setIsDirty(true)
+    setApplyAddPresetId('')
+  }
+
+  function deleteAdditionalGroupPreset(id: string) {
+    const next = additionalGroupPresets.filter(p => p.id !== id)
+    setAdditionalGroupPresets(next)
+    persistOptionPresets({ variableGroups: variableGroupPresets, additionalGroups: next })
   }
 
   async function handleImgUpload(e: { target: { files: FileList | null } }) {
@@ -379,6 +457,18 @@ export default function ProductosPage() {
             </div>
             <button className="pr-opts-add-btn" onClick={addVarGroup}>+ Agregar grupo</button>
           </div>
+          {variableGroupPresets.length > 0 && (
+            <div className="pr-preset-apply-row">
+              <select className="pr-preset-select" value={applyVarPresetId} onChange={e => setApplyVarPresetId(e.target.value)}>
+                <option value="">Usar un grupo guardado...</option>
+                {variableGroupPresets.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+              <button className="pr-preset-apply-btn" onClick={applyVariableGroupPreset} disabled={!applyVarPresetId}>Aplicar</button>
+              {applyVarPresetId && (
+                <button className="pr-preset-del-btn" title="Eliminar preset guardado" onClick={() => deleteVariableGroupPreset(applyVarPresetId)}>Eliminar guardado</button>
+              )}
+            </div>
+          )}
           {optVariables.length > 0 && (
             <div className="pr-opts-box-body">
               {optVariables.map((g, gi) => (
@@ -390,8 +480,29 @@ export default function ProductosPage() {
                       value={g.label}
                       onChange={e => updateVarLabel(gi, e.target.value)}
                     />
+                    <button
+                      className="pr-opt-save-preset"
+                      disabled={!g.label.trim() || g.choices.length === 0}
+                      onClick={() => { setSavingVarPresetFor(gi); setVarPresetNameInput(g.label) }}
+                    >
+                      Guardar como preset
+                    </button>
                     <button className="pr-opt-del-group" onClick={() => removeVarGroup(gi)}>Eliminar grupo</button>
                   </div>
+                  {savingVarPresetFor === gi && (
+                    <div className="pr-preset-name-row">
+                      <input
+                        className="pr-opt-chip-input"
+                        placeholder="Nombre del preset (ej: Tallas)"
+                        value={varPresetNameInput}
+                        onChange={e => setVarPresetNameInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') saveVariableGroupPreset(gi) }}
+                        autoFocus
+                      />
+                      <button className="pr-preset-apply-btn" onClick={() => saveVariableGroupPreset(gi)} disabled={!varPresetNameInput.trim()}>Guardar</button>
+                      <button className="pr-preset-cancel-btn" onClick={() => { setSavingVarPresetFor(null); setVarPresetNameInput('') }}>Cancelar</button>
+                    </div>
+                  )}
                   <div className="pr-opt-choices">
                     {g.choices.map((c, ci) => {
                       const choice = normalizeChoice(c)
@@ -536,10 +647,45 @@ export default function ProductosPage() {
               <div className="pr-opts-box-label">Adicionales</div>
               <div className="pr-opts-box-hint">El cliente puede agregar extras opcionales al producto</div>
             </div>
-            <button className="pr-opts-add-btn" onClick={() => { setOptAdditionals(a => [...a, { name: '', price: 0 }]); setIsDirty(true) }}>
-              + Agregar
-            </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                className="pr-opt-save-preset"
+                disabled={optAdditionals.filter(a => a.name.trim()).length === 0}
+                onClick={() => { setSavingAddPreset(true); setAddPresetNameInput('') }}
+              >
+                Guardar como preset
+              </button>
+              <button className="pr-opts-add-btn" onClick={() => { setOptAdditionals(a => [...a, { name: '', price: 0 }]); setIsDirty(true) }}>
+                + Agregar
+              </button>
+            </div>
           </div>
+          {additionalGroupPresets.length > 0 && (
+            <div className="pr-preset-apply-row">
+              <select className="pr-preset-select" value={applyAddPresetId} onChange={e => setApplyAddPresetId(e.target.value)}>
+                <option value="">Usar un grupo guardado...</option>
+                {additionalGroupPresets.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+              <button className="pr-preset-apply-btn" onClick={applyAdditionalGroupPreset} disabled={!applyAddPresetId}>Aplicar</button>
+              {applyAddPresetId && (
+                <button className="pr-preset-del-btn" title="Eliminar preset guardado" onClick={() => deleteAdditionalGroupPreset(applyAddPresetId)}>Eliminar guardado</button>
+              )}
+            </div>
+          )}
+          {savingAddPreset && (
+            <div className="pr-preset-name-row">
+              <input
+                className="pr-opt-chip-input"
+                placeholder="Nombre del preset (ej: Salsas)"
+                value={addPresetNameInput}
+                onChange={e => setAddPresetNameInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') saveAdditionalGroupPreset() }}
+                autoFocus
+              />
+              <button className="pr-preset-apply-btn" onClick={saveAdditionalGroupPreset} disabled={!addPresetNameInput.trim()}>Guardar</button>
+              <button className="pr-preset-cancel-btn" onClick={() => { setSavingAddPreset(false); setAddPresetNameInput('') }}>Cancelar</button>
+            </div>
+          )}
           {optAdditionals.length > 0 && (
             <div className="pr-opts-box-body">
               {optAdditionals.map((a, i) => (

@@ -89,6 +89,8 @@ type TemplateConfig = {
   showMenuButton?: boolean
   cardBg?: string
   catTitleColor?: string
+  catTitleFont?: string
+  productNameFont?: string
   accentColor?: string
   logoShape?: string
   logoSize?: string
@@ -538,6 +540,19 @@ export default function StoreShell({ store, products, categories = [], initialBc
     playfair:     'var(--font-playfair), "Playfair Display", serif',
     merriweather: 'var(--font-merriweather), Merriweather, serif',
     cormorant:    'var(--font-cormorant), "Cormorant Garamond", serif',
+    inter:        'var(--font-inter), Inter, sans-serif',
+    roboto:       'var(--font-roboto), Roboto, sans-serif',
+    dmsans:       'var(--font-dm-sans), "DM Sans", sans-serif',
+    worksans:     'var(--font-work-sans), "Work Sans", sans-serif',
+    manrope:      'var(--font-manrope), Manrope, sans-serif',
+    outfit:       'var(--font-outfit), Outfit, sans-serif',
+    spacegrotesk: 'var(--font-space-grotesk), "Space Grotesk", sans-serif',
+    quicksand:    'var(--font-quicksand), Quicksand, sans-serif',
+    josefin:      'var(--font-josefin-sans), "Josefin Sans", sans-serif',
+    bebas:        'var(--font-bebas-neue), "Bebas Neue", sans-serif',
+    librebask:    'var(--font-libre-baskerville), "Libre Baskerville", serif',
+    caveat:       'var(--font-caveat), Caveat, cursive',
+    abril:        'var(--font-abril-fatface), "Abril Fatface", serif',
   }
   const cfg          = store.template_config ?? {}
   const cfgFontFamily  = cfg.pageFont ? FONT_MAP[cfg.pageFont] : undefined
@@ -576,6 +591,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
     ...(cfg.accentColor ? { '--sf-accent-color': cfg.accentColor } : {}),
     ...(cfg.pageBg      ? { '--sf-page-bg':      cfg.pageBg      } : {}),
     ...(cfg.catTitleColor ? { '--sf-cat-title-color': cfg.catTitleColor } : {}),
+    ...(cfg.catTitleFont && FONT_MAP[cfg.catTitleFont] ? { '--sf-cat-title-font': FONT_MAP[cfg.catTitleFont] } : {}),
+    ...(cfg.productNameFont && FONT_MAP[cfg.productNameFont] ? { '--sf-product-name-font': FONT_MAP[cfg.productNameFont] } : {}),
   } as React.CSSProperties
 
   function renderContentBlocks(afterId: string) {

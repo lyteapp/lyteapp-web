@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../../../lib/supabase'
 import './editor.css'
@@ -34,21 +35,47 @@ const FONT_MAP: Record<string, string> = {
   playfair:     'var(--font-playfair), "Playfair Display", serif',
   merriweather: 'var(--font-merriweather), Merriweather, serif',
   cormorant:    'var(--font-cormorant), "Cormorant Garamond", serif',
+  inter:        'var(--font-inter), Inter, sans-serif',
+  roboto:       'var(--font-roboto), Roboto, sans-serif',
+  dmsans:       'var(--font-dm-sans), "DM Sans", sans-serif',
+  worksans:     'var(--font-work-sans), "Work Sans", sans-serif',
+  manrope:      'var(--font-manrope), Manrope, sans-serif',
+  outfit:       'var(--font-outfit), Outfit, sans-serif',
+  spacegrotesk: 'var(--font-space-grotesk), "Space Grotesk", sans-serif',
+  quicksand:    'var(--font-quicksand), Quicksand, sans-serif',
+  josefin:      'var(--font-josefin-sans), "Josefin Sans", sans-serif',
+  bebas:        'var(--font-bebas-neue), "Bebas Neue", sans-serif',
+  librebask:    'var(--font-libre-baskerville), "Libre Baskerville", serif',
+  caveat:       'var(--font-caveat), Caveat, cursive',
+  abril:        'var(--font-abril-fatface), "Abril Fatface", serif',
 }
 
 const PAGE_FONTS = [
   { id: 'geist',        name: 'Moderna'    },
   { id: 'simple',       name: 'Simple'     },
+  { id: 'inter',        name: 'Inter'      },
+  { id: 'roboto',       name: 'Roboto'     },
   { id: 'poppins',      name: 'Poppins'    },
   { id: 'montserrat',   name: 'Montserrat' },
+  { id: 'dmsans',       name: 'DM Sans'    },
+  { id: 'worksans',     name: 'Work Sans'  },
+  { id: 'manrope',      name: 'Manrope'    },
+  { id: 'outfit',       name: 'Outfit'     },
+  { id: 'spacegrotesk', name: 'Space Grotesk' },
+  { id: 'quicksand',    name: 'Quicksand'  },
+  { id: 'josefin',      name: 'Josefin Sans' },
   { id: 'raleway',      name: 'Raleway'    },
   { id: 'lato',         name: 'Lato'       },
   { id: 'nunito',       name: 'Nunito'     },
   { id: 'oswald',       name: 'Oswald'     },
+  { id: 'bebas',        name: 'Bebas Neue' },
   { id: 'fraunces',     name: 'Elegante'   },
   { id: 'playfair',     name: 'Clasica'    },
   { id: 'merriweather', name: 'Editorial'  },
   { id: 'cormorant',    name: 'Lujo'       },
+  { id: 'librebask',    name: 'Libre Baskerville' },
+  { id: 'abril',        name: 'Abril Fatface' },
+  { id: 'caveat',       name: 'Manuscrita' },
 ]
 
 const PHOTO_SHAPES_CAT = [
@@ -59,6 +86,81 @@ const PHOTO_SHAPES_CAT = [
 
 type Category = { id: string; name: string }
 type ContentBlock = { id: string; afterId: string; type: 'text' | 'image' | 'video'; content: string }
+
+function FontSelect({
+  value, onChange, options, placeholder,
+}: {
+  value: string
+  onChange: (id: string) => void
+  options: { id: string; name: string }[]
+  placeholder: string
+}) {
+  const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
+
+  function toggleOpen() {
+    if (!open && triggerRef.current) {
+      const r = triggerRef.current.getBoundingClientRect()
+      setPos({ top: r.bottom + 4, left: r.left, width: r.width })
+    }
+    setOpen(o => !o)
+  }
+
+  useEffect(() => {
+    if (!open) return
+    function onDocDown(e: MouseEvent) {
+      const t = e.target as Node
+      if (triggerRef.current?.contains(t)) return
+      if (listRef.current?.contains(t)) return
+      setOpen(false)
+    }
+    function onScroll() { setOpen(false) }
+    document.addEventListener('mousedown', onDocDown)
+    window.addEventListener('scroll', onScroll, true)
+    return () => {
+      document.removeEventListener('mousedown', onDocDown)
+      window.removeEventListener('scroll', onScroll, true)
+    }
+  }, [open])
+
+  const current = options.find(o => o.id === value)
+
+  return (
+    <div className="ed-font-select">
+      <button ref={triggerRef} type="button" className="ed-font-select-trigger" onClick={toggleOpen}>
+        <span style={{ fontFamily: current?.id ? FONT_MAP[current.id] : undefined }}>
+          {current ? current.name : placeholder}
+        </span>
+        <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14" style={{ transform: open ? 'rotate(180deg)' : undefined, transition: 'transform 0.15s', flexShrink: 0 }}>
+          <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+        </svg>
+      </button>
+      {open && pos && typeof document !== 'undefined' && createPortal(
+        <div ref={listRef} className="ed-font-select-list" style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width }}>
+          {options.map(o => (
+            <button
+              key={o.id || '__auto'}
+              type="button"
+              className={`ed-font-select-item${value === o.id ? ' ed-font-select-item-active' : ''}`}
+              style={{ fontFamily: o.id ? FONT_MAP[o.id] : undefined }}
+              onClick={() => { onChange(o.id); setOpen(false) }}
+            >
+              {o.name}
+              {value === o.id && (
+                <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+                  <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                </svg>
+              )}
+            </button>
+          ))}
+        </div>,
+        document.body
+      )}
+    </div>
+  )
+}
 
 export default function EditorPage() {
   const router = useRouter()
@@ -79,6 +181,8 @@ export default function EditorPage() {
   const [catTitleColor, setCatTitleColor] = useState('')
   const [priceSize, setPriceSize]   = useState<'small' | 'medium' | 'large'>('medium')
   const [priceFont, setPriceFont]   = useState('')
+  const [catTitleFont, setCatTitleFont]     = useState('')
+  const [productNameFont, setProductNameFont] = useState('')
 
   const [template, setTemplate]             = useState('clasico')
   const [categories, setCategories]         = useState<Category[]>([])
@@ -141,6 +245,8 @@ export default function EditorPage() {
       else if ((store as { brand_color?: string }).brand_color) setAccentColor((store as { brand_color: string }).brand_color)
       if (cfg.priceSize)  setPriceSize(cfg.priceSize as 'small' | 'medium' | 'large')
       if (cfg.priceFont !== undefined) setPriceFont((cfg.priceFont as string) ?? '')
+      if ((cfg as Record<string,unknown>).catTitleFont !== undefined) setCatTitleFont((cfg as Record<string,unknown>).catTitleFont as string)
+      if ((cfg as Record<string,unknown>).productNameFont !== undefined) setProductNameFont((cfg as Record<string,unknown>).productNameFont as string)
       if (cfg.categoryPhotoShapes) setCategoryShapes(cfg.categoryPhotoShapes as Record<string, string>)
       if (cfg.categoryNavStyle) setCategoryNavStyle(cfg.categoryNavStyle as string)
       if (cfg.showCatNav !== undefined) setShowCatNav(cfg.showCatNav as boolean)
@@ -174,6 +280,8 @@ export default function EditorPage() {
   function buildPreviewCSS(): string {
     const font = FONT_MAP[pageFont] ?? ''
     const prFont = priceFont && FONT_MAP[priceFont] ? FONT_MAP[priceFont] : font
+    const catFont = catTitleFont && FONT_MAP[catTitleFont] ? FONT_MAP[catTitleFont] : ''
+    const prodFont = productNameFont && FONT_MAP[productNameFont] ? FONT_MAP[productNameFont] : ''
     const prSizeMap = { small: '12px', medium: '15px', large: '20px' }
 
     let shapeCSS = ''
@@ -250,16 +358,16 @@ export default function EditorPage() {
       .sf-nav-name       { font-size: ${(fontSizePx * 1.07).toFixed(1)}px !important; }
       .sf-store-name     { font-size: ${(fontSizePx * 1.6).toFixed(1)}px !important; }
       .sf-store-desc     { font-size: ${(fontSizePx * 0.93).toFixed(1)}px !important; }
-      .sf-section-title  { font-size: ${(fontSizePx * 1.2).toFixed(1)}px !important; ${catTitleColor ? `color: ${catTitleColor} !important;` : ''} }
-      .sf-card-name      { font-size: ${(fontSizePx * 0.93).toFixed(1)}px !important; }
+      .sf-section-title  { font-size: ${(fontSizePx * 1.2).toFixed(1)}px !important; ${catTitleColor ? `color: ${catTitleColor} !important;` : ''} ${catFont ? `font-family: ${catFont} !important;` : ''} }
+      .sf-card-name      { font-size: ${(fontSizePx * 0.93).toFixed(1)}px !important; ${prodFont ? `font-family: ${prodFont} !important;` : ''} }
       .sf-card-desc      { font-size: ${(fontSizePx * 0.8).toFixed(1)}px !important; }
       .sf-card-price     { font-size: ${(fontSizePx * 1.07).toFixed(1)}px !important; }
-      .sf-vit-hero-name  { font-size: ${(fontSizePx * 1.47).toFixed(1)}px !important; }
+      .sf-vit-hero-name  { font-size: ${(fontSizePx * 1.47).toFixed(1)}px !important; ${prodFont ? `font-family: ${prodFont} !important;` : ''} }
       .sf-vit-hero-desc  { font-size: ${(fontSizePx * 0.93).toFixed(1)}px !important; }
       .sf-vit-hero-price { font-size: ${(fontSizePx * 1.73).toFixed(1)}px !important; }
-      .sf-esc-name       { font-size: ${(fontSizePx * 0.93).toFixed(1)}px !important; }
+      .sf-esc-name       { font-size: ${(fontSizePx * 0.93).toFixed(1)}px !important; ${prodFont ? `font-family: ${prodFont} !important;` : ''} }
       .sf-esc-price      { font-size: ${(fontSizePx * 0.87).toFixed(1)}px !important; }
-      .sf-cat-name       { font-size: ${(fontSizePx * 0.93).toFixed(1)}px !important; }
+      .sf-cat-name       { font-size: ${(fontSizePx * 0.93).toFixed(1)}px !important; ${prodFont ? `font-family: ${prodFont} !important;` : ''} }
       .sf-cat-desc       { font-size: ${(fontSizePx * 0.8).toFixed(1)}px !important; }
       .sf-cat-price      { font-size: ${fontSizePx}px !important; }
       .sf-modal-name     { font-size: ${(fontSizePx * 1.13).toFixed(1)}px !important; }
@@ -319,7 +427,7 @@ export default function EditorPage() {
   useEffect(() => {
     applyPreview()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, categoryNavStyle, logoShape, logoSizePx])
+  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, logoShape, logoSizePx])
 
   // ── Auto-save category shape (reloads iframe immediately) ─
   async function handleCategoryShape(catId: string, shape: string | null) {
@@ -364,6 +472,7 @@ export default function EditorPage() {
       pageBg, cardBg: cardBg || undefined, catTitleColor: catTitleColor || undefined, pageFont, fontSizePx, textAlign,
       photoShape, photoSize,
       priceColor, accentColor, priceFont: priceFont || pageFont, priceSize,
+      catTitleFont: catTitleFont || undefined, productNameFont: productNameFont || undefined,
       categoryNavStyle, showCatNav, stickyCatNav,
       logoShape, logoSizePx, logoPosition, namePosition, showMenuButton,
       headerLayout: undefined,
@@ -748,19 +857,29 @@ export default function EditorPage() {
           <div className="ed-tool-panel ed-tool-panel-lg ed-tool-panel-type">
             <div className="ed-tp-title">Letras</div>
 
-            <div className="ed-tp-subtitle">Fuente</div>
-            <div className="ed-font-grid">
-              {PAGE_FONTS.map(f => (
-                <button
-                  key={f.id}
-                  className={`ed-font-card${pageFont === f.id ? ' ed-font-card-active' : ''}`}
-                  onClick={() => setPageFont(f.id)}
-                >
-                  <span className="ed-font-card-preview" style={{ fontFamily: FONT_MAP[f.id] }}>Aa</span>
-                  <span className="ed-font-card-name">{f.name}</span>
-                </button>
-              ))}
-            </div>
+            <div className="ed-tp-subtitle">Fuente general</div>
+            <FontSelect
+              value={pageFont}
+              onChange={setPageFont}
+              options={PAGE_FONTS}
+              placeholder="Elegir fuente"
+            />
+
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Fuente de categorias</div>
+            <FontSelect
+              value={catTitleFont}
+              onChange={setCatTitleFont}
+              options={[{ id: '', name: 'Igual que la general' }, ...PAGE_FONTS]}
+              placeholder="Igual que la general"
+            />
+
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Fuente de productos</div>
+            <FontSelect
+              value={productNameFont}
+              onChange={setProductNameFont}
+              options={[{ id: '', name: 'Igual que la general' }, ...PAGE_FONTS]}
+              placeholder="Igual que la general"
+            />
 
             <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>
               Tamano
@@ -983,18 +1102,12 @@ export default function EditorPage() {
             </div>
 
             <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Fuente</div>
-            <div className="ed-font-grid">
-              {[{ id: '', name: 'Pagina' }, ...PAGE_FONTS].map(f => (
-                <button
-                  key={f.id}
-                  className={`ed-font-card${priceFont === f.id ? ' ed-font-card-active' : ''}`}
-                  onClick={() => setPriceFont(f.id)}
-                >
-                  <span className="ed-font-card-preview" style={{ fontFamily: f.id ? FONT_MAP[f.id] : undefined }}>$9</span>
-                  <span className="ed-font-card-name">{f.name}</span>
-                </button>
-              ))}
-            </div>
+            <FontSelect
+              value={priceFont}
+              onChange={setPriceFont}
+              options={[{ id: '', name: 'Igual que la general' }, ...PAGE_FONTS]}
+              placeholder="Igual que la general"
+            />
 
             <PanelSave />
           </div>

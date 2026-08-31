@@ -1811,6 +1811,38 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
 .ed-font-card-preview { font-size: 18px; color: var(--ed-ink); line-height: 1; }
 .ed-font-card-name { font-size: 9px; font-weight: 500; color: var(--ed-ink-muted); text-align: center; }
 
+/* ── FONT SELECT (Canva-style dropdown) ──────────────────── */
+.ed-font-select { position: relative; }
+.ed-font-select-trigger {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 10px 12px; border-radius: 10px;
+  border: 1.5px solid var(--ed-line);
+  background: var(--ed-surface);
+  cursor: pointer; transition: all 0.15s;
+  font-size: 13px; color: var(--ed-ink); text-align: left;
+}
+.ed-font-select-trigger span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ed-font-select-trigger:hover { border-color: var(--ed-violet-soft); background: var(--ed-violet-bg); }
+.ed-font-select-trigger svg { color: var(--ed-ink-muted); }
+.ed-font-select-list {
+  z-index: 500;
+  max-height: 280px; overflow-y: auto;
+  background: var(--ed-surface);
+  border: 1px solid var(--ed-line);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(15,23,42,0.18);
+  padding: 6px;
+}
+.ed-font-select-item {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 10px 10px; border-radius: 8px; border: none; background: transparent;
+  cursor: pointer; font-size: 15px; color: var(--ed-ink); text-align: left;
+  transition: background 0.1s;
+}
+.ed-font-select-item:hover { background: var(--ed-violet-bg); }
+.ed-font-select-item-active { background: var(--ed-violet-bg); color: var(--ed-violet); }
+.ed-font-select-item svg { color: var(--ed-violet); flex-shrink: 0; }
+
 /* ── ALIGNMENT BUTTONS ────────────────────────────────── */
 .ed-align-opts { display: flex; gap: 6px; }
 .ed-align-opt {

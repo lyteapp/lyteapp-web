@@ -499,6 +499,26 @@ export default function StoreShell({ store, products, categories = [], initialBc
     return () => observer.disconnect()
   }, [view])
 
+  // ── Horizontal category carousels: keep only the centered card in focus ──
+  useEffect(() => {
+    if (view !== 'catalog') return
+    const rows = Array.from(document.querySelectorAll<HTMLElement>('.sf-grid-horizontal'))
+    if (rows.length === 0) return
+    const observers = rows.map(row => {
+      const observer = new IntersectionObserver(
+        entries => {
+          entries.forEach(entry => {
+            entry.target.classList.toggle('sf-carousel-focused', entry.isIntersecting)
+          })
+        },
+        { root: row, rootMargin: '0px -35% 0px -35%', threshold: 0 }
+      )
+      row.querySelectorAll<HTMLElement>('.sf-card').forEach(card => observer.observe(card))
+      return observer
+    })
+    return () => observers.forEach(o => o.disconnect())
+  }, [view])
+
   const cartItems  = Object.values(cart).filter(i => i.quantity > 0)
   const cartCount  = cartItems.reduce((s, i) => s + i.quantity, 0)
   const cartTotal  = cartItems.reduce((s, i) => s + (i.price + i.extraPrice) * i.quantity, 0)

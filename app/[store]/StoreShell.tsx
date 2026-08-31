@@ -2137,12 +2137,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
               style={{ width: `${variants.length * 100}%`, transform: `translateX(-${(selIdx ?? 0) * (100 / variants.length)}%)` }}>
               {variants.map((v, i) => (
                 <div key={i} className="sf-slide-frame" style={{ width: `${100 / variants.length}%` }}>
-                  {v.imageUrl ? <img src={v.imageUrl} alt={product.name} className="sf-card-img" /> : <div className="sf-card-img-empty">{PLACEHOLDER}</div>}
+                  {v.imageUrl ? <img src={v.imageUrl} alt={product.name} className="sf-card-img" loading="lazy" /> : <div className="sf-card-img-empty">{PLACEHOLDER}</div>}
                 </div>
               ))}
             </div>
           ) : displayImg ? (
-            <img src={displayImg} alt={product.name} className="sf-card-img" />
+            <img src={displayImg} alt={product.name} className="sf-card-img" loading="lazy" />
           ) : (
             <div className="sf-card-img-empty">{PLACEHOLDER}</div>
           )}
@@ -2225,12 +2225,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
               style={{ width: `${variants.length * 100}%`, transform: `translateX(-${(selIdx ?? 0) * (100 / variants.length)}%)` }}>
               {variants.map((v, i) => (
                 <div key={i} className="sf-slide-frame" style={{ width: `${100 / variants.length}%` }}>
-                  {v.imageUrl ? <img src={v.imageUrl} alt={product.name} className="sf-esc-img" /> : <div className="sf-esc-img sf-esc-img-empty">{PLACEHOLDER}</div>}
+                  {v.imageUrl ? <img src={v.imageUrl} alt={product.name} className="sf-esc-img" loading="lazy" /> : <div className="sf-esc-img sf-esc-img-empty">{PLACEHOLDER}</div>}
                 </div>
               ))}
             </div>
           ) : displayImg ? (
-            <img src={displayImg} alt={product.name} className="sf-esc-img" />
+            <img src={displayImg} alt={product.name} className="sf-esc-img" loading="lazy" />
           ) : (
             <div className="sf-esc-img sf-esc-img-empty">{PLACEHOLDER}</div>
           )}
@@ -2310,12 +2310,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
               style={{ width: `${variants.length * 100}%`, transform: `translateX(-${(selIdx ?? 0) * (100 / variants.length)}%)` }}>
               {variants.map((v, i) => (
                 <div key={i} className="sf-slide-frame" style={{ width: `${100 / variants.length}%` }}>
-                  {v.imageUrl ? <img src={v.imageUrl} alt={product.name} className="sf-cat-img" /> : <div className="sf-cat-img sf-cat-img-empty">{PLACEHOLDER}</div>}
+                  {v.imageUrl ? <img src={v.imageUrl} alt={product.name} className="sf-cat-img" loading="lazy" /> : <div className="sf-cat-img sf-cat-img-empty">{PLACEHOLDER}</div>}
                 </div>
               ))}
             </div>
           ) : displayImg ? (
-            <img src={displayImg} alt={product.name} className="sf-cat-img" />
+            <img src={displayImg} alt={product.name} className="sf-cat-img" loading="lazy" />
           ) : (
             <div className="sf-cat-img sf-cat-img-empty">{PLACEHOLDER}</div>
           )}

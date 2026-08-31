@@ -267,7 +267,7 @@ html, body { overflow-x: clip; }
 }
 .sf-grid-horizontal::-webkit-scrollbar { display: none; }
 .sf-grid-horizontal .sf-card {
-  flex: 0 0 60%; min-width: 130px; scroll-snap-align: start;
+  flex: 0 0 46%; min-width: 120px; scroll-snap-align: start;
   /* opacity only — filter:blur() on this element broke Safari's clip of the
      nested circular photo shape (border-radius:50% + overflow:visible),
      showing its square corners instead of a clean circle. */

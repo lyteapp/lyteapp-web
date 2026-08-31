@@ -2177,6 +2177,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       <div key={product.id} className="sf-card" onClick={() => openProductModal(product)}>
         <div
           className="sf-card-img-wrap"
+          style={{ touchAction: variants?.length ? 'pan-y' : 'auto' }}
           onTouchStart={variants?.length ? e => {
             touchStartX.current = e.touches[0].clientX
             swipedRef.current = false

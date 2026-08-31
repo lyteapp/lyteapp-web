@@ -8,14 +8,16 @@ import { useT } from '../../lib/LocaleProvider'
 import './productos.css'
 
 type VariableGroup = { label: string; choices: string[] }
-type Additional    = { name: string; price: number }
+type Additional    = { name: string; price: number; calories?: number; fat?: number; protein?: number; carbs?: number }
 type ColorVariant  = { label: string; color: string; imageUrl: string }
+type NutritionInfo = { enabled?: boolean; calories?: number; fat?: number; protein?: number; carbs?: number }
 type ProductOptions = {
   variables?:     VariableGroup[]
   colors?:        string[]
   colorVariants?: ColorVariant[]
   additionals?:   Additional[]
   allowNotes?:    boolean
+  nutrition?:     NutritionInfo
 }
 
 type Product = {
@@ -60,6 +62,12 @@ export default function ProductosPage() {
   const [optAdditionals, setOptAdditionals] = useState<Additional[]>([])
   const [optAllowNotes, setOptAllowNotes]   = useState(false)
 
+  const [optNutritionEnabled, setOptNutritionEnabled] = useState(false)
+  const [optCalories, setOptCalories] = useState('')
+  const [optFat,      setOptFat]      = useState('')
+  const [optProtein,  setOptProtein]  = useState('')
+  const [optCarbs,    setOptCarbs]    = useState('')
+
   const [optColorVariants, setOptColorVariants]       = useState<ColorVariant[]>([])
   const [variantImgUploadIdx, setVariantImgUploadIdx] = useState<number | null>(null)
   const [variantImgUploading, setVariantImgUploading] = useState(false)
@@ -89,6 +97,8 @@ export default function ProductosPage() {
     setOptColors([]); setColorInput('')
     setOptColorVariants([])
     setOptAdditionals([]); setOptAllowNotes(false)
+    setOptNutritionEnabled(false)
+    setOptCalories(''); setOptFat(''); setOptProtein(''); setOptCarbs('')
   }
 
   function openAdd() {
@@ -111,6 +121,11 @@ export default function ProductosPage() {
     setOptColorVariants(opts.colorVariants ?? [])
     setOptAdditionals(opts.additionals ?? [])
     setOptAllowNotes(opts.allowNotes ?? false)
+    setOptNutritionEnabled(opts.nutrition?.enabled ?? false)
+    setOptCalories(opts.nutrition?.calories !== undefined ? String(opts.nutrition.calories) : '')
+    setOptFat(opts.nutrition?.fat !== undefined ? String(opts.nutrition.fat) : '')
+    setOptProtein(opts.nutrition?.protein !== undefined ? String(opts.nutrition.protein) : '')
+    setOptCarbs(opts.nutrition?.carbs !== undefined ? String(opts.nutrition.carbs) : '')
     setChoiceInputs({}); setColorInput('')
     setMode('form')
   }
@@ -189,10 +204,17 @@ export default function ProductosPage() {
       colorVariants: optColorVariants.filter(v => v.label.trim() || v.imageUrl),
       additionals:   optAdditionals.filter(a => a.name.trim()),
       allowNotes:    optAllowNotes,
+      nutrition: optNutritionEnabled ? {
+        enabled:  true,
+        calories: parseFloat(optCalories) || 0,
+        fat:      parseFloat(optFat) || 0,
+        protein:  parseFloat(optProtein) || 0,
+        carbs:    parseFloat(optCarbs) || 0,
+      } : undefined,
     }
     const hasOpts = opts.variables!.length > 0 || opts.colors!.length > 0 ||
       (opts.colorVariants?.length ?? 0) > 0 ||
-      opts.additionals!.length > 0 || opts.allowNotes
+      opts.additionals!.length > 0 || opts.allowNotes || !!opts.nutrition
 
     const payload = {
       store_id: store.id, name: name.trim(),
@@ -462,26 +484,87 @@ export default function ProductosPage() {
           {optAdditionals.length > 0 && (
             <div className="pr-opts-box-body">
               {optAdditionals.map((a, i) => (
-                <div key={i} className="pr-opt-extra-row">
-                  <input
-                    className="pr-opt-extra-name"
-                    placeholder="Nombre del adicional (ej: Extra queso)"
-                    value={a.name}
-                    onChange={e => setOptAdditionals(arr => arr.map((x, j) => j === i ? { ...x, name: e.target.value } : x))}
-                  />
-                  <div className="pr-opt-extra-price-wrap">
-                    <span className="pr-opt-extra-dollar">$</span>
+                <div key={i} className="pr-opt-extra-row-wrap">
+                  <div className="pr-opt-extra-row">
                     <input
-                      type="number" min="0" step="0.01"
-                      className="pr-opt-extra-price"
-                      placeholder="0.00"
-                      value={a.price || ''}
-                      onChange={e => setOptAdditionals(arr => arr.map((x, j) => j === i ? { ...x, price: parseFloat(e.target.value) || 0 } : x))}
+                      className="pr-opt-extra-name"
+                      placeholder="Nombre del adicional (ej: Extra queso)"
+                      value={a.name}
+                      onChange={e => setOptAdditionals(arr => arr.map((x, j) => j === i ? { ...x, name: e.target.value } : x))}
                     />
+                    <div className="pr-opt-extra-price-wrap">
+                      <span className="pr-opt-extra-dollar">$</span>
+                      <input
+                        type="number" min="0" step="0.01"
+                        className="pr-opt-extra-price"
+                        placeholder="0.00"
+                        value={a.price || ''}
+                        onChange={e => setOptAdditionals(arr => arr.map((x, j) => j === i ? { ...x, price: parseFloat(e.target.value) || 0 } : x))}
+                      />
+                    </div>
+                    <button className="pr-opt-del" onClick={() => setOptAdditionals(arr => arr.filter((_, j) => j !== i))}>×</button>
                   </div>
-                  <button className="pr-opt-del" onClick={() => setOptAdditionals(arr => arr.filter((_, j) => j !== i))}>×</button>
+                  {optNutritionEnabled && (
+                    <div className="pr-opt-extra-nutrition-row">
+                      <input
+                        type="number" step="1" placeholder="kcal"
+                        value={a.calories ?? ''}
+                        onChange={e => setOptAdditionals(arr => arr.map((x, j) => j === i ? { ...x, calories: parseFloat(e.target.value) || 0 } : x))}
+                      />
+                      <input
+                        type="number" step="0.1" placeholder="grasa (g)"
+                        value={a.fat ?? ''}
+                        onChange={e => setOptAdditionals(arr => arr.map((x, j) => j === i ? { ...x, fat: parseFloat(e.target.value) || 0 } : x))}
+                      />
+                      <input
+                        type="number" step="0.1" placeholder="prot (g)"
+                        value={a.protein ?? ''}
+                        onChange={e => setOptAdditionals(arr => arr.map((x, j) => j === i ? { ...x, protein: parseFloat(e.target.value) || 0 } : x))}
+                      />
+                      <input
+                        type="number" step="0.1" placeholder="carbs (g)"
+                        value={a.carbs ?? ''}
+                        onChange={e => setOptAdditionals(arr => arr.map((x, j) => j === i ? { ...x, carbs: parseFloat(e.target.value) || 0 } : x))}
+                      />
+                    </div>
+                  )}
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+
+        {/* Informacion nutricional */}
+        <div className="pr-opts-box">
+          <div className="pr-opts-box-head" style={{ alignItems: 'center' }}>
+            <div>
+              <div className="pr-opts-box-label">Información nutricional</div>
+              <div className="pr-opts-box-hint">Muestra calorías, grasas, proteínas y carbohidratos en la tienda — se actualiza según los adicionales elegidos</div>
+            </div>
+            <div className="pr-toggle-row" style={{ padding: 0 }} onClick={() => setOptNutritionEnabled(n => !n)}>
+              <div className={`pr-toggle ${optNutritionEnabled ? 'on' : ''}`}><div className="pr-toggle-knob" /></div>
+            </div>
+          </div>
+          {optNutritionEnabled && (
+            <div className="pr-opts-box-body">
+              <div className="pr-nutrition-grid">
+                <div className="pr-nutrition-field">
+                  <label>Calorías <span className="pr-nutrition-unit">kcal</span></label>
+                  <input type="number" min="0" step="1" placeholder="0" value={optCalories} onChange={e => setOptCalories(e.target.value)} />
+                </div>
+                <div className="pr-nutrition-field">
+                  <label>Grasas <span className="pr-nutrition-unit">g</span></label>
+                  <input type="number" min="0" step="0.1" placeholder="0" value={optFat} onChange={e => setOptFat(e.target.value)} />
+                </div>
+                <div className="pr-nutrition-field">
+                  <label>Proteínas <span className="pr-nutrition-unit">g</span></label>
+                  <input type="number" min="0" step="0.1" placeholder="0" value={optProtein} onChange={e => setOptProtein(e.target.value)} />
+                </div>
+                <div className="pr-nutrition-field">
+                  <label>Carbohidratos <span className="pr-nutrition-unit">g</span></label>
+                  <input type="number" min="0" step="0.1" placeholder="0" value={optCarbs} onChange={e => setOptCarbs(e.target.value)} />
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -547,7 +630,7 @@ export default function ProductosPage() {
       ) : (
         <div className="pr-list">
           {products.map(p => {
-            const hasOpts = !!(p.options?.variables?.length || p.options?.colors?.length || p.options?.additionals?.length || p.options?.allowNotes)
+            const hasOpts = !!(p.options?.variables?.length || p.options?.colors?.length || p.options?.additionals?.length || p.options?.allowNotes || p.options?.nutrition?.enabled)
             const hasPending = p.id in pendingToggles
             const displayActive = hasPending ? pendingToggles[p.id] : p.is_active
             return (

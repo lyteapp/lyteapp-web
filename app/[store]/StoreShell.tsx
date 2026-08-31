@@ -15,14 +15,16 @@ const supabase = createClient(
 )
 
 type VariableGroup  = { label: string; choices: string[] }
-type Additional     = { name: string; price: number }
+type Additional     = { name: string; price: number; calories?: number; fat?: number; protein?: number; carbs?: number }
 type ColorVariant   = { label: string; color: string; imageUrl: string }
+type NutritionInfo  = { enabled?: boolean; calories?: number; fat?: number; protein?: number; carbs?: number }
 type ProductOptions = {
   variables?:     VariableGroup[]
   colors?:        string[]
   colorVariants?: ColorVariant[]
   additionals?:   Additional[]
   allowNotes?:    boolean
+  nutrition?:     NutritionInfo
 }
 type SelectedOptions = {
   variables?:   Record<string, string>
@@ -688,6 +690,140 @@ export default function StoreShell({ store, products, categories = [], initialBc
             ))}
           </div>
         )}
+      </div>
+    )
+  }
+
+  function renderProductModal() {
+    if (!modalProduct) return null
+    return (
+      <div className="sf-modal-overlay" onClick={() => setModalProduct(null)}>
+        <div className="sf-modal" onClick={e => e.stopPropagation()}>
+          <button className="sf-modal-close" onClick={() => setModalProduct(null)}>×</button>
+
+          <div className={`sf-modal-product-head${modalNutritionEnabled ? ' has-nutrition' : ''}`}>
+            {modalNutritionEnabled && modalNutrition && (
+              <div className="sf-modal-nutrition-badge">
+                <div className="sf-modal-nutrition-item"><strong>{Math.round(modalNutrition.calories)}</strong><span>kcal</span></div>
+                <div className="sf-modal-nutrition-item"><strong>{Math.round(modalNutrition.fat)}g</strong><span>grasa</span></div>
+                <div className="sf-modal-nutrition-item"><strong>{Math.round(modalNutrition.protein)}g</strong><span>prot</span></div>
+                <div className="sf-modal-nutrition-item"><strong>{Math.round(modalNutrition.carbs)}g</strong><span>carbs</span></div>
+              </div>
+            )}
+            {modalDisplayImage && (
+              <img src={modalDisplayImage} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" onClick={() => {
+                const cvs = modalProduct.options?.colorVariants
+                const imgs = cvs?.length ? cvs.map(v => v.imageUrl).filter(Boolean) as string[] : [modalDisplayImage!]
+                setLightbox({ images: imgs, idx: cvs?.length ? Math.max(0, cvs.findIndex(v => v.label === modalColor)) : 0 })
+              }} />
+            )}
+            <div className="sf-modal-product-info">
+              <div className="sf-modal-name">{modalProduct.name}</div>
+              {modalProduct.description && <div className="sf-modal-desc">{modalProduct.description}</div>}
+              <div className="sf-modal-base-price">{currencySymbol}{Number(modalProduct.price).toFixed(2)}</div>
+            </div>
+          </div>
+
+          <div className="sf-modal-body">
+            {modalProduct.options?.variables?.filter(g => g.choices.length > 0).map((g, gi) => (
+              <div key={gi} className="sf-modal-section">
+                <div className="sf-modal-section-title">{g.label}</div>
+                <div className="sf-modal-chips">
+                  {g.choices.map(c => (
+                    <button
+                      key={c}
+                      className={`sf-modal-chip${modalVars[g.label] === c ? ' selected' : ''}`}
+                      onClick={() => setModalVars(v => ({ ...v, [g.label]: v[g.label] === c ? '' : c }))}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            {(modalProduct.options?.colorVariants?.length ?? 0) > 0 ? (
+              <div className="sf-modal-section">
+                <div className="sf-modal-section-title">Color</div>
+                <div className="sf-modal-color-swatches">
+                  {modalProduct.options!.colorVariants!.map((v, i) => (
+                    <button
+                      key={i}
+                      className={`sf-modal-color-swatch${modalColor === v.label ? ' selected' : ''}`}
+                      style={{ background: v.color }}
+                      title={v.label}
+                      onClick={() => {
+                        const next = modalColor === v.label ? undefined : v.label
+                        setModalColor(next)
+                        if (next) setSelectedVariants(p => ({ ...p, [modalProduct!.id]: i }))
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : (modalProduct.options?.colors?.length ?? 0) > 0 ? (
+              <div className="sf-modal-section">
+                <div className="sf-modal-section-title">Color</div>
+                <div className="sf-modal-chips">
+                  {modalProduct.options!.colors!.map(c => (
+                    <button
+                      key={c}
+                      className={`sf-modal-chip${modalColor === c ? ' selected' : ''}`}
+                      onClick={() => setModalColor(prev => prev === c ? undefined : c)}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {(modalProduct.options?.additionals?.length ?? 0) > 0 && (
+              <div className="sf-modal-section">
+                <div className="sf-modal-section-title">Adicionales</div>
+                {modalProduct.options!.additionals!.map((a, i) => (
+                  <div
+                    key={i}
+                    className={`sf-modal-extra${modalAdditionals.has(i) ? ' selected' : ''}`}
+                    onClick={() => setModalAdditionals(prev => {
+                      const next = new Set(prev)
+                      next.has(i) ? next.delete(i) : next.add(i)
+                      return next
+                    })}
+                  >
+                    <div className={`sf-modal-extra-check${modalAdditionals.has(i) ? ' on' : ''}`} />
+                    <span className="sf-modal-extra-name">{a.name}</span>
+                    {a.price > 0 && <span className="sf-modal-extra-price">+{currencySymbol}{a.price.toFixed(2)}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {modalProduct.options?.allowNotes && (
+              <div className="sf-modal-section">
+                <div className="sf-modal-section-title">Notas <span className="sf-optional">opcional</span></div>
+                <textarea
+                  className="sf-modal-notes"
+                  placeholder="Instrucciones especiales..."
+                  value={modalNotes}
+                  onChange={e => setModalNotes(e.target.value)}
+                  rows={2}
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="sf-modal-footer">
+            <div className="sf-modal-qty">
+              <button onClick={() => setModalQty(q => Math.max(1, q - 1))}>−</button>
+              <span>{modalQty}</span>
+              <button onClick={() => setModalQty(q => q + 1)}>+</button>
+            </div>
+            <button className="sf-modal-confirm" onClick={confirmModal}>
+              Agregar · {currencySymbol}{((modalProduct.price + modalExtraPrice) * modalQty).toFixed(2)}
+            </button>
+          </div>
+        </div>
       </div>
     )
   }
@@ -1436,6 +1572,17 @@ export default function StoreShell({ store, products, categories = [], initialBc
         : modalProduct.image_url)
     : null
 
+  const modalNutritionEnabled = !!modalProduct?.options?.nutrition?.enabled
+  const modalNutritionAdditionals = (modalProduct?.options?.additionals ?? []).filter((_, i) => modalAdditionals.has(i))
+  const modalNutrition = modalNutritionEnabled
+    ? {
+        calories: (modalProduct!.options!.nutrition!.calories ?? 0) + modalNutritionAdditionals.reduce((s, a) => s + (a.calories ?? 0), 0),
+        fat:      (modalProduct!.options!.nutrition!.fat ?? 0)      + modalNutritionAdditionals.reduce((s, a) => s + (a.fat ?? 0), 0),
+        protein:  (modalProduct!.options!.nutrition!.protein ?? 0)  + modalNutritionAdditionals.reduce((s, a) => s + (a.protein ?? 0), 0),
+        carbs:    (modalProduct!.options!.nutrition!.carbs ?? 0)    + modalNutritionAdditionals.reduce((s, a) => s + (a.carbs ?? 0), 0),
+      }
+    : null
+
 
   // ── CHECKOUT ──
   if (view === 'checkout') return (
@@ -1939,128 +2086,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       </div>
 
       {/* Modal inside checkout too */}
-      {modalProduct && (
-        <div className="sf-modal-overlay" onClick={() => setModalProduct(null)}>
-          <div className="sf-modal" onClick={e => e.stopPropagation()}>
-            <button className="sf-modal-close" onClick={() => setModalProduct(null)}>×</button>
-
-            <div className="sf-modal-product-head">
-              {modalDisplayImage && (
-                <img src={modalDisplayImage} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" onClick={() => {
-                  const cvs = modalProduct.options?.colorVariants
-                  const imgs = cvs?.length ? cvs.map(v => v.imageUrl).filter(Boolean) as string[] : [modalDisplayImage!]
-                  setLightbox({ images: imgs, idx: cvs?.length ? Math.max(0, cvs.findIndex(v => v.label === modalColor)) : 0 })
-                }} />
-              )}
-              <div className="sf-modal-product-info">
-                <div className="sf-modal-name">{modalProduct.name}</div>
-                {modalProduct.description && <div className="sf-modal-desc">{modalProduct.description}</div>}
-                <div className="sf-modal-base-price">{currencySymbol}{Number(modalProduct.price).toFixed(2)}</div>
-              </div>
-            </div>
-
-            <div className="sf-modal-body">
-              {modalProduct.options?.variables?.filter(g => g.choices.length > 0).map((g, gi) => (
-                <div key={gi} className="sf-modal-section">
-                  <div className="sf-modal-section-title">{g.label}</div>
-                  <div className="sf-modal-chips">
-                    {g.choices.map(c => (
-                      <button
-                        key={c}
-                        className={`sf-modal-chip${modalVars[g.label] === c ? ' selected' : ''}`}
-                        onClick={() => setModalVars(v => ({ ...v, [g.label]: v[g.label] === c ? '' : c }))}
-                      >
-                        {c}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-
-              {(modalProduct.options?.colorVariants?.length ?? 0) > 0 ? (
-                <div className="sf-modal-section">
-                  <div className="sf-modal-section-title">Color</div>
-                  <div className="sf-modal-color-swatches">
-                    {modalProduct.options!.colorVariants!.map((v, i) => (
-                      <button
-                        key={i}
-                        className={`sf-modal-color-swatch${modalColor === v.label ? ' selected' : ''}`}
-                        style={{ background: v.color }}
-                        title={v.label}
-                        onClick={() => {
-                          const next = modalColor === v.label ? undefined : v.label
-                          setModalColor(next)
-                          if (next) setSelectedVariants(p => ({ ...p, [modalProduct!.id]: i }))
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ) : (modalProduct.options?.colors?.length ?? 0) > 0 ? (
-                <div className="sf-modal-section">
-                  <div className="sf-modal-section-title">Color</div>
-                  <div className="sf-modal-chips">
-                    {modalProduct.options!.colors!.map(c => (
-                      <button
-                        key={c}
-                        className={`sf-modal-chip${modalColor === c ? ' selected' : ''}`}
-                        onClick={() => setModalColor(prev => prev === c ? undefined : c)}
-                      >
-                        {c}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              {(modalProduct.options?.additionals?.length ?? 0) > 0 && (
-                <div className="sf-modal-section">
-                  <div className="sf-modal-section-title">Adicionales</div>
-                  {modalProduct.options!.additionals!.map((a, i) => (
-                    <div
-                      key={i}
-                      className={`sf-modal-extra${modalAdditionals.has(i) ? ' selected' : ''}`}
-                      onClick={() => setModalAdditionals(prev => {
-                        const next = new Set(prev)
-                        next.has(i) ? next.delete(i) : next.add(i)
-                        return next
-                      })}
-                    >
-                      <div className={`sf-modal-extra-check${modalAdditionals.has(i) ? ' on' : ''}`} />
-                      <span className="sf-modal-extra-name">{a.name}</span>
-                      {a.price > 0 && <span className="sf-modal-extra-price">+{currencySymbol}{a.price.toFixed(2)}</span>}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {modalProduct.options?.allowNotes && (
-                <div className="sf-modal-section">
-                  <div className="sf-modal-section-title">Notas <span className="sf-optional">opcional</span></div>
-                  <textarea
-                    className="sf-modal-notes"
-                    placeholder="Instrucciones especiales..."
-                    value={modalNotes}
-                    onChange={e => setModalNotes(e.target.value)}
-                    rows={2}
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="sf-modal-footer">
-              <div className="sf-modal-qty">
-                <button onClick={() => setModalQty(q => Math.max(1, q - 1))}>−</button>
-                <span>{modalQty}</span>
-                <button onClick={() => setModalQty(q => q + 1)}>+</button>
-              </div>
-<button className="sf-modal-confirm" onClick={confirmModal}>
-                Agregar · {currencySymbol}{((modalProduct.price + modalExtraPrice) * modalQty).toFixed(2)}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {renderProductModal()}
 
       {lightbox && (
         <div className="sf-lightbox" onClick={() => setLightbox(null)}>
@@ -2728,128 +2754,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
         <Link href="/" className="sf-footer-link">{t('store.footerLink')}</Link>
       </footer>
 
-      {modalProduct && (
-        <div className="sf-modal-overlay" onClick={() => setModalProduct(null)}>
-          <div className="sf-modal" onClick={e => e.stopPropagation()}>
-            <button className="sf-modal-close" onClick={() => setModalProduct(null)}>×</button>
-
-            <div className="sf-modal-product-head">
-              {modalDisplayImage && (
-                <img src={modalDisplayImage} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" onClick={() => {
-                  const cvs = modalProduct.options?.colorVariants
-                  const imgs = cvs?.length ? cvs.map(v => v.imageUrl).filter(Boolean) as string[] : [modalDisplayImage!]
-                  setLightbox({ images: imgs, idx: cvs?.length ? Math.max(0, cvs.findIndex(v => v.label === modalColor)) : 0 })
-                }} />
-              )}
-              <div className="sf-modal-product-info">
-                <div className="sf-modal-name">{modalProduct.name}</div>
-                {modalProduct.description && <div className="sf-modal-desc">{modalProduct.description}</div>}
-                <div className="sf-modal-base-price">{currencySymbol}{Number(modalProduct.price).toFixed(2)}</div>
-              </div>
-            </div>
-
-            <div className="sf-modal-body">
-              {modalProduct.options?.variables?.filter(g => g.choices.length > 0).map((g, gi) => (
-                <div key={gi} className="sf-modal-section">
-                  <div className="sf-modal-section-title">{g.label}</div>
-                  <div className="sf-modal-chips">
-                    {g.choices.map(c => (
-                      <button
-                        key={c}
-                        className={`sf-modal-chip${modalVars[g.label] === c ? ' selected' : ''}`}
-                        onClick={() => setModalVars(v => ({ ...v, [g.label]: v[g.label] === c ? '' : c }))}
-                      >
-                        {c}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-
-              {(modalProduct.options?.colorVariants?.length ?? 0) > 0 ? (
-                <div className="sf-modal-section">
-                  <div className="sf-modal-section-title">Color</div>
-                  <div className="sf-modal-color-swatches">
-                    {modalProduct.options!.colorVariants!.map((v, i) => (
-                      <button
-                        key={i}
-                        className={`sf-modal-color-swatch${modalColor === v.label ? ' selected' : ''}`}
-                        style={{ background: v.color }}
-                        title={v.label}
-                        onClick={() => {
-                          const next = modalColor === v.label ? undefined : v.label
-                          setModalColor(next)
-                          if (next) setSelectedVariants(p => ({ ...p, [modalProduct!.id]: i }))
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ) : (modalProduct.options?.colors?.length ?? 0) > 0 ? (
-                <div className="sf-modal-section">
-                  <div className="sf-modal-section-title">Color</div>
-                  <div className="sf-modal-chips">
-                    {modalProduct.options!.colors!.map(c => (
-                      <button
-                        key={c}
-                        className={`sf-modal-chip${modalColor === c ? ' selected' : ''}`}
-                        onClick={() => setModalColor(prev => prev === c ? undefined : c)}
-                      >
-                        {c}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              {(modalProduct.options?.additionals?.length ?? 0) > 0 && (
-                <div className="sf-modal-section">
-                  <div className="sf-modal-section-title">Adicionales</div>
-                  {modalProduct.options!.additionals!.map((a, i) => (
-                    <div
-                      key={i}
-                      className={`sf-modal-extra${modalAdditionals.has(i) ? ' selected' : ''}`}
-                      onClick={() => setModalAdditionals(prev => {
-                        const next = new Set(prev)
-                        next.has(i) ? next.delete(i) : next.add(i)
-                        return next
-                      })}
-                    >
-                      <div className={`sf-modal-extra-check${modalAdditionals.has(i) ? ' on' : ''}`} />
-                      <span className="sf-modal-extra-name">{a.name}</span>
-                      {a.price > 0 && <span className="sf-modal-extra-price">+{currencySymbol}{a.price.toFixed(2)}</span>}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {modalProduct.options?.allowNotes && (
-                <div className="sf-modal-section">
-                  <div className="sf-modal-section-title">Notas <span className="sf-optional">opcional</span></div>
-                  <textarea
-                    className="sf-modal-notes"
-                    placeholder="Instrucciones especiales..."
-                    value={modalNotes}
-                    onChange={e => setModalNotes(e.target.value)}
-                    rows={2}
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="sf-modal-footer">
-              <div className="sf-modal-qty">
-                <button onClick={() => setModalQty(q => Math.max(1, q - 1))}>−</button>
-                <span>{modalQty}</span>
-                <button onClick={() => setModalQty(q => q + 1)}>+</button>
-              </div>
-<button className="sf-modal-confirm" onClick={confirmModal}>
-                Agregar · {currencySymbol}{((modalProduct.price + modalExtraPrice) * modalQty).toFixed(2)}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {renderProductModal()}
 
       {lightbox && (
         <div className="sf-lightbox" onClick={() => setLightbox(null)}>

@@ -1110,12 +1110,36 @@ html, body { overflow-x: clip; }
   display: flex; gap: 14px; align-items: flex-start;
   padding: 20px 20px 0;
   flex-shrink: 0;
+  position: relative;
+}
+.sf-modal-product-head.has-nutrition {
+  padding-top: 46px;
 }
 .sf-modal-img {
   width: 80px; height: 80px; border-radius: 14px;
   object-fit: cover; flex-shrink: 0; background: #F1F5F9;
 }
 .sf-modal-img-zoom { cursor: zoom-in; }
+
+.sf-modal-nutrition-badge {
+  position: absolute; top: 8px; left: 20px; right: 56px; z-index: 1;
+  display: flex; flex-wrap: wrap; gap: 4px 10px;
+  background: white; border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px; padding: 7px 12px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+}
+.sf-modal-nutrition-item {
+  display: flex; align-items: baseline; gap: 3px;
+  font-size: 11px; color: #64748B;
+}
+.sf-modal-nutrition-item strong {
+  font-size: 13px; font-weight: 800; color: #0F172A;
+}
+.sf-tpl-oscuro .sf-modal-nutrition-badge {
+  background: #1E293B; border-color: rgba(255, 255, 255, 0.1);
+}
+.sf-tpl-oscuro .sf-modal-nutrition-item { color: #94A3B8; }
+.sf-tpl-oscuro .sf-modal-nutrition-item strong { color: #F1F5F9; }
 
 /* ── SLIDE STRIP ── */
 .sf-slide-strip {

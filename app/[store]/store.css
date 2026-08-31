@@ -174,7 +174,7 @@ html, body { overflow-x: clip; }
   background: inherit;
   border-bottom: 1px solid rgba(15,23,42,0.06);
   display: flex; overflow-x: auto; scrollbar-width: none;
-  padding: 0 16px; gap: 2px;
+  padding: 6px 16px; gap: 2px;
   -webkit-overflow-scrolling: touch;
 }
 .sf-cat-nav::-webkit-scrollbar { display: none; }
@@ -234,7 +234,7 @@ html, body { overflow-x: clip; }
   background: var(--sf-accent-color, #7C3AED); color: white; font-weight: 600;
 }
 
-.sf-cat-section { scroll-margin-top: 44px; }
+.sf-cat-section { scroll-margin-top: 56px; }
 
 /* dark template overrides */
 .sf-tpl-oscuro .sf-cat-nav { background: #1E293B; border-color: rgba(255,255,255,0.06); }

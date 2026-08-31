@@ -674,7 +674,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
       <div className="sf-hcarousel-wrap">
         <div className="sf-grid-horizontal">{items.map(renderCard)}</div>
         <div className="sf-hcarousel-hint" aria-hidden="true">
-          <span className="sf-hcarousel-hint-finger">👆</span>
+          <svg className="sf-hcarousel-hint-finger" viewBox="0 0 64 64" fill="currentColor" width="38" height="38">
+            <path d="M12 20 C20 10, 32 8, 42 13" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+            <polygon points="6,21 15,16 16,26" />
+            <rect x="24" y="12" width="11" height="28" rx="5.5" transform="rotate(-14 29.5 26)" />
+            <circle cx="35" cy="35" r="5.5" />
+            <circle cx="42" cy="37" r="5.5" />
+            <rect x="21" y="33" width="28" height="25" rx="12.5" />
+          </svg>
         </div>
         {items.length > 1 && (
           <div className="sf-hcarousel-dots">

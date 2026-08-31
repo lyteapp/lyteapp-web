@@ -288,8 +288,8 @@ html, body { overflow-x: clip; }
   animation: sf-hcarousel-fadeout 0.4s ease 3.5s forwards;
 }
 .sf-hcarousel-hint-finger {
-  font-size: 34px; line-height: 1;
-  filter: drop-shadow(0 3px 8px rgba(0,0,0,0.4));
+  color: rgba(15,23,42,0.85);
+  filter: drop-shadow(0 3px 8px rgba(0,0,0,0.35));
   animation: sf-hcarousel-swipe 1.4s ease-in-out infinite;
 }
 .sf-hcarousel-hint-hidden { animation: sf-hcarousel-fadeout 0.3s ease forwards; }

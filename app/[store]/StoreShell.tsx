@@ -499,12 +499,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
     return () => observer.disconnect()
   }, [view])
 
-  // ── Horizontal category carousels: keep only the centered card in focus ──
+  // ── Horizontal category carousels: keep only the centered card in focus,
+  // and dismiss the "Desliza" hint the first time each row is scrolled ──
   useEffect(() => {
     if (view !== 'catalog') return
     const rows = Array.from(document.querySelectorAll<HTMLElement>('.sf-grid-horizontal'))
     if (rows.length === 0) return
-    const observers = rows.map(row => {
+    const cleanups: (() => void)[] = []
+    rows.forEach(row => {
       const observer = new IntersectionObserver(
         entries => {
           entries.forEach(entry => {
@@ -514,9 +516,16 @@ export default function StoreShell({ store, products, categories = [], initialBc
         { root: row, rootMargin: '0px -35% 0px -35%', threshold: 0 }
       )
       row.querySelectorAll<HTMLElement>('.sf-card').forEach(card => observer.observe(card))
-      return observer
+      cleanups.push(() => observer.disconnect())
+
+      const hint = row.parentElement?.querySelector<HTMLElement>('.sf-hcarousel-hint')
+      if (hint) {
+        const dismiss = () => hint.classList.add('sf-hcarousel-hint-hidden')
+        row.addEventListener('scroll', dismiss, { once: true, passive: true })
+        cleanups.push(() => row.removeEventListener('scroll', dismiss))
+      }
     })
-    return () => observers.forEach(o => o.disconnect())
+    return () => cleanups.forEach(fn => fn())
   }, [view])
 
   const cartItems  = Object.values(cart).filter(i => i.quantity > 0)
@@ -648,6 +657,23 @@ export default function StoreShell({ store, products, categories = [], initialBc
           </div>
         ))}
       </>
+    )
+  }
+
+  function renderProductGrid(items: Product[], layoutKey: string) {
+    if (cfgCategoryLayouts[layoutKey] !== 'horizontal') {
+      return <div className="sf-grid">{items.map(renderCard)}</div>
+    }
+    return (
+      <div className="sf-hcarousel-wrap">
+        <div className="sf-grid-horizontal">{items.map(renderCard)}</div>
+        <div className="sf-hcarousel-hint" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
+            <path d="M13 5l7 7-7 7M4 12h15" />
+          </svg>
+          Desliza
+        </div>
+      </div>
     )
   }
 
@@ -2637,7 +2663,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 <Fragment key={cat.id}>
                   <div id={`cat-${cat.id}`} className={`sf-cat-section${cfgCategoryShapes[cat.id] ? ` sf-pshape-${cfgCategoryShapes[cat.id]}` : ''}`}>
                     <h2 className="sf-section-title sf-cat-section-title">{cat.name}</h2>
-                    <div className={cfgCategoryLayouts[cat.id] === 'horizontal' ? 'sf-grid-horizontal' : 'sf-grid'}>{items.map(renderCard)}</div>
+                    {renderProductGrid(items, cat.id)}
                   </div>
                   {renderContentBlocks(cat.id)}
                 </Fragment>
@@ -2645,7 +2671,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
               {uncategorized.length > 0 && (
                 <div id="cat-other" className="sf-cat-section">
                   <h2 className="sf-section-title sf-cat-section-title">{t('store.ourProducts')}</h2>
-                  <div className={cfgCategoryLayouts['__other'] === 'horizontal' ? 'sf-grid-horizontal' : 'sf-grid'}>{uncategorized.map(renderCard)}</div>
+                  {renderProductGrid(uncategorized, '__other')}
                 </div>
               )}
               {renderContentBlocks('bottom')}

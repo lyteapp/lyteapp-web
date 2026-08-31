@@ -260,7 +260,7 @@ html, body { overflow-x: clip; }
    scoped to each row (see the "carousel focus" effect in StoreShell.tsx). */
 .sf-grid-horizontal {
   display: flex; overflow-x: auto;
-  scroll-snap-type: x proximity;
+  scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   gap: 14px; padding-bottom: 4px;

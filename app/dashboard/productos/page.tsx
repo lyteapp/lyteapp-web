@@ -509,22 +509,22 @@ export default function ProductosPage() {
                       <input
                         type="number" step="1" placeholder="kcal"
                         value={a.calories ?? ''}
-                        onChange={e => setOptAdditionals(arr => arr.map((x, j) => j === i ? { ...x, calories: parseFloat(e.target.value) || 0 } : x))}
+                        onChange={e => { setOptAdditionals(arr => arr.map((x, j) => j === i ? { ...x, calories: parseFloat(e.target.value) || 0 } : x)); setIsDirty(true) }}
                       />
                       <input
                         type="number" step="0.1" placeholder="grasa (g)"
                         value={a.fat ?? ''}
-                        onChange={e => setOptAdditionals(arr => arr.map((x, j) => j === i ? { ...x, fat: parseFloat(e.target.value) || 0 } : x))}
+                        onChange={e => { setOptAdditionals(arr => arr.map((x, j) => j === i ? { ...x, fat: parseFloat(e.target.value) || 0 } : x)); setIsDirty(true) }}
                       />
                       <input
                         type="number" step="0.1" placeholder="prot (g)"
                         value={a.protein ?? ''}
-                        onChange={e => setOptAdditionals(arr => arr.map((x, j) => j === i ? { ...x, protein: parseFloat(e.target.value) || 0 } : x))}
+                        onChange={e => { setOptAdditionals(arr => arr.map((x, j) => j === i ? { ...x, protein: parseFloat(e.target.value) || 0 } : x)); setIsDirty(true) }}
                       />
                       <input
                         type="number" step="0.1" placeholder="carbs (g)"
                         value={a.carbs ?? ''}
-                        onChange={e => setOptAdditionals(arr => arr.map((x, j) => j === i ? { ...x, carbs: parseFloat(e.target.value) || 0 } : x))}
+                        onChange={e => { setOptAdditionals(arr => arr.map((x, j) => j === i ? { ...x, carbs: parseFloat(e.target.value) || 0 } : x)); setIsDirty(true) }}
                       />
                     </div>
                   )}
@@ -541,7 +541,7 @@ export default function ProductosPage() {
               <div className="pr-opts-box-label">Información nutricional</div>
               <div className="pr-opts-box-hint">Muestra calorías, grasas, proteínas y carbohidratos en la tienda — se actualiza según los adicionales elegidos</div>
             </div>
-            <div className="pr-toggle-row" style={{ padding: 0 }} onClick={() => setOptNutritionEnabled(n => !n)}>
+            <div className="pr-toggle-row" style={{ padding: 0 }} onClick={() => { setOptNutritionEnabled(n => !n); setIsDirty(true) }}>
               <div className={`pr-toggle ${optNutritionEnabled ? 'on' : ''}`}><div className="pr-toggle-knob" /></div>
             </div>
           </div>
@@ -550,19 +550,19 @@ export default function ProductosPage() {
               <div className="pr-nutrition-grid">
                 <div className="pr-nutrition-field">
                   <label>Calorías <span className="pr-nutrition-unit">kcal</span></label>
-                  <input type="number" min="0" step="1" placeholder="0" value={optCalories} onChange={e => setOptCalories(e.target.value)} />
+                  <input type="number" min="0" step="1" placeholder="0" value={optCalories} onChange={e => { setOptCalories(e.target.value); setIsDirty(true) }} />
                 </div>
                 <div className="pr-nutrition-field">
                   <label>Grasas <span className="pr-nutrition-unit">g</span></label>
-                  <input type="number" min="0" step="0.1" placeholder="0" value={optFat} onChange={e => setOptFat(e.target.value)} />
+                  <input type="number" min="0" step="0.1" placeholder="0" value={optFat} onChange={e => { setOptFat(e.target.value); setIsDirty(true) }} />
                 </div>
                 <div className="pr-nutrition-field">
                   <label>Proteínas <span className="pr-nutrition-unit">g</span></label>
-                  <input type="number" min="0" step="0.1" placeholder="0" value={optProtein} onChange={e => setOptProtein(e.target.value)} />
+                  <input type="number" min="0" step="0.1" placeholder="0" value={optProtein} onChange={e => { setOptProtein(e.target.value); setIsDirty(true) }} />
                 </div>
                 <div className="pr-nutrition-field">
                   <label>Carbohidratos <span className="pr-nutrition-unit">g</span></label>
-                  <input type="number" min="0" step="0.1" placeholder="0" value={optCarbs} onChange={e => setOptCarbs(e.target.value)} />
+                  <input type="number" min="0" step="0.1" placeholder="0" value={optCarbs} onChange={e => { setOptCarbs(e.target.value); setIsDirty(true) }} />
                 </div>
               </div>
             </div>

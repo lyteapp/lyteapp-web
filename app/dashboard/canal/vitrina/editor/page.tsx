@@ -124,7 +124,10 @@ function FontSelect({
       if (listRef.current?.contains(t)) return
       setOpen(false)
     }
-    function onScroll() { setOpen(false) }
+    function onScroll(e: Event) {
+      if (listRef.current && e.target instanceof Node && listRef.current.contains(e.target)) return
+      setOpen(false)
+    }
     document.addEventListener('mousedown', onDocDown)
     window.addEventListener('scroll', onScroll, true)
     return () => {

@@ -11,19 +11,19 @@ export type PuntoEvolucion = {
   capital: number
 }
 
-/* Colour follows the entity, matching the sheet: assets green, equity blue,
-   liabilities amber — restrained enough to sit beside a monochrome rail without
-   turning the page into an app.
+/* Colour follows the entity, matching the sheet: assets green, liabilities red,
+   equity violet.
 
-   Validated as a categorical trio on a light surface: all six checks pass, with
-   worst-adjacent separation of 17.4 for colour-blind vision and 19.1 for normal,
-   and all three clearing 3:1 contrast. Because the palette passes on its own,
-   the lines are solid — identity still never rests on colour alone, carried by
-   the legend, the direct labels at the last point, and the figures table. */
+   Validated as a categorical trio on a light surface: all three clear 3:1
+   contrast and separate at 33.3 for normal vision. Green against red is the
+   worst case for the common form of colour blindness and lands at 6.5, inside
+   the band the guidance permits only with a secondary encoding — so each series
+   also carries its own dash pattern, repeated in the legend, on top of the
+   direct labels and the figures table. */
 const SERIES = [
-  { key: 'activos' as const, label: 'Activos', color: '#08805E' },
-  { key: 'capital' as const, label: 'Capital', color: '#3355A0' },
-  { key: 'pasivos' as const, label: 'Pasivos', color: '#AA6A18' },
+  { key: 'activos' as const, label: 'Activos', color: '#0EA05C', trazo: undefined as string | undefined },
+  { key: 'capital' as const, label: 'Capital', color: '#7C3AED', trazo: '7 3' },
+  { key: 'pasivos' as const, label: 'Pasivos', color: '#DC2626', trazo: '2 3' },
 ]
 
 const W = 800, H = 268
@@ -116,6 +116,7 @@ export default function EvolucionChart({ puntos }: { puntos: PuntoEvolucion[] })
                   fill="none"
                   stroke={s.color}
                   strokeWidth="2"
+                  strokeDasharray={s.trazo}
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
@@ -173,12 +174,14 @@ export default function EvolucionChart({ puntos }: { puntos: PuntoEvolucion[] })
       <div className="bal-legend">
         {SERIES.map(s => (
           <span className="bal-legend-item" key={s.key}>
-            {/* A line rather than a dot: the swatch matches the mark it stands for. */}
+            {/* The swatch repeats the line's dash pattern, so the legend keys on the
+                same two cues the plot does rather than on colour alone. */}
             <svg width="18" height="8" aria-hidden="true">
               <line
                 x1="0" y1="4" x2="18" y2="4"
                 stroke={s.color}
                 strokeWidth="2"
+                strokeDasharray={s.trazo}
                 strokeLinecap="round"
               />
             </svg>

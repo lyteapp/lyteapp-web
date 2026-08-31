@@ -214,16 +214,22 @@
    `bg-*` for background utilities and the two would be indistinguishable in
    markup. */
 .bal-wrap {
-  /* Restrained ledger hues rather than steps of ink: colour is spent on the
-     three quantities the sheet is about — and on nothing else. Everything
-     structural stays in ink, so these read as meaning, not decoration.
-     Validated as a trio on a light surface: all six checks pass, worst
-     colour-blind separation 17.4 and normal-vision 19.1. */
-  --activo: #08805E;
-  --pasivo: #AA6A18;
-  --capital: #3355A0;
-  --ok: #08805E;
-  --alert: #A93B2C;
+  /* Colour is spent on the three quantities the sheet is about and on nothing
+     else; everything structural stays in ink, so a hue here reads as meaning.
+
+     Validated on a light surface: all three clear 3:1 contrast and separate at
+     33.3 for normal vision. Green against red is the worst case for the common
+     form of colour blindness, so their separation lands at 6.5 — inside the band
+     the guidance allows only alongside a secondary encoding, which is why the
+     chart's lines carry distinct dash patterns and every figure is labelled.
+
+     Liabilities and losses share one red on purpose: both are money against
+     you, so the page never spends two different reds on the same idea. */
+  --activo: #0EA05C;
+  --pasivo: #DC2626;
+  --capital: #7C3AED;
+  --ok: #0EA05C;
+  --alert: #DC2626;
   --rule: #E3E3E0;
   --rule-soft: #EFEFEC;
   --ink: #0B0B0C;
@@ -468,7 +474,7 @@
 .bal-table tr:hover .bal-del,
 .bal-table tr:focus-within .bal-del,
 .bal-cierre-meta:hover .bal-del { opacity: 1; }
-.bal-del:hover { background: #F7E9E6; color: var(--alert); }
+.bal-del:hover { background: #FDECEC; color: var(--alert); }
 .bal-del:focus-visible { opacity: 1; outline: 2px solid var(--ink); outline-offset: 1px; }
 
 .bal-addbtn {
@@ -486,7 +492,7 @@
   text-align: center;
   transition: border-color .15s, color .15s, background .15s;
 }
-.bal-addbtn:hover { border-color: var(--activo); color: var(--activo); background: #F1F7F4; }
+.bal-addbtn:hover { border-color: var(--activo); color: var(--activo); background: #EFFAF4; }
 
 /* ── Capital ── */
 .bal-capbody { padding: 14px 16px 16px; }
@@ -528,8 +534,8 @@
   justify-content: space-between;
   gap: 10px;
 }
-.bal-cuadre.ok  { background: #EAF4F0; color: var(--activo); }
-.bal-cuadre.bad { background: #F7E9E6; color: var(--alert); }
+.bal-cuadre.ok  { background: #E7F6EF; color: var(--activo); }
+.bal-cuadre.bad { background: #FDECEC; color: var(--alert); }
 
 /* ── Acciones ── */
 .bal-actions {
@@ -731,7 +737,7 @@
 .bal-open svg { width: 13px; height: 13px; }
 .bal-row:hover .bal-open,
 .bal-row:focus-within .bal-open { opacity: 1; }
-.bal-open:hover { background: #F1F7F4; color: var(--activo); }
+.bal-open:hover { background: #EFFAF4; color: var(--activo); }
 
 /* ===== PÁGINA DE PARTIDA ===== */
 .bal-detalle { max-width: 640px; }
@@ -801,7 +807,7 @@
 }
 
 .bal-danger { color: var(--alert); }
-.bal-danger:hover { border-color: var(--alert); background: #FBF4F3; }
+.bal-danger:hover { border-color: var(--alert); background: #FEF4F4; }
 
 .bal-loading { color: #97979E; font-size: 13px; }
 
@@ -963,8 +969,8 @@ a.bal-act { display: inline-flex; align-items: center; text-decoration: none; }
   padding: 2px 5px;
   vertical-align: middle;
 }
-.bal-tag-nueva { background: #EAF4F0; color: var(--activo); }
-.bal-tag-baja  { background: #F7E9E6; color: var(--alert); }
+.bal-tag-nueva { background: #E7F6EF; color: var(--activo); }
+.bal-tag-baja  { background: #FDECEC; color: var(--alert); }
 
 @media print {
   .bal-chart-tip { display: none !important; }
@@ -973,17 +979,17 @@ a.bal-act { display: inline-flex; align-items: center; text-decoration: none; }
 /* ===== FLUJO DE CAJA ===== */
 .bal-cards-4 { grid-template-columns: repeat(4, 1fr); }
 
-.bal-dot-entrada { background: #08805E; }
+.bal-dot-entrada { background: #0EA05C; }
 .bal-dot-salida  { background: #A93B2C; }
-.bal-v-entrada { color: #08805E; }
+.bal-v-entrada { color: #0EA05C; }
 .bal-v-salida  { color: #A93B2C; }
 
 .bal-alerta {
   margin-top: 14px;
   padding: 10px 13px;
   border-radius: 9px;
-  background: #F7E9E6;
-  border: 1px solid #EBD6D1;
+  background: #FDECEC;
+  border: 1px solid #F7CFCF;
   color: var(--alert);
   font-size: 12.5px;
   line-height: 1.5;
@@ -1023,14 +1029,14 @@ a.bal-act { display: inline-flex; align-items: center; text-decoration: none; }
   justify-content: center;
   transition: background .12s, color .12s;
 }
-.bal-signo-entrada { background: #EAF4F0; color: #08805E; }
-.bal-signo-salida  { background: #F7E9E6; color: #A93B2C; }
+.bal-signo-entrada { background: #E7F6EF; color: #0EA05C; }
+.bal-signo-salida  { background: #FDECEC; color: #A93B2C; }
 .bal-signo:hover { border-color: currentColor; }
 
 .bal-add-row { display: flex; gap: 8px; margin: 8px 16px 12px; }
 .bal-add-row .bal-addbtn { margin: 0; width: auto; flex: 1; }
-.bal-add-entrada:hover { border-color: #08805E; color: #08805E; background: #F1F7F4; }
-.bal-add-salida:hover  { border-color: #A93B2C; color: #A93B2C; background: #FBF4F3; }
+.bal-add-entrada:hover { border-color: #0EA05C; color: #0EA05C; background: #EFFAF4; }
+.bal-add-salida:hover  { border-color: #A93B2C; color: #A93B2C; background: #FEF4F4; }
 
 @media (max-width: 900px) {
   .bal-cards-4 { grid-template-columns: 1fr 1fr; }
@@ -1070,9 +1076,9 @@ a.bal-act { display: inline-flex; align-items: center; text-decoration: none; }
   padding: 2px 6px;
   white-space: nowrap;
 }
-.bal-origen-detal { background: #EAF4F0; color: #08805E; }
+.bal-origen-detal { background: #E7F6EF; color: #0EA05C; }
 .bal-origen-mayor { background: #F2F2EF; color: #5F5F66; }
-.bal-origen-gasto { background: #F7E9E6; color: #A93B2C; }
+.bal-origen-gasto { background: #FDECEC; color: #A93B2C; }
 .bal-origen-otro  { background: var(--rule-soft); color: var(--ink-soft); }
 
 .bal-metodo-col { color: var(--ink-soft); font-size: 12px; }
@@ -1145,7 +1151,7 @@ select.bal-cell {
   white-space: nowrap;
 }
 .bal-catbar-track { flex: 1; background: var(--rule-soft); border-radius: 4px; height: 8px; overflow: hidden; }
-.bal-catbar-fill { height: 100%; background: #AA6A18; border-radius: 4px; transition: width .35s cubic-bezier(.4,0,.2,1); }
+.bal-catbar-fill { height: 100%; background: #DC2626; border-radius: 4px; transition: width .35s cubic-bezier(.4,0,.2,1); }
 .bal-catbar-v { width: 84px; text-align: right; font-size: 12px; font-weight: 600; flex-shrink: 0; }
 
 @media (max-width: 900px) {
@@ -1248,8 +1254,8 @@ select.bal-cell {
   gap: 10px;
   margin-top: 10px;
   padding: 9px 12px;
-  background: #EAF4F0;
-  border: 1px solid #D5E6DE;
+  background: #E7F6EF;
+  border: 1px solid #C9EAD9;
   border-radius: 9px;
   font-size: 12.5px;
   color: var(--activo);
@@ -1288,8 +1294,8 @@ select.bal-cell {
   gap: 16px;
   margin-bottom: 18px;
   padding: 13px 16px;
-  border: 1px solid #EBD6D1;
-  background: #FBF4F3;
+  border: 1px solid #F7CFCF;
+  background: #FEF4F4;
   border-radius: 12px;
 }
 .bal-merma-nota { font-size: 12px; color: var(--ink-soft); margin-top: 3px; max-width: 520px; line-height: 1.5; }

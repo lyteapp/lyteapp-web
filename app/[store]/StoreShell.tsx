@@ -176,6 +176,52 @@ function buildCartKey(productId: string, color?: string, variables?: Record<stri
   return parts.join('|||')
 }
 
+// "slide" swipe style renders variant photos as a 3D coverflow — each frame is
+// positioned by its own signed distance from the selected index (rotated,
+// pushed back and dimmed the further it is), so neighbors stay visibly peeking
+// and rotating regardless of how many variants a product has. Other styles keep
+// the flat flex+translateX strip. These helpers keep the shared geometry (used
+// both for React's render-time inline styles and the imperative drag update) in
+// one place across renderCard/renderEscRow/renderCatRow.
+function carouselFrameTransform(d: number): { transform: string; opacity: number; zIndex: number } {
+  const angle  = Math.max(-60, Math.min(60, d * 30))
+  const offset = d * 46
+  const scale  = 1 - Math.min(Math.abs(d), 2) * 0.12
+  const z      = -Math.min(Math.abs(d), 3) * 40
+  return {
+    transform: `translateX(${offset}%) translateZ(${z}px) rotateY(${-angle}deg) scale(${scale})`,
+    opacity: Math.max(0, 1 - Math.abs(d) * 0.4),
+    zIndex: Math.round(100 - Math.abs(d) * 10),
+  }
+}
+function carouselStripStyle(swipeStyle: string, n: number, idx: number): React.CSSProperties {
+  if (swipeStyle === 'slide' && n > 1) {
+    return { position: 'relative', width: '100%' }
+  }
+  return { width: `${n * 100}%`, transform: `translateX(-${idx * (100 / n)}%)` }
+}
+function carouselFrameStyle(swipeStyle: string, n: number, i: number, idx: number): React.CSSProperties {
+  if (swipeStyle === 'slide' && n > 1) {
+    const { transform, opacity, zIndex } = carouselFrameTransform(i - idx)
+    return { position: 'absolute', inset: 0, transform, opacity, zIndex }
+  }
+  return { width: `${100 / n}%`, opacity: swipeStyle === 'fade' ? (i === idx ? 1 : 0.2) : undefined }
+}
+// Applied imperatively during touchmove, where updates bypass React for perf.
+function applyCarouselDrag(strip: HTMLElement, swipeStyle: string, n: number, idxPos: number) {
+  if (swipeStyle === 'slide' && n > 1) {
+    const frames = strip.querySelectorAll<HTMLElement>('.sf-slide-frame')
+    frames.forEach((frame, i) => {
+      const { transform, opacity, zIndex } = carouselFrameTransform(i - idxPos)
+      frame.style.transform = transform
+      frame.style.opacity = String(opacity)
+      frame.style.zIndex = String(zIndex)
+    })
+    return
+  }
+  strip.style.transform = `translateX(-${(idxPos / n) * 100}%)`
+}
+
 // Payment-proof photos come straight off a phone camera (often several MB) and
 // were being uploaded as-is, blocking order submission on the upload — this
 // shrinks them client-side (long edge capped, re-encoded as JPEG) so the file
@@ -2133,8 +2179,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
               if (strip) {
                 const n = variants.length
                 const fw = strip.offsetWidth / n
-                const pct = (Math.max(0, Math.min((n - 1) * fw, dragStartIdxRef.current * fw - dx)) / (n * fw)) * 100
-                strip.style.transform = `translateX(-${pct}%)`
+                const idxPos = Math.max(0, Math.min(n - 1, dragStartIdxRef.current - dx / fw))
+                applyCarouselDrag(strip, swipeStyle, n, idxPos)
               }
             }
           } : undefined}
@@ -2155,9 +2201,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
           {variants?.length ? (
             <div className={`sf-slide-strip sf-slide-strip-${swipeStyle}`}
               ref={el => { if (el) stripRefs.current.set(product.id, el); else stripRefs.current.delete(product.id) }}
-              style={{ width: `${variants.length * 100}%`, transform: `translateX(-${(selIdx ?? 0) * (100 / variants.length)}%)` }}>
+              style={carouselStripStyle(swipeStyle, variants.length, selIdx ?? 0)}>
               {variants.map((v, i) => (
-                <div key={i} className="sf-slide-frame" style={{ width: `${100 / variants.length}%`, opacity: swipeStyle === 'fade' ? ((selIdx ?? 0) === i ? 1 : 0.2) : undefined }}>
+                <div key={i} className="sf-slide-frame" style={carouselFrameStyle(swipeStyle, variants.length, i, selIdx ?? 0)}>
                   {v.imageUrl ? <img src={v.imageUrl} alt={product.name} className="sf-card-img" loading="lazy" /> : <div className="sf-card-img-empty">{PLACEHOLDER}</div>}
                 </div>
               ))}
@@ -2222,8 +2268,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
               if (strip) {
                 const n = variants.length
                 const fw = strip.offsetWidth / n
-                const pct = (Math.max(0, Math.min((n - 1) * fw, dragStartIdxRef.current * fw - dx)) / (n * fw)) * 100
-                strip.style.transform = `translateX(-${pct}%)`
+                const idxPos = Math.max(0, Math.min(n - 1, dragStartIdxRef.current - dx / fw))
+                applyCarouselDrag(strip, swipeStyle, n, idxPos)
               }
             }
           } : undefined}
@@ -2244,9 +2290,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
           {variants?.length ? (
             <div className={`sf-slide-strip sf-slide-strip-${swipeStyle}`}
               ref={el => { if (el) stripRefs.current.set(product.id, el); else stripRefs.current.delete(product.id) }}
-              style={{ width: `${variants.length * 100}%`, transform: `translateX(-${(selIdx ?? 0) * (100 / variants.length)}%)` }}>
+              style={carouselStripStyle(swipeStyle, variants.length, selIdx ?? 0)}>
               {variants.map((v, i) => (
-                <div key={i} className="sf-slide-frame" style={{ width: `${100 / variants.length}%`, opacity: swipeStyle === 'fade' ? ((selIdx ?? 0) === i ? 1 : 0.2) : undefined }}>
+                <div key={i} className="sf-slide-frame" style={carouselFrameStyle(swipeStyle, variants.length, i, selIdx ?? 0)}>
                   {v.imageUrl ? <img src={v.imageUrl} alt={product.name} className="sf-esc-img" loading="lazy" /> : <div className="sf-esc-img sf-esc-img-empty">{PLACEHOLDER}</div>}
                 </div>
               ))}
@@ -2308,8 +2354,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
               if (strip) {
                 const n = variants.length
                 const fw = strip.offsetWidth / n
-                const pct = (Math.max(0, Math.min((n - 1) * fw, dragStartIdxRef.current * fw - dx)) / (n * fw)) * 100
-                strip.style.transform = `translateX(-${pct}%)`
+                const idxPos = Math.max(0, Math.min(n - 1, dragStartIdxRef.current - dx / fw))
+                applyCarouselDrag(strip, swipeStyle, n, idxPos)
               }
             }
           } : undefined}
@@ -2330,9 +2376,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
           {variants?.length ? (
             <div className={`sf-slide-strip sf-slide-strip-${swipeStyle}`}
               ref={el => { if (el) stripRefs.current.set(product.id, el); else stripRefs.current.delete(product.id) }}
-              style={{ width: `${variants.length * 100}%`, transform: `translateX(-${(selIdx ?? 0) * (100 / variants.length)}%)` }}>
+              style={carouselStripStyle(swipeStyle, variants.length, selIdx ?? 0)}>
               {variants.map((v, i) => (
-                <div key={i} className="sf-slide-frame" style={{ width: `${100 / variants.length}%`, opacity: swipeStyle === 'fade' ? ((selIdx ?? 0) === i ? 1 : 0.2) : undefined }}>
+                <div key={i} className="sf-slide-frame" style={carouselFrameStyle(swipeStyle, variants.length, i, selIdx ?? 0)}>
                   {v.imageUrl ? <img src={v.imageUrl} alt={product.name} className="sf-cat-img" loading="lazy" /> : <div className="sf-cat-img sf-cat-img-empty">{PLACEHOLDER}</div>}
                 </div>
               ))}

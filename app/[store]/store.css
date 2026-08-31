@@ -254,28 +254,28 @@ html, body { overflow-x: clip; }
 .sf-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 
 /* per-category horizontal product carousel (opt-in, see cfgCategoryLayouts) —
-   one card centered "in focus" at a time, neighbors peeking blurred at the
-   edges. Side padding lets the first/last card scroll-snap to dead center
-   too. Focus state is toggled by an IntersectionObserver scoped to each row
-   (see the "carousel focus" effect in StoreShell.tsx). */
+   one card "in focus" at a time, edge-to-edge (no side inset needed since
+   cards snap to their leading edge, not centered), with the next card
+   peeking softly blurred. Focus state is toggled by an IntersectionObserver
+   scoped to each row (see the "carousel focus" effect in StoreShell.tsx). */
 .sf-grid-horizontal {
   display: flex; overflow-x: auto;
   scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  gap: 14px; padding: 0 8% 4px;
+  gap: 14px; padding-bottom: 4px;
 }
 .sf-grid-horizontal::-webkit-scrollbar { display: none; }
 .sf-grid-horizontal .sf-card {
-  flex: 0 0 84%; min-width: 150px; scroll-snap-align: center;
-  filter: blur(4px); opacity: 0.5; transition: filter 0.25s ease, opacity 0.25s ease;
+  flex: 0 0 92%; min-width: 150px; scroll-snap-align: start;
+  filter: blur(1.5px); opacity: 0.78; transition: filter 0.25s ease, opacity 0.25s ease;
   will-change: filter, opacity;
 }
 .sf-grid-horizontal .sf-card.sf-carousel-focused { filter: none; opacity: 1; }
 
 .sf-hcarousel-wrap { position: relative; }
 .sf-hcarousel-hint {
-  position: absolute; bottom: 16px; right: calc(8% + 10px);
+  position: absolute; bottom: 16px; right: 18px;
   display: flex; align-items: center; gap: 5px;
   background: rgba(15,23,42,0.78); color: white;
   font-size: 11px; font-weight: 600; letter-spacing: 0.02em;

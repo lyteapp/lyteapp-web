@@ -499,7 +499,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     return () => observer.disconnect()
   }, [view])
 
-  // ── Horizontal category carousels: keep only the centered card in focus,
+  // ── Horizontal category carousels: keep only the leading (start-snapped) card in focus,
   // and dismiss the "Desliza" hint the first time each row is scrolled ──
   useEffect(() => {
     if (view !== 'catalog') return
@@ -519,7 +519,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
             }
           })
         },
-        { root: row, rootMargin: '0px -35% 0px -35%', threshold: 0 }
+        { root: row, rootMargin: '0px -80% 0px 0px', threshold: 0 }
       )
       cards.forEach(card => observer.observe(card))
       cleanups.push(() => observer.disconnect())

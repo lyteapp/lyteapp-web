@@ -80,6 +80,7 @@ type TemplateConfig = {
   photoSize?: 'small' | 'medium' | 'large'
   categoryPhotoShapes?: Record<string, string>
   categoryLayouts?: Record<string, string>
+  categorySpacing?: number
   categoryNavStyle?: string
   variantShape?: 'pill' | 'rounded' | 'square'
   extraShape?: 'rounded' | 'pill' | 'square'
@@ -628,6 +629,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     ...(cfg.accentColor ? { '--sf-accent-color': cfg.accentColor } : {}),
     ...(cfg.pageBg      ? { '--sf-page-bg':      cfg.pageBg      } : {}),
     ...(cfg.catTitleColor ? { '--sf-cat-title-color': cfg.catTitleColor } : {}),
+    ...(cfg.categorySpacing !== undefined ? { '--sf-cat-spacing': `${cfg.categorySpacing}px` } : {}),
     ...(cfg.catTitleFont && FONT_MAP[cfg.catTitleFont] ? { '--sf-cat-title-font': FONT_MAP[cfg.catTitleFont] } : {}),
     ...(cfg.productNameFont && FONT_MAP[cfg.productNameFont] ? { '--sf-product-name-font': FONT_MAP[cfg.productNameFont] } : {}),
   } as React.CSSProperties

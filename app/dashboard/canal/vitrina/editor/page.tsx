@@ -201,6 +201,7 @@ export default function EditorPage() {
   const [categoryNavStyle, setCategoryNavStyle] = useState('pills')
   const [showCatNav, setShowCatNav] = useState(true)
   const [stickyCatNav, setStickyCatNav] = useState(true)
+  const [categorySpacing, setCategorySpacing] = useState(0)
   const [logoShape,   setLogoShape]   = useState('rounded')
   const [logoSizePx,  setLogoSizePx]  = useState(34)
   const [logoPosition, setLogoPosition] = useState<'left' | 'center' | 'right' | 'none'>('left')
@@ -261,6 +262,7 @@ export default function EditorPage() {
       if (cfg.categoryNavStyle) setCategoryNavStyle(cfg.categoryNavStyle as string)
       if (cfg.showCatNav !== undefined) setShowCatNav(cfg.showCatNav as boolean)
       if (cfg.stickyCatNav !== undefined) setStickyCatNav(cfg.stickyCatNav as boolean)
+      if ((cfg as Record<string,unknown>).categorySpacing !== undefined) setCategorySpacing(Number((cfg as Record<string,unknown>).categorySpacing))
       if (cfg.logoShape) setLogoShape(cfg.logoShape as string)
       if ((cfg as Record<string, unknown>).logoSizePx) {
         setLogoSizePx(Number((cfg as Record<string, unknown>).logoSizePx))
@@ -369,6 +371,7 @@ export default function EditorPage() {
       .sf-store-name     { font-size: ${(fontSizePx * 1.6).toFixed(1)}px !important; }
       .sf-store-desc     { font-size: ${(fontSizePx * 0.93).toFixed(1)}px !important; }
       .sf-section-title  { font-size: ${(fontSizePx * 1.2).toFixed(1)}px !important; ${catTitleColor ? `color: ${catTitleColor} !important;` : ''} ${catFont ? `font-family: ${catFont} !important;` : ''} }
+      .sf-cat-section    { margin-top: ${categorySpacing}px !important; }
       .sf-card-name      { font-size: ${(fontSizePx * 0.93).toFixed(1)}px !important; ${prodFont ? `font-family: ${prodFont} !important;` : ''} }
       .sf-card-desc      { font-size: ${(fontSizePx * 0.8).toFixed(1)}px !important; }
       .sf-card-price     { font-size: ${(fontSizePx * 1.07).toFixed(1)}px !important; }
@@ -437,7 +440,7 @@ export default function EditorPage() {
   useEffect(() => {
     applyPreview()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, logoShape, logoSizePx])
+  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx])
 
   // ── Auto-save category shape (reloads iframe immediately) ─
   async function handleCategoryShape(catId: string, shape: string | null) {
@@ -499,7 +502,7 @@ export default function EditorPage() {
       photoShape, photoSize,
       priceColor, accentColor, priceFont: priceFont || pageFont, priceSize,
       catTitleFont: catTitleFont || undefined, productNameFont: productNameFont || undefined,
-      categoryNavStyle, showCatNav, stickyCatNav,
+      categoryNavStyle, showCatNav, stickyCatNav, categorySpacing,
       logoShape, logoSizePx, logoPosition, namePosition, showMenuButton,
       headerLayout: undefined,
       contentBlocks: contentBlocks.length > 0 ? contentBlocks : undefined,
@@ -1239,6 +1242,24 @@ export default function EditorPage() {
                 </div>
               </div>
             </label>
+
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>
+              Separacion entre categorias
+              <span className="ed-size-slider-val">{categorySpacing}px</span>
+            </div>
+            <div className="ed-size-slider-wrap">
+              <span className="ed-size-slider-hint">S</span>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={4}
+                value={categorySpacing}
+                onChange={e => setCategorySpacing(Number(e.target.value))}
+                className="ed-size-slider"
+              />
+              <span className="ed-size-slider-hint ed-size-slider-hint-lg">L</span>
+            </div>
 
             {categories.length > 0 && (
               <>

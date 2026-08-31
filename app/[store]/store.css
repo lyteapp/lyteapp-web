@@ -260,7 +260,7 @@ html, body { overflow-x: clip; }
    (see the "carousel focus" effect in StoreShell.tsx). */
 .sf-grid-horizontal {
   display: flex; overflow-x: auto;
-  scroll-snap-type: x mandatory;
+  scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   gap: 14px; padding: 0 8% 4px;
@@ -269,6 +269,7 @@ html, body { overflow-x: clip; }
 .sf-grid-horizontal .sf-card {
   flex: 0 0 84%; min-width: 150px; scroll-snap-align: center;
   filter: blur(4px); opacity: 0.5; transition: filter 0.25s ease, opacity 0.25s ease;
+  will-change: filter, opacity;
 }
 .sf-grid-horizontal .sf-card.sf-carousel-focused { filter: none; opacity: 1; }
 

@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 import StoreShell from './StoreShell'
@@ -16,13 +17,14 @@ const supabaseService = createClient(
   { auth: { persistSession: false } }
 )
 
+const getStore = cache(async (slug: string) => {
+  const { data } = await supabase.from('stores').select('*').eq('slug', slug).maybeSingle()
+  return data
+})
+
 export async function generateMetadata({ params }: { params: Promise<{ store: string }> }) {
   const { store: slug } = await params
-  const { data } = await supabase
-    .from('stores')
-    .select('name, description, logo_url, brand_color')
-    .eq('slug', slug)
-    .maybeSingle()
+  const data = await getStore(slug)
   if (!data) return { title: 'Tienda no encontrada' }
   return {
     title: data.name,
@@ -42,8 +44,7 @@ export async function generateMetadata({ params }: { params: Promise<{ store: st
 export default async function StorePage({ params }: { params: Promise<{ store: string }> }) {
   const { store: slug } = await params
 
-  const { data: store } = await supabase
-    .from('stores').select('*').eq('slug', slug).maybeSingle()
+  const store = await getStore(slug)
 
   if (!store) notFound()
 

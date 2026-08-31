@@ -276,7 +276,13 @@ html, body { overflow-x: clip; }
 }
 .sf-grid-horizontal .sf-card.sf-carousel-focused { opacity: 1; }
 
-.sf-hcarousel-wrap { position: relative; }
+/* Breaks out of .sf-section-inner's padding/max-width to reach the true
+   viewport edges, regardless of how much side padding the page has at any
+   breakpoint — the standard "100vw + centered translateX" full-bleed trick. */
+.sf-hcarousel-wrap {
+  position: relative;
+  width: 100vw; margin-left: 50%; transform: translateX(-50%);
+}
 .sf-hcarousel-hint {
   position: absolute; bottom: 16px; right: 18px;
   display: flex; align-items: center; gap: 5px;

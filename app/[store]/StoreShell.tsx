@@ -88,6 +88,7 @@ type TemplateConfig = {
   showInstagram?: boolean
   showMenuButton?: boolean
   cardBg?: string
+  catTitleColor?: string
   accentColor?: string
   logoShape?: string
   logoSize?: string
@@ -574,6 +575,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     ...(cfg.cardBg      ? { '--sf-card-bg':     cfg.cardBg      } : {}),
     ...(cfg.accentColor ? { '--sf-accent-color': cfg.accentColor } : {}),
     ...(cfg.pageBg      ? { '--sf-page-bg':      cfg.pageBg      } : {}),
+    ...(cfg.catTitleColor ? { '--sf-cat-title-color': cfg.catTitleColor } : {}),
   } as React.CSSProperties
 
   function renderContentBlocks(afterId: string) {

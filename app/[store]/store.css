@@ -243,7 +243,7 @@ html, body { overflow-x: clip; }
 /* ── PRODUCTS ── */
 .sf-products-section { padding: 32px 0 48px; }
 .sf-section-inner { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
-.sf-section-title { font-size: 1.2em; font-weight: 700; color: #0F172A; letter-spacing: -0.03em; margin-bottom: 20px; }
+.sf-section-title { font-size: 1.2em; font-weight: 700; color: var(--sf-cat-title-color, #0F172A); letter-spacing: -0.03em; margin-bottom: 20px; }
 .sf-cat-section-title-sticky {
   position: sticky; top: 0; z-index: 15;
   background: var(--sf-page-bg, #FAFAF9);
@@ -968,7 +968,7 @@ html, body { overflow-x: clip; }
 .sf-tpl-oscuro .sf-header { background: #1E293B; border-color: rgba(255,255,255,0.06); }
 .sf-tpl-oscuro .sf-store-name { color: white; }
 .sf-tpl-oscuro .sf-store-desc { color: rgba(255,255,255,0.55); }
-.sf-tpl-oscuro .sf-section-title { color: white; }
+.sf-tpl-oscuro .sf-section-title { color: var(--sf-cat-title-color, white); }
 .sf-tpl-oscuro .sf-card { background: #1E293B; border-color: rgba(255,255,255,0.07); }
 .sf-tpl-oscuro .sf-card-img-wrap { background: #334155; }
 .sf-tpl-oscuro .sf-card-name { color: white; }

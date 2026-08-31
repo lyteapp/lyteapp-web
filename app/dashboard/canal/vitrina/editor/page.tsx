@@ -76,6 +76,7 @@ export default function EditorPage() {
   const [photoSize, setPhotoSize]   = useState<'small' | 'medium' | 'large'>('medium')
   const [accentColor, setAccentColor] = useState('#7C3AED')
   const [priceColor,  setPriceColor]  = useState('#7C3AED')
+  const [catTitleColor, setCatTitleColor] = useState('')
   const [priceSize, setPriceSize]   = useState<'small' | 'medium' | 'large'>('medium')
   const [priceFont, setPriceFont]   = useState('')
 
@@ -107,6 +108,7 @@ export default function EditorPage() {
   const acPickerColorsRef    = useRef<HTMLInputElement>(null)
   const pricePickerRef       = useRef<HTMLInputElement>(null)
   const pricePickerColorsRef = useRef<HTMLInputElement>(null)
+  const catTitlePickerRef    = useRef<HTMLInputElement>(null)
 
   // ── Load saved config ──────────────────────────────────
   useEffect(() => {
@@ -125,6 +127,7 @@ export default function EditorPage() {
       setBaseConfig(cfg)
       if (cfg.pageBg)  setPageBg(cfg.pageBg as string)
       if ((cfg as Record<string,unknown>).cardBg !== undefined) setCardBg((cfg as Record<string,unknown>).cardBg as string)
+      if ((cfg as Record<string,unknown>).catTitleColor !== undefined) setCatTitleColor((cfg as Record<string,unknown>).catTitleColor as string)
       if (cfg.pageFont)   setPageFont(cfg.pageFont as string)
       if (cfg.fontSizePx) setFontSizePx(Number(cfg.fontSizePx))
       else if (cfg.fontSize) setFontSizePx(cfg.fontSize === 'small' ? 13 : cfg.fontSize === 'large' ? 18 : 15)
@@ -247,7 +250,7 @@ export default function EditorPage() {
       .sf-nav-name       { font-size: ${(fontSizePx * 1.07).toFixed(1)}px !important; }
       .sf-store-name     { font-size: ${(fontSizePx * 1.6).toFixed(1)}px !important; }
       .sf-store-desc     { font-size: ${(fontSizePx * 0.93).toFixed(1)}px !important; }
-      .sf-section-title  { font-size: ${(fontSizePx * 1.2).toFixed(1)}px !important; }
+      .sf-section-title  { font-size: ${(fontSizePx * 1.2).toFixed(1)}px !important; ${catTitleColor ? `color: ${catTitleColor} !important;` : ''} }
       .sf-card-name      { font-size: ${(fontSizePx * 0.93).toFixed(1)}px !important; }
       .sf-card-desc      { font-size: ${(fontSizePx * 0.8).toFixed(1)}px !important; }
       .sf-card-price     { font-size: ${(fontSizePx * 1.07).toFixed(1)}px !important; }
@@ -316,7 +319,7 @@ export default function EditorPage() {
   useEffect(() => {
     applyPreview()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageBg, cardBg, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, categoryNavStyle, logoShape, logoSizePx])
+  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, categoryNavStyle, logoShape, logoSizePx])
 
   // ── Auto-save category shape (reloads iframe immediately) ─
   async function handleCategoryShape(catId: string, shape: string | null) {
@@ -358,7 +361,7 @@ export default function EditorPage() {
     setSaving(true)
     const template_config = {
       ...baseConfig,
-      pageBg, cardBg: cardBg || undefined, pageFont, fontSizePx, textAlign,
+      pageBg, cardBg: cardBg || undefined, catTitleColor: catTitleColor || undefined, pageFont, fontSizePx, textAlign,
       photoShape, photoSize,
       priceColor, accentColor, priceFont: priceFont || pageFont, priceSize,
       categoryNavStyle, showCatNav, stickyCatNav,
@@ -385,6 +388,7 @@ export default function EditorPage() {
   const isCustomCard  = cardBg !== '' && cardBg !== 'transparent' && !BG_COLORS.some(c => c.value === cardBg)
   const isCustomAc    = !ACCENT_COLORS.includes(accentColor)
   const isCustomPrice = !ACCENT_COLORS.includes(priceColor)
+  const isCustomCatTitle = catTitleColor !== '' && !ACCENT_COLORS.includes(catTitleColor)
 
   function PanelSave() {
     return (
@@ -630,6 +634,45 @@ export default function EditorPage() {
                 type="color"
                 value={isCustomCard ? cardBg : '#FFFFFF'}
                 onChange={e => setCardBg(e.target.value)}
+                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
+              />
+            </div>
+
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Titulo de categoria</div>
+            <div className="ed-tp-swatches" style={{ position: 'relative' }}>
+              <button
+                className={`ed-tp-swatch ed-tp-light${catTitleColor === '' ? ' ed-tp-active' : ''}`}
+                style={{ background: 'white', fontSize: 9, fontWeight: 700, color: '#94A3B8', letterSpacing: 0 }}
+                title="Auto"
+                onClick={() => setCatTitleColor('')}
+              >
+                Auto
+              </button>
+              {ACCENT_COLORS.map(c => (
+                <button
+                  key={c}
+                  className={`ed-tp-swatch${catTitleColor === c ? ' ed-tp-active' : ''}`}
+                  style={{ background: c }}
+                  onClick={() => setCatTitleColor(c)}
+                />
+              ))}
+              <button
+                className={`ed-tp-swatch ed-tp-custom${isCustomCatTitle ? ' ed-tp-active' : ''}`}
+                style={isCustomCatTitle ? { background: catTitleColor } : undefined}
+                title="Personalizado"
+                onClick={() => catTitlePickerRef.current?.click()}
+              >
+                {!isCustomCatTitle && (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                )}
+              </button>
+              <input
+                ref={catTitlePickerRef}
+                type="color"
+                value={isCustomCatTitle ? catTitleColor : '#0F172A'}
+                onChange={e => setCatTitleColor(e.target.value)}
                 style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
               />
             </div>

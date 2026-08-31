@@ -268,10 +268,13 @@ html, body { overflow-x: clip; }
 .sf-grid-horizontal::-webkit-scrollbar { display: none; }
 .sf-grid-horizontal .sf-card {
   flex: 0 0 92%; min-width: 150px; scroll-snap-align: start;
-  filter: blur(1.5px); opacity: 0.78; transition: filter 0.25s ease, opacity 0.25s ease;
-  will-change: filter, opacity;
+  /* opacity only — filter:blur() on this element broke Safari's clip of the
+     nested circular photo shape (border-radius:50% + overflow:visible),
+     showing its square corners instead of a clean circle. */
+  opacity: 0.6; transition: opacity 0.25s ease;
+  will-change: opacity;
 }
-.sf-grid-horizontal .sf-card.sf-carousel-focused { filter: none; opacity: 1; }
+.sf-grid-horizontal .sf-card.sf-carousel-focused { opacity: 1; }
 
 .sf-hcarousel-wrap { position: relative; }
 .sf-hcarousel-hint {

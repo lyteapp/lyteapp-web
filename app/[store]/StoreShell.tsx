@@ -704,10 +704,39 @@ export default function StoreShell({ store, products, categories = [], initialBc
           <div className={`sf-modal-product-head${modalNutritionEnabled ? ' has-nutrition' : ''}`}>
             {modalNutritionEnabled && modalNutrition && (
               <div className="sf-modal-nutrition-badge">
-                <div className="sf-modal-nutrition-item"><strong>{Math.round(modalNutrition.calories)}</strong><span>kcal</span></div>
-                <div className="sf-modal-nutrition-item"><strong>{Math.round(modalNutrition.fat)}g</strong><span>grasa</span></div>
-                <div className="sf-modal-nutrition-item"><strong>{Math.round(modalNutrition.protein)}g</strong><span>prot</span></div>
-                <div className="sf-modal-nutrition-item"><strong>{Math.round(modalNutrition.carbs)}g</strong><span>carbs</span></div>
+                <div className="sf-modal-nutrition-chart">
+                  <svg viewBox="0 0 56 56">
+                    <circle cx="28" cy="28" r={modalNutritionRadius} fill="none" stroke="rgba(15,23,42,0.08)" strokeWidth="7" />
+                    {modalNutritionSegments.map(s => (
+                      <circle
+                        key={s.key} cx="28" cy="28" r={modalNutritionRadius} fill="none"
+                        stroke={s.color} strokeWidth="7"
+                        strokeDasharray={`${s.len} ${modalNutritionCircumference - s.len}`}
+                        strokeDashoffset={s.dashOffset}
+                        strokeLinecap="round"
+                        transform="rotate(-90 28 28)"
+                      />
+                    ))}
+                  </svg>
+                  <div className="sf-modal-nutrition-kcal">
+                    <strong>{Math.round(modalNutrition.calories)}</strong>
+                    <span>kcal</span>
+                  </div>
+                </div>
+                <div className="sf-modal-nutrition-legend">
+                  <div className="sf-modal-nutrition-legend-item">
+                    <span className="sf-modal-nutrition-dot" style={{ background: '#F59E0B' }} />
+                    Grasas <strong>{Math.round(modalNutrition.fat)}g</strong>
+                  </div>
+                  <div className="sf-modal-nutrition-legend-item">
+                    <span className="sf-modal-nutrition-dot" style={{ background: 'var(--sf-accent-color, #7C3AED)' }} />
+                    Proteínas <strong>{Math.round(modalNutrition.protein)}g</strong>
+                  </div>
+                  <div className="sf-modal-nutrition-legend-item">
+                    <span className="sf-modal-nutrition-dot" style={{ background: '#10B981' }} />
+                    Carbos <strong>{Math.round(modalNutrition.carbs)}g</strong>
+                  </div>
+                </div>
               </div>
             )}
             {modalDisplayImage && (
@@ -1582,6 +1611,24 @@ export default function StoreShell({ store, products, categories = [], initialBc
         carbs:    (modalProduct!.options!.nutrition!.carbs ?? 0)    + modalNutritionAdditionals.reduce((s, a) => s + (a.carbs ?? 0), 0),
       }
     : null
+
+  const modalNutritionRadius = 24
+  const modalNutritionCircumference = 2 * Math.PI * modalNutritionRadius
+  const modalNutritionTotal = modalNutrition ? modalNutrition.fat + modalNutrition.protein + modalNutrition.carbs : 0
+  const modalNutritionSegments: { key: string; color: string; len: number; dashOffset: number }[] = []
+  if (modalNutrition && modalNutritionTotal > 0) {
+    let segOffset = 0
+    for (const s of [
+      { key: 'fat', value: modalNutrition.fat, color: '#F59E0B' },
+      { key: 'protein', value: modalNutrition.protein, color: 'var(--sf-accent-color, #7C3AED)' },
+      { key: 'carbs', value: modalNutrition.carbs, color: '#10B981' },
+    ]) {
+      if (s.value <= 0) continue
+      const len = (s.value / modalNutritionTotal) * modalNutritionCircumference
+      modalNutritionSegments.push({ key: s.key, color: s.color, len, dashOffset: -segOffset })
+      segOffset += len
+    }
+  }
 
 
   // ── CHECKOUT ──

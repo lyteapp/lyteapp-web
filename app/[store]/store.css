@@ -267,7 +267,6 @@ html, body { overflow-x: clip; }
   display: flex; align-items: center; justify-content: center;
   position: relative;
   touch-action: pan-y;
-  perspective: 800px;
 }
 .sf-card-img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s; }
 .sf-card:hover .sf-card-img { transform: scale(1.04); }
@@ -905,7 +904,6 @@ html, body { overflow-x: clip; }
   position: relative; flex-shrink: 0;
   width: 60px; height: 60px;
   touch-action: pan-y;
-  perspective: 500px;
 }
 .sf-esc-img {
   width: 60px; height: 60px; border-radius: 10px;
@@ -944,7 +942,6 @@ html, body { overflow-x: clip; }
   position: relative; flex-shrink: 0;
   width: 68px; height: 68px;
   touch-action: pan-y;
-  perspective: 500px;
 }
 .sf-cat-img {
   width: 68px; height: 68px; border-radius: 10px;
@@ -1061,29 +1058,11 @@ html, body { overflow-x: clip; }
   position: absolute; top: 0; left: 0;
   height: 100%;
   display: flex;
-  overflow: hidden; border-radius: inherit;
   transition: transform 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   will-change: transform;
 }
 .sf-slide-strip.dragging { transition: none; }
-
-/* per-category swipe animation styles */
-.sf-slide-strip-snappy { transition-duration: 0.16s; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); }
-.sf-slide-strip-smooth { transition-duration: 0.55s; transition-timing-function: cubic-bezier(0.65, 0, 0.35, 1); }
-.sf-slide-strip-bounce { transition-duration: 0.5s; transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1); }
-.sf-slide-strip-fade   { transition-duration: 0.38s; transition-timing-function: ease; }
-.sf-slide-strip-fade.dragging .sf-slide-frame { transition: none; }
-
-/* "slide" = 3D coverflow: each frame positions itself by distance from the
-   selected index (see carouselFrameTransform in StoreShell.tsx) instead of
-   the strip sliding as a flat row. */
-.sf-slide-strip-slide { display: block; }
-.sf-slide-strip-slide.dragging .sf-slide-frame { transition: none; }
-
-.sf-slide-frame {
-  flex-shrink: 0; height: 100%; overflow: hidden;
-  transition: transform 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.32s ease;
-}
+.sf-slide-frame { flex-shrink: 0; height: 100%; overflow: hidden; }
 .sf-slide-frame img { width: 100%; height: 100%; object-fit: cover; }
 .sf-slide-frame .sf-card-img-empty,
 .sf-slide-frame .sf-esc-img-empty,

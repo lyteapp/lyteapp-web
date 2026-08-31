@@ -712,47 +712,48 @@ export default function StoreShell({ store, products, categories = [], initialBc
     if (!modalProduct) return null
     return (
       <div className="sf-modal-overlay" onClick={() => setModalProduct(null)}>
+        <div className="sf-modal-wrap">
+          {modalNutritionEnabled && modalNutrition && (
+            <div className="sf-modal-nutrition-badge sf-modal-nutrition-badge-float">
+              <div className="sf-modal-nutrition-chart">
+                <svg viewBox="0 0 80 80">
+                  <circle cx="40" cy="40" r={modalNutritionRadius} fill="none" stroke="rgba(15,23,42,0.08)" strokeWidth="10" />
+                  {modalNutritionSegments.map(s => (
+                    <circle
+                      key={s.key} cx="40" cy="40" r={modalNutritionRadius} fill="none"
+                      stroke={s.color} strokeWidth="10"
+                      strokeDasharray={`${s.len} ${modalNutritionCircumference - s.len}`}
+                      strokeDashoffset={s.dashOffset}
+                      strokeLinecap="round"
+                      transform="rotate(-90 40 40)"
+                    />
+                  ))}
+                </svg>
+                <div className="sf-modal-nutrition-kcal">
+                  <strong>{Math.round(modalNutrition.calories)}</strong>
+                  <span>kcal</span>
+                </div>
+              </div>
+              <div className="sf-modal-nutrition-legend">
+                <div className="sf-modal-nutrition-legend-item">
+                  <span className="sf-modal-nutrition-dot" style={{ background: '#F59E0B' }} />
+                  Grasas <strong>{Math.round(modalNutrition.fat)}g</strong>
+                </div>
+                <div className="sf-modal-nutrition-legend-item">
+                  <span className="sf-modal-nutrition-dot" style={{ background: 'var(--sf-accent-color, #7C3AED)' }} />
+                  Proteínas <strong>{Math.round(modalNutrition.protein)}g</strong>
+                </div>
+                <div className="sf-modal-nutrition-legend-item">
+                  <span className="sf-modal-nutrition-dot" style={{ background: '#10B981' }} />
+                  Carbos <strong>{Math.round(modalNutrition.carbs)}g</strong>
+                </div>
+              </div>
+            </div>
+          )}
         <div className="sf-modal" onClick={e => e.stopPropagation()}>
           <button className="sf-modal-close" onClick={() => setModalProduct(null)}>×</button>
 
-          <div className={`sf-modal-product-head${modalNutritionEnabled ? ' has-nutrition' : ''}`}>
-            {modalNutritionEnabled && modalNutrition && (
-              <div className="sf-modal-nutrition-badge">
-                <div className="sf-modal-nutrition-chart">
-                  <svg viewBox="0 0 80 80">
-                    <circle cx="40" cy="40" r={modalNutritionRadius} fill="none" stroke="rgba(15,23,42,0.08)" strokeWidth="10" />
-                    {modalNutritionSegments.map(s => (
-                      <circle
-                        key={s.key} cx="40" cy="40" r={modalNutritionRadius} fill="none"
-                        stroke={s.color} strokeWidth="10"
-                        strokeDasharray={`${s.len} ${modalNutritionCircumference - s.len}`}
-                        strokeDashoffset={s.dashOffset}
-                        strokeLinecap="round"
-                        transform="rotate(-90 40 40)"
-                      />
-                    ))}
-                  </svg>
-                  <div className="sf-modal-nutrition-kcal">
-                    <strong>{Math.round(modalNutrition.calories)}</strong>
-                    <span>kcal</span>
-                  </div>
-                </div>
-                <div className="sf-modal-nutrition-legend">
-                  <div className="sf-modal-nutrition-legend-item">
-                    <span className="sf-modal-nutrition-dot" style={{ background: '#F59E0B' }} />
-                    Grasas <strong>{Math.round(modalNutrition.fat)}g</strong>
-                  </div>
-                  <div className="sf-modal-nutrition-legend-item">
-                    <span className="sf-modal-nutrition-dot" style={{ background: 'var(--sf-accent-color, #7C3AED)' }} />
-                    Proteínas <strong>{Math.round(modalNutrition.protein)}g</strong>
-                  </div>
-                  <div className="sf-modal-nutrition-legend-item">
-                    <span className="sf-modal-nutrition-dot" style={{ background: '#10B981' }} />
-                    Carbos <strong>{Math.round(modalNutrition.carbs)}g</strong>
-                  </div>
-                </div>
-              </div>
-            )}
+          <div className="sf-modal-product-head">
             {modalDisplayImage && (
               <img src={modalDisplayImage} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" onClick={() => {
                 const cvs = modalProduct.options?.colorVariants
@@ -867,6 +868,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
               Agregar · {currencySymbol}{((modalProduct.price + modalExtraPrice) * modalQty).toFixed(2)}
             </button>
           </div>
+        </div>
         </div>
       </div>
     )

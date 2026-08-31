@@ -1129,8 +1129,8 @@ html, body { overflow-x: clip; }
   box-shadow: 0 8px 22px rgba(15, 23, 42, 0.18);
 }
 .sf-modal-nutrition-badge-float {
-  position: absolute; top: 0; left: 50%; z-index: 5;
-  transform: translate(-50%, -50%);
+  position: absolute; bottom: calc(100% + 14px); left: 50%; z-index: 5;
+  transform: translateX(-50%);
   max-width: calc(100% - 32px);
 }
 .sf-modal-nutrition-chart {

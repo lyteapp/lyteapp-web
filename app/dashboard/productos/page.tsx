@@ -133,22 +133,27 @@ export default function ProductosPage() {
   // --- variable helpers ---
   function addVarGroup() {
     setOptVariables(v => [...v, { label: '', choices: [] }])
+    setIsDirty(true)
   }
   function updateVarLabel(i: number, label: string) {
     setOptVariables(v => v.map((g, idx) => idx === i ? { ...g, label } : g))
+    setIsDirty(true)
   }
   function addChoice(gi: number, val: string) {
     if (!val.trim()) return
     setOptVariables(v => v.map((g, i) => i === gi ? { ...g, choices: [...g.choices, val.trim()] } : g))
     setChoiceInputs(p => ({ ...p, [gi]: '' }))
+    setIsDirty(true)
   }
   function removeChoice(gi: number, ci: number) {
     setOptVariables(v => v.map((g, i) => i === gi
       ? { ...g, choices: g.choices.filter((_, j) => j !== ci) } : g))
+    setIsDirty(true)
   }
   function removeVarGroup(i: number) {
     setOptVariables(v => v.filter((_, idx) => idx !== i))
     setChoiceInputs(p => { const n = { ...p }; delete n[i]; return n })
+    setIsDirty(true)
   }
 
   async function handleImgUpload(e: { target: { files: FileList | null } }) {
@@ -477,7 +482,7 @@ export default function ProductosPage() {
               <div className="pr-opts-box-label">Adicionales</div>
               <div className="pr-opts-box-hint">El cliente puede agregar extras opcionales al producto</div>
             </div>
-            <button className="pr-opts-add-btn" onClick={() => setOptAdditionals(a => [...a, { name: '', price: 0 }])}>
+            <button className="pr-opts-add-btn" onClick={() => { setOptAdditionals(a => [...a, { name: '', price: 0 }]); setIsDirty(true) }}>
               + Agregar
             </button>
           </div>
@@ -490,7 +495,7 @@ export default function ProductosPage() {
                       className="pr-opt-extra-name"
                       placeholder="Nombre del adicional (ej: Extra queso)"
                       value={a.name}
-                      onChange={e => setOptAdditionals(arr => arr.map((x, j) => j === i ? { ...x, name: e.target.value } : x))}
+                      onChange={e => { setOptAdditionals(arr => arr.map((x, j) => j === i ? { ...x, name: e.target.value } : x)); setIsDirty(true) }}
                     />
                     <div className="pr-opt-extra-price-wrap">
                       <span className="pr-opt-extra-dollar">$</span>
@@ -499,10 +504,10 @@ export default function ProductosPage() {
                         className="pr-opt-extra-price"
                         placeholder="0.00"
                         value={a.price || ''}
-                        onChange={e => setOptAdditionals(arr => arr.map((x, j) => j === i ? { ...x, price: parseFloat(e.target.value) || 0 } : x))}
+                        onChange={e => { setOptAdditionals(arr => arr.map((x, j) => j === i ? { ...x, price: parseFloat(e.target.value) || 0 } : x)); setIsDirty(true) }}
                       />
                     </div>
-                    <button className="pr-opt-del" onClick={() => setOptAdditionals(arr => arr.filter((_, j) => j !== i))}>×</button>
+                    <button className="pr-opt-del" onClick={() => { setOptAdditionals(arr => arr.filter((_, j) => j !== i)); setIsDirty(true) }}>×</button>
                   </div>
                   {optNutritionEnabled && (
                     <div className="pr-opt-extra-nutrition-row">

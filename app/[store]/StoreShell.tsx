@@ -14,7 +14,11 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
 )
 
-type VariableGroup  = { label: string; choices: string[] }
+type VariableChoice = { value: string; price: number }
+type VariableGroup  = { label: string; choices: VariableChoice[] }
+function normalizeChoice(c: VariableChoice | string): VariableChoice {
+  return typeof c === 'string' ? { value: c, price: 0 } : { value: c.value, price: c.price ?? 0 }
+}
 type Additional     = { name: string; price: number; calories?: number; fat?: number; protein?: number; carbs?: number }
 type ColorVariant   = { label: string; color: string; imageUrl: string }
 type NutritionInfo  = { enabled?: boolean; calories?: number; fat?: number; protein?: number; carbs?: number }
@@ -320,7 +324,15 @@ export default function StoreShell({ store, products, categories = [], initialBc
       const color = item.selected_options?.color
       const variables = item.selected_options?.variables
       const key = buildCartKey(item.product_id ?? item.product_name, color, variables)
-      const extraPrice = (item.selected_options?.additionals ?? []).reduce((s, a) => s + (a.price || 0), 0)
+      const variablePrice = product?.options?.variables
+        ? Object.entries(variables ?? {}).reduce((sum, [label, value]) => {
+            if (!value) return sum
+            const group = product.options!.variables!.find(g => g.label === label)
+            const choice = group?.choices.map(normalizeChoice).find(c => c.value === value)
+            return sum + (choice?.price ?? 0)
+          }, 0)
+        : 0
+      const extraPrice = (item.selected_options?.additionals ?? []).reduce((s, a) => s + (a.price || 0), 0) + variablePrice
       next[key] = {
         id: key,
         productId: item.product_id ?? undefined,
@@ -758,13 +770,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
               <div key={gi} className="sf-modal-section">
                 <div className="sf-modal-section-title">{g.label}</div>
                 <div className="sf-modal-chips">
-                  {g.choices.map(c => (
+                  {g.choices.map(normalizeChoice).map(c => (
                     <button
-                      key={c}
-                      className={`sf-modal-chip${modalVars[g.label] === c ? ' selected' : ''}`}
-                      onClick={() => setModalVars(v => ({ ...v, [g.label]: v[g.label] === c ? '' : c }))}
+                      key={c.value}
+                      className={`sf-modal-chip${modalVars[g.label] === c.value ? ' selected' : ''}`}
+                      onClick={() => setModalVars(v => ({ ...v, [g.label]: v[g.label] === c.value ? '' : c.value }))}
                     >
-                      {c}
+                      {c.value}
+                      {c.price > 0 && <span className="sf-modal-chip-price">+{currencySymbol}{c.price.toFixed(2)}</span>}
                     </button>
                   ))}
                 </div>
@@ -874,7 +887,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   function confirmModal() {
     if (!modalProduct) return
     const selectedAdds = (modalProduct.options?.additionals ?? []).filter((_, i) => modalAdditionals.has(i))
-    const extraPrice   = selectedAdds.reduce((s, a) => s + a.price, 0)
+    const extraPrice   = selectedAdds.reduce((s, a) => s + a.price, 0) + modalVariablePrice
     const variantImage = modalColor && modalProduct.options?.colorVariants?.length
       ? (modalProduct.options.colorVariants.find(v => v.label === modalColor)?.imageUrl ?? null)
       : null
@@ -1591,8 +1604,17 @@ export default function StoreShell({ store, products, categories = [], initialBc
   )
 
   // Product modal extra price (for footer price display)
+  const modalVariablePrice = modalProduct
+    ? Object.entries(modalVars).reduce((sum, [label, value]) => {
+        if (!value) return sum
+        const group = modalProduct!.options?.variables?.find(g => g.label === label)
+        const choice = group?.choices.map(normalizeChoice).find(c => c.value === value)
+        return sum + (choice?.price ?? 0)
+      }, 0)
+    : 0
+
   const modalExtraPrice = modalProduct
-    ? (modalProduct.options?.additionals ?? []).filter((_, i) => modalAdditionals.has(i)).reduce((s, a) => s + a.price, 0)
+    ? (modalProduct.options?.additionals ?? []).filter((_, i) => modalAdditionals.has(i)).reduce((s, a) => s + a.price, 0) + modalVariablePrice
     : 0
 
   const modalDisplayImage = modalProduct

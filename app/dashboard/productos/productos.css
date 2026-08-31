@@ -320,15 +320,28 @@
   display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
 }
 .pr-opt-chip {
-  display: inline-flex; align-items: center; gap: 5px;
+  display: inline-flex; align-items: center; gap: 6px;
   background: white; border: 1px solid rgba(124,58,237,0.25);
   color: #4C1D95; font-size: 13px; font-weight: 600;
-  padding: 5px 10px; border-radius: 100px;
+  padding: 5px 6px 5px 10px; border-radius: 100px;
 }
+.pr-opt-chip-label { white-space: nowrap; }
+.pr-opt-chip-price-wrap {
+  display: flex; align-items: center;
+  background: rgba(124,58,237,0.06); border-radius: 100px;
+  padding: 0 8px 0 6px;
+}
+.pr-opt-chip-dollar { font-size: 12px; color: #A78BFA; font-weight: 600; }
+.pr-opt-chip-price {
+  width: 48px; border: none; outline: none; background: transparent;
+  padding: 4px 0; font-size: 12px; font-weight: 600; color: #4C1D95;
+  font-family: var(--font-geist-sans), sans-serif;
+}
+.pr-opt-chip-price::placeholder { color: #C4B5FD; font-weight: 400; }
 .pr-opt-chip button {
   background: none; border: none; cursor: pointer;
   color: #94A3B8; font-size: 14px; line-height: 1;
-  padding: 0; display: flex;
+  padding: 0; display: flex; flex-shrink: 0;
 }
 .pr-opt-chip button:hover { color: #EF4444; }
 .pr-opt-add-choice-row {

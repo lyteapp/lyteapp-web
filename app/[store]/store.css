@@ -1260,6 +1260,9 @@ html, body { overflow-x: clip; }
 .sf-modal-chip.selected {
   background: var(--sf-accent-color, #7C3AED); border-color: var(--sf-accent-color, #7C3AED); color: white; font-weight: 600;
 }
+.sf-modal-chip-price {
+  margin-left: 6px; font-size: 12px; font-weight: 600; opacity: 0.75;
+}
 
 /* Additionals */
 .sf-modal-extra {

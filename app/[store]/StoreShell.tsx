@@ -14,10 +14,12 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
 )
 
-type VariableChoice = { value: string; price: number }
+type VariableChoice = { value: string; price: number; calories?: number; fat?: number; protein?: number; carbs?: number }
 type VariableGroup  = { label: string; choices: VariableChoice[] }
 function normalizeChoice(c: VariableChoice | string): VariableChoice {
-  return typeof c === 'string' ? { value: c, price: 0 } : { value: c.value, price: c.price ?? 0 }
+  return typeof c === 'string'
+    ? { value: c, price: 0 }
+    : { value: c.value, price: c.price ?? 0, calories: c.calories, fat: c.fat, protein: c.protein, carbs: c.carbs }
 }
 type Additional     = { name: string; price: number; calories?: number; fat?: number; protein?: number; carbs?: number }
 type ColorVariant   = { label: string; color: string; imageUrl: string }
@@ -1625,12 +1627,19 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
   const modalNutritionEnabled = !!modalProduct?.options?.nutrition?.enabled
   const modalNutritionAdditionals = (modalProduct?.options?.additionals ?? []).filter((_, i) => modalAdditionals.has(i))
+  const modalNutritionVariableChoices = modalProduct
+    ? Object.entries(modalVars).map(([label, value]) => {
+        if (!value) return null
+        const group = modalProduct!.options?.variables?.find(g => g.label === label)
+        return group?.choices.map(normalizeChoice).find(c => c.value === value) ?? null
+      }).filter((c): c is VariableChoice => !!c)
+    : []
   const modalNutrition = modalNutritionEnabled
     ? {
-        calories: (modalProduct!.options!.nutrition!.calories ?? 0) + modalNutritionAdditionals.reduce((s, a) => s + (a.calories ?? 0), 0),
-        fat:      (modalProduct!.options!.nutrition!.fat ?? 0)      + modalNutritionAdditionals.reduce((s, a) => s + (a.fat ?? 0), 0),
-        protein:  (modalProduct!.options!.nutrition!.protein ?? 0)  + modalNutritionAdditionals.reduce((s, a) => s + (a.protein ?? 0), 0),
-        carbs:    (modalProduct!.options!.nutrition!.carbs ?? 0)    + modalNutritionAdditionals.reduce((s, a) => s + (a.carbs ?? 0), 0),
+        calories: (modalProduct!.options!.nutrition!.calories ?? 0) + modalNutritionAdditionals.reduce((s, a) => s + (a.calories ?? 0), 0) + modalNutritionVariableChoices.reduce((s, c) => s + (c.calories ?? 0), 0),
+        fat:      (modalProduct!.options!.nutrition!.fat ?? 0)      + modalNutritionAdditionals.reduce((s, a) => s + (a.fat ?? 0), 0)      + modalNutritionVariableChoices.reduce((s, c) => s + (c.fat ?? 0), 0),
+        protein:  (modalProduct!.options!.nutrition!.protein ?? 0)  + modalNutritionAdditionals.reduce((s, a) => s + (a.protein ?? 0), 0)  + modalNutritionVariableChoices.reduce((s, c) => s + (c.protein ?? 0), 0),
+        carbs:    (modalProduct!.options!.nutrition!.carbs ?? 0)    + modalNutritionAdditionals.reduce((s, a) => s + (a.carbs ?? 0), 0)    + modalNutritionVariableChoices.reduce((s, c) => s + (c.carbs ?? 0), 0),
       }
     : null
 

@@ -317,8 +317,22 @@
 
 /* Choices row */
 .pr-opt-choices {
-  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  display: flex; flex-wrap: wrap; gap: 10px 6px; align-items: flex-start;
 }
+.pr-opt-choice-block { display: flex; flex-direction: column; gap: 6px; }
+.pr-opt-choice-nutrition-row {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px;
+  min-width: 160px;
+}
+.pr-opt-choice-nutrition-row input {
+  border: 1px solid rgba(15,23,42,0.1); border-radius: 6px;
+  padding: 4px 6px; font-size: 11px; color: #0F172A;
+  background: white; outline: none;
+  font-family: var(--font-geist-sans), sans-serif;
+  transition: border-color 0.2s;
+}
+.pr-opt-choice-nutrition-row input:focus { border-color: rgba(124,58,237,0.4); }
+.pr-opt-choice-nutrition-row input::placeholder { color: #CBD5E1; }
 .pr-opt-chip {
   display: inline-flex; align-items: center; gap: 6px;
   background: white; border: 1px solid rgba(124,58,237,0.25);

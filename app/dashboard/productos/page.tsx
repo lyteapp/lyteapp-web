@@ -7,10 +7,12 @@ import { useAuth } from '../../lib/auth'
 import { useT } from '../../lib/LocaleProvider'
 import './productos.css'
 
-type VariableChoice = { value: string; price: number }
+type VariableChoice = { value: string; price: number; calories?: number; fat?: number; protein?: number; carbs?: number }
 type VariableGroup  = { label: string; choices: VariableChoice[] }
 function normalizeChoice(c: VariableChoice | string): VariableChoice {
-  return typeof c === 'string' ? { value: c, price: 0 } : { value: c.value, price: c.price ?? 0 }
+  return typeof c === 'string'
+    ? { value: c, price: 0 }
+    : { value: c.value, price: c.price ?? 0, calories: c.calories, fat: c.fat, protein: c.protein, carbs: c.carbs }
 }
 type Additional    = { name: string; price: number; calories?: number; fat?: number; protein?: number; carbs?: number }
 type ColorVariant  = { label: string; color: string; imageUrl: string }
@@ -157,6 +159,11 @@ export default function ProductosPage() {
   function updateChoicePrice(gi: number, ci: number, price: number) {
     setOptVariables(v => v.map((g, i) => i === gi
       ? { ...g, choices: g.choices.map((c, j) => j === ci ? { ...c, price } : c) } : g))
+    setIsDirty(true)
+  }
+  function updateChoiceNutrition(gi: number, ci: number, field: 'calories' | 'fat' | 'protein' | 'carbs', value: number) {
+    setOptVariables(v => v.map((g, i) => i === gi
+      ? { ...g, choices: g.choices.map((c, j) => j === ci ? { ...c, [field]: value } : c) } : g))
     setIsDirty(true)
   }
   function removeVarGroup(i: number) {
@@ -386,21 +393,50 @@ export default function ProductosPage() {
                     <button className="pr-opt-del-group" onClick={() => removeVarGroup(gi)}>Eliminar grupo</button>
                   </div>
                   <div className="pr-opt-choices">
-                    {g.choices.map((c, ci) => (
-                      <div key={ci} className="pr-opt-chip">
-                        <span className="pr-opt-chip-label">{normalizeChoice(c).value}</span>
-                        <span className="pr-opt-chip-price-wrap">
-                          <span className="pr-opt-chip-dollar">+$</span>
-                          <input
-                            type="number" min="0" step="0.01" placeholder="0.00"
-                            className="pr-opt-chip-price"
-                            value={normalizeChoice(c).price || ''}
-                            onChange={e => updateChoicePrice(gi, ci, parseFloat(e.target.value) || 0)}
-                          />
-                        </span>
-                        <button onClick={() => removeChoice(gi, ci)}>×</button>
-                      </div>
-                    ))}
+                    {g.choices.map((c, ci) => {
+                      const choice = normalizeChoice(c)
+                      return (
+                        <div key={ci} className="pr-opt-choice-block">
+                          <div className="pr-opt-chip">
+                            <span className="pr-opt-chip-label">{choice.value}</span>
+                            <span className="pr-opt-chip-price-wrap">
+                              <span className="pr-opt-chip-dollar">+$</span>
+                              <input
+                                type="number" min="0" step="0.01" placeholder="0.00"
+                                className="pr-opt-chip-price"
+                                value={choice.price || ''}
+                                onChange={e => updateChoicePrice(gi, ci, parseFloat(e.target.value) || 0)}
+                              />
+                            </span>
+                            <button onClick={() => removeChoice(gi, ci)}>×</button>
+                          </div>
+                          {optNutritionEnabled && (
+                            <div className="pr-opt-choice-nutrition-row">
+                              <input
+                                type="number" step="1" placeholder="kcal"
+                                value={choice.calories ?? ''}
+                                onChange={e => updateChoiceNutrition(gi, ci, 'calories', parseFloat(e.target.value) || 0)}
+                              />
+                              <input
+                                type="number" step="0.1" placeholder="grasa (g)"
+                                value={choice.fat ?? ''}
+                                onChange={e => updateChoiceNutrition(gi, ci, 'fat', parseFloat(e.target.value) || 0)}
+                              />
+                              <input
+                                type="number" step="0.1" placeholder="prot (g)"
+                                value={choice.protein ?? ''}
+                                onChange={e => updateChoiceNutrition(gi, ci, 'protein', parseFloat(e.target.value) || 0)}
+                              />
+                              <input
+                                type="number" step="0.1" placeholder="carbs (g)"
+                                value={choice.carbs ?? ''}
+                                onChange={e => updateChoiceNutrition(gi, ci, 'carbs', parseFloat(e.target.value) || 0)}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
                   <div className="pr-opt-add-choice-row">
                     <input

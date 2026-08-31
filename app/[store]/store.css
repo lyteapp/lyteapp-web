@@ -253,6 +253,17 @@ html, body { overflow-x: clip; }
 
 .sf-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 
+/* per-category horizontal product carousel (opt-in, see cfgCategoryLayouts) */
+.sf-grid-horizontal {
+  display: flex; overflow-x: auto;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  gap: 14px; padding-bottom: 4px;
+}
+.sf-grid-horizontal::-webkit-scrollbar { display: none; }
+.sf-grid-horizontal .sf-card { flex: 0 0 42%; min-width: 150px; scroll-snap-align: start; }
+
 .sf-card {
   background: var(--sf-card-bg, white); border: 1px solid rgba(15,23,42,0.07);
   border-radius: 18px; overflow: hidden;

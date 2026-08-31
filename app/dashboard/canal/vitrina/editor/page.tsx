@@ -84,6 +84,11 @@ const PHOTO_SHAPES_CAT = [
   { id: 'circle', name: 'Circular'   },
 ]
 
+const CATEGORY_LAYOUTS = [
+  { id: 'grid',       name: 'Cuadricula' },
+  { id: 'horizontal', name: 'Horizontal' },
+]
+
 type Category = { id: string; name: string }
 type ContentBlock = { id: string; afterId: string; type: 'text' | 'image' | 'video'; content: string }
 
@@ -190,6 +195,7 @@ export default function EditorPage() {
   const [template, setTemplate]             = useState('clasico')
   const [categories, setCategories]         = useState<Category[]>([])
   const [categoryShapes, setCategoryShapes] = useState<Record<string, string>>({})
+  const [categoryLayouts, setCategoryLayouts] = useState<Record<string, string>>({})
   const [baseConfig, setBaseConfig]         = useState<Record<string, unknown>>({})
 
   const [categoryNavStyle, setCategoryNavStyle] = useState('pills')
@@ -251,6 +257,7 @@ export default function EditorPage() {
       if ((cfg as Record<string,unknown>).catTitleFont !== undefined) setCatTitleFont((cfg as Record<string,unknown>).catTitleFont as string)
       if ((cfg as Record<string,unknown>).productNameFont !== undefined) setProductNameFont((cfg as Record<string,unknown>).productNameFont as string)
       if (cfg.categoryPhotoShapes) setCategoryShapes(cfg.categoryPhotoShapes as Record<string, string>)
+      if ((cfg as Record<string,unknown>).categoryLayouts) setCategoryLayouts((cfg as Record<string,unknown>).categoryLayouts as Record<string, string>)
       if (cfg.categoryNavStyle) setCategoryNavStyle(cfg.categoryNavStyle as string)
       if (cfg.showCatNav !== undefined) setShowCatNav(cfg.showCatNav as boolean)
       if (cfg.stickyCatNav !== undefined) setStickyCatNav(cfg.stickyCatNav as boolean)
@@ -448,6 +455,22 @@ export default function EditorPage() {
     setIframeKey(k => k + 1)
   }
 
+  // ── Auto-save category layout (reloads iframe immediately) ─
+  async function handleCategoryLayout(catId: string, layout: string | null) {
+    const next = { ...categoryLayouts }
+    if (layout) next[catId] = layout
+    else delete next[catId]
+    setCategoryLayouts(next)
+    if (!storeId) return
+    const newConfig = {
+      ...baseConfig,
+      categoryLayouts: Object.keys(next).length > 0 ? next : undefined,
+    }
+    await supabase.from('stores').update({ template_config: newConfig }).eq('id', storeId)
+    setBaseConfig(newConfig)
+    setIframeKey(k => k + 1)
+  }
+
   // ── Auto-save logo/name position (reloads iframe) ────
   async function handleLogoPosition(pos: 'left' | 'center' | 'right' | 'none') {
     setLogoPosition(pos)
@@ -483,6 +506,9 @@ export default function EditorPage() {
       ...(Object.keys(categoryShapes).length > 0
         ? { categoryPhotoShapes: categoryShapes }
         : { categoryPhotoShapes: undefined }),
+      ...(Object.keys(categoryLayouts).length > 0
+        ? { categoryLayouts }
+        : { categoryLayouts: undefined }),
     }
     await supabase.from('stores').update({
       template,
@@ -1213,6 +1239,35 @@ export default function EditorPage() {
                 </div>
               </div>
             </label>
+
+            {categories.length > 0 && (
+              <>
+                <div className="ed-tp-divider" />
+                <div className="ed-tp-subtitle">Diseno de productos por categoria</div>
+                <div className="ed-tp-hint" style={{ fontSize: 11, color: '#94A3B8', marginBottom: 8 }}>
+                  Cuadricula normal o fila horizontal deslizable
+                </div>
+                <div className="ed-cat-shapes">
+                  {categories.map(cat => (
+                    <div key={cat.id} className="ed-cat-shape-row">
+                      <div className="ed-cat-shape-label">{cat.name}</div>
+                      <div className="ed-cat-shape-pills">
+                        {CATEGORY_LAYOUTS.map(l => (
+                          <button
+                            key={l.id}
+                            type="button"
+                            className={`ed-cat-pill${(categoryLayouts[cat.id] ?? 'grid') === l.id ? ' ed-cat-pill-active' : ''}`}
+                            onClick={() => handleCategoryLayout(cat.id, l.id === 'grid' ? null : l.id)}
+                          >
+                            {l.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
 
             <PanelSave />
           </div>

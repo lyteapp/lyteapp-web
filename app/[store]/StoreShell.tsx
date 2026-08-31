@@ -79,6 +79,7 @@ type TemplateConfig = {
   priceSize?: 'small' | 'medium' | 'large'
   photoSize?: 'small' | 'medium' | 'large'
   categoryPhotoShapes?: Record<string, string>
+  categoryLayouts?: Record<string, string>
   categoryNavStyle?: string
   variantShape?: 'pill' | 'rounded' | 'square'
   extraShape?: 'rounded' | 'pill' | 'square'
@@ -565,6 +566,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const cfgPriceFontFamily = cfg.priceFont ? FONT_MAP[cfg.priceFont] : undefined
   const cfgPriceSize       = cfg.priceSize ?? 'medium'
   const cfgCategoryShapes  = cfg.categoryPhotoShapes ?? {}
+  const cfgCategoryLayouts = cfg.categoryLayouts ?? {}
   const cfgCatNavStyle     = cfg.categoryNavStyle ?? 'pills'
   const cfgStickyCatNav    = cfg.stickyCatNav !== false
   const cfgVariantShape    = cfg.variantShape ?? 'pill'
@@ -2615,7 +2617,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 <Fragment key={cat.id}>
                   <div id={`cat-${cat.id}`} className={`sf-cat-section${cfgCategoryShapes[cat.id] ? ` sf-pshape-${cfgCategoryShapes[cat.id]}` : ''}`}>
                     <h2 className="sf-section-title sf-cat-section-title">{cat.name}</h2>
-                    <div className="sf-grid">{items.map(renderCard)}</div>
+                    <div className={cfgCategoryLayouts[cat.id] === 'horizontal' ? 'sf-grid-horizontal' : 'sf-grid'}>{items.map(renderCard)}</div>
                   </div>
                   {renderContentBlocks(cat.id)}
                 </Fragment>
@@ -2623,7 +2625,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
               {uncategorized.length > 0 && (
                 <div id="cat-other" className="sf-cat-section">
                   <h2 className="sf-section-title sf-cat-section-title">{t('store.ourProducts')}</h2>
-                  <div className="sf-grid">{uncategorized.map(renderCard)}</div>
+                  <div className={cfgCategoryLayouts['__other'] === 'horizontal' ? 'sf-grid-horizontal' : 'sf-grid'}>{uncategorized.map(renderCard)}</div>
                 </div>
               )}
               {renderContentBlocks('bottom')}

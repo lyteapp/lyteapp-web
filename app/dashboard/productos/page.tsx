@@ -204,7 +204,8 @@ export default function ProductosPage() {
     const name = varPresetNameInput.trim()
     if (!name) return
     const group = optVariables[gi]
-    const preset: VariableGroupPreset = { id: crypto.randomUUID(), name, group: { label: group.label, choices: group.choices } }
+    if (!group || (group.choices ?? []).length === 0) return
+    const preset: VariableGroupPreset = { id: crypto.randomUUID(), name, group: { label: group.label, choices: group.choices.map(normalizeChoice) } }
     const next = [...variableGroupPresets, preset]
     setVariableGroupPresets(next)
     persistOptionPresets({ variableGroups: next, additionalGroups: additionalGroupPresets })
@@ -214,7 +215,7 @@ export default function ProductosPage() {
   function applyVariableGroupPreset() {
     const preset = variableGroupPresets.find(p => p.id === applyVarPresetId)
     if (!preset) return
-    setOptVariables(v => [...v, { label: preset.group.label, choices: preset.group.choices.map(c => ({ ...c })) }])
+    setOptVariables(v => [...v, { label: preset.group.label, choices: (preset.group.choices ?? []).map(normalizeChoice) }])
     setIsDirty(true)
     setApplyVarPresetId('')
   }
@@ -239,7 +240,7 @@ export default function ProductosPage() {
   function applyAdditionalGroupPreset() {
     const preset = additionalGroupPresets.find(p => p.id === applyAddPresetId)
     if (!preset) return
-    setOptAdditionals(a => [...a, ...preset.items.map(item => ({ ...item }))])
+    setOptAdditionals(a => [...a, ...(preset.items ?? []).map(item => ({ ...item }))])
     setIsDirty(true)
     setApplyAddPresetId('')
   }

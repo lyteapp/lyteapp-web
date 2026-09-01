@@ -657,6 +657,19 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const cfgStickyOffsetPx = cfgHeaderSticky ? (headerHeightMeasured ?? cfg.headerHeightPx ?? 56) : 0
   const cfgModalWizard = !!cfg.modalWizard
 
+  // ── iOS Safari reveals <body>'s own background during the rubber-band
+  // overscroll bounce past the top/bottom of the page. The app shell's
+  // global body background follows the visitor's OS dark-mode setting
+  // (near-black in dark mode), which has nothing to do with this store's
+  // colors — sync it to match so the bounce doesn't flash a mismatched
+  // color behind the header/banner. Reset on unmount so it doesn't leak
+  // onto other pages after a client-side navigation away from the store. ──
+  useEffect(() => {
+    const bg = cfg.pageBg || '#FAFAF9'
+    document.body.style.background = bg
+    return () => { document.body.style.background = '' }
+  }, [cfg.pageBg])
+
   // ── Measure the header's real rendered height (see cfgStickyOffsetPx) ──
   useEffect(() => {
     if (view !== 'catalog' || !cfgHeaderSticky) { setHeaderHeightMeasured(null); return }

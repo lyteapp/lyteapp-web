@@ -422,7 +422,6 @@ export default function EditorPage() {
       ${alignCSS}
       .sf-nav-logo-wrap {
         border-radius: ${logoShape === 'circle' ? '50%' : logoShape === 'square' ? '0' : '8px'} !important;
-        width:  ${logoSizePx}px !important;
         height: ${logoSizePx}px !important;
       }
       .sf-topbar-inner { min-height: ${headerHeightPx}px !important; }

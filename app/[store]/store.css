@@ -54,22 +54,20 @@ html, body { overflow-x: clip; }
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
 }
 .sf-topbar-brand { display: flex; align-items: center; gap: 10px; }
-/* logo wrapper — overflow:hidden + border-radius clip correctly */
+/* logo wrapper — sized by height only so a non-square PNG keeps its own
+   proportions instead of being boxed/cropped into a square; the wrap
+   shrinks to fit the image, it doesn't force a size onto it. */
 .sf-nav-logo-wrap {
   flex-shrink: 0; overflow: hidden;
-  width: 34px; height: 34px;
   display: flex; align-items: center; justify-content: center;
 }
-.sf-nav-logo-img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.sf-nav-logo-img { height: 100%; width: auto; max-width: 200px; object-fit: contain; display: block; }
 .sf-nav-name { font-size: 1.07em; font-weight: 700; color: #0F172A; letter-spacing: -0.03em; }
-/* logo shape */
+/* logo shape — rounds the logo's own corners; only reads as a "box" if
+   the image itself has non-transparent pixels reaching those corners */
 .sf-nav-logo-rounded { border-radius: 8px; }
 .sf-nav-logo-circle  { border-radius: 50%; }
 .sf-nav-logo-square  { border-radius: 0; }
-/* logo size */
-.sf-nav-logo-small  { width: 26px; height: 26px; }
-.sf-nav-logo-medium { width: 34px; height: 34px; }
-.sf-nav-logo-large  { width: 46px; height: 46px; }
 /* 3-column header layout */
 .sf-topbar-3col {
   display: grid;

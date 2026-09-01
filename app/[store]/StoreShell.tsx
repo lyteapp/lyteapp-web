@@ -2550,7 +2550,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
         <div className="sf-topbar-inner sf-topbar-3col">
           <div className="sf-topbar-slot-left">
             {cfgLogoPosition === 'left' && store.logo_url && (
-              <div ref={catalogLogoRef} className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape} sf-nav-logo-${cfgLogoShape}${logoMorphStart ? ' sf-nav-logo-hidden' : ''}`} style={{ width: cfgLogoSizePx, height: cfgLogoSizePx }}>
+              <div ref={catalogLogoRef} className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape}${logoMorphStart ? ' sf-nav-logo-hidden' : ''}`} style={{ height: cfgLogoSizePx }}>
                 <img src={store.logo_url} alt={store.name} className="sf-nav-logo-img" />
               </div>
             )}
@@ -2560,7 +2560,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           </div>
           <div className="sf-topbar-slot-center">
             {cfgLogoPosition === 'center' && store.logo_url && (
-              <div ref={catalogLogoRef} className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape} sf-nav-logo-${cfgLogoShape}${logoMorphStart ? ' sf-nav-logo-hidden' : ''}`} style={{ width: cfgLogoSizePx, height: cfgLogoSizePx }}>
+              <div ref={catalogLogoRef} className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape}${logoMorphStart ? ' sf-nav-logo-hidden' : ''}`} style={{ height: cfgLogoSizePx }}>
                 <img src={store.logo_url} alt={store.name} className="sf-nav-logo-img" />
               </div>
             )}
@@ -2570,7 +2570,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           </div>
           <div className="sf-topbar-slot-right">
             {cfgLogoPosition === 'right' && store.logo_url && (
-              <div ref={catalogLogoRef} className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape} sf-nav-logo-${cfgLogoShape}${logoMorphStart ? ' sf-nav-logo-hidden' : ''}`} style={{ width: cfgLogoSizePx, height: cfgLogoSizePx }}>
+              <div ref={catalogLogoRef} className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape}${logoMorphStart ? ' sf-nav-logo-hidden' : ''}`} style={{ height: cfgLogoSizePx }}>
                 <img src={store.logo_url} alt={store.name} className="sf-nav-logo-img" />
               </div>
             )}

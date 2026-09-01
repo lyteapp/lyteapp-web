@@ -1202,6 +1202,17 @@ export default function EditorPage() {
                     </div>
                   ),
                 },
+                {
+                  id: 'tabs',
+                  name: 'Tabs',
+                  preview: (
+                    <div style={{ display: 'flex', gap: 5, padding: '8px 10px', background: pageBg || '#FAFAF9' }}>
+                      {['Todo', 'Comida', 'Bebidas'].map((l, i) => (
+                        <div key={l} style={{ padding: '5px 10px', borderRadius: 8, fontSize: 9, fontWeight: i === 0 ? 700 : 500, background: i === 0 ? '#7C3AED' : (pageBg || '#FAFAF9'), border: i === 0 ? 'none' : '1px solid rgba(15,23,42,0.12)', color: i === 0 ? 'white' : '#64748B', whiteSpace: 'nowrap' as const }}>{l}</div>
+                      ))}
+                    </div>
+                  ),
+                },
               ]).map(s => (
                 <button
                   key={s.id}

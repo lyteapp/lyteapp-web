@@ -193,15 +193,15 @@ html, body { overflow-x: clip; }
 /* "Categorias sobre el banner" — straddles the banner's bottom edge in a
    frosted-glass strip instead of taking its normal spot in the flow. */
 .sf-cat-nav-glass {
-  position: absolute; left: 16px; right: 16px; bottom: 0; top: auto; z-index: 15;
+  position: absolute; left: 0; right: 0; bottom: 0; top: auto; z-index: 15;
   transform: translateY(50%);
   background: rgba(255,255,255,0.22);
   backdrop-filter: blur(14px) saturate(160%);
   -webkit-backdrop-filter: blur(14px) saturate(160%);
-  border: 1px solid rgba(255,255,255,0.3);
-  border-radius: 100px;
+  border-top: 1px solid rgba(255,255,255,0.3);
+  border-radius: 0;
   box-shadow: 0 8px 24px rgba(15,23,42,0.18);
-  justify-content: center;
+  justify-content: flex-start;
 }
 .sf-cat-nav-glass .sf-cat-btn { color: white; text-shadow: 0 1px 4px rgba(0,0,0,0.25); }
 .sf-cat-nav-glass .sf-cat-btn.sf-cat-active { text-shadow: none; }
@@ -278,6 +278,40 @@ html, body { overflow-x: clip; }
 .sf-cat-nav-boxes .sf-cat-btn.sf-cat-active {
   background: var(--sf-accent-color, #7C3AED); color: white; font-weight: 600;
 }
+
+/* tabs — each button blends into the page's own background instead of
+   sitting on a tinted or transparent one, so it reads as part of the
+   page rather than a UI chrome bar; only the active tab pops out. */
+.sf-cat-nav-tabs { padding: 10px 16px; gap: 6px; }
+.sf-cat-nav-tabs .sf-cat-btn {
+  border-radius: 10px; padding: 10px 16px;
+  background: var(--sf-page-bg, #FAFAF9);
+  border: 1px solid rgba(15,23,42,0.07);
+  color: #475569;
+}
+.sf-cat-nav-tabs .sf-cat-btn.sf-cat-active {
+  background: var(--sf-accent-color, #7C3AED); color: white; font-weight: 600;
+  border-color: var(--sf-accent-color, #7C3AED);
+}
+/* over the banner: translucent glass instead of the opaque page-bg blend,
+   so the photo still shows through the inactive tabs like the reference */
+.sf-cat-nav-glass.sf-cat-nav-tabs .sf-cat-btn {
+  background: rgba(255,255,255,0.16); border-color: rgba(255,255,255,0.28);
+  color: white; text-shadow: 0 1px 4px rgba(0,0,0,0.25);
+}
+.sf-cat-nav-glass.sf-cat-nav-tabs .sf-cat-btn.sf-cat-active {
+  background: var(--sf-accent-color, #7C3AED); border-color: var(--sf-accent-color, #7C3AED); text-shadow: none;
+}
+/* once pinned solid at the top there's no photo left to blend with —
+   back to the opaque page-bg look */
+.sf-cat-nav-glass.sf-cat-nav-pinned.sf-cat-nav-tabs .sf-cat-btn {
+  background: var(--sf-page-bg, #FAFAF9); border-color: rgba(15,23,42,0.07);
+  color: #475569; text-shadow: none;
+}
+.sf-cat-nav-glass.sf-cat-nav-pinned.sf-cat-nav-tabs .sf-cat-btn.sf-cat-active {
+  background: var(--sf-accent-color, #7C3AED); border-color: var(--sf-accent-color, #7C3AED); color: white;
+}
+.sf-tpl-oscuro .sf-cat-nav-tabs .sf-cat-btn { background: #1E293B; border-color: rgba(255,255,255,0.08); color: #94A3B8; }
 
 .sf-cat-section { scroll-margin-top: 56px; margin-top: var(--sf-cat-spacing, 0px); }
 

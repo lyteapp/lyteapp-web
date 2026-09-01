@@ -776,6 +776,7 @@ html, body { overflow-x: clip; }
 .sf-splash-keypad-spacer { width: 74px; height: 74px; }
 .sf-splash-keypad-in { animation: sfKeypadRevealIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
 @keyframes sfKeypadRevealIn { from { opacity: 0; transform: translateY(-8px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.sf-splash-btn-in { animation: sfKeypadRevealIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both; }
 
 /* "Slide to reveal" bar shown before the keypad — same accent pill as the
    "Empezar" button below, not a separate visual element. */

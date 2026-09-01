@@ -253,6 +253,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [catalogEnter, setCatalogEnter] = useState(false)
   const [customerCedula, setCustomerCedula] = useState('')
   const [cedulaStatus, setCedulaStatus] = useState<'idle' | 'checking' | 'found' | 'new'>('idle')
+  // "Slide to reveal" bar shown before the cedula keypad, for a bit of interactivity
+  const [keypadRevealed, setKeypadRevealed] = useState(false)
+  const [cedulaSlideProgress, setCedulaSlideProgress] = useState(0)
+  const [cedulaSliding, setCedulaSliding] = useState(false)
+  const cedulaSlideBarRef = useRef<HTMLDivElement | null>(null)
+  const cedulaSlideDraggingRef = useRef(false)
   const [splashError, setSplashError] = useState('')
   const [locationLabel, setLocationLabel] = useState('')
   const [lastOrder, setLastOrder] = useState<LastOrder | null>(null)
@@ -1468,6 +1474,36 @@ export default function StoreShell({ store, products, categories = [], initialBc
     setCustomerCedula(prev => prev.slice(0, -1))
   }
 
+  // ── "Slide to reveal" bar that unlocks the number pad ──
+  function cedulaSlideUpdate(clientX: number) {
+    const bar = cedulaSlideBarRef.current
+    if (!bar) return
+    const rect = bar.getBoundingClientRect()
+    const thumbSize = 44, pad = 4
+    const travel = rect.width - thumbSize - pad * 2
+    const raw = travel > 0 ? (clientX - rect.left - pad - thumbSize / 2) / travel : 0
+    setCedulaSlideProgress(Math.min(1, Math.max(0, raw)))
+  }
+  function cedulaSlidePointerDown(e: React.PointerEvent) {
+    cedulaSlideDraggingRef.current = true
+    setCedulaSliding(true)
+    e.currentTarget.setPointerCapture(e.pointerId)
+    cedulaSlideUpdate(e.clientX)
+  }
+  function cedulaSlidePointerMove(e: React.PointerEvent) {
+    if (!cedulaSlideDraggingRef.current) return
+    cedulaSlideUpdate(e.clientX)
+  }
+  function cedulaSlidePointerUp() {
+    if (!cedulaSlideDraggingRef.current) return
+    cedulaSlideDraggingRef.current = false
+    setCedulaSliding(false)
+    setCedulaSlideProgress(prev => {
+      if (prev >= 0.82) { setTimeout(() => setKeypadRevealed(true), 200); return 1 }
+      return 0
+    })
+  }
+
   function proceedToTransition() {
     if (transitionId === 'logo-morph' && splashLogoRef.current) {
       const r = splashLogoRef.current.getBoundingClientRect()
@@ -1632,25 +1668,45 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 placeholder="Tu cedula de identidad"
                 value={customerCedula}
               />
-              <div className="sf-splash-keypad">
-                {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(d => (
-                  <button key={d} type="button" className="sf-splash-keypad-btn" onClick={() => pressCedulaDigit(d)}>{d}</button>
-                ))}
-                <div className="sf-splash-keypad-spacer" />
-                <button type="button" className="sf-splash-keypad-btn" onClick={() => pressCedulaDigit('0')}>0</button>
-                <button
-                  type="button"
-                  className="sf-splash-keypad-btn sf-splash-keypad-back"
-                  onClick={pressCedulaBackspace}
-                  disabled={!customerCedula}
-                  aria-label="Borrar"
+              {!keypadRevealed ? (
+                <div
+                  ref={cedulaSlideBarRef}
+                  className={`sf-splash-slide-bar${cedulaSliding ? ' sliding' : ''}`}
+                  style={{ '--sf-slide-progress': cedulaSlideProgress } as React.CSSProperties}
+                  onPointerDown={cedulaSlidePointerDown}
+                  onPointerMove={cedulaSlidePointerMove}
+                  onPointerUp={cedulaSlidePointerUp}
+                  onPointerCancel={cedulaSlidePointerUp}
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="20" height="20">
-                    <path d="M21 4H8l-7 8 7 8h13a2 2 0 002-2V6a2 2 0 00-2-2z" />
-                    <path d="M15 9l-4 6M11 9l4 6" />
-                  </svg>
-                </button>
-              </div>
+                  <div className="sf-splash-slide-fill" />
+                  <span className="sf-splash-slide-label">Desliza para ingresar tu cedula</span>
+                  <div className="sf-splash-slide-thumb">
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
+                      <path d="M7 4l6 6-6 6" />
+                    </svg>
+                  </div>
+                </div>
+              ) : (
+                <div className="sf-splash-keypad sf-splash-keypad-in">
+                  {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(d => (
+                    <button key={d} type="button" className="sf-splash-keypad-btn" onClick={() => pressCedulaDigit(d)}>{d}</button>
+                  ))}
+                  <div className="sf-splash-keypad-spacer" />
+                  <button type="button" className="sf-splash-keypad-btn" onClick={() => pressCedulaDigit('0')}>0</button>
+                  <button
+                    type="button"
+                    className="sf-splash-keypad-btn sf-splash-keypad-back"
+                    onClick={pressCedulaBackspace}
+                    disabled={!customerCedula}
+                    aria-label="Borrar"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="20" height="20">
+                      <path d="M21 4H8l-7 8 7 8h13a2 2 0 002-2V6a2 2 0 00-2-2z" />
+                      <path d="M15 9l-4 6M11 9l4 6" />
+                    </svg>
+                  </button>
+                </div>
+              )}
               {cedulaStatus === 'found' && <div className="sf-splash-cedula-hint found">Te reconocimos{customerName ? `, ${customerName.split(' ')[0]}` : ''}</div>}
               {cedulaStatus === 'new' && <div className="sf-splash-cedula-hint">Eres nuevo por aqui, completa tus datos</div>}
 

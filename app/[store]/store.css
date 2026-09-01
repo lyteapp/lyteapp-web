@@ -774,6 +774,37 @@ html, body { overflow-x: clip; }
 .sf-splash-keypad-btn:active { background: color-mix(in srgb, var(--sf-splash-input-bg, white) 30%, transparent); transform: scale(0.94); }
 .sf-splash-keypad-btn:disabled { opacity: 0.3; cursor: default; }
 .sf-splash-keypad-spacer { width: 74px; height: 74px; }
+.sf-splash-keypad-in { animation: sfKeypadRevealIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes sfKeypadRevealIn { from { opacity: 0; transform: translateY(-8px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+/* "Slide to reveal" bar shown before the keypad, for a bit of interactivity */
+.sf-splash-slide-bar {
+  position: relative; height: 52px; max-width: 260px; margin: 6px auto 0;
+  border-radius: 100px; overflow: hidden; touch-action: none; cursor: grab; user-select: none;
+  background: color-mix(in srgb, var(--sf-splash-input-bg, white) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--sf-splash-input-bg, white) 22%, transparent);
+}
+.sf-splash-slide-fill {
+  position: absolute; top: 0; left: 0; bottom: 0;
+  width: calc(52px + var(--sf-slide-progress, 0) * (100% - 52px));
+  background: color-mix(in srgb, var(--sf-splash-input-bg, white) 24%, transparent);
+}
+.sf-splash-slide-bar:not(.sliding) .sf-splash-slide-fill,
+.sf-splash-slide-bar:not(.sliding) .sf-splash-slide-thumb { transition: width 0.25s cubic-bezier(0.22, 1, 0.36, 1), left 0.25s cubic-bezier(0.22, 1, 0.36, 1); }
+.sf-splash-slide-label {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 600; color: var(--sf-splash-input-color, white);
+  opacity: calc(1 - var(--sf-slide-progress, 0) * 0.9); pointer-events: none; letter-spacing: -0.01em;
+}
+.sf-splash-slide-thumb {
+  position: absolute; top: 4px; left: calc(4px + var(--sf-slide-progress, 0) * (100% - 52px));
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--sf-splash-input-color, white);
+  color: var(--sf-accent-color, #7C3AED);
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.sf-splash-slide-bar.sliding { cursor: grabbing; }
 
 .sf-splash-shape-square .sf-splash-cedula { border-radius: 4px; }
 .sf-splash-shape-outline .sf-splash-cedula { border-radius: 10px; }

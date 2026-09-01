@@ -53,9 +53,9 @@ html, body { overflow-x: clip; }
    --sf-sticky-offset instead of the two overlapping at top:0. */
 .sf-topbar-sticky { position: sticky; top: 0; z-index: 25; }
 /* Same option, but for a glass header floating over the banner: it's
-   already anchored at top:0 while floating (absolute, scrolls away with
-   the banner), so pinning it once scrolled past just swaps that for
-   fixed — same look, same bar, just no longer tied to the banner. */
+   already positioned at top:0 (absolute, so it normally scrolls away
+   with the banner) — anchoring just swaps that for fixed, from the
+   start, so it stays put through the whole scroll, same look either way. */
 .sf-topbar-glass.sf-topbar-pinned { position: fixed; z-index: 25; }
 .sf-topbar-inner {
   max-width: 1100px; margin: 0 auto;

@@ -386,7 +386,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [isIos, setIsIos]   = useState(false)
   const [installed, setInstalled] = useState(false)
   const [activeCatId, setActiveCatId] = useState<string | null>(null)
-  const [bannerScrolledPast, setBannerScrolledPast] = useState(false)
+  const [catNavPinned, setCatNavPinned] = useState(false)
   const [menuOpen, setMenuOpen]       = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedVariants, setSelectedVariants] = useState<Record<string, number>>({})
@@ -642,31 +642,29 @@ export default function StoreShell({ store, products, categories = [], initialBc
     )
   const cfgHeaderOverBanner = !!cfg.headerOverBanner && !!store.banner_url && store.template !== 'vitrina' && store.template !== 'catalogo'
   const cfgCatNavOverBanner = !!cfg.catNavOverBanner && !!store.banner_url && store.template !== 'vitrina' && store.template !== 'catalogo'
+  // "Anclar encabezado" always keeps the header at the top while scrolling,
+  // in either mode — sticky in normal flow, or fixed (instead of absolute)
+  // when it floats over the banner. No scroll-position dependency: it's
+  // anchored from the very start, not only once you've scrolled some amount.
   const cfgHeaderSticky = !!cfg.headerSticky
-  // A glass header/cat-nav only starts occupying "top of viewport" space
-  // once it's pinned there after scrolling past the banner; a regular
-  // (non-glass) sticky header occupies it from the start.
-  const cfgHeaderPinned = cfgHeaderOverBanner && cfgHeaderSticky && bannerScrolledPast
-  const cfgHeaderOccupiesTop = cfgHeaderSticky && (!cfgHeaderOverBanner || cfgHeaderPinned)
-  const cfgStickyOffsetPx = cfgHeaderOccupiesTop ? (cfg.headerHeightPx ?? 56) : 0
+  const cfgStickyOffsetPx = cfgHeaderSticky ? (cfg.headerHeightPx ?? 56) : 0
 
-  // ── "Sobre el banner" (encabezado y/o categorias): once the banner scrolls
-  // fully out of view, pin the (still glass-styled) bar(s) to the top like
-  // the normal anchored behavior, instead of leaving them stuck to the
-  // banner's edge ──
+  // ── "Categorias sobre el banner": once the banner scrolls fully out of
+  // view, pin the (still glass-styled) category bar to the top like the
+  // normal anchored behavior, instead of leaving it stuck to the banner's
+  // edge. (The header doesn't need this — it's anchored unconditionally,
+  // see cfgHeaderSticky above.) ──
   useEffect(() => {
-    const headerNeedsPin = cfgHeaderOverBanner && cfgHeaderSticky
-    const catNavNeedsPin = cfgCatNavOverBanner && cfgStickyCatNav
-    if (view !== 'catalog' || (!headerNeedsPin && !catNavNeedsPin)) { setBannerScrolledPast(false); return }
+    if (view !== 'catalog' || !cfgCatNavOverBanner || !cfgStickyCatNav) { setCatNavPinned(false); return }
     const banner = document.querySelector<HTMLElement>('.sf-banner-wrap')
     if (!banner) return
     const observer = new IntersectionObserver(
-      ([entry]) => setBannerScrolledPast(!entry.isIntersecting && entry.boundingClientRect.top < 0),
+      ([entry]) => setCatNavPinned(!entry.isIntersecting && entry.boundingClientRect.top < 0),
       { threshold: 0 }
     )
     observer.observe(banner)
     return () => observer.disconnect()
-  }, [view, cfgHeaderOverBanner, cfgHeaderSticky, cfgCatNavOverBanner, cfgStickyCatNav])
+  }, [view, cfgCatNavOverBanner, cfgStickyCatNav])
 
   const pageStyle: React.CSSProperties = {
     ...(cfg.pageBg ? { background: cfg.pageBg } : {}),
@@ -2287,7 +2285,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const uncategorized = products.filter(p => !p.category_id || !categories.find(c => c.id === p.category_id))
   const hasCats = catGroups.length > 0
   const catNavEl = hasCats && tpl !== 'catalogo' && cfg.showCatNav !== false ? (
-    <nav className={`sf-cat-nav sf-cat-nav-${cfgCatNavStyle}${cfgStickyCatNav ? '' : ' sf-cat-nav-nosticky'}${cfgCatNavOverBanner ? ' sf-cat-nav-glass' : ''}${cfgCatNavOverBanner && cfgStickyCatNav && bannerScrolledPast ? ' sf-cat-nav-pinned' : ''}`}>
+    <nav className={`sf-cat-nav sf-cat-nav-${cfgCatNavStyle}${cfgStickyCatNav ? '' : ' sf-cat-nav-nosticky'}${cfgCatNavOverBanner ? ' sf-cat-nav-glass' : ''}${cfgCatNavOverBanner && cfgStickyCatNav && catNavPinned ? ' sf-cat-nav-pinned' : ''}`}>
       {catGroups.map(({ cat }) => (
         <button
           key={cat.id}
@@ -2604,7 +2602,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     {renderLogoMorphOverlay()}
     {installed && <div className="sf-statusbar-strip" />}
     <div className={`sf-page sf-tpl-${tpl} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize} sf-vshape-${cfgVariantShape} sf-eshape-${cfgExtraShape}${catalogEnter ? ` sf-catalog-enter sf-trans-${store.template_config?.homePage?.transition || 'slide'}` : ''}`} style={pageStyle}>
-      <div className={`sf-topbar${cfgHeaderOverBanner ? ' sf-topbar-glass' : ''}${cfgHeaderSticky && !cfgHeaderOverBanner ? ' sf-topbar-sticky' : ''}${cfgHeaderPinned ? ' sf-topbar-pinned' : ''}`}>
+      <div className={`sf-topbar${cfgHeaderOverBanner ? ' sf-topbar-glass' : ''}${cfgHeaderSticky && !cfgHeaderOverBanner ? ' sf-topbar-sticky' : ''}${cfgHeaderSticky && cfgHeaderOverBanner ? ' sf-topbar-pinned' : ''}`}>
         <div className="sf-topbar-inner sf-topbar-3col">
           <div className="sf-topbar-slot-left">
             {cfgLogoPosition === 'left' && store.logo_url && (

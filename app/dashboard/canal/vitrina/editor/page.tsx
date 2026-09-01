@@ -1497,7 +1497,7 @@ export default function EditorPage() {
             <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#F8FAFC', borderRadius: 10, cursor: 'pointer', gap: 12 }}>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', lineHeight: 1.2 }}>Fijar al hacer scroll</div>
-                <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 3 }}>Queda fijo arriba de la pantalla, y la barra de categorias se ancla justo debajo. Si el encabezado flota sobre el banner, se fija al llegar al final de la foto.</div>
+                <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 3 }}>Queda fijo arriba de la pantalla al hacer scroll, y la barra de categorias se ancla justo debajo si tambien esta anclada.</div>
               </div>
               <div style={{ position: 'relative', flexShrink: 0 }}>
                 <input

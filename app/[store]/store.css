@@ -1501,6 +1501,25 @@ html, body { overflow-x: clip; }
 }
 .sf-menu-btn:hover { background: #E2E8F0; color: #0F172A; }
 
+/* ── HEADER SEARCH / CART BUTTONS ── */
+.sf-header-icon-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: 8px;
+  border: none; background: #F1F5F9; cursor: pointer;
+  color: #475569; transition: background 0.15s, color 0.15s;
+  flex-shrink: 0; position: relative;
+}
+.sf-header-icon-btn:hover { background: #E2E8F0; color: #0F172A; }
+.sf-header-icon-badge {
+  position: absolute; top: -4px; right: -4px;
+  min-width: 16px; height: 16px; padding: 0 3px;
+  border-radius: 100px; background: var(--sf-accent-color, #7C3AED);
+  color: white; font-size: 10px; font-weight: 700; line-height: 16px;
+  text-align: center;
+}
+.sf-topbar-glass .sf-header-icon-btn { background: rgba(255,255,255,0.3); color: white; }
+.sf-topbar-glass .sf-header-icon-btn:hover { background: rgba(255,255,255,0.45); }
+
 /* ── DRAWER ── */
 .sf-drawer-overlay {
   position: fixed; inset: 0; z-index: 250;

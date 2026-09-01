@@ -98,6 +98,8 @@ type TemplateConfig = {
   showWhatsapp?: boolean
   showInstagram?: boolean
   showMenuButton?: boolean
+  showHeaderSearch?: boolean
+  showHeaderCart?: boolean
   cardBg?: string
   catTitleColor?: string
   catTitleFont?: string
@@ -392,6 +394,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [catNavHeightMeasured, setCatNavHeightMeasured] = useState<number | null>(null)
   const [menuOpen, setMenuOpen]       = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [headerSearchOpen, setHeaderSearchOpen] = useState(false)
   const [selectedVariants, setSelectedVariants] = useState<Record<string, number>>({})
 
   // Product options modal
@@ -2487,16 +2490,19 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const escRest     = products.slice(2)
   const vitHero     = products.length > 0 ? products[0] : null
   const vitRest     = products.slice(1)
-  const catFiltered = tpl === 'catalogo'
+  // Filtering keys off having a search query at all, not the template — the
+  // catalogo template's own bar and the header search icon (any template)
+  // both just write into the same searchQuery state.
+  const catFiltered = searchQuery.trim()
     ? products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.description ?? '').toLowerCase().includes(searchQuery.toLowerCase()))
     : products
   const catGroupsFiltered = catGroups.map(({ cat, items }) => ({
     cat,
-    items: tpl === 'catalogo'
+    items: searchQuery.trim()
       ? items.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.description ?? '').toLowerCase().includes(searchQuery.toLowerCase()))
       : items,
   })).filter(g => g.items.length > 0)
-  const uncatGroupFiltered = tpl === 'catalogo'
+  const uncatGroupFiltered = searchQuery.trim()
     ? uncategorized.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.description ?? '').toLowerCase().includes(searchQuery.toLowerCase()))
     : uncategorized
 
@@ -2777,6 +2783,13 @@ export default function StoreShell({ store, products, categories = [], initialBc
       <div className={`sf-topbar${cfgHeaderOverBanner ? ' sf-topbar-glass' : ''}${cfgHeaderSticky && !cfgHeaderOverBanner ? ' sf-topbar-sticky' : ''}${cfgHeaderSticky && cfgHeaderOverBanner ? ' sf-topbar-pinned' : ''}`}>
         <div className="sf-topbar-inner sf-topbar-3col">
           <div className="sf-topbar-slot-left">
+            {cfg.showMenuButton && (
+              <button className="sf-menu-btn" onClick={() => setMenuOpen(true)} aria-label="Menu">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
+                  <path fillRule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                </svg>
+              </button>
+            )}
             {cfgLogoPosition === 'left' && store.logo_url && (
               <div ref={catalogLogoRef} className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape}${logoMorphStart ? ' sf-nav-logo-hidden' : ''}`} style={{ height: cfgLogoSizePx }}>
                 <img src={store.logo_url} alt={store.name} className="sf-nav-logo-img" />
@@ -2810,11 +2823,19 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 {WA_ICON} {t('store.contact')}
               </a>
             )}
-            {cfg.showMenuButton && (
-              <button className="sf-menu-btn" onClick={() => setMenuOpen(true)} aria-label="Menu">
-                <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
-                  <path fillRule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+            {cfg.showHeaderSearch && (
+              <button className="sf-header-icon-btn" onClick={() => setHeaderSearchOpen(o => !o)} aria-label="Buscar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="19" height="19"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
+              </button>
+            )}
+            {cfg.showHeaderCart && (
+              <button className="sf-header-icon-btn" onClick={() => setView('checkout')} aria-label="Carrito">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="19" height="19">
+                  <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+                  <path d="M3 6h18" />
+                  <path d="M16 10a4 4 0 01-8 0" />
                 </svg>
+                {cartCount > 0 && <span className="sf-header-icon-badge">{cartCount}</span>}
               </button>
             )}
           </div>
@@ -2860,11 +2881,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
         </div>
       )}
 
-      {tpl === 'catalogo' && (
+      {(tpl === 'catalogo' || headerSearchOpen) && (
         <div className="sf-search-wrap">
           <div className="sf-search-bar">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
-            <input type="search" placeholder="Buscar productos…" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+            <input type="search" placeholder="Buscar productos…" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} autoFocus={headerSearchOpen && tpl !== 'catalogo'} />
           </div>
         </div>
       )}

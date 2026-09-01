@@ -1673,7 +1673,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
               {!keypadRevealed ? (
                 <div
                   ref={cedulaSlideBarRef}
-                  className={`sf-splash-slide-bar${cedulaSliding ? ' sliding' : ''}`}
+                  className={`sf-splash-slide-bar${cedulaSliding ? ' sliding' : ' sf-splash-slide-hint'}`}
                   style={{
                     '--sf-slide-progress': cedulaSlideProgress,
                     ...(hp.buttonColor ? { background: hp.buttonColor } : {}),

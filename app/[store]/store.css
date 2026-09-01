@@ -809,6 +809,19 @@ html, body { overflow-x: clip; }
 .sf-splash-slide-bar:hover { filter: brightness(1.05); }
 .sf-splash-slide-bar.sliding { cursor: grabbing; }
 
+/* Idle hint: nudges the thumb ~25% across and back, on repeat, so it
+   reads as draggable. Paused while the user is actually dragging. */
+.sf-splash-slide-hint .sf-splash-slide-thumb { animation: sfSlideHintThumb 2.2s ease-in-out infinite; }
+.sf-splash-slide-hint .sf-splash-slide-fill { animation: sfSlideHintFill 2.2s ease-in-out infinite; }
+@keyframes sfSlideHintThumb {
+  0%, 15%, 100% { left: 6px; }
+  40%, 55% { left: 25%; }
+}
+@keyframes sfSlideHintFill {
+  0%, 15%, 100% { width: 68px; }
+  40%, 55% { width: calc(25% + 56px); }
+}
+
 .sf-splash-shape-square .sf-splash-cedula { border-radius: 4px; }
 .sf-splash-shape-outline .sf-splash-cedula { border-radius: 10px; }
 .sf-splash-shape-outline .sf-splash-cedula:not(.sf-splash-location-btn) {

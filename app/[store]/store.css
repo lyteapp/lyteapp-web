@@ -46,8 +46,8 @@ html, body { overflow-x: clip; }
   border-bottom: 1px solid rgba(255,255,255,0.3);
 }
 .sf-topbar-glass .sf-nav-name { color: white; text-shadow: 0 1px 6px rgba(0,0,0,0.35); }
-.sf-topbar-glass .sf-menu-btn { background: rgba(255,255,255,0.3); color: white; }
-.sf-topbar-glass .sf-menu-btn:hover { background: rgba(255,255,255,0.45); }
+.sf-topbar-glass .sf-menu-btn { background: transparent; color: white; }
+.sf-topbar-glass .sf-menu-btn:hover { color: rgba(255,255,255,0.75); }
 /* "Fijar encabezado al hacer scroll" — anchors the header to the top;
    the category bar (sticky or pinned-glass) sticks right below it via
    --sf-sticky-offset instead of the two overlapping at top:0. */
@@ -1495,21 +1495,21 @@ html, body { overflow-x: clip; }
 .sf-menu-btn {
   display: flex; align-items: center; justify-content: center;
   width: 36px; height: 36px; border-radius: 8px;
-  border: none; background: #F1F5F9; cursor: pointer;
-  color: #475569; transition: background 0.15s, color 0.15s;
+  border: none; background: transparent; cursor: pointer;
+  color: #475569; transition: color 0.15s;
   flex-shrink: 0;
 }
-.sf-menu-btn:hover { background: #E2E8F0; color: #0F172A; }
+.sf-menu-btn:hover { color: #0F172A; }
 
 /* ── HEADER SEARCH / CART BUTTONS ── */
 .sf-header-icon-btn {
   display: flex; align-items: center; justify-content: center;
   width: 36px; height: 36px; border-radius: 8px;
-  border: none; background: #F1F5F9; cursor: pointer;
-  color: #475569; transition: background 0.15s, color 0.15s;
+  border: none; background: transparent; cursor: pointer;
+  color: #475569; transition: color 0.15s;
   flex-shrink: 0; position: relative;
 }
-.sf-header-icon-btn:hover { background: #E2E8F0; color: #0F172A; }
+.sf-header-icon-btn:hover { color: #0F172A; }
 .sf-header-icon-badge {
   position: absolute; top: -4px; right: -4px;
   min-width: 16px; height: 16px; padding: 0 3px;
@@ -1517,8 +1517,8 @@ html, body { overflow-x: clip; }
   color: white; font-size: 10px; font-weight: 700; line-height: 16px;
   text-align: center;
 }
-.sf-topbar-glass .sf-header-icon-btn { background: rgba(255,255,255,0.3); color: white; }
-.sf-topbar-glass .sf-header-icon-btn:hover { background: rgba(255,255,255,0.45); }
+.sf-topbar-glass .sf-header-icon-btn { background: transparent; color: white; }
+.sf-topbar-glass .sf-header-icon-btn:hover { color: rgba(255,255,255,0.75); }
 
 /* ── DRAWER ── */
 .sf-drawer-overlay {

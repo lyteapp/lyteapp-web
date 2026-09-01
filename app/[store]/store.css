@@ -755,6 +755,16 @@ html, body { overflow-x: clip; }
   border-color: color-mix(in srgb, var(--sf-splash-input-bg, white) 50%, transparent);
   background: color-mix(in srgb, var(--sf-splash-input-bg, white) 18%, transparent);
 }
+.sf-splash-cedula-field { position: relative; }
+.sf-splash-cedula-edit {
+  position: absolute; top: 50%; right: 8px; transform: translateY(-50%);
+  width: 30px; height: 30px; border-radius: 50%; border: none; cursor: pointer;
+  background: color-mix(in srgb, var(--sf-splash-input-bg, white) 20%, transparent);
+  color: var(--sf-splash-input-color, white);
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.sf-splash-cedula-edit:hover { background: color-mix(in srgb, var(--sf-splash-input-bg, white) 32%, transparent); }
 
 /* Circular number pad for the cedula field, instead of the OS keyboard */
 .sf-splash-keypad {

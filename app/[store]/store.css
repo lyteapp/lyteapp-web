@@ -205,25 +205,20 @@ html, body { overflow-x: clip; }
 }
 .sf-cat-nav-glass .sf-cat-btn { color: white; text-shadow: 0 1px 4px rgba(0,0,0,0.25); }
 .sf-cat-nav-glass .sf-cat-btn.sf-cat-active { text-shadow: none; }
-/* Once scrolled past the banner, pin it to the top like the normal
-   anchored bar — solid, since there's no photo left to blur behind it. */
+/* Once scrolled past the banner, this becomes the SAME glass bar pinned
+   to the top — not a different, solid one. Only the positioning changes
+   (straddling the banner's edge -> flush at the very top); the frosted
+   look, colors and border it already had keep coming from the rules
+   above, since this only overrides what actually needs to move. */
 .sf-cat-nav-glass.sf-cat-nav-pinned {
   position: fixed; top: 0; left: 0; right: 0; bottom: auto;
   transform: none; margin: 0;
-  background: white; border-radius: 0;
-  backdrop-filter: none; -webkit-backdrop-filter: none;
-  border: none; border-bottom: 1px solid rgba(15,23,42,0.07);
-  box-shadow: 0 2px 8px rgba(15,23,42,0.06);
-  justify-content: flex-start;
   animation: sfCatNavPinIn 0.2s ease;
 }
-.sf-cat-nav-glass.sf-cat-nav-pinned .sf-cat-btn { color: #64748B; text-shadow: none; }
 @keyframes sfCatNavPinIn {
   from { transform: translateY(-100%); }
   to   { transform: translateY(0); }
 }
-.sf-tpl-oscuro .sf-cat-nav-glass.sf-cat-nav-pinned { background: #1E293B; border-color: rgba(255,255,255,0.06); }
-.sf-tpl-oscuro .sf-cat-nav-glass.sf-cat-nav-pinned .sf-cat-btn { color: #94A3B8; }
 .sf-cat-nav-inner { display: flex; gap: 2px; }
 .sf-cat-btn {
   flex-shrink: 0; white-space: nowrap; border: none; cursor: pointer;
@@ -301,15 +296,6 @@ html, body { overflow-x: clip; }
 }
 .sf-cat-nav-glass.sf-cat-nav-tabs .sf-cat-btn.sf-cat-active {
   background: var(--sf-accent-color, #7C3AED); border-color: var(--sf-accent-color, #7C3AED); text-shadow: none;
-}
-/* once pinned solid at the top there's no photo left to blend with —
-   back to the opaque page-bg look */
-.sf-cat-nav-glass.sf-cat-nav-pinned.sf-cat-nav-tabs .sf-cat-btn {
-  background: var(--sf-page-bg, #FAFAF9); border-color: rgba(15,23,42,0.07);
-  color: #475569; text-shadow: none;
-}
-.sf-cat-nav-glass.sf-cat-nav-pinned.sf-cat-nav-tabs .sf-cat-btn.sf-cat-active {
-  background: var(--sf-accent-color, #7C3AED); border-color: var(--sf-accent-color, #7C3AED); color: white;
 }
 .sf-tpl-oscuro .sf-cat-nav-tabs .sf-cat-btn { background: #1E293B; border-color: rgba(255,255,255,0.08); color: #94A3B8; }
 

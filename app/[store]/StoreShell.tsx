@@ -109,6 +109,7 @@ type TemplateConfig = {
   logoPosition?: 'left' | 'center' | 'right' | 'none'
   namePosition?: 'left' | 'center' | 'right' | 'none'
   headerOverBanner?: boolean
+  headerHeightPx?: number
   contentBlocks?: ContentBlock[]
   homePage?: {
     enabled?: boolean
@@ -648,6 +649,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     ...(cfg.pageBg      ? { '--sf-page-bg':      cfg.pageBg      } : {}),
     ...(cfg.catTitleColor ? { '--sf-cat-title-color': cfg.catTitleColor } : {}),
     ...(cfg.categorySpacing !== undefined ? { '--sf-cat-spacing': `${cfg.categorySpacing}px` } : {}),
+    ...(cfg.headerHeightPx !== undefined ? { '--sf-header-height': `${cfg.headerHeightPx}px` } : {}),
     ...(cfg.catTitleFont && FONT_MAP[cfg.catTitleFont] ? { '--sf-cat-title-font': FONT_MAP[cfg.catTitleFont] } : {}),
     ...(cfg.productNameFont && FONT_MAP[cfg.productNameFont] ? { '--sf-product-name-font': FONT_MAP[cfg.productNameFont] } : {}),
   } as React.CSSProperties

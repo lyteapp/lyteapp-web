@@ -208,6 +208,7 @@ export default function EditorPage() {
   const [namePosition, setNamePosition] = useState<'left' | 'center' | 'right' | 'none'>('left')
   const [showMenuButton, setShowMenuButton] = useState(false)
   const [headerOverBanner, setHeaderOverBanner] = useState(false)
+  const [headerHeightPx, setHeaderHeightPx] = useState(56)
   const [contentBlocks, setContentBlocks]   = useState<ContentBlock[]>([])
   const [newBlockPos,  setNewBlockPos]      = useState('top')
   const [newBlockType, setNewBlockType]     = useState<'text' | 'image' | 'video'>('text')
@@ -282,6 +283,7 @@ export default function EditorPage() {
       }
       if (cfg.showMenuButton !== undefined) setShowMenuButton(cfg.showMenuButton as boolean)
       if (cfg.headerOverBanner !== undefined) setHeaderOverBanner(cfg.headerOverBanner as boolean)
+      if (cfg.headerHeightPx) setHeaderHeightPx(Number(cfg.headerHeightPx))
       if (cfg.contentBlocks) setContentBlocks(cfg.contentBlocks as ContentBlock[])
       const { data: cats } = await supabase
         .from('categories').select('id,name')
@@ -423,6 +425,7 @@ export default function EditorPage() {
         width:  ${logoSizePx}px !important;
         height: ${logoSizePx}px !important;
       }
+      .sf-topbar-inner { min-height: ${headerHeightPx}px !important; }
     `
   }
 
@@ -442,7 +445,7 @@ export default function EditorPage() {
   useEffect(() => {
     applyPreview()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx])
+  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx])
 
   // ── Auto-save category shape (reloads iframe immediately) ─
   async function handleCategoryShape(catId: string, shape: string | null) {
@@ -505,7 +508,7 @@ export default function EditorPage() {
       priceColor, accentColor, priceFont: priceFont || pageFont, priceSize,
       catTitleFont: catTitleFont || undefined, productNameFont: productNameFont || undefined,
       categoryNavStyle, showCatNav, stickyCatNav, categorySpacing,
-      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, headerOverBanner,
+      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, headerOverBanner, headerHeightPx,
       headerLayout: undefined,
       contentBlocks: contentBlocks.length > 0 ? contentBlocks : undefined,
       ...(Object.keys(categoryShapes).length > 0
@@ -1385,6 +1388,24 @@ export default function EditorPage() {
                 className="ed-size-slider"
               />
               <div style={{ width: 28, height: 28, borderRadius: 6, background: '#CBD5E1', flexShrink: 0 }} />
+            </div>
+
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>
+              Tamano del encabezado
+              <span className="ed-size-slider-val">{headerHeightPx}px</span>
+            </div>
+            <div className="ed-size-slider-wrap">
+              <div style={{ width: 16, height: 10, borderRadius: 3, background: '#CBD5E1', flexShrink: 0 }} />
+              <input
+                type="range"
+                min={48}
+                max={100}
+                step={2}
+                value={headerHeightPx}
+                onChange={e => setHeaderHeightPx(Number(e.target.value))}
+                className="ed-size-slider"
+              />
+              <div style={{ width: 28, height: 18, borderRadius: 4, background: '#CBD5E1', flexShrink: 0 }} />
             </div>
 
             <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Menu lateral</div>

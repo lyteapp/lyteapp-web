@@ -50,7 +50,7 @@ html, body { overflow-x: clip; }
 .sf-topbar-glass .sf-menu-btn:hover { background: rgba(255,255,255,0.45); }
 .sf-topbar-inner {
   max-width: 1100px; margin: 0 auto;
-  padding: 0 20px; min-height: 56px; height: auto;
+  padding: 0 20px; min-height: var(--sf-header-height, 56px); height: auto;
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
 }
 .sf-topbar-brand { display: flex; align-items: center; gap: 10px; }

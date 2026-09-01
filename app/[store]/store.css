@@ -342,6 +342,14 @@ html, body { overflow-x: clip; }
 .sf-grid-horizontal .sf-card {
   flex: 0 0 46%; min-width: 120px; scroll-snap-align: start;
 }
+/* The card currently in focus grows slightly, like a page turning to it,
+   as the row scrolls it into place (focus is tracked by an IntersectionObserver
+   scoped to each row, see StoreShell.tsx). */
+.sf-grid-horizontal .sf-card.sf-carousel-focused {
+  transform: scale(1.07);
+  box-shadow: 0 10px 26px rgba(15,23,42,0.14);
+  position: relative; z-index: 2;
+}
 
 /* Breaks out of .sf-section-inner's padding/max-width to reach the true
    viewport edges, regardless of how much side padding the page has at any

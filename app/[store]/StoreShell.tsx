@@ -249,6 +249,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [splashLeaving, setSplashLeaving] = useState(false)
   const [catalogEnter, setCatalogEnter] = useState(false)
   const [customerCedula, setCustomerCedula] = useState('')
+  const cedulaDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [cedulaStatus, setCedulaStatus] = useState<'idle' | 'checking' | 'found' | 'new'>('idle')
   const [splashError, setSplashError] = useState('')
   const [locationLabel, setLocationLabel] = useState('')
@@ -1380,6 +1381,37 @@ export default function StoreShell({ store, products, categories = [], initialBc
     }
   }
 
+  // ── Circular number pad for the cedula field (instead of the OS keyboard) ──
+  function resetCedulaDependents() {
+    setCedulaStatus('idle')
+    setCustomerName(''); setCustomerPhone(''); setCustomerAddress('')
+    setLocationState('idle'); setCustomerLat(null); setCustomerLng(null); setLocationLabel('')
+  }
+  function scheduleCedulaLookup(val: string) {
+    if (cedulaDebounceRef.current) clearTimeout(cedulaDebounceRef.current)
+    if (!val.trim()) return
+    cedulaDebounceRef.current = setTimeout(async () => {
+      const result = await lookupCedula(val.trim())
+      if (result.status === 'found') enterStore('found', result.customer)
+    }, 600)
+  }
+  function pressCedulaDigit(d: string) {
+    resetCedulaDependents()
+    setCustomerCedula(prev => {
+      const next = (prev + d).slice(0, 12)
+      scheduleCedulaLookup(next)
+      return next
+    })
+  }
+  function pressCedulaBackspace() {
+    resetCedulaDependents()
+    setCustomerCedula(prev => {
+      const next = prev.slice(0, -1)
+      scheduleCedulaLookup(next)
+      return next
+    })
+  }
+
   function proceedToTransition() {
     if (transitionId === 'logo-morph' && splashLogoRef.current) {
       const r = splashLogoRef.current.getBoundingClientRect()
@@ -1539,22 +1571,30 @@ export default function StoreShell({ store, products, categories = [], initialBc
               <input
                 className="sf-splash-cedula"
                 type="text"
-                inputMode="numeric"
+                inputMode="none"
+                readOnly
                 placeholder="Tu cedula de identidad"
                 value={customerCedula}
-                onChange={e => {
-                  setCustomerCedula(e.target.value)
-                  setCedulaStatus('idle')
-                  setCustomerName(''); setCustomerPhone(''); setCustomerAddress('')
-                  setLocationState('idle'); setCustomerLat(null); setCustomerLng(null); setLocationLabel('')
-                }}
-                onBlur={async e => {
-                  const val = e.target.value.trim()
-                  if (!val) return
-                  const result = await lookupCedula(val)
-                  if (result.status === 'found') enterStore('found', result.customer)
-                }}
               />
+              <div className="sf-splash-keypad">
+                {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(d => (
+                  <button key={d} type="button" className="sf-splash-keypad-btn" onClick={() => pressCedulaDigit(d)}>{d}</button>
+                ))}
+                <div className="sf-splash-keypad-spacer" />
+                <button type="button" className="sf-splash-keypad-btn" onClick={() => pressCedulaDigit('0')}>0</button>
+                <button
+                  type="button"
+                  className="sf-splash-keypad-btn sf-splash-keypad-back"
+                  onClick={pressCedulaBackspace}
+                  disabled={!customerCedula}
+                  aria-label="Borrar"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="20" height="20">
+                    <path d="M21 4H8l-7 8 7 8h13a2 2 0 002-2V6a2 2 0 00-2-2z" />
+                    <path d="M15 9l-4 6M11 9l4 6" />
+                  </svg>
+                </button>
+              </div>
               {cedulaStatus === 'found' && <div className="sf-splash-cedula-hint found">Te reconocimos{customerName ? `, ${customerName.split(' ')[0]}` : ''}</div>}
               {cedulaStatus === 'new' && <div className="sf-splash-cedula-hint">Eres nuevo por aqui, completa tus datos</div>}
 

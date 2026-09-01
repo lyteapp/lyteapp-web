@@ -44,10 +44,10 @@ html, body { overflow-x: clip; }
 /* logo wrapper — overflow:hidden + border-radius clip correctly */
 .sf-nav-logo-wrap {
   flex-shrink: 0; overflow: hidden;
-  width: 34px; height: 34px; border-radius: 8px;
-  background: #F1F5F9;
+  width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
 }
-.sf-nav-logo-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sf-nav-logo-img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .sf-nav-name { font-size: 1.07em; font-weight: 700; color: #0F172A; letter-spacing: -0.03em; }
 .sf-lyte-mobile-logo { display: none; height: 20px; width: auto; }
 /* logo shape */
@@ -657,13 +657,13 @@ html, body { overflow-x: clip; }
 }
 .sf-splash-content::-webkit-scrollbar { display: none; }
 .sf-splash-logo {
-  width: 72px; height: 72px; border-radius: 20px; object-fit: cover;
+  width: 72px; height: 72px; border-radius: 20px; object-fit: contain;
   margin: 0 auto 24px; display: block; box-shadow: 0 8px 32px rgba(0,0,0,0.25);
 }
 .sf-splash-logo-hidden { opacity: 0; }
 .sf-nav-logo-hidden { opacity: 0; }
 .sf-logo-morph {
-  position: fixed; z-index: 500; object-fit: cover; margin: 0;
+  position: fixed; z-index: 500; object-fit: contain; margin: 0;
   box-shadow: 0 8px 24px rgba(0,0,0,0.3); pointer-events: none;
   transition: top 0.6s cubic-bezier(0.4,0,0.2,1), left 0.6s cubic-bezier(0.4,0,0.2,1),
               width 0.6s cubic-bezier(0.4,0,0.2,1), height 0.6s cubic-bezier(0.4,0,0.2,1),
@@ -1396,9 +1396,10 @@ html, body { overflow-x: clip; }
 .sf-drawer-brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .sf-drawer-logo {
   width: 32px; height: 32px; border-radius: 8px;
-  overflow: hidden; background: #F1F5F9; flex-shrink: 0;
+  overflow: hidden; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
 }
-.sf-drawer-logo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sf-drawer-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .sf-drawer-name {
   font-size: 15px; font-weight: 700; color: #0F172A;
   letter-spacing: -0.02em; white-space: nowrap;

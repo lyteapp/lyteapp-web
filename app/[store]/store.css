@@ -137,8 +137,8 @@ html, body { overflow-x: clip; }
 .sf-nav-checkout-title { font-size: 15px; font-weight: 700; color: #0F172A; letter-spacing: -0.02em; }
 
 /* ── BANNER ── */
-.sf-banner { width: 100%; max-height: 320px; overflow: hidden; }
-.sf-banner-img { width: 100%; max-height: 320px; object-fit: cover; display: block; }
+.sf-banner { width: 100%; }
+.sf-banner-img { width: 100%; height: auto; display: block; }
 
 /* ── STORE HEADER ── */
 .sf-header { background: white; border-bottom: 1px solid rgba(15,23,42,0.07); }
@@ -948,8 +948,6 @@ html, body { overflow-x: clip; }
 }
 
 /* ── TEMPLATE: ESCAPARATE ── */
-.sf-tpl-escaparate .sf-banner { max-height: 420px; }
-.sf-tpl-escaparate .sf-banner-img { max-height: 420px; object-fit: cover; }
 .sf-esc-featured {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

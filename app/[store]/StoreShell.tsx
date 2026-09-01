@@ -21,6 +21,12 @@ function normalizeChoice(c: VariableChoice | string): VariableChoice {
     ? { value: c, price: 0 }
     : { value: c.value, price: c.price ?? 0, calories: c.calories, fat: c.fat, protein: c.protein, carbs: c.carbs }
 }
+// Product "images" can also be short looping videos, uploaded like any
+// other image and told apart purely by file extension (no separate DB field).
+const PRODUCT_VIDEO_EXT_RE = /\.(mp4|webm|mov|m4v)(\?|#|$)/i
+function isVideoUrl(url?: string | null): boolean {
+  return !!url && PRODUCT_VIDEO_EXT_RE.test(url)
+}
 type Additional     = { name: string; price: number; calories?: number; fat?: number; protein?: number; carbs?: number }
 type ColorVariant   = { label: string; color: string; imageUrl: string }
 type NutritionInfo  = { enabled?: boolean; calories?: number; fat?: number; protein?: number; carbs?: number }
@@ -902,13 +908,16 @@ export default function StoreShell({ store, products, categories = [], initialBc
           <button className="sf-modal-close" onClick={() => setModalProduct(null)}>×</button>
 
           <div className="sf-modal-product-head">
-            {modalDisplayImage && (
-              <img src={modalDisplayImage} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" onClick={() => {
+            {modalDisplayImage && (() => {
+              const openLightbox = () => {
                 const cvs = modalProduct.options?.colorVariants
                 const imgs = cvs?.length ? cvs.map(v => v.imageUrl).filter(Boolean) as string[] : [modalDisplayImage!]
                 setLightbox({ images: imgs, idx: cvs?.length ? Math.max(0, cvs.findIndex(v => v.label === modalColor)) : 0 })
-              }} />
-            )}
+              }
+              return isVideoUrl(modalDisplayImage)
+                ? <video src={modalDisplayImage} autoPlay muted loop playsInline className="sf-modal-img sf-modal-img-zoom" onClick={openLightbox} />
+                : <img src={modalDisplayImage} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" onClick={openLightbox} />
+            })()}
             <div className="sf-modal-product-info">
               <div className="sf-modal-name">{modalProduct.name}</div>
               {modalProduct.description && <div className="sf-modal-desc">{modalProduct.description}</div>}
@@ -2005,7 +2014,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
           {cartItems.map(item => (
             <div key={item.id} className="sf-co-row">
               {item.image_url
-                ? <img src={item.image_url} alt={item.name} className="sf-co-img" />
+                ? (isVideoUrl(item.image_url)
+                    ? <video src={item.image_url} autoPlay muted loop playsInline className="sf-co-img" />
+                    : <img src={item.image_url} alt={item.name} className="sf-co-img" />)
                 : <div className="sf-co-img sf-co-img-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 18, height: 18 }}><path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" /></svg></div>
               }
               <div className="sf-co-info">
@@ -2510,7 +2521,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
             <div className="sf-lightbox-strip" ref={lightboxStripRef} style={{ width: `${lightbox.images.length * 100}%`, transform: `translateX(-${lightbox.idx * (100 / lightbox.images.length)}%)` }}>
               {lightbox.images.map((img, i) => (
                 <div key={i} className="sf-lightbox-frame" style={{ width: `${100 / lightbox.images.length}%` }}>
-                  <img src={img} alt="" className="sf-lightbox-img" />
+                  {isVideoUrl(img)
+                    ? <video src={img} autoPlay muted loop playsInline className="sf-lightbox-img" />
+                    : <img src={img} alt="" className="sf-lightbox-img" />}
                 </div>
               ))}
             </div>
@@ -2658,12 +2671,18 @@ export default function StoreShell({ store, products, categories = [], initialBc
               style={{ width: `${variants.length * 100}%`, transform: `translateX(-${(selIdx ?? 0) * (100 / variants.length)}%)` }}>
               {variants.map((v, i) => (
                 <div key={i} className="sf-slide-frame" style={{ width: `${100 / variants.length}%` }}>
-                  {v.imageUrl ? <img src={v.imageUrl} alt={product.name} className="sf-card-img" loading="lazy" /> : <div className="sf-card-img-empty">{PLACEHOLDER}</div>}
+                  {v.imageUrl
+                    ? (isVideoUrl(v.imageUrl)
+                        ? <video src={v.imageUrl} autoPlay muted loop playsInline className="sf-card-img" />
+                        : <img src={v.imageUrl} alt={product.name} className="sf-card-img" loading="lazy" />)
+                    : <div className="sf-card-img-empty">{PLACEHOLDER}</div>}
                 </div>
               ))}
             </div>
           ) : displayImg ? (
-            <img src={displayImg} alt={product.name} className="sf-card-img" loading="lazy" />
+            isVideoUrl(displayImg)
+              ? <video src={displayImg} autoPlay muted loop playsInline className="sf-card-img" />
+              : <img src={displayImg} alt={product.name} className="sf-card-img" loading="lazy" />
           ) : (
             <div className="sf-card-img-empty">{PLACEHOLDER}</div>
           )}
@@ -2746,12 +2765,18 @@ export default function StoreShell({ store, products, categories = [], initialBc
               style={{ width: `${variants.length * 100}%`, transform: `translateX(-${(selIdx ?? 0) * (100 / variants.length)}%)` }}>
               {variants.map((v, i) => (
                 <div key={i} className="sf-slide-frame" style={{ width: `${100 / variants.length}%` }}>
-                  {v.imageUrl ? <img src={v.imageUrl} alt={product.name} className="sf-esc-img" loading="lazy" /> : <div className="sf-esc-img sf-esc-img-empty">{PLACEHOLDER}</div>}
+                  {v.imageUrl
+                    ? (isVideoUrl(v.imageUrl)
+                        ? <video src={v.imageUrl} autoPlay muted loop playsInline className="sf-esc-img" />
+                        : <img src={v.imageUrl} alt={product.name} className="sf-esc-img" loading="lazy" />)
+                    : <div className="sf-esc-img sf-esc-img-empty">{PLACEHOLDER}</div>}
                 </div>
               ))}
             </div>
           ) : displayImg ? (
-            <img src={displayImg} alt={product.name} className="sf-esc-img" loading="lazy" />
+            isVideoUrl(displayImg)
+              ? <video src={displayImg} autoPlay muted loop playsInline className="sf-esc-img" />
+              : <img src={displayImg} alt={product.name} className="sf-esc-img" loading="lazy" />
           ) : (
             <div className="sf-esc-img sf-esc-img-empty">{PLACEHOLDER}</div>
           )}
@@ -2831,12 +2856,18 @@ export default function StoreShell({ store, products, categories = [], initialBc
               style={{ width: `${variants.length * 100}%`, transform: `translateX(-${(selIdx ?? 0) * (100 / variants.length)}%)` }}>
               {variants.map((v, i) => (
                 <div key={i} className="sf-slide-frame" style={{ width: `${100 / variants.length}%` }}>
-                  {v.imageUrl ? <img src={v.imageUrl} alt={product.name} className="sf-cat-img" loading="lazy" /> : <div className="sf-cat-img sf-cat-img-empty">{PLACEHOLDER}</div>}
+                  {v.imageUrl
+                    ? (isVideoUrl(v.imageUrl)
+                        ? <video src={v.imageUrl} autoPlay muted loop playsInline className="sf-cat-img" />
+                        : <img src={v.imageUrl} alt={product.name} className="sf-cat-img" loading="lazy" />)
+                    : <div className="sf-cat-img sf-cat-img-empty">{PLACEHOLDER}</div>}
                 </div>
               ))}
             </div>
           ) : displayImg ? (
-            <img src={displayImg} alt={product.name} className="sf-cat-img" loading="lazy" />
+            isVideoUrl(displayImg)
+              ? <video src={displayImg} autoPlay muted loop playsInline className="sf-cat-img" />
+              : <img src={displayImg} alt={product.name} className="sf-cat-img" loading="lazy" />
           ) : (
             <div className="sf-cat-img sf-cat-img-empty">{PLACEHOLDER}</div>
           )}
@@ -3020,7 +3051,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 <div className="sf-vit-hero" onClick={() => openProductModal(vitHero)}>
                   <div className="sf-vit-hero-img-wrap">
                     {vitHero.image_url
-                      ? <img src={vitHero.image_url} alt={vitHero.name} className="sf-vit-hero-img" />
+                      ? (isVideoUrl(vitHero.image_url)
+                          ? <video src={vitHero.image_url} autoPlay muted loop playsInline className="sf-vit-hero-img" />
+                          : <img src={vitHero.image_url} alt={vitHero.name} className="sf-vit-hero-img" />)
                       : <div className="sf-vit-hero-img-empty">{PLACEHOLDER}</div>
                     }
                     {getProdQty(vitHero.id) > 0 && <div className="sf-card-badge sf-vit-badge">{getProdQty(vitHero.id)}</div>}
@@ -3197,7 +3230,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
             <div className="sf-lightbox-strip" ref={lightboxStripRef} style={{ width: `${lightbox.images.length * 100}%`, transform: `translateX(-${lightbox.idx * (100 / lightbox.images.length)}%)` }}>
               {lightbox.images.map((img, i) => (
                 <div key={i} className="sf-lightbox-frame" style={{ width: `${100 / lightbox.images.length}%` }}>
-                  <img src={img} alt="" className="sf-lightbox-img" />
+                  {isVideoUrl(img)
+                    ? <video src={img} autoPlay muted loop playsInline className="sf-lightbox-img" />
+                    : <img src={img} alt="" className="sf-lightbox-img" />}
                 </div>
               ))}
             </div>

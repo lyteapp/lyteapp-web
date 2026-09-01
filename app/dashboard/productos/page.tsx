@@ -14,6 +14,10 @@ function normalizeChoice(c: VariableChoice | string): VariableChoice {
     ? { value: c, price: 0 }
     : { value: c.value, price: c.price ?? 0, calories: c.calories, fat: c.fat, protein: c.protein, carbs: c.carbs }
 }
+const PRODUCT_VIDEO_EXT_RE = /\.(mp4|webm|mov|m4v)(\?|#|$)/i
+function isVideoUrl(url?: string | null): boolean {
+  return !!url && PRODUCT_VIDEO_EXT_RE.test(url)
+}
 type Additional    = { name: string; price: number; calories?: number; fat?: number; protein?: number; carbs?: number }
 type ColorVariant  = { label: string; color: string; imageUrl: string }
 type NutritionInfo = { enabled?: boolean; calories?: number; fat?: number; protein?: number; carbs?: number }
@@ -380,7 +384,9 @@ export default function ProductosPage() {
         <div className="pr-img-col">
           <div className="pr-img-upload" onClick={() => imgRef.current?.click()}>
             {imageUrl
-              ? <img src={imageUrl} alt="Producto" className="pr-img-preview" />
+              ? (isVideoUrl(imageUrl)
+                  ? <video src={imageUrl} autoPlay muted loop playsInline className="pr-img-preview" />
+                  : <img src={imageUrl} alt="Producto" className="pr-img-preview" />)
               : <div className="pr-img-empty">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 32, height: 32, color: '#CBD5E1' }}><path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" /><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" /></svg>
                   <div className="pr-img-label">{t('prod.img.upload')}</div>
@@ -390,8 +396,8 @@ export default function ProductosPage() {
             {imgUploading && <div className="pr-img-overlay">{t('prod.img.uploading')}</div>}
             {imageUrl && !imgUploading && <div className="pr-img-overlay pr-img-hover">{t('prod.img.change')}</div>}
           </div>
-          <input ref={imgRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImgUpload} />
-          <input ref={variantImgRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleVariantImgUpload} />
+          <input ref={imgRef} type="file" accept="image/*,video/mp4,video/webm,video/quicktime" style={{ display: 'none' }} onChange={handleImgUpload} />
+          <input ref={variantImgRef} type="file" accept="image/*,video/mp4,video/webm,video/quicktime" style={{ display: 'none' }} onChange={handleVariantImgUpload} />
           <p className="pr-img-tip">{t('prod.img.tip')}</p>
         </div>
 
@@ -620,7 +626,9 @@ export default function ProductosPage() {
                       onClick={() => { setVariantImgUploadIdx(i); variantImgRef.current?.click() }}
                     >
                       {v.imageUrl
-                        ? <><img src={v.imageUrl} alt="" className="pr-variant-img-preview" /><span>Cambiar foto</span></>
+                        ? <>{isVideoUrl(v.imageUrl)
+                              ? <video src={v.imageUrl} autoPlay muted loop playsInline className="pr-variant-img-preview" />
+                              : <img src={v.imageUrl} alt="" className="pr-variant-img-preview" />}<span>Cambiar foto</span></>
                         : <>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 16, height: 16 }}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />

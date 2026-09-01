@@ -1672,7 +1672,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 <div
                   ref={cedulaSlideBarRef}
                   className={`sf-splash-slide-bar${cedulaSliding ? ' sliding' : ''}`}
-                  style={{ '--sf-slide-progress': cedulaSlideProgress } as React.CSSProperties}
+                  style={{
+                    '--sf-slide-progress': cedulaSlideProgress,
+                    ...(hp.buttonColor ? { background: hp.buttonColor } : {}),
+                  } as React.CSSProperties}
                   onPointerDown={cedulaSlidePointerDown}
                   onPointerMove={cedulaSlidePointerMove}
                   onPointerUp={cedulaSlidePointerUp}

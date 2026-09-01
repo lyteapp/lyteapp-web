@@ -147,6 +147,7 @@ html, body { overflow-x: clip; }
 .sf-nav-checkout-title { font-size: 15px; font-weight: 700; color: #0F172A; letter-spacing: -0.02em; }
 
 /* ── BANNER ── */
+.sf-banner-wrap { position: relative; }
 .sf-banner { width: 100%; }
 .sf-banner-img { width: 100%; height: auto; display: block; }
 
@@ -189,6 +190,21 @@ html, body { overflow-x: clip; }
 }
 .sf-cat-nav::-webkit-scrollbar { display: none; }
 .sf-cat-nav-nosticky { position: static; }
+/* "Categorias sobre el banner" — straddles the banner's bottom edge in a
+   frosted-glass strip instead of taking its normal spot in the flow. */
+.sf-cat-nav-glass {
+  position: absolute; left: 16px; right: 16px; bottom: 0; top: auto; z-index: 15;
+  transform: translateY(50%);
+  background: rgba(255,255,255,0.22);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 100px;
+  box-shadow: 0 8px 24px rgba(15,23,42,0.18);
+  justify-content: center;
+}
+.sf-cat-nav-glass .sf-cat-btn { color: white; text-shadow: 0 1px 4px rgba(0,0,0,0.25); }
+.sf-cat-nav-glass .sf-cat-btn.sf-cat-active { text-shadow: none; }
 .sf-cat-nav-inner { display: flex; gap: 2px; }
 .sf-cat-btn {
   flex-shrink: 0; white-space: nowrap; border: none; cursor: pointer;

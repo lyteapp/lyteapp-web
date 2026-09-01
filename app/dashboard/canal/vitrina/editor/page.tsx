@@ -201,6 +201,7 @@ export default function EditorPage() {
   const [categoryNavStyle, setCategoryNavStyle] = useState('pills')
   const [showCatNav, setShowCatNav] = useState(true)
   const [stickyCatNav, setStickyCatNav] = useState(true)
+  const [catNavOverBanner, setCatNavOverBanner] = useState(false)
   const [categorySpacing, setCategorySpacing] = useState(0)
   const [logoShape,   setLogoShape]   = useState('rounded')
   const [logoSizePx,  setLogoSizePx]  = useState(34)
@@ -264,6 +265,7 @@ export default function EditorPage() {
       if (cfg.categoryNavStyle) setCategoryNavStyle(cfg.categoryNavStyle as string)
       if (cfg.showCatNav !== undefined) setShowCatNav(cfg.showCatNav as boolean)
       if (cfg.stickyCatNav !== undefined) setStickyCatNav(cfg.stickyCatNav as boolean)
+      if (cfg.catNavOverBanner !== undefined) setCatNavOverBanner(cfg.catNavOverBanner as boolean)
       if ((cfg as Record<string,unknown>).categorySpacing !== undefined) setCategorySpacing(Number((cfg as Record<string,unknown>).categorySpacing))
       if (cfg.logoShape) setLogoShape(cfg.logoShape as string)
       if ((cfg as Record<string, unknown>).logoSizePx) {
@@ -506,7 +508,7 @@ export default function EditorPage() {
       photoShape, photoSize,
       priceColor, accentColor, priceFont: priceFont || pageFont, priceSize,
       catTitleFont: catTitleFont || undefined, productNameFont: productNameFont || undefined,
-      categoryNavStyle, showCatNav, stickyCatNav, categorySpacing,
+      categoryNavStyle, showCatNav, stickyCatNav, catNavOverBanner, categorySpacing,
       logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, headerOverBanner, headerHeightPx,
       headerLayout: undefined,
       contentBlocks: contentBlocks.length > 0 ? contentBlocks : undefined,
@@ -1243,6 +1245,23 @@ export default function EditorPage() {
                 />
                 <div style={{ width: 38, height: 22, borderRadius: 100, background: stickyCatNav ? '#7C3AED' : '#D1D5DB', transition: 'background 0.2s', cursor: 'pointer', position: 'relative' }}>
                   <div style={{ position: 'absolute', top: 4, left: stickyCatNav ? 18 : 4, width: 14, height: 14, borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
+                </div>
+              </div>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#F8FAFC', borderRadius: 10, cursor: 'pointer', gap: 12, marginTop: 8 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', lineHeight: 1.2 }}>Categorias sobre el banner</div>
+                <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 3 }}>Flota en vidrio esmerilado sobre el borde del banner. Necesita un banner subido.</div>
+              </div>
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <input
+                  type="checkbox"
+                  checked={catNavOverBanner}
+                  onChange={e => setCatNavOverBanner(e.target.checked)}
+                  style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
+                />
+                <div style={{ width: 38, height: 22, borderRadius: 100, background: catNavOverBanner ? '#7C3AED' : '#D1D5DB', transition: 'background 0.2s', cursor: 'pointer', position: 'relative' }}>
+                  <div style={{ position: 'absolute', top: 4, left: catNavOverBanner ? 18 : 4, width: 14, height: 14, borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
                 </div>
               </div>
             </label>

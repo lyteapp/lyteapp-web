@@ -94,6 +94,7 @@ type TemplateConfig = {
   extraShape?: 'rounded' | 'pill' | 'square'
   showCatNav?: boolean
   stickyCatNav?: boolean
+  catNavOverBanner?: boolean
   showWhatsapp?: boolean
   showInstagram?: boolean
   showMenuButton?: boolean
@@ -2255,6 +2256,34 @@ export default function StoreShell({ store, products, categories = [], initialBc
     .filter(g => g.items.length > 0)
   const uncategorized = products.filter(p => !p.category_id || !categories.find(c => c.id === p.category_id))
   const hasCats = catGroups.length > 0
+  const cfgCatNavOverBanner = !!cfg.catNavOverBanner && !!store.banner_url && store.template !== 'vitrina' && store.template !== 'catalogo'
+  const catNavEl = hasCats && tpl !== 'catalogo' && cfg.showCatNav !== false ? (
+    <nav className={`sf-cat-nav sf-cat-nav-${cfgCatNavStyle}${cfgStickyCatNav ? '' : ' sf-cat-nav-nosticky'}${cfgCatNavOverBanner ? ' sf-cat-nav-glass' : ''}`}>
+      {catGroups.map(({ cat }) => (
+        <button
+          key={cat.id}
+          className={`sf-cat-btn${activeCatId === cat.id ? ' sf-cat-active' : ''}`}
+          onClick={() => {
+            setActiveCatId(cat.id)
+            document.getElementById(`cat-${cat.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }}
+        >
+          {cat.name}
+        </button>
+      ))}
+      {uncategorized.length > 0 && (
+        <button
+          className={`sf-cat-btn${activeCatId === '__other' ? ' sf-cat-active' : ''}`}
+          onClick={() => {
+            setActiveCatId('__other')
+            document.getElementById('cat-other')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }}
+        >
+          {t('store.ourProducts')}
+        </button>
+      )}
+    </nav>
+  ) : null
   const escFeatured = products.slice(0, 2)
   const escRest     = products.slice(2)
   const vitHero     = products.length > 0 ? products[0] : null
@@ -2611,7 +2640,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
       )}
 
       {store.banner_url && tpl !== 'vitrina' && tpl !== 'catalogo' && (
-        <div className="sf-banner"><img src={store.banner_url} alt="Banner" className="sf-banner-img" /></div>
+        <div className="sf-banner-wrap">
+          <div className="sf-banner"><img src={store.banner_url} alt="Banner" className="sf-banner-img" /></div>
+          {cfgCatNavOverBanner && catNavEl}
+        </div>
       )}
 
       {(store.description || (store.instagram && cfg.showInstagram !== false)) && (
@@ -2638,33 +2670,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
         </div>
       )}
 
-      {hasCats && tpl !== 'catalogo' && cfg.showCatNav !== false && (
-        <nav className={`sf-cat-nav sf-cat-nav-${cfgCatNavStyle}${cfgStickyCatNav ? '' : ' sf-cat-nav-nosticky'}`}>
-          {catGroups.map(({ cat }) => (
-            <button
-              key={cat.id}
-              className={`sf-cat-btn${activeCatId === cat.id ? ' sf-cat-active' : ''}`}
-              onClick={() => {
-                setActiveCatId(cat.id)
-                document.getElementById(`cat-${cat.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-              }}
-            >
-              {cat.name}
-            </button>
-          ))}
-          {uncategorized.length > 0 && (
-            <button
-              className={`sf-cat-btn${activeCatId === '__other' ? ' sf-cat-active' : ''}`}
-              onClick={() => {
-                setActiveCatId('__other')
-                document.getElementById('cat-other')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-              }}
-            >
-              {t('store.ourProducts')}
-            </button>
-          )}
-        </nav>
-      )}
+      {!cfgCatNavOverBanner && catNavEl}
 
       <div className="sf-products-section">
         <div className="sf-section-inner">

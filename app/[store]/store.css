@@ -201,38 +201,27 @@ html, body { overflow-x: clip; }
 }
 .sf-cat-nav::-webkit-scrollbar { display: none; }
 .sf-cat-nav-nosticky { position: static; }
-/* "Categorias sobre el banner" — straddles the banner's bottom edge in a
-   frosted-glass strip instead of taking its normal spot in the flow. */
+/* "Categorias sobre el banner" — native position:sticky, not a JS-toggled
+   class. Its natural (unstuck) position overlaps the banner's bottom edge
+   via a negative margin-top sized to the bar's own measured height (see
+   catNavHeightMeasured in StoreShell.tsx); the browser then drags it
+   continuously with the scroll from the exact moment it would touch the
+   header, with zero jump — no separate "pinned" state that can fall out
+   of sync with what's actually on screen mid-transition. No border/shadow
+   here on purpose: together with the (also anchored) header, they're
+   meant to read as one seamless glass block, not two stacked bars. */
 .sf-cat-nav-glass {
-  position: absolute; left: 0; right: 0; bottom: 0; top: auto; z-index: 15;
+  position: sticky; top: var(--sf-sticky-offset, 0px); z-index: 15;
+  margin-top: var(--sf-catnav-overlap, -52px);
   background: rgba(255,255,255,0.22);
   backdrop-filter: blur(14px) saturate(160%);
   -webkit-backdrop-filter: blur(14px) saturate(160%);
-  border-top: 1px solid rgba(255,255,255,0.3);
   border-radius: 0;
-  box-shadow: 0 8px 24px rgba(15,23,42,0.18);
   justify-content: flex-start;
 }
+.sf-cat-nav-glass.sf-cat-nav-nosticky { position: static; }
 .sf-cat-nav-glass .sf-cat-btn { color: white; text-shadow: 0 1px 4px rgba(0,0,0,0.25); }
 .sf-cat-nav-glass .sf-cat-btn.sf-cat-active { text-shadow: none; }
-/* Once scrolled past the banner, this becomes the SAME glass bar pinned
-   to the top — not a different, solid one. Only the positioning changes
-   (straddling the banner's edge -> flush at the very top); the frosted
-   look and color it already had keep coming from the rules above.
-   The border/shadow are dropped here specifically: when the header is
-   also anchored, this sits flush against its bottom edge, and that
-   border+shadow used to draw a seam right across the join — the two
-   are meant to read as one continuous glass block, not two stacked bars. */
-.sf-cat-nav-glass.sf-cat-nav-pinned {
-  position: fixed; top: var(--sf-sticky-offset, 0px); left: 0; right: 0; bottom: auto;
-  transform: none; margin: 0;
-  border-top: none; box-shadow: none;
-  animation: sfCatNavPinIn 0.2s ease;
-}
-@keyframes sfCatNavPinIn {
-  from { transform: translateY(-100%); }
-  to   { transform: translateY(0); }
-}
 .sf-cat-nav-inner { display: flex; gap: 2px; }
 .sf-cat-btn {
   flex-shrink: 0; white-space: nowrap; border: none; cursor: pointer;

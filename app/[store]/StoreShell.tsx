@@ -388,7 +388,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [installed, setInstalled] = useState(false)
   const [activeCatId, setActiveCatId] = useState<string | null>(null)
   const [headerHeightMeasured, setHeaderHeightMeasured] = useState<number | null>(null)
-  const [catNavPinned, setCatNavPinned] = useState(false)
+  const [catNavHeightMeasured, setCatNavHeightMeasured] = useState<number | null>(null)
   const [menuOpen, setMenuOpen]       = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedVariants, setSelectedVariants] = useState<Record<string, number>>({})
@@ -682,23 +682,26 @@ export default function StoreShell({ store, products, categories = [], initialBc
     return () => ro.disconnect()
   }, [view, cfgHeaderSticky])
 
-  // ── "Categorias sobre el banner": pin the (still glass-styled) category
-  // bar to the top the moment its floating position would otherwise slide
-  // behind the (always-anchored) header, instead of leaving it tied to the
-  // banner's scroll until the banner has fully left the viewport — which,
-  // with an anchored header in front of it, made it disappear behind the
-  // header for the last stretch of that scroll. ──
+  // ── "Categorias sobre el banner": rather than a JS-triggered jump from
+  // "floating over the banner" to "pinned below the header" (which visibly
+  // passed the category bar behind the header for a frame or two on the way),
+  // this is now native position:sticky the whole time — it drags continuously
+  // with the scroll from the exact moment it touches the header, with zero
+  // jump, because the browser does it directly instead of a class toggle
+  // reacting to scroll position after the fact. A negative margin-top pulls
+  // its natural (unstuck) position up to sit over the banner's bottom edge;
+  // measuring its own height keeps that overlap exact regardless of font
+  // size / button padding. ──
   useEffect(() => {
-    if (view !== 'catalog' || !cfgCatNavOverBanner || !cfgStickyCatNav) { setCatNavPinned(false); return }
-    const banner = document.querySelector<HTMLElement>('.sf-banner-wrap')
-    if (!banner) return
-    const observer = new IntersectionObserver(
-      ([entry]) => setCatNavPinned(!entry.isIntersecting),
-      { threshold: 0, rootMargin: `-${cfgStickyOffsetPx}px 0px 0px 0px` }
-    )
-    observer.observe(banner)
-    return () => observer.disconnect()
-  }, [view, cfgCatNavOverBanner, cfgStickyCatNav, cfgStickyOffsetPx])
+    if (view !== 'catalog' || !cfgCatNavOverBanner) { setCatNavHeightMeasured(null); return }
+    const el = document.querySelector<HTMLElement>('.sf-cat-nav-glass')
+    if (!el) return
+    const update = () => setCatNavHeightMeasured(el.getBoundingClientRect().height)
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [view, cfgCatNavOverBanner])
 
   const pageStyle: React.CSSProperties = {
     ...(cfg.pageBg ? { background: cfg.pageBg } : {}),
@@ -713,6 +716,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     ...(cfg.categorySpacing !== undefined ? { '--sf-cat-spacing': `${cfg.categorySpacing}px` } : {}),
     ...(cfg.headerHeightPx !== undefined ? { '--sf-header-height': `${cfg.headerHeightPx}px` } : {}),
     '--sf-sticky-offset': `${cfgStickyOffsetPx}px`,
+    '--sf-catnav-overlap': `-${catNavHeightMeasured ?? 52}px`,
     ...(cfg.catTitleFont && FONT_MAP[cfg.catTitleFont] ? { '--sf-cat-title-font': FONT_MAP[cfg.catTitleFont] } : {}),
     ...(cfg.productNameFont && FONT_MAP[cfg.productNameFont] ? { '--sf-product-name-font': FONT_MAP[cfg.productNameFont] } : {}),
   } as React.CSSProperties
@@ -2413,7 +2417,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const uncategorized = products.filter(p => !p.category_id || !categories.find(c => c.id === p.category_id))
   const hasCats = catGroups.length > 0
   const catNavEl = hasCats && tpl !== 'catalogo' && cfg.showCatNav !== false ? (
-    <nav className={`sf-cat-nav sf-cat-nav-${cfgCatNavStyle}${cfgStickyCatNav ? '' : ' sf-cat-nav-nosticky'}${cfgCatNavOverBanner ? ' sf-cat-nav-glass' : ''}${cfgCatNavOverBanner && cfgStickyCatNav && catNavPinned ? ' sf-cat-nav-pinned' : ''}`}>
+    <nav className={`sf-cat-nav sf-cat-nav-${cfgCatNavStyle}${cfgStickyCatNav ? '' : ' sf-cat-nav-nosticky'}${cfgCatNavOverBanner ? ' sf-cat-nav-glass' : ''}`}>
       {catGroups.map(({ cat }) => (
         <button
           key={cat.id}
@@ -2797,9 +2801,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
       {store.banner_url && tpl !== 'vitrina' && tpl !== 'catalogo' && (
         <div className="sf-banner-wrap">
           <div className="sf-banner"><img src={store.banner_url} alt="Banner" className="sf-banner-img" /></div>
-          {cfgCatNavOverBanner && catNavEl}
         </div>
       )}
+      {cfgCatNavOverBanner && catNavEl}
 
       {(store.description || (store.instagram && cfg.showInstagram !== false)) && (
         <div className="sf-header">

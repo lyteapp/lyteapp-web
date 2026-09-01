@@ -203,7 +203,6 @@ html, body { overflow-x: clip; }
    frosted-glass strip instead of taking its normal spot in the flow. */
 .sf-cat-nav-glass {
   position: absolute; left: 0; right: 0; bottom: 0; top: auto; z-index: 15;
-  transform: translateY(50%);
   background: rgba(255,255,255,0.22);
   backdrop-filter: blur(14px) saturate(160%);
   -webkit-backdrop-filter: blur(14px) saturate(160%);

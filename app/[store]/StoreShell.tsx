@@ -110,6 +110,7 @@ type TemplateConfig = {
   logoPosition?: 'left' | 'center' | 'right' | 'none'
   namePosition?: 'left' | 'center' | 'right' | 'none'
   headerOverBanner?: boolean
+  headerSticky?: boolean
   headerHeightPx?: number
   contentBlocks?: ContentBlock[]
   homePage?: {
@@ -641,6 +642,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
     )
   const cfgHeaderOverBanner = !!cfg.headerOverBanner && !!store.banner_url && store.template !== 'vitrina' && store.template !== 'catalogo'
   const cfgCatNavOverBanner = !!cfg.catNavOverBanner && !!store.banner_url && store.template !== 'vitrina' && store.template !== 'catalogo'
+  // Sticky header doesn't apply together with "header over banner" — that
+  // mode is already absolutely positioned over the photo, not anchored.
+  const cfgHeaderSticky = !!cfg.headerSticky && !cfgHeaderOverBanner
+  const cfgStickyOffsetPx = cfgHeaderSticky ? (cfg.headerHeightPx ?? 56) : 0
 
   // ── "Categorias sobre el banner": once the banner scrolls fully out of
   // view, pin the (now solid) category bar to the top like the normal
@@ -669,6 +674,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     ...(cfg.catTitleColor ? { '--sf-cat-title-color': cfg.catTitleColor } : {}),
     ...(cfg.categorySpacing !== undefined ? { '--sf-cat-spacing': `${cfg.categorySpacing}px` } : {}),
     ...(cfg.headerHeightPx !== undefined ? { '--sf-header-height': `${cfg.headerHeightPx}px` } : {}),
+    '--sf-sticky-offset': `${cfgStickyOffsetPx}px`,
     ...(cfg.catTitleFont && FONT_MAP[cfg.catTitleFont] ? { '--sf-cat-title-font': FONT_MAP[cfg.catTitleFont] } : {}),
     ...(cfg.productNameFont && FONT_MAP[cfg.productNameFont] ? { '--sf-product-name-font': FONT_MAP[cfg.productNameFont] } : {}),
   } as React.CSSProperties
@@ -2592,7 +2598,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     {renderLogoMorphOverlay()}
     {installed && <div className="sf-statusbar-strip" />}
     <div className={`sf-page sf-tpl-${tpl} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize} sf-vshape-${cfgVariantShape} sf-eshape-${cfgExtraShape}${catalogEnter ? ` sf-catalog-enter sf-trans-${store.template_config?.homePage?.transition || 'slide'}` : ''}`} style={pageStyle}>
-      <div className={`sf-topbar${cfgHeaderOverBanner ? ' sf-topbar-glass' : ''}`}>
+      <div className={`sf-topbar${cfgHeaderOverBanner ? ' sf-topbar-glass' : ''}${cfgHeaderSticky ? ' sf-topbar-sticky' : ''}`}>
         <div className="sf-topbar-inner sf-topbar-3col">
           <div className="sf-topbar-slot-left">
             {cfgLogoPosition === 'left' && store.logo_url && (

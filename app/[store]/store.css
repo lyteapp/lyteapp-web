@@ -48,6 +48,10 @@ html, body { overflow-x: clip; }
 .sf-topbar-glass .sf-nav-name { color: white; text-shadow: 0 1px 6px rgba(0,0,0,0.35); }
 .sf-topbar-glass .sf-menu-btn { background: rgba(255,255,255,0.3); color: white; }
 .sf-topbar-glass .sf-menu-btn:hover { background: rgba(255,255,255,0.45); }
+/* "Fijar encabezado al hacer scroll" — anchors the header to the top;
+   the category bar (sticky or pinned-glass) sticks right below it via
+   --sf-sticky-offset instead of the two overlapping at top:0. */
+.sf-topbar-sticky { position: sticky; top: 0; z-index: 25; }
 .sf-topbar-inner {
   max-width: 1100px; margin: 0 auto;
   padding: 0 20px; min-height: var(--sf-header-height, 56px); height: auto;
@@ -181,7 +185,7 @@ html, body { overflow-x: clip; }
 
 /* ── CATEGORY NAV ── */
 .sf-cat-nav {
-  position: sticky; top: 0; z-index: 20;
+  position: sticky; top: var(--sf-sticky-offset, 0px); z-index: 20;
   background: inherit;
   border-bottom: 1px solid rgba(15,23,42,0.06);
   display: flex; overflow-x: auto; scrollbar-width: none;
@@ -211,7 +215,7 @@ html, body { overflow-x: clip; }
    look, colors and border it already had keep coming from the rules
    above, since this only overrides what actually needs to move. */
 .sf-cat-nav-glass.sf-cat-nav-pinned {
-  position: fixed; top: 0; left: 0; right: 0; bottom: auto;
+  position: fixed; top: var(--sf-sticky-offset, 0px); left: 0; right: 0; bottom: auto;
   transform: none; margin: 0;
   animation: sfCatNavPinIn 0.2s ease;
 }
@@ -299,7 +303,7 @@ html, body { overflow-x: clip; }
 }
 .sf-tpl-oscuro .sf-cat-nav-tabs .sf-cat-btn { background: #1E293B; border-color: rgba(255,255,255,0.08); color: #94A3B8; }
 
-.sf-cat-section { scroll-margin-top: 56px; margin-top: var(--sf-cat-spacing, 0px); }
+.sf-cat-section { scroll-margin-top: calc(var(--sf-sticky-offset, 0px) + 56px); margin-top: var(--sf-cat-spacing, 0px); }
 
 /* dark template overrides */
 .sf-tpl-oscuro .sf-cat-nav { background: #1E293B; border-color: rgba(255,255,255,0.06); }

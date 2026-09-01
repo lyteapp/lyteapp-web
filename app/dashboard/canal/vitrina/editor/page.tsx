@@ -209,6 +209,7 @@ export default function EditorPage() {
   const [namePosition, setNamePosition] = useState<'left' | 'center' | 'right' | 'none'>('left')
   const [showMenuButton, setShowMenuButton] = useState(false)
   const [headerOverBanner, setHeaderOverBanner] = useState(false)
+  const [headerSticky, setHeaderSticky] = useState(false)
   const [headerHeightPx, setHeaderHeightPx] = useState(56)
   const [contentBlocks, setContentBlocks]   = useState<ContentBlock[]>([])
   const [newBlockPos,  setNewBlockPos]      = useState('top')
@@ -285,6 +286,7 @@ export default function EditorPage() {
       }
       if (cfg.showMenuButton !== undefined) setShowMenuButton(cfg.showMenuButton as boolean)
       if (cfg.headerOverBanner !== undefined) setHeaderOverBanner(cfg.headerOverBanner as boolean)
+      if (cfg.headerSticky !== undefined) setHeaderSticky(cfg.headerSticky as boolean)
       if (cfg.headerHeightPx) setHeaderHeightPx(Number(cfg.headerHeightPx))
       if (cfg.contentBlocks) setContentBlocks(cfg.contentBlocks as ContentBlock[])
       const { data: cats } = await supabase
@@ -509,7 +511,7 @@ export default function EditorPage() {
       priceColor, accentColor, priceFont: priceFont || pageFont, priceSize,
       catTitleFont: catTitleFont || undefined, productNameFont: productNameFont || undefined,
       categoryNavStyle, showCatNav, stickyCatNav, catNavOverBanner, categorySpacing,
-      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, headerOverBanner, headerHeightPx,
+      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, headerOverBanner, headerSticky, headerHeightPx,
       headerLayout: undefined,
       contentBlocks: contentBlocks.length > 0 ? contentBlocks : undefined,
       ...(Object.keys(categoryShapes).length > 0
@@ -1484,6 +1486,33 @@ export default function EditorPage() {
                 }}>
                   <div style={{
                     position: 'absolute', top: 4, left: headerOverBanner ? 18 : 4,
+                    width: 14, height: 14, borderRadius: '50%', background: 'white',
+                    transition: 'left 0.2s',
+                  }} />
+                </div>
+              </div>
+            </label>
+
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Anclar encabezado</div>
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#F8FAFC', borderRadius: 10, cursor: 'pointer', gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', lineHeight: 1.2 }}>Fijar al hacer scroll</div>
+                <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 3 }}>Queda fijo arriba de la pantalla, y la barra de categorias se ancla justo debajo. No aplica si el encabezado flota sobre el banner.</div>
+              </div>
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <input
+                  type="checkbox"
+                  checked={headerSticky}
+                  onChange={e => setHeaderSticky(e.target.checked)}
+                  style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
+                />
+                <div style={{
+                  width: 38, height: 22, borderRadius: 100,
+                  background: headerSticky ? '#7C3AED' : '#D1D5DB',
+                  transition: 'background 0.2s', cursor: 'pointer', position: 'relative',
+                }}>
+                  <div style={{
+                    position: 'absolute', top: 4, left: headerSticky ? 18 : 4,
                     width: 14, height: 14, borderRadius: '50%', background: 'white',
                     transition: 'left 0.2s',
                   }} />

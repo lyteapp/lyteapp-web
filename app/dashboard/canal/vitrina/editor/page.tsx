@@ -210,12 +210,13 @@ export default function EditorPage() {
   const [showMenuButton, setShowMenuButton] = useState(false)
   const [headerOverBanner, setHeaderOverBanner] = useState(false)
   const [headerSticky, setHeaderSticky] = useState(false)
+  const [modalWizard, setModalWizard] = useState(false)
   const [headerHeightPx, setHeaderHeightPx] = useState(56)
   const [contentBlocks, setContentBlocks]   = useState<ContentBlock[]>([])
   const [newBlockPos,  setNewBlockPos]      = useState('top')
   const [newBlockType, setNewBlockType]     = useState<'text' | 'image' | 'video'>('text')
   const [newBlockContent, setNewBlockContent] = useState('')
-  const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'price' | 'categories' | 'brand' | 'blocks' | null>(null)
+  const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'price' | 'categories' | 'brand' | 'blocks' | 'product' | null>(null)
   const [iframeKey, setIframeKey]   = useState(0)
   const [saving, setSaving]         = useState(false)
   const [toolSaved, setToolSaved]   = useState(false)
@@ -287,6 +288,7 @@ export default function EditorPage() {
       if (cfg.showMenuButton !== undefined) setShowMenuButton(cfg.showMenuButton as boolean)
       if (cfg.headerOverBanner !== undefined) setHeaderOverBanner(cfg.headerOverBanner as boolean)
       if (cfg.headerSticky !== undefined) setHeaderSticky(cfg.headerSticky as boolean)
+      if (cfg.modalWizard !== undefined) setModalWizard(cfg.modalWizard as boolean)
       if (cfg.headerHeightPx) setHeaderHeightPx(Number(cfg.headerHeightPx))
       if (cfg.contentBlocks) setContentBlocks(cfg.contentBlocks as ContentBlock[])
       const { data: cats } = await supabase
@@ -511,7 +513,7 @@ export default function EditorPage() {
       priceColor, accentColor, priceFont: priceFont || pageFont, priceSize,
       catTitleFont: catTitleFont || undefined, productNameFont: productNameFont || undefined,
       categoryNavStyle, showCatNav, stickyCatNav, catNavOverBanner, categorySpacing,
-      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, headerOverBanner, headerSticky, headerHeightPx,
+      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, headerOverBanner, headerSticky, headerHeightPx, modalWizard,
       headerLayout: undefined,
       contentBlocks: contentBlocks.length > 0 ? contentBlocks : undefined,
       ...(Object.keys(categoryShapes).length > 0
@@ -688,6 +690,17 @@ export default function EditorPage() {
             <rect x="3" y="3" width="18" height="7" rx="1"/>
             <path d="M12 13v5M9.5 15.5h5"/>
             <rect x="3" y="14" width="18" height="7" rx="1"/>
+          </svg>
+        </button>
+
+        {/* Producto */}
+        <button
+          className={`ed-tool-btn${activeTool === 'product' ? ' ed-tool-active' : ''}`}
+          title="Producto"
+          onClick={() => setActiveTool(p => p === 'product' ? null : 'product')}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 5l7 7-7 7M4 12h11" />
           </svg>
         </button>
 
@@ -1626,6 +1639,42 @@ export default function EditorPage() {
                 Agregar
               </button>
             </div>
+
+            <PanelSave />
+          </div>
+        )}
+
+        {/* Panel — Producto */}
+        {activeTool === 'product' && (
+          <div className="ed-tool-panel ed-tool-panel-lg">
+            <div className="ed-tp-title">Producto</div>
+
+            <div className="ed-tp-subtitle">Modal de producto</div>
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#F8FAFC', borderRadius: 10, cursor: 'pointer', gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', lineHeight: 1.2 }}>Paso a paso</div>
+                <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 3 }}>Muestra una variable a la vez, como si preguntara, y avanza sola al elegir. Los adicionales, notas y el boton de agregar quedan al final.</div>
+              </div>
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <input
+                  type="checkbox"
+                  checked={modalWizard}
+                  onChange={e => setModalWizard(e.target.checked)}
+                  style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
+                />
+                <div style={{
+                  width: 38, height: 22, borderRadius: 100,
+                  background: modalWizard ? '#7C3AED' : '#D1D5DB',
+                  transition: 'background 0.2s', cursor: 'pointer', position: 'relative',
+                }}>
+                  <div style={{
+                    position: 'absolute', top: 4, left: modalWizard ? 18 : 4,
+                    width: 14, height: 14, borderRadius: '50%', background: 'white',
+                    transition: 'left 0.2s',
+                  }} />
+                </div>
+              </div>
+            </label>
 
             <PanelSave />
           </div>

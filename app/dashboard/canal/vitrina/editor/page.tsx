@@ -1398,7 +1398,7 @@ export default function EditorPage() {
               <div style={{ width: 16, height: 10, borderRadius: 3, background: '#CBD5E1', flexShrink: 0 }} />
               <input
                 type="range"
-                min={48}
+                min={32}
                 max={100}
                 step={2}
                 value={headerHeightPx}

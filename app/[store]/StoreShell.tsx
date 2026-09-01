@@ -385,6 +385,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [isIos, setIsIos]   = useState(false)
   const [installed, setInstalled] = useState(false)
   const [activeCatId, setActiveCatId] = useState<string | null>(null)
+  const [catNavPinned, setCatNavPinned] = useState(false)
   const [menuOpen, setMenuOpen]       = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedVariants, setSelectedVariants] = useState<Record<string, number>>({})
@@ -639,6 +640,23 @@ export default function StoreShell({ store, products, categories = [], initialBc
       cfg.headerLayout === 'centrado'  ? 'center' : 'left'
     )
   const cfgHeaderOverBanner = !!cfg.headerOverBanner && !!store.banner_url && store.template !== 'vitrina' && store.template !== 'catalogo'
+  const cfgCatNavOverBanner = !!cfg.catNavOverBanner && !!store.banner_url && store.template !== 'vitrina' && store.template !== 'catalogo'
+
+  // ── "Categorias sobre el banner": once the banner scrolls fully out of
+  // view, pin the (now solid) category bar to the top like the normal
+  // anchored behavior, instead of leaving it stuck to the banner's edge ──
+  useEffect(() => {
+    if (view !== 'catalog' || !cfgCatNavOverBanner || !cfgStickyCatNav) { setCatNavPinned(false); return }
+    const banner = document.querySelector<HTMLElement>('.sf-banner-wrap')
+    if (!banner) return
+    const observer = new IntersectionObserver(
+      ([entry]) => setCatNavPinned(!entry.isIntersecting && entry.boundingClientRect.top < 0),
+      { threshold: 0 }
+    )
+    observer.observe(banner)
+    return () => observer.disconnect()
+  }, [view, cfgCatNavOverBanner, cfgStickyCatNav])
+
   const pageStyle: React.CSSProperties = {
     ...(cfg.pageBg ? { background: cfg.pageBg } : {}),
     ...(cfgFontFamily ? { fontFamily: cfgFontFamily } : {}),
@@ -2256,9 +2274,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
     .filter(g => g.items.length > 0)
   const uncategorized = products.filter(p => !p.category_id || !categories.find(c => c.id === p.category_id))
   const hasCats = catGroups.length > 0
-  const cfgCatNavOverBanner = !!cfg.catNavOverBanner && !!store.banner_url && store.template !== 'vitrina' && store.template !== 'catalogo'
   const catNavEl = hasCats && tpl !== 'catalogo' && cfg.showCatNav !== false ? (
-    <nav className={`sf-cat-nav sf-cat-nav-${cfgCatNavStyle}${cfgStickyCatNav ? '' : ' sf-cat-nav-nosticky'}${cfgCatNavOverBanner ? ' sf-cat-nav-glass' : ''}`}>
+    <nav className={`sf-cat-nav sf-cat-nav-${cfgCatNavStyle}${cfgStickyCatNav ? '' : ' sf-cat-nav-nosticky'}${cfgCatNavOverBanner ? ' sf-cat-nav-glass' : ''}${cfgCatNavOverBanner && catNavPinned ? ' sf-cat-nav-pinned' : ''}`}>
       {catGroups.map(({ cat }) => (
         <button
           key={cat.id}

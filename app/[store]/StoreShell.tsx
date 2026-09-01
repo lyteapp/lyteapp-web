@@ -251,7 +251,6 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [splashLeaving, setSplashLeaving] = useState(false)
   const [catalogEnter, setCatalogEnter] = useState(false)
   const [customerCedula, setCustomerCedula] = useState('')
-  const cedulaDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [cedulaStatus, setCedulaStatus] = useState<'idle' | 'checking' | 'found' | 'new'>('idle')
   const [splashError, setSplashError] = useState('')
   const [locationLabel, setLocationLabel] = useState('')
@@ -1385,31 +1384,20 @@ export default function StoreShell({ store, products, categories = [], initialBc
   }
 
   // ── Circular number pad for the cedula field (instead of the OS keyboard) ──
+  // Lookup only runs when "Empezar" is pressed (handleSplashStart) — the
+  // found/new hint and name/phone/address fields must not pop in while typing.
   function resetCedulaDependents() {
     setCedulaStatus('idle')
     setCustomerName(''); setCustomerPhone(''); setCustomerAddress('')
     setLocationState('idle'); setCustomerLat(null); setCustomerLng(null); setLocationLabel('')
   }
-  function scheduleCedulaLookup(val: string) {
-    if (cedulaDebounceRef.current) clearTimeout(cedulaDebounceRef.current)
-    if (!val.trim()) return
-    cedulaDebounceRef.current = setTimeout(() => { lookupCedula(val.trim()) }, 600)
-  }
   function pressCedulaDigit(d: string) {
     resetCedulaDependents()
-    setCustomerCedula(prev => {
-      const next = (prev + d).slice(0, 12)
-      scheduleCedulaLookup(next)
-      return next
-    })
+    setCustomerCedula(prev => (prev + d).slice(0, 12))
   }
   function pressCedulaBackspace() {
     resetCedulaDependents()
-    setCustomerCedula(prev => {
-      const next = prev.slice(0, -1)
-      scheduleCedulaLookup(next)
-      return next
-    })
+    setCustomerCedula(prev => prev.slice(0, -1))
   }
 
   function proceedToTransition() {

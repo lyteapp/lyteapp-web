@@ -1479,7 +1479,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     const bar = cedulaSlideBarRef.current
     if (!bar) return
     const rect = bar.getBoundingClientRect()
-    const thumbSize = 44, pad = 4
+    const thumbSize = 56, pad = 6
     const travel = rect.width - thumbSize - pad * 2
     const raw = travel > 0 ? (clientX - rect.left - pad - thumbSize / 2) / travel : 0
     setCedulaSlideProgress(Math.min(1, Math.max(0, raw)))
@@ -1660,14 +1660,16 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 '--sf-splash-input-size': `${hp.elementSizes?.fields || 14}px`,
               } as React.CSSProperties}
             >
-              <input
-                className="sf-splash-cedula"
-                type="text"
-                inputMode="none"
-                readOnly
-                placeholder="Tu cedula de identidad"
-                value={customerCedula}
-              />
+              {keypadRevealed && (
+                <input
+                  className="sf-splash-cedula"
+                  type="text"
+                  inputMode="none"
+                  readOnly
+                  placeholder="Tu cedula de identidad"
+                  value={customerCedula}
+                />
+              )}
               {!keypadRevealed ? (
                 <div
                   ref={cedulaSlideBarRef}
@@ -1684,7 +1686,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   <div className="sf-splash-slide-fill" />
                   <span className="sf-splash-slide-label">Desliza para ingresar tu cedula</span>
                   <div className="sf-splash-slide-thumb">
-                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="22" height="22">
                       <path d="M7 4l6 6-6 6" />
                     </svg>
                   </div>

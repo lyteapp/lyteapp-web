@@ -781,26 +781,26 @@ html, body { overflow-x: clip; }
 /* "Slide to reveal" bar shown before the keypad — same accent pill as the
    "Empezar" button below, not a separate visual element. */
 .sf-splash-slide-bar {
-  position: relative; height: 52px; max-width: 260px; margin: 6px auto 0;
+  position: relative; height: 68px; max-width: 280px; margin: 6px auto 0;
   border-radius: 100px; overflow: hidden; touch-action: none; cursor: grab; user-select: none;
   background: var(--sf-accent-color, #7C3AED);
   transition: transform 0.2s, filter 0.2s;
 }
 .sf-splash-slide-fill {
   position: absolute; top: 0; left: 0; bottom: 0;
-  width: calc(52px + var(--sf-slide-progress, 0) * (100% - 52px));
+  width: calc(68px + var(--sf-slide-progress, 0) * (100% - 68px));
   background: rgba(255,255,255,0.18);
 }
 .sf-splash-slide-bar:not(.sliding) .sf-splash-slide-fill,
 .sf-splash-slide-bar:not(.sliding) .sf-splash-slide-thumb { transition: width 0.25s cubic-bezier(0.22, 1, 0.36, 1), left 0.25s cubic-bezier(0.22, 1, 0.36, 1); }
 .sf-splash-slide-label {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  font-size: 15px; font-weight: 700; color: white; letter-spacing: -0.01em;
+  font-size: 16px; font-weight: 700; color: white; letter-spacing: -0.01em;
   opacity: calc(1 - var(--sf-slide-progress, 0) * 0.9); pointer-events: none;
 }
 .sf-splash-slide-thumb {
-  position: absolute; top: 4px; left: calc(4px + var(--sf-slide-progress, 0) * (100% - 52px));
-  width: 44px; height: 44px; border-radius: 50%;
+  position: absolute; top: 6px; left: calc(6px + var(--sf-slide-progress, 0) * (100% - 68px));
+  width: 56px; height: 56px; border-radius: 50%;
   background: white;
   color: var(--sf-accent-color, #7C3AED);
   display: flex; align-items: center; justify-content: center;

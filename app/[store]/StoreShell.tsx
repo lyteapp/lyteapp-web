@@ -1393,10 +1393,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   function scheduleCedulaLookup(val: string) {
     if (cedulaDebounceRef.current) clearTimeout(cedulaDebounceRef.current)
     if (!val.trim()) return
-    cedulaDebounceRef.current = setTimeout(async () => {
-      const result = await lookupCedula(val.trim())
-      if (result.status === 'found') enterStore('found', result.customer)
-    }, 600)
+    cedulaDebounceRef.current = setTimeout(() => { lookupCedula(val.trim()) }, 600)
   }
   function pressCedulaDigit(d: string) {
     resetCedulaDependents()

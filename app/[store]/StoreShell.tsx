@@ -649,22 +649,24 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const cfgHeaderSticky = !!cfg.headerSticky
   const cfgStickyOffsetPx = cfgHeaderSticky ? (cfg.headerHeightPx ?? 56) : 0
 
-  // ── "Categorias sobre el banner": once the banner scrolls fully out of
-  // view, pin the (still glass-styled) category bar to the top like the
-  // normal anchored behavior, instead of leaving it stuck to the banner's
-  // edge. (The header doesn't need this — it's anchored unconditionally,
-  // see cfgHeaderSticky above.) ──
+  // ── "Categorias sobre el banner": pin the (still glass-styled) category
+  // bar to the top the moment its floating position would otherwise slide
+  // behind the (always-anchored) header, instead of leaving it tied to the
+  // banner's scroll until the banner has fully left the viewport — which,
+  // with an anchored header in front of it, made it disappear behind the
+  // header for the last stretch of that scroll. ──
   useEffect(() => {
     if (view !== 'catalog' || !cfgCatNavOverBanner || !cfgStickyCatNav) { setCatNavPinned(false); return }
     const banner = document.querySelector<HTMLElement>('.sf-banner-wrap')
     if (!banner) return
+    const headerOffset = cfgHeaderSticky ? (cfg.headerHeightPx ?? 56) : 0
     const observer = new IntersectionObserver(
-      ([entry]) => setCatNavPinned(!entry.isIntersecting && entry.boundingClientRect.top < 0),
-      { threshold: 0 }
+      ([entry]) => setCatNavPinned(!entry.isIntersecting),
+      { threshold: 0, rootMargin: `-${headerOffset}px 0px 0px 0px` }
     )
     observer.observe(banner)
     return () => observer.disconnect()
-  }, [view, cfgCatNavOverBanner, cfgStickyCatNav])
+  }, [view, cfgCatNavOverBanner, cfgStickyCatNav, cfgHeaderSticky, cfg.headerHeightPx])
 
   const pageStyle: React.CSSProperties = {
     ...(cfg.pageBg ? { background: cfg.pageBg } : {}),

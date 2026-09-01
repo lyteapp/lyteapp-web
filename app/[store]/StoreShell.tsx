@@ -100,6 +100,7 @@ type TemplateConfig = {
   showMenuButton?: boolean
   showHeaderSearch?: boolean
   showHeaderCart?: boolean
+  headerIconColor?: string
   cardBg?: string
   catTitleColor?: string
   catTitleFont?: string
@@ -718,6 +719,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     ...(cfg.catTitleColor ? { '--sf-cat-title-color': cfg.catTitleColor } : {}),
     ...(cfg.categorySpacing !== undefined ? { '--sf-cat-spacing': `${cfg.categorySpacing}px` } : {}),
     ...(cfg.headerHeightPx !== undefined ? { '--sf-header-height': `${cfg.headerHeightPx}px` } : {}),
+    ...(cfg.headerIconColor ? { '--sf-header-icon-color': cfg.headerIconColor } : {}),
     '--sf-sticky-offset': `${cfgStickyOffsetPx}px`,
     '--sf-catnav-overlap': `-${catNavHeightMeasured ?? 52}px`,
     ...(cfg.catTitleFont && FONT_MAP[cfg.catTitleFont] ? { '--sf-cat-title-font': FONT_MAP[cfg.catTitleFont] } : {}),

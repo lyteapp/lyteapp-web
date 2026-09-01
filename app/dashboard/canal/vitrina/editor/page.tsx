@@ -210,6 +210,7 @@ export default function EditorPage() {
   const [showMenuButton, setShowMenuButton] = useState(false)
   const [showHeaderSearch, setShowHeaderSearch] = useState(false)
   const [showHeaderCart, setShowHeaderCart] = useState(false)
+  const [headerIconColor, setHeaderIconColor] = useState('')
   const [headerOverBanner, setHeaderOverBanner] = useState(false)
   const [headerSticky, setHeaderSticky] = useState(false)
   const [modalWizard, setModalWizard] = useState(false)
@@ -230,6 +231,7 @@ export default function EditorPage() {
   const pricePickerRef       = useRef<HTMLInputElement>(null)
   const pricePickerColorsRef = useRef<HTMLInputElement>(null)
   const catTitlePickerRef    = useRef<HTMLInputElement>(null)
+  const headerIconPickerRef  = useRef<HTMLInputElement>(null)
 
   // ── Load saved config ──────────────────────────────────
   useEffect(() => {
@@ -290,6 +292,7 @@ export default function EditorPage() {
       if (cfg.showMenuButton !== undefined) setShowMenuButton(cfg.showMenuButton as boolean)
       if (cfg.showHeaderSearch !== undefined) setShowHeaderSearch(cfg.showHeaderSearch as boolean)
       if (cfg.showHeaderCart !== undefined) setShowHeaderCart(cfg.showHeaderCart as boolean)
+      if (cfg.headerIconColor) setHeaderIconColor(cfg.headerIconColor as string)
       if (cfg.headerOverBanner !== undefined) setHeaderOverBanner(cfg.headerOverBanner as boolean)
       if (cfg.headerSticky !== undefined) setHeaderSticky(cfg.headerSticky as boolean)
       if (cfg.modalWizard !== undefined) setModalWizard(cfg.modalWizard as boolean)
@@ -435,6 +438,7 @@ export default function EditorPage() {
         height: ${logoSizePx}px !important;
       }
       .sf-topbar-inner { min-height: ${headerHeightPx}px !important; }
+      ${headerIconColor ? `.sf-menu-btn, .sf-header-icon-btn { color: ${headerIconColor} !important; }` : ''}
     `
   }
 
@@ -454,7 +458,7 @@ export default function EditorPage() {
   useEffect(() => {
     applyPreview()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx])
+  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor])
 
   // ── Auto-save category shape (reloads iframe immediately) ─
   async function handleCategoryShape(catId: string, shape: string | null) {
@@ -517,7 +521,7 @@ export default function EditorPage() {
       priceColor, accentColor, priceFont: priceFont || pageFont, priceSize,
       catTitleFont: catTitleFont || undefined, productNameFont: productNameFont || undefined,
       categoryNavStyle, showCatNav, stickyCatNav, catNavOverBanner, categorySpacing,
-      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, showHeaderSearch, showHeaderCart, headerOverBanner, headerSticky, headerHeightPx, modalWizard,
+      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, showHeaderSearch, showHeaderCart, headerIconColor: headerIconColor || undefined, headerOverBanner, headerSticky, headerHeightPx, modalWizard,
       headerLayout: undefined,
       contentBlocks: contentBlocks.length > 0 ? contentBlocks : undefined,
       ...(Object.keys(categoryShapes).length > 0
@@ -543,6 +547,7 @@ export default function EditorPage() {
   const isCustomCard  = cardBg !== '' && cardBg !== 'transparent' && !BG_COLORS.some(c => c.value === cardBg)
   const isCustomAc    = !ACCENT_COLORS.includes(accentColor)
   const isCustomPrice = !ACCENT_COLORS.includes(priceColor)
+  const isCustomHeaderIcon = headerIconColor !== '' && !ACCENT_COLORS.includes(headerIconColor)
   const isCustomCatTitle = catTitleColor !== '' && !ACCENT_COLORS.includes(catTitleColor)
 
   function PanelSave() {
@@ -1534,6 +1539,45 @@ export default function EditorPage() {
                 </div>
               </div>
             </label>
+
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Color de los iconos</div>
+            <div className="ed-tp-swatches" style={{ position: 'relative' }}>
+              <button
+                className={`ed-tp-swatch ed-tp-light${headerIconColor === '' ? ' ed-tp-active' : ''}`}
+                style={{ background: 'white', fontSize: 9, fontWeight: 700, color: '#94A3B8', letterSpacing: 0 }}
+                title="Auto"
+                onClick={() => setHeaderIconColor('')}
+              >
+                Auto
+              </button>
+              {ACCENT_COLORS.map(c => (
+                <button
+                  key={c}
+                  className={`ed-tp-swatch${headerIconColor === c ? ' ed-tp-active' : ''}`}
+                  style={{ background: c }}
+                  onClick={() => setHeaderIconColor(c)}
+                />
+              ))}
+              <button
+                className={`ed-tp-swatch ed-tp-custom${isCustomHeaderIcon ? ' ed-tp-active' : ''}`}
+                style={isCustomHeaderIcon ? { background: headerIconColor } : undefined}
+                title="Personalizado"
+                onClick={() => headerIconPickerRef.current?.click()}
+              >
+                {!isCustomHeaderIcon && (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                )}
+              </button>
+              <input
+                ref={headerIconPickerRef}
+                type="color"
+                value={isCustomHeaderIcon ? headerIconColor : '#475569'}
+                onChange={e => setHeaderIconColor(e.target.value)}
+                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
+              />
+            </div>
 
             <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Encabezado sobre el banner</div>
             <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#F8FAFC', borderRadius: 10, cursor: 'pointer', gap: 12 }}>

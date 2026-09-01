@@ -387,6 +387,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [isIos, setIsIos]   = useState(false)
   const [installed, setInstalled] = useState(false)
   const [activeCatId, setActiveCatId] = useState<string | null>(null)
+  const [headerHeightMeasured, setHeaderHeightMeasured] = useState<number | null>(null)
   const [catNavPinned, setCatNavPinned] = useState(false)
   const [menuOpen, setMenuOpen]       = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -649,8 +650,24 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // when it floats over the banner. No scroll-position dependency: it's
   // anchored from the very start, not only once you've scrolled some amount.
   const cfgHeaderSticky = !!cfg.headerSticky
-  const cfgStickyOffsetPx = cfgHeaderSticky ? (cfg.headerHeightPx ?? 56) : 0
+  // headerHeightPx only sets a *minimum* height on the header — real content
+  // (a tall logo, a wrapping name) can render taller than that. Measuring the
+  // actual element avoids the category bar landing under/over the header by
+  // however many pixels the configured value was off by.
+  const cfgStickyOffsetPx = cfgHeaderSticky ? (headerHeightMeasured ?? cfg.headerHeightPx ?? 56) : 0
   const cfgModalWizard = !!cfg.modalWizard
+
+  // ── Measure the header's real rendered height (see cfgStickyOffsetPx) ──
+  useEffect(() => {
+    if (view !== 'catalog' || !cfgHeaderSticky) { setHeaderHeightMeasured(null); return }
+    const header = document.querySelector<HTMLElement>('.sf-topbar')
+    if (!header) return
+    const update = () => setHeaderHeightMeasured(header.getBoundingClientRect().height)
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(header)
+    return () => ro.disconnect()
+  }, [view, cfgHeaderSticky])
 
   // ── "Categorias sobre el banner": pin the (still glass-styled) category
   // bar to the top the moment its floating position would otherwise slide
@@ -662,14 +679,13 @@ export default function StoreShell({ store, products, categories = [], initialBc
     if (view !== 'catalog' || !cfgCatNavOverBanner || !cfgStickyCatNav) { setCatNavPinned(false); return }
     const banner = document.querySelector<HTMLElement>('.sf-banner-wrap')
     if (!banner) return
-    const headerOffset = cfgHeaderSticky ? (cfg.headerHeightPx ?? 56) : 0
     const observer = new IntersectionObserver(
       ([entry]) => setCatNavPinned(!entry.isIntersecting),
-      { threshold: 0, rootMargin: `-${headerOffset}px 0px 0px 0px` }
+      { threshold: 0, rootMargin: `-${cfgStickyOffsetPx}px 0px 0px 0px` }
     )
     observer.observe(banner)
     return () => observer.disconnect()
-  }, [view, cfgCatNavOverBanner, cfgStickyCatNav, cfgHeaderSticky, cfg.headerHeightPx])
+  }, [view, cfgCatNavOverBanner, cfgStickyCatNav, cfgStickyOffsetPx])
 
   const pageStyle: React.CSSProperties = {
     ...(cfg.pageBg ? { background: cfg.pageBg } : {}),

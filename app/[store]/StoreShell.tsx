@@ -405,6 +405,72 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [modalNotes, setModalNotes]           = useState('')
   const [modalQty, setModalQty]               = useState(1)
   const [modalStep, setModalStep]             = useState(0)
+
+  // Live nutrition totals + a slow "loading in" animation whenever they change
+  // (toggling a variable/additional), instead of jumping straight to the new values.
+  const modalNutritionEnabled = !!modalProduct?.options?.nutrition?.enabled
+  const modalNutritionAdditionals = (modalProduct?.options?.additionals ?? []).filter((_, i) => modalAdditionals.has(i))
+  const modalNutritionVariableChoices = modalProduct
+    ? Object.entries(modalVars).map(([label, value]) => {
+        if (!value) return null
+        const group = modalProduct!.options?.variables?.find(g => g.label === label)
+        return group?.choices.map(normalizeChoice).find(c => c.value === value) ?? null
+      }).filter((c): c is VariableChoice => !!c)
+    : []
+  const modalNutrition = modalNutritionEnabled
+    ? {
+        calories: (modalProduct!.options!.nutrition!.calories ?? 0) + modalNutritionAdditionals.reduce((s, a) => s + (a.calories ?? 0), 0) + modalNutritionVariableChoices.reduce((s, c) => s + (c.calories ?? 0), 0),
+        fat:      (modalProduct!.options!.nutrition!.fat ?? 0)      + modalNutritionAdditionals.reduce((s, a) => s + (a.fat ?? 0), 0)      + modalNutritionVariableChoices.reduce((s, c) => s + (c.fat ?? 0), 0),
+        protein:  (modalProduct!.options!.nutrition!.protein ?? 0)  + modalNutritionAdditionals.reduce((s, a) => s + (a.protein ?? 0), 0)  + modalNutritionVariableChoices.reduce((s, c) => s + (c.protein ?? 0), 0),
+        carbs:    (modalProduct!.options!.nutrition!.carbs ?? 0)    + modalNutritionAdditionals.reduce((s, a) => s + (a.carbs ?? 0), 0)    + modalNutritionVariableChoices.reduce((s, c) => s + (c.carbs ?? 0), 0),
+      }
+    : null
+
+  const [animNutrition, setAnimNutrition] = useState<{ calories: number; fat: number; protein: number; carbs: number } | null>(null)
+  const animNutritionRaf = useRef<number | null>(null)
+  useEffect(() => {
+    if (animNutritionRaf.current) cancelAnimationFrame(animNutritionRaf.current)
+    if (!modalNutrition) { setAnimNutrition(null); return }
+    const target = modalNutrition
+    const start = animNutrition ?? { calories: 0, fat: 0, protein: 0, carbs: 0 }
+    const startTime = performance.now()
+    const duration = 900
+    const ease = (t: number) => 1 - Math.pow(1 - t, 3)
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - startTime) / duration)
+      const e = ease(t)
+      setAnimNutrition({
+        calories: start.calories + (target.calories - start.calories) * e,
+        fat:      start.fat      + (target.fat      - start.fat)      * e,
+        protein:  start.protein  + (target.protein  - start.protein)  * e,
+        carbs:    start.carbs    + (target.carbs    - start.carbs)    * e,
+      })
+      if (t < 1) animNutritionRaf.current = requestAnimationFrame(tick)
+    }
+    animNutritionRaf.current = requestAnimationFrame(tick)
+    return () => { if (animNutritionRaf.current) cancelAnimationFrame(animNutritionRaf.current) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modalNutrition?.calories, modalNutrition?.fat, modalNutrition?.protein, modalNutrition?.carbs])
+  const modalNutritionDisplay = modalNutritionEnabled ? (animNutrition ?? { calories: 0, fat: 0, protein: 0, carbs: 0 }) : null
+
+  const modalNutritionRadius = 34
+  const modalNutritionCircumference = 2 * Math.PI * modalNutritionRadius
+  const modalNutritionTotal = modalNutritionDisplay ? modalNutritionDisplay.fat + modalNutritionDisplay.protein + modalNutritionDisplay.carbs : 0
+  const modalNutritionSegments: { key: string; color: string; len: number; dashOffset: number }[] = []
+  if (modalNutritionDisplay && modalNutritionTotal > 0) {
+    let segOffset = 0
+    for (const s of [
+      { key: 'fat', value: modalNutritionDisplay.fat, color: '#F59E0B' },
+      { key: 'protein', value: modalNutritionDisplay.protein, color: 'var(--sf-accent-color, #7C3AED)' },
+      { key: 'carbs', value: modalNutritionDisplay.carbs, color: '#10B981' },
+    ]) {
+      if (s.value <= 0) continue
+      const len = (s.value / modalNutritionTotal) * modalNutritionCircumference
+      modalNutritionSegments.push({ key: s.key, color: s.color, len, dashOffset: -segOffset })
+      segOffset += len
+    }
+  }
+
   const [lightbox, setLightbox] = useState<{ images: string[]; idx: number } | null>(null)
   const touchStartX             = useRef<number>(0)
   const swipedRef               = useRef<boolean>(false)
@@ -789,7 +855,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     return (
       <div className="sf-modal-overlay" onClick={() => setModalProduct(null)}>
         <div className="sf-modal-wrap">
-          {modalNutritionEnabled && modalNutrition && (
+          {modalNutritionEnabled && modalNutritionDisplay && (
             <div className="sf-modal-nutrition-badge sf-modal-nutrition-badge-float">
               <div className="sf-modal-nutrition-chart">
                 <svg viewBox="0 0 80 80">
@@ -806,22 +872,22 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   ))}
                 </svg>
                 <div className="sf-modal-nutrition-kcal">
-                  <strong>{Math.round(modalNutrition.calories)}</strong>
+                  <strong>{Math.round(modalNutritionDisplay.calories)}</strong>
                   <span>kcal</span>
                 </div>
               </div>
               <div className="sf-modal-nutrition-legend">
                 <div className="sf-modal-nutrition-legend-item">
                   <span className="sf-modal-nutrition-dot" style={{ background: '#F59E0B' }} />
-                  Grasas <strong>{Math.round(modalNutrition.fat)}g</strong>
+                  Grasas <strong>{Math.round(modalNutritionDisplay.fat)}g</strong>
                 </div>
                 <div className="sf-modal-nutrition-legend-item">
                   <span className="sf-modal-nutrition-dot" style={{ background: 'var(--sf-accent-color, #7C3AED)' }} />
-                  Proteínas <strong>{Math.round(modalNutrition.protein)}g</strong>
+                  Proteínas <strong>{Math.round(modalNutritionDisplay.protein)}g</strong>
                 </div>
                 <div className="sf-modal-nutrition-legend-item">
                   <span className="sf-modal-nutrition-dot" style={{ background: '#10B981' }} />
-                  Carbos <strong>{Math.round(modalNutrition.carbs)}g</strong>
+                  Carbos <strong>{Math.round(modalNutritionDisplay.carbs)}g</strong>
                 </div>
               </div>
             </div>
@@ -1821,43 +1887,6 @@ export default function StoreShell({ store, products, categories = [], initialBc
   function advanceModalWizard() {
     setTimeout(() => setModalStep(s => s + 1), 220)
   }
-
-  const modalNutritionEnabled = !!modalProduct?.options?.nutrition?.enabled
-  const modalNutritionAdditionals = (modalProduct?.options?.additionals ?? []).filter((_, i) => modalAdditionals.has(i))
-  const modalNutritionVariableChoices = modalProduct
-    ? Object.entries(modalVars).map(([label, value]) => {
-        if (!value) return null
-        const group = modalProduct!.options?.variables?.find(g => g.label === label)
-        return group?.choices.map(normalizeChoice).find(c => c.value === value) ?? null
-      }).filter((c): c is VariableChoice => !!c)
-    : []
-  const modalNutrition = modalNutritionEnabled
-    ? {
-        calories: (modalProduct!.options!.nutrition!.calories ?? 0) + modalNutritionAdditionals.reduce((s, a) => s + (a.calories ?? 0), 0) + modalNutritionVariableChoices.reduce((s, c) => s + (c.calories ?? 0), 0),
-        fat:      (modalProduct!.options!.nutrition!.fat ?? 0)      + modalNutritionAdditionals.reduce((s, a) => s + (a.fat ?? 0), 0)      + modalNutritionVariableChoices.reduce((s, c) => s + (c.fat ?? 0), 0),
-        protein:  (modalProduct!.options!.nutrition!.protein ?? 0)  + modalNutritionAdditionals.reduce((s, a) => s + (a.protein ?? 0), 0)  + modalNutritionVariableChoices.reduce((s, c) => s + (c.protein ?? 0), 0),
-        carbs:    (modalProduct!.options!.nutrition!.carbs ?? 0)    + modalNutritionAdditionals.reduce((s, a) => s + (a.carbs ?? 0), 0)    + modalNutritionVariableChoices.reduce((s, c) => s + (c.carbs ?? 0), 0),
-      }
-    : null
-
-  const modalNutritionRadius = 34
-  const modalNutritionCircumference = 2 * Math.PI * modalNutritionRadius
-  const modalNutritionTotal = modalNutrition ? modalNutrition.fat + modalNutrition.protein + modalNutrition.carbs : 0
-  const modalNutritionSegments: { key: string; color: string; len: number; dashOffset: number }[] = []
-  if (modalNutrition && modalNutritionTotal > 0) {
-    let segOffset = 0
-    for (const s of [
-      { key: 'fat', value: modalNutrition.fat, color: '#F59E0B' },
-      { key: 'protein', value: modalNutrition.protein, color: 'var(--sf-accent-color, #7C3AED)' },
-      { key: 'carbs', value: modalNutrition.carbs, color: '#10B981' },
-    ]) {
-      if (s.value <= 0) continue
-      const len = (s.value / modalNutritionTotal) * modalNutritionCircumference
-      modalNutritionSegments.push({ key: s.key, color: s.color, len, dashOffset: -segOffset })
-      segOffset += len
-    }
-  }
-
 
   // ── CHECKOUT ──
   if (view === 'checkout') return (

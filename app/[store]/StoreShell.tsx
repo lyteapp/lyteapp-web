@@ -1691,7 +1691,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                     </svg>
                   </div>
                 </div>
-              ) : (
+              ) : cedulaStatus !== 'new' && (
                 <div className="sf-splash-keypad sf-splash-keypad-in">
                   {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(d => (
                     <button key={d} type="button" className="sf-splash-keypad-btn" onClick={() => pressCedulaDigit(d)}>{d}</button>

@@ -49,7 +49,6 @@ html, body { overflow-x: clip; }
 }
 .sf-nav-logo-img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .sf-nav-name { font-size: 1.07em; font-weight: 700; color: #0F172A; letter-spacing: -0.03em; }
-.sf-lyte-mobile-logo { display: none; height: 20px; width: auto; }
 /* logo shape */
 .sf-nav-logo-rounded { border-radius: 8px; }
 .sf-nav-logo-circle  { border-radius: 50%; }
@@ -903,7 +902,6 @@ html, body { overflow-x: clip; }
   .sf-header-inner, .sf-section-inner { padding: 16px; }
   .sf-logo-wrap { width: 60px; height: 60px; border-radius: 12px; }
   .sf-nav-name { display: none; }
-  .sf-lyte-mobile-logo { display: block; }
 }
 @media (max-width: 400px) {
   .sf-nav-inner { padding: 0 16px; }

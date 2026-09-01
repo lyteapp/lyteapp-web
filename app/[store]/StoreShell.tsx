@@ -2563,9 +2563,6 @@ export default function StoreShell({ store, products, categories = [], initialBc
             {cfgNamePosition === 'center' && (
               <span className="sf-nav-name">{store.name}</span>
             )}
-            {cfgLogoPosition !== 'center' && (
-              <img src="/logo.png" alt="Lyte" className="sf-lyte-mobile-logo" />
-            )}
           </div>
           <div className="sf-topbar-slot-right">
             {cfgLogoPosition === 'right' && store.logo_url && (

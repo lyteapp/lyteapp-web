@@ -160,6 +160,35 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
   )
 }
 
+// Downscales + re-encodes as JPEG so a high-resolution photo picked straight
+// off a phone doesn't ship as a multi-MB background the splash screen has to
+// fully download before it can paint. Falls back to the original file on any
+// failure — never blocks the upload.
+function compressImage(file: File, maxDim = 1920, quality = 0.82): Promise<File> {
+  return new Promise(resolve => {
+    if (!file.type.startsWith('image/') || file.type === 'image/svg+xml') { resolve(file); return }
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height))
+      const w = Math.round(img.width * scale)
+      const h = Math.round(img.height * scale)
+      const canvas = document.createElement('canvas')
+      canvas.width = w; canvas.height = h
+      const ctx = canvas.getContext('2d')
+      if (!ctx) { resolve(file); return }
+      ctx.drawImage(img, 0, 0, w, h)
+      canvas.toBlob(blob => {
+        if (!blob || blob.size >= file.size) { resolve(file); return }
+        resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }))
+      }, 'image/jpeg', quality)
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
+    img.src = url
+  })
+}
+
 async function uploadFile(file: File, userId: string, folder: string) {
   const ext = file.name.split('.').pop()
   const path = `${folder}/${userId}-${Date.now()}.${ext}`
@@ -666,7 +695,7 @@ export default function InicioPage() {
     const file = e.target.files?.[0]
     if (!file || !user) return
     setUploading(true)
-    try { set('imageUrl', await uploadFile(file, user.id, 'homepage')) }
+    try { set('imageUrl', await uploadFile(await compressImage(file), user.id, 'homepage')) }
     catch { setError('No se pudo subir la imagen.') }
     setUploading(false)
   }

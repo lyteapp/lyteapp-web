@@ -108,6 +108,7 @@ type TemplateConfig = {
   headerLayout?: string
   logoPosition?: 'left' | 'center' | 'right' | 'none'
   namePosition?: 'left' | 'center' | 'right' | 'none'
+  headerOverBanner?: boolean
   contentBlocks?: ContentBlock[]
   homePage?: {
     enabled?: boolean
@@ -635,6 +636,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       cfg.headerLayout === 'solo-logo' ? 'none' :
       cfg.headerLayout === 'centrado'  ? 'center' : 'left'
     )
+  const cfgHeaderOverBanner = !!cfg.headerOverBanner && !!store.banner_url && store.template !== 'vitrina' && store.template !== 'catalogo'
   const pageStyle: React.CSSProperties = {
     ...(cfg.pageBg ? { background: cfg.pageBg } : {}),
     ...(cfgFontFamily ? { fontFamily: cfgFontFamily } : {}),
@@ -2542,7 +2544,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     {renderLogoMorphOverlay()}
     {installed && <div className="sf-statusbar-strip" />}
     <div className={`sf-page sf-tpl-${tpl} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize} sf-vshape-${cfgVariantShape} sf-eshape-${cfgExtraShape}${catalogEnter ? ` sf-catalog-enter sf-trans-${store.template_config?.homePage?.transition || 'slide'}` : ''}`} style={pageStyle}>
-      <div className="sf-topbar">
+      <div className={`sf-topbar${cfgHeaderOverBanner ? ' sf-topbar-glass' : ''}`}>
         <div className="sf-topbar-inner sf-topbar-3col">
           <div className="sf-topbar-slot-left">
             {cfgLogoPosition === 'left' && store.logo_url && (

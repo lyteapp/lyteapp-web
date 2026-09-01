@@ -21,6 +21,7 @@ html, body { overflow-x: clip; }
 
 .sf-page {
   --sf-accent-color: var(--sf-accent-color, #7C3AED);
+  position: relative;
   min-height: 100vh;
   background: #FAFAF9;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
@@ -35,6 +36,18 @@ html, body { overflow-x: clip; }
   border-bottom: 1px solid rgba(15,23,42,0.07);
   padding-top: env(safe-area-inset-top);
 }
+/* "Encabezado sobre el banner" — floats the topbar over the banner image
+   in a frosted-glass strip instead of stacking above it in normal flow. */
+.sf-topbar-glass {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 20;
+  background: rgba(255,255,255,0.22);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border-bottom: 1px solid rgba(255,255,255,0.3);
+}
+.sf-topbar-glass .sf-nav-name { color: white; text-shadow: 0 1px 6px rgba(0,0,0,0.35); }
+.sf-topbar-glass .sf-menu-btn { background: rgba(255,255,255,0.3); color: white; }
+.sf-topbar-glass .sf-menu-btn:hover { background: rgba(255,255,255,0.45); }
 .sf-topbar-inner {
   max-width: 1100px; margin: 0 auto;
   padding: 0 20px; min-height: 56px; height: auto;

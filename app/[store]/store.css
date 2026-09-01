@@ -221,13 +221,10 @@ html, body { overflow-x: clip; }
 .sf-cat-nav-glass.sf-cat-nav-pinned {
   position: fixed; top: var(--sf-sticky-offset, 0px); left: 0; right: 0; bottom: auto;
   transform: none; margin: 0;
-  animation: sfCatNavPinIn 0.25s cubic-bezier(0.3, 1.4, 0.6, 1);
+  animation: sfCatNavPinIn 0.2s ease;
 }
 @keyframes sfCatNavPinIn {
-  /* Swept up into place from below instead of dropping down from above —
-     that way it never passes behind the header mid-transition, and lands
-     under it with a bit of a snap instead of gently fading in from it. */
-  from { transform: translateY(36px); }
+  from { transform: translateY(-100%); }
   to   { transform: translateY(0); }
 }
 .sf-cat-nav-inner { display: flex; gap: 2px; }

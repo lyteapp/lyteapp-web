@@ -816,9 +816,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
     return () => { document.body.style.background = '' }
   }, [cfg.pageBg])
 
-  // ── Measure the header's real rendered height (see cfgStickyOffsetPx) ──
+  // ── Measure the header's real rendered height (see cfgStickyOffsetPx, and
+  // the focused-category view's top padding when the header floats over the
+  // banner and would otherwise sit on top of the "Volver" button) ──
   useEffect(() => {
-    if (view !== 'catalog' || !cfgHeaderSticky) { setHeaderHeightMeasured(null); return }
+    if (view !== 'catalog' || (!cfgHeaderSticky && !cfgHeaderOverBanner)) { setHeaderHeightMeasured(null); return }
     const header = document.querySelector<HTMLElement>('.sf-topbar')
     if (!header) return
     const update = () => setHeaderHeightMeasured(header.getBoundingClientRect().height)
@@ -826,7 +828,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     const ro = new ResizeObserver(update)
     ro.observe(header)
     return () => ro.disconnect()
-  }, [view, cfgHeaderSticky])
+  }, [view, cfgHeaderSticky, cfgHeaderOverBanner])
 
   // ── "Categorias sobre el banner": rather than a JS-triggered jump from
   // "floating over the banner" to "pinned below the header" (which visibly
@@ -3272,7 +3274,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
       )}
 
       {focusCategory ? (
-        <div className="sf-focus-category">
+        <div
+          className="sf-focus-category"
+          style={cfgHeaderOverBanner ? { paddingTop: `${(headerHeightMeasured ?? cfg.headerHeightPx ?? 56) + 12}px` } : undefined}
+        >
           <button className="sf-focus-back" onClick={() => setFocusCategory(null)}>
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16"><path d="M12 15l-5-5 5-5" /></svg>
             Volver

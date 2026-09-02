@@ -917,16 +917,12 @@ html, body { overflow-x: clip; }
 }
 .sf-reorder-close:hover { color: #475569; }
 @media (max-width: 640px) {
-  .sf-reorder-banner {
-    right: 12px; left: 12px; bottom: 12px; top: auto;
-    max-width: none; transform-origin: center bottom;
-    animation: sfReorderFloatInMobile 0.4s cubic-bezier(0.16,1,0.3,1) both;
-  }
+  .sf-reorder-banner { max-width: min(260px, calc(100vw - 24px)); }
+  .sf-reorder-pos-right  { right: 12px; }
+  .sf-reorder-pos-left   { left: 12px; }
+  .sf-reorder-pos-top    { top: 12px; }
+  .sf-reorder-pos-bottom { bottom: 12px; }
   .sf-reorder-title { font-size: 13px; }
-}
-@keyframes sfReorderFloatInMobile {
-  from { opacity: 0; transform: translateY(24px) scale(var(--sf-reorder-scale, 1)); }
-  to   { opacity: 1; transform: translateY(0) scale(var(--sf-reorder-scale, 1)); }
 }
 .sf-splash-btn {
   background: var(--sf-accent-color, #7C3AED); color: white; border: none;

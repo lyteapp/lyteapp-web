@@ -670,6 +670,16 @@ export default function StoreShell({ store, products, categories = [], initialBc
     try { localStorage.setItem(`cart-${store.slug}`, JSON.stringify(cart)) } catch {}
   }, [cart, store.slug])
 
+  // Clears the saved cart from this device immediately, rather than relying
+  // on the effect above to catch up — several call sites clear the cart right
+  // before navigating away (e.g. to the WhatsApp confirmation page), and that
+  // effect's write can lose the race against the navigation, leaving the
+  // customer's finished order sitting in localStorage to silently reappear
+  // as their cart the next time they open the store.
+  function clearSavedCart() {
+    try { localStorage.removeItem(`cart-${store.slug}`) } catch {}
+  }
+
 
 
   useEffect(() => {
@@ -1463,7 +1473,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     setModalProduct(null)
   }
 
-  function clearCart() { setCart({}) }
+  function clearCart() { setCart({}); clearSavedCart() }
 
   function updateQty(id: string, delta: number) {
     setCart(prev => {
@@ -1640,7 +1650,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       }
 
       const shortId = newOrderId.slice(0, 8).toUpperCase()
-      setOrderId(shortId); setCart({})
+      setOrderId(shortId); setCart({}); clearSavedCart()
       if (isPickup) setPickupTrackId(newOrderId)
       else setPickupTrackId('')
 
@@ -1689,7 +1699,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // home page (or the catalog, if this store doesn't use one), ready for
   // the next customer. Used by both the inactivity and post-order timers.
   function resetToHome() {
-    setCart({})
+    setCart({}); clearSavedCart()
     setCustomerName(''); setCustomerPhone(''); setCustomerAddress(''); setCustomerNotes('')
     setCustomerCedula(''); setCedulaStatus('idle')
     setSelectedPayment(''); setPaymentFreeText('')

@@ -3316,10 +3316,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
             } as React.CSSProperties}
           >
             {cfg.reorderImageUrl && (
-              <>
-                <img src={cfg.reorderImageUrl} alt="" className="sf-reorder-img" />
-                <div className="sf-reorder-scrim" />
-              </>
+              <img src={cfg.reorderImageUrl} alt="" className="sf-reorder-img" />
             )}
             <div className="sf-reorder-info">
               <div

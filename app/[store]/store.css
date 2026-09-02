@@ -860,16 +860,11 @@ html, body { overflow-x: clip; }
   border-radius: 16px; padding: 14px 16px;
   box-shadow: 0 12px 32px rgba(0,0,0,0.18);
 }
-/* When a photo is set it replaces the tinted background entirely — sits
-   behind everything, clipped to the card's own rounded corners by the
-   parent's overflow:hidden, with a bottom-up scrim so the text and
-   close button stay readable over any photo. */
+/* When a photo is set it replaces the tinted background entirely — shown
+   as-is, clipped to the card's own rounded corners by the parent's
+   overflow:hidden. */
 .sf-reorder-banner.has-img { background: #0F172A; border-color: transparent; }
 .sf-reorder-banner.has-img .sf-reorder-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; z-index: 0; }
-.sf-reorder-scrim {
-  position: absolute; inset: 0; z-index: 0;
-  background: linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.25) 45%, rgba(0,0,0,0.7) 100%);
-}
 .sf-reorder-banner.has-img .sf-reorder-info,
 .sf-reorder-banner.has-img .sf-reorder-actions { position: relative; z-index: 1; }
 .sf-reorder-banner.has-img .sf-reorder-title { color: white; }

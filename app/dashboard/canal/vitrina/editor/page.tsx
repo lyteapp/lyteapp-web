@@ -651,7 +651,7 @@ export default function EditorPage() {
       const stroke = reorderFontWeight > 900 ? Math.min(1.4, ((reorderFontWeight - 900) / 300) * 1.4) : 0
       const fontFamily = reorderFont && FONT_MAP[reorderFont] ? FONT_MAP[reorderFont] : ''
       const titleText = (reorderTitle || '¿Pedimos lo mismo que la ultima vez?').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      const imgHtml = reorderImageUrl ? `<img src="${reorderImageUrl}" alt="" class="sf-reorder-img" /><div class="sf-reorder-scrim"></div>` : ''
+      const imgHtml = reorderImageUrl ? `<img src="${reorderImageUrl}" alt="" class="sf-reorder-img" />` : ''
       const actionHtml = reorderButtonStyle === 'slide'
         ? `<div class="sf-block-slide-bar" style="pointer-events:none; height:${reorderBm.height}px; flex:1; --sf-slide-thumb:${reorderBm.thumb}px; --sf-slide-pad:${reorderBm.pad}px;">
              <div class="sf-block-slide-fill"></div>

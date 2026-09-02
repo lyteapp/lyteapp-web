@@ -576,7 +576,8 @@ export default function EditorPage() {
         draft.textContent = newBlockContent
         draft.style.padding = '10px 14px'
         draft.style.fontSize = `${newBlockFontSize}px`
-        draft.style.fontWeight = String(newBlockFontWeight)
+        draft.style.fontWeight = String(Math.min(900, newBlockFontWeight))
+        draft.style.webkitTextStroke = newBlockFontWeight > 900 ? `${Math.min(1.4, ((newBlockFontWeight - 900) / 300) * 1.4)}px currentColor` : ''
         draft.style.color = newBlockColor
         draft.style.textAlign = newBlockAlign
         draft.style.fontFamily = newBlockFont && FONT_MAP[newBlockFont] ? FONT_MAP[newBlockFont] : ''
@@ -584,6 +585,7 @@ export default function EditorPage() {
         draft.style.padding = '10px'
         draft.style.fontSize = ''
         draft.style.fontWeight = ''
+        draft.style.webkitTextStroke = ''
         draft.style.color = ''
         draft.style.textAlign = ''
         draft.style.fontFamily = ''
@@ -2204,13 +2206,26 @@ export default function EditorPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ fontSize: 11, fontWeight: 600, color: '#64748B', flexShrink: 0 }}>Grosor</span>
                     <input
-                      type="range" min={100} max={900} step={100}
+                      type="range" min={100} max={1200} step={50}
                       value={newBlockFontWeight}
                       onChange={e => setNewBlockFontWeight(Number(e.target.value))}
                       style={{ flex: 1 }}
                     />
-                    <span style={{ fontSize: 11, color: '#94A3B8', width: 28, flexShrink: 0, textAlign: 'right', fontWeight: newBlockFontWeight }}>{newBlockFontWeight}</span>
+                    <span
+                      style={{
+                        fontSize: 11, color: '#94A3B8', width: 28, flexShrink: 0, textAlign: 'right',
+                        fontWeight: Math.min(900, newBlockFontWeight),
+                        WebkitTextStroke: newBlockFontWeight > 900 ? `${Math.min(1.4, ((newBlockFontWeight - 900) / 300) * 1.4)}px currentColor` : undefined,
+                      }}
+                    >
+                      {newBlockFontWeight}
+                    </span>
                   </div>
+                  {newBlockFontWeight > 900 && (
+                    <div style={{ fontSize: 10, color: '#94A3B8', marginTop: -4 }}>
+                      900 es el maximo real de la fuente — mas alla de eso se agrega un contorno para verse aun mas grueso
+                    </div>
+                  )}
                   <div style={{ display: 'flex', gap: 6 }}>
                     {([['left', 'Izquierda'], ['center', 'Centro'], ['right', 'Derecha']] as const).map(([al, label]) => (
                       <button

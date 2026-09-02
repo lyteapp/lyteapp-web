@@ -62,6 +62,17 @@ function buttonSizeMetrics(buttonSize: number | 'sm' | 'md' | 'lg' | undefined) 
 // Same corner radius the store's product photos use (cfg.photoShape),
 // so a content-block image can match them instead of always being sharp.
 const PRODUCT_PHOTO_RADIUS: Record<string, string> = { square: '18px', sharp: '4px', circle: '50%' }
+// 900 is the CSS spec's max font-weight — past that the "Grosor" slider adds
+// a matching-color text stroke on top of weight 900 so text can still read
+// noticeably heavier for anyone who wants it "much thicker" than any font's
+// own black/900 weight gets.
+function textWeightStyle(sliderValue: number | undefined): { fontWeight?: number; strokeWidth: number } {
+  if (!sliderValue) return { fontWeight: undefined, strokeWidth: 0 }
+  const fontWeight = Math.min(900, sliderValue)
+  const extra = Math.max(0, sliderValue - 900)
+  const strokeWidth = extra > 0 ? Math.min(1.4, (extra / 300) * 1.4) : 0
+  return { fontWeight, strokeWidth }
+}
 type Additional     = { name: string; price: number; calories?: number; fat?: number; protein?: number; carbs?: number }
 type ColorVariant   = { label: string; color: string; imageUrl: string }
 type NutritionInfo  = { enabled?: boolean; calories?: number; fat?: number; protein?: number; carbs?: number }
@@ -921,20 +932,24 @@ export default function StoreShell({ store, products, categories = [], initialBc
     const bm = buttonSizeMetrics(block.buttonSize)
     return (
       <div key={block.id} id={`sf-cb-${block.id}`} className="sf-content-block" style={{ padding: `${block.spacing ?? 0}px 0`, ...extraStyle }}>
-        {block.type === 'text' && (
-          <div
-            className="sf-block-text"
-            style={{
-              fontSize: block.fontSize ? `${block.fontSize}px` : undefined,
-              fontWeight: block.fontWeight || undefined,
-              color: block.color || undefined,
-              textAlign: block.align || undefined,
-              fontFamily: block.font && FONT_MAP[block.font] ? FONT_MAP[block.font] : undefined,
-            }}
-          >
-            {block.content}
-          </div>
-        )}
+        {block.type === 'text' && (() => {
+          const { fontWeight, strokeWidth } = textWeightStyle(block.fontWeight)
+          return (
+            <div
+              className="sf-block-text"
+              style={{
+                fontSize: block.fontSize ? `${block.fontSize}px` : undefined,
+                fontWeight,
+                color: block.color || undefined,
+                textAlign: block.align || undefined,
+                fontFamily: block.font && FONT_MAP[block.font] ? FONT_MAP[block.font] : undefined,
+                WebkitTextStroke: strokeWidth > 0 ? `${strokeWidth}px currentColor` : undefined,
+              }}
+            >
+              {block.content}
+            </div>
+          )
+        })()}
         {block.type === 'image' && block.content && (() => {
           const isCategoryLink = block.linkTarget === 'category' && !!block.linkCategoryId
           const isUrlLink = (block.linkTarget ?? 'url') === 'url' && !!block.linkUrl?.trim()

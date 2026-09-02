@@ -8,7 +8,7 @@ import { useT } from '../../lib/LocaleProvider'
 import './productos.css'
 
 type VariableChoice = { value: string; price: number; calories?: number; fat?: number; protein?: number; carbs?: number }
-type VariableGroup  = { label: string; choices: VariableChoice[] }
+type VariableGroup  = { label: string; choices: VariableChoice[]; min?: number; max?: number }
 function normalizeChoice(c: VariableChoice | string): VariableChoice {
   return typeof c === 'string'
     ? { value: c, price: 0 }
@@ -193,6 +193,30 @@ export default function ProductosPage() {
   function removeVarGroup(i: number) {
     setOptVariables(v => v.filter((_, idx) => idx !== i))
     setChoiceInputs(p => { const n = { ...p }; delete n[i]; return n })
+    setIsDirty(true)
+  }
+  function updateVarMinMax(i: number, field: 'min' | 'max', value: number) {
+    setOptVariables(v => v.map((g, idx) => idx === i ? { ...g, [field]: value } : g))
+    setIsDirty(true)
+  }
+  function moveVarGroup(i: number, dir: -1 | 1) {
+    const j = i + dir
+    setOptVariables(arr => {
+      if (j < 0 || j >= arr.length) return arr
+      const next = [...arr];
+      [next[i], next[j]] = [next[j], next[i]]
+      return next
+    })
+    setIsDirty(true)
+  }
+  function moveAdditional(i: number, dir: -1 | 1) {
+    const j = i + dir
+    setOptAdditionals(arr => {
+      if (j < 0 || j >= arr.length) return arr
+      const next = [...arr];
+      [next[i], next[j]] = [next[j], next[i]]
+      return next
+    })
     setIsDirty(true)
   }
 
@@ -481,6 +505,10 @@ export default function ProductosPage() {
               {optVariables.map((g, gi) => (
                 <div key={gi} className="pr-opt-group-row">
                   <div className="pr-opt-group-top">
+                    <div className="cat-order-btns">
+                      <button className="cat-order-btn" onClick={() => moveVarGroup(gi, -1)} disabled={gi === 0}>▲</button>
+                      <button className="cat-order-btn" onClick={() => moveVarGroup(gi, 1)} disabled={gi === optVariables.length - 1}>▼</button>
+                    </div>
                     <input
                       className="pr-opt-group-label-input"
                       placeholder="Nombre del grupo (ej: Talla, Sabor)"
@@ -495,6 +523,27 @@ export default function ProductosPage() {
                       Guardar como preset
                     </button>
                     <button className="pr-opt-del-group" onClick={() => removeVarGroup(gi)}>Eliminar grupo</button>
+                  </div>
+                  <div className="pr-opt-group-minmax">
+                    <label>
+                      Minimo
+                      <input
+                        type="number" min="0" step="1" placeholder="0"
+                        value={g.min ?? ''}
+                        onChange={e => updateVarMinMax(gi, 'min', parseInt(e.target.value) || 0)}
+                      />
+                    </label>
+                    <label>
+                      Maximo
+                      <input
+                        type="number" min="1" step="1" placeholder="1"
+                        value={g.max ?? ''}
+                        onChange={e => updateVarMinMax(gi, 'max', Math.max(1, parseInt(e.target.value) || 1))}
+                      />
+                    </label>
+                    <span className="pr-opt-group-minmax-hint">
+                      {(g.max ?? 1) > 1 ? `El cliente elige entre ${g.min ?? 0} y ${g.max ?? 1} opciones` : (g.min ?? 0) > 0 ? 'El cliente debe elegir una opcion' : 'El cliente elige una opcion (opcional)'}
+                    </span>
                   </div>
                   {savingVarPresetFor === gi && (
                     <div className="pr-preset-name-row">
@@ -700,6 +749,10 @@ export default function ProductosPage() {
               {optAdditionals.map((a, i) => (
                 <div key={i} className="pr-opt-extra-row-wrap">
                   <div className="pr-opt-extra-row">
+                    <div className="cat-order-btns">
+                      <button className="cat-order-btn" onClick={() => moveAdditional(i, -1)} disabled={i === 0}>▲</button>
+                      <button className="cat-order-btn" onClick={() => moveAdditional(i, 1)} disabled={i === optAdditionals.length - 1}>▼</button>
+                    </div>
                     <input
                       className="pr-opt-extra-name"
                       placeholder="Nombre del adicional (ej: Extra queso)"

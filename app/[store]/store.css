@@ -1398,6 +1398,9 @@ html, body { overflow-x: clip; }
   font-size: 12px; font-weight: 700; color: rgba(15,23,42,0.45);
   text-transform: uppercase; letter-spacing: 0.08em;
 }
+.sf-modal-section-title .sf-required,
+.sf-modal-section-title .sf-optional { margin-left: 6px; font-size: 11px; text-transform: none; }
+.sf-modal-section-hint { font-size: 11px; font-weight: 600; color: #F59E0B; margin-top: -4px; }
 
 /* Chips (variables / colors) */
 .sf-modal-chips { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -1435,6 +1438,10 @@ html, body { overflow-x: clip; }
   font-size: 19px; font-weight: 700; color: #0F172A; text-align: center;
   letter-spacing: -0.02em; margin-bottom: 6px;
 }
+.sf-modal-wizard-hint {
+  display: block; font-size: 12px; font-weight: 600; color: #94A3B8;
+  margin-top: 4px; letter-spacing: 0;
+}
 .sf-modal-wizard-chips { justify-content: center; }
 .sf-modal-wizard-chips .sf-modal-chip { padding: 12px 22px; font-size: 15px; }
 .sf-modal-wizard-swatches { justify-content: center; }
@@ -1455,7 +1462,8 @@ html, body { overflow-x: clip; }
   text-decoration: underline; text-underline-offset: 2px;
   padding: 6px 4px; font-family: inherit;
 }
-.sf-modal-wizard-skip:hover { color: #64748B; }
+.sf-modal-wizard-skip:hover:not(:disabled) { color: #64748B; }
+.sf-modal-wizard-skip:disabled { opacity: 0.4; cursor: default; text-decoration: none; }
 
 /* Additionals */
 .sf-modal-extra {
@@ -1527,8 +1535,9 @@ html, body { overflow-x: clip; }
   font-family: inherit; transition: filter 0.15s, transform 0.1s;
   letter-spacing: -0.02em;
 }
-.sf-modal-confirm:hover { filter: brightness(0.88); }
-.sf-modal-confirm:active { transform: scale(0.98); }
+.sf-modal-confirm:hover:not(:disabled) { filter: brightness(0.88); }
+.sf-modal-confirm:active:not(:disabled) { transform: scale(0.98); }
+.sf-modal-confirm:disabled { opacity: 0.5; cursor: default; }
 .sf-modal-del {
   width: 44px; height: 44px; border-radius: 12px;
   background: #FEF2F2; color: #EF4444; border: none;

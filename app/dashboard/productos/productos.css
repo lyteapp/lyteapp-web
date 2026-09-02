@@ -325,6 +325,19 @@
 .pr-opt-save-preset:hover:not(:disabled) { background: #E2E8F0; }
 .pr-opt-save-preset:disabled { opacity: 0.45; cursor: default; }
 
+.pr-opt-group-minmax { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.pr-opt-group-minmax label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 600; color: #475569;
+}
+.pr-opt-group-minmax input {
+  width: 52px; border: 1px solid rgba(15,23,42,0.1); border-radius: 7px;
+  padding: 5px 8px; font-size: 12px; color: #0F172A; outline: none;
+  font-family: var(--font-geist-sans), sans-serif;
+}
+.pr-opt-group-minmax input:focus { border-color: rgba(124,58,237,0.4); }
+.pr-opt-group-minmax-hint { font-size: 11px; color: #94A3B8; }
+
 /* Option-group presets (save/apply) */
 .pr-preset-apply-row {
   display: flex; align-items: center; gap: 8px;

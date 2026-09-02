@@ -10,6 +10,13 @@ import './pedidos.css'
 
 type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'ready' | 'delivered' | 'cancelled'
 
+// Selected variable values are stored per-group; older orders placed before
+// multi-select shipped have a plain string here instead of string[].
+function variableValueLabel(v: string[] | string | undefined): string {
+  if (!v) return ''
+  return Array.isArray(v) ? v.join(', ') : v
+}
+
 interface OrderItem {
   id: string
   product_name: string
@@ -46,7 +53,7 @@ interface DisplayOrder {
   order_items: {
     product_name: string; quantity: number; subtotal: number
     selected_options?: {
-      variables?: Record<string, string>
+      variables?: Record<string, string[] | string>
       color?: string
       additionals?: { name: string; price: number }[]
       notes?: string
@@ -625,7 +632,7 @@ export default function PedidosPage() {
                               <div className="pd-comanda-item-opts">
                                 {opts.variables && Object.entries(opts.variables).map(([k, v], idx) => (
                                   <span key={k} className={`pd-comanda-opt-tag pd-comanda-opt-c${idx % 6}`}>
-                                    <span className="pd-comanda-opt-tag-key">{k}:</span>{v}
+                                    <span className="pd-comanda-opt-tag-key">{k}:</span>{variableValueLabel(v)}
                                   </span>
                                 ))}
                                 {opts.color && (

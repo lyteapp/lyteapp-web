@@ -15,11 +15,28 @@ const supabase = createClient(
 )
 
 type VariableChoice = { value: string; price: number; calories?: number; fat?: number; protein?: number; carbs?: number }
-type VariableGroup  = { label: string; choices: VariableChoice[] }
+type VariableGroup  = { label: string; choices: VariableChoice[]; min?: number; max?: number }
 function normalizeChoice(c: VariableChoice | string): VariableChoice {
   return typeof c === 'string'
     ? { value: c, price: 0 }
     : { value: c.value, price: c.price ?? 0, calories: c.calories, fat: c.fat, protein: c.protein, carbs: c.carbs }
+}
+// A group defaults to a single required-or-optional pick (min 0, max 1),
+// matching pre-existing products that predate min/max — extending it to a
+// bounded multi-select is opt-in via the dashboard's Minimo/Maximo fields.
+function groupMinMax(g: { min?: number; max?: number }): { min: number; max: number } {
+  const max = g.max && g.max > 0 ? Math.floor(g.max) : 1
+  const min = g.min && g.min > 0 ? Math.min(Math.floor(g.min), max) : 0
+  return { min, max }
+}
+// Selected variable values are stored per-group; older orders placed before
+// multi-select shipped have a plain string here instead of string[].
+function variableValues(v: string | string[] | undefined): string[] {
+  if (!v) return []
+  return Array.isArray(v) ? v : [v]
+}
+function variableValueLabel(v: string | string[] | undefined): string {
+  return variableValues(v).join(', ')
 }
 // Product "images" can also be short looping videos, uploaded like any
 // other image and told apart purely by file extension (no separate DB field).
@@ -39,7 +56,7 @@ type ProductOptions = {
   nutrition?:     NutritionInfo
 }
 type SelectedOptions = {
-  variables?:   Record<string, string>
+  variables?:   Record<string, string[] | string>
   color?:       string
   additionals?: Additional[]
   notes?:       string
@@ -192,10 +209,10 @@ function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number)
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
-function buildCartKey(productId: string, color?: string, variables?: Record<string, string>): string {
+function buildCartKey(productId: string, color?: string, variables?: Record<string, string[] | string>): string {
   const parts = [productId]
   if (color) parts.push(color)
-  if (variables) Object.entries(variables).sort(([a],[b]) => a.localeCompare(b)).forEach(([k,v]) => parts.push(`${k}:${v}`))
+  if (variables) Object.entries(variables).sort(([a],[b]) => a.localeCompare(b)).forEach(([k,v]) => parts.push(`${k}:${variableValueLabel(v)}`))
   return parts.join('|||')
 }
 
@@ -348,10 +365,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
       const key = buildCartKey(item.product_id ?? item.product_name, color, variables)
       const variablePrice = product?.options?.variables
         ? Object.entries(variables ?? {}).reduce((sum, [label, value]) => {
-            if (!value) return sum
             const group = product.options!.variables!.find(g => g.label === label)
-            const choice = group?.choices.map(normalizeChoice).find(c => c.value === value)
-            return sum + (choice?.price ?? 0)
+            return sum + variableValues(value).reduce((s, v) => {
+              const choice = group?.choices.map(normalizeChoice).find(c => c.value === v)
+              return s + (choice?.price ?? 0)
+            }, 0)
           }, 0)
         : 0
       const extraPrice = (item.selected_options?.additionals ?? []).reduce((s, a) => s + (a.price || 0), 0) + variablePrice
@@ -411,7 +429,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
   // Product options modal
   const [modalProduct, setModalProduct]       = useState<Product | null>(null)
-  const [modalVars, setModalVars]             = useState<Record<string, string>>({})
+  const [modalVars, setModalVars]             = useState<Record<string, string[]>>({})
   const [modalColor, setModalColor]           = useState<string | undefined>()
   const [modalAdditionals, setModalAdditionals] = useState<Set<number>>(new Set())
   const [modalNotes, setModalNotes]           = useState('')
@@ -423,10 +441,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const modalNutritionEnabled = !!modalProduct?.options?.nutrition?.enabled
   const modalNutritionAdditionals = (modalProduct?.options?.additionals ?? []).filter((_, i) => modalAdditionals.has(i))
   const modalNutritionVariableChoices = modalProduct
-    ? Object.entries(modalVars).map(([label, value]) => {
-        if (!value) return null
+    ? Object.entries(modalVars).flatMap(([label, values]) => {
         const group = modalProduct!.options?.variables?.find(g => g.label === label)
-        return group?.choices.map(normalizeChoice).find(c => c.value === value) ?? null
+        return values.map(value => group?.choices.map(normalizeChoice).find(c => c.value === value) ?? null)
       }).filter((c): c is VariableChoice => !!c)
     : []
   const modalNutrition = modalNutritionEnabled
@@ -934,16 +951,19 @@ export default function StoreShell({ store, products, categories = [], initialBc
               </div>
               <div className="sf-modal-wizard-question">
                 {modalWizardStep.kind === 'variable' ? modalWizardStep.group.label : 'Color'}
+                {modalWizardStep.kind === 'variable' && wizardVarMinMax.min > 0 && (
+                  <span className="sf-modal-wizard-hint">Elige {wizardVarMinMax.min === wizardVarMinMax.max ? wizardVarMinMax.min : `${wizardVarMinMax.min}-${wizardVarMinMax.max}`}</span>
+                )}
               </div>
               {modalWizardStep.kind === 'variable' ? (
                 <div className="sf-modal-chips sf-modal-wizard-chips">
                   {modalWizardStep.group.choices.map(normalizeChoice).map(c => (
                     <button
                       key={c.value}
-                      className={`sf-modal-chip${modalVars[modalWizardStep.group.label] === c.value ? ' selected' : ''}`}
+                      className={`sf-modal-chip${(modalVars[modalWizardStep.group.label] ?? []).includes(c.value) ? ' selected' : ''}`}
                       onClick={() => {
-                        setModalVars(v => ({ ...v, [modalWizardStep.group.label]: c.value }))
-                        advanceModalWizard()
+                        toggleModalVar(modalWizardStep.group, c.value)
+                        if (wizardVarMinMax.max <= 1) advanceModalWizard()
                       }}
                     >
                       {c.value}
@@ -990,28 +1010,44 @@ export default function StoreShell({ store, products, categories = [], initialBc
                     Atras
                   </button>
                 )}
-                <button className="sf-modal-wizard-skip" onClick={() => setModalStep(s => s + 1)}>Omitir</button>
+                <button
+                  className="sf-modal-wizard-skip"
+                  disabled={!wizardVarSatisfied}
+                  onClick={() => setModalStep(s => s + 1)}
+                >
+                  {wizardVarMinMax.min > 0 || wizardVarCount > 0 ? 'Siguiente' : 'Omitir'}
+                </button>
               </div>
             </div>
           ) : (
             <div className="sf-modal-body">
-              {!cfgModalWizard && modalProduct.options?.variables?.filter(g => g.choices.length > 0).map((g, gi) => (
-                <div key={gi} className="sf-modal-section">
-                  <div className="sf-modal-section-title">{g.label}</div>
-                  <div className="sf-modal-chips">
-                    {g.choices.map(normalizeChoice).map(c => (
-                      <button
-                        key={c.value}
-                        className={`sf-modal-chip${modalVars[g.label] === c.value ? ' selected' : ''}`}
-                        onClick={() => setModalVars(v => ({ ...v, [g.label]: v[g.label] === c.value ? '' : c.value }))}
-                      >
-                        {c.value}
-                        {c.price > 0 && <span className="sf-modal-chip-price">+{currencySymbol}{c.price.toFixed(2)}</span>}
-                      </button>
-                    ))}
+              {!cfgModalWizard && modalProduct.options?.variables?.filter(g => g.choices.length > 0).map((g, gi) => {
+                const { min, max } = groupMinMax(g)
+                const count = (modalVars[g.label] ?? []).length
+                return (
+                  <div key={gi} className="sf-modal-section">
+                    <div className="sf-modal-section-title">
+                      {g.label}
+                      {min > 0
+                        ? <span className="sf-required">requerido{max > 1 ? ` · elige ${min === max ? min : `${min}-${max}`}` : ''}</span>
+                        : max > 1 && <span className="sf-optional">opcional · hasta {max}</span>}
+                    </div>
+                    <div className="sf-modal-chips">
+                      {g.choices.map(normalizeChoice).map(c => (
+                        <button
+                          key={c.value}
+                          className={`sf-modal-chip${(modalVars[g.label] ?? []).includes(c.value) ? ' selected' : ''}`}
+                          onClick={() => toggleModalVar(g, c.value)}
+                        >
+                          {c.value}
+                          {c.price > 0 && <span className="sf-modal-chip-price">+{currencySymbol}{c.price.toFixed(2)}</span>}
+                        </button>
+                      ))}
+                    </div>
+                    {min > 0 && count < min && <div className="sf-modal-section-hint">Elige al menos {min}</div>}
                   </div>
-                </div>
-              ))}
+                )
+              })}
 
               {!cfgModalWizard && ((modalProduct.options?.colorVariants?.length ?? 0) > 0 ? (
                 <div className="sf-modal-section">
@@ -1092,7 +1128,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 <span>{modalQty}</span>
                 <button onClick={() => setModalQty(q => q + 1)}>+</button>
               </div>
-              <button className="sf-modal-confirm" onClick={confirmModal}>
+              <button className="sf-modal-confirm" onClick={confirmModal} disabled={!modalVariablesOk}>
                 Agregar · {currencySymbol}{((modalProduct.price + modalExtraPrice) * modalQty).toFixed(2)}
               </button>
             </div>
@@ -1104,6 +1140,18 @@ export default function StoreShell({ store, products, categories = [], initialBc
   }
 
   // ── Modal helpers ──
+  // Below a group's max, tapping a choice toggles it into the selection
+  // (or, for a max-1 group, replaces it — same as the old single-select).
+  function toggleModalVar(group: VariableGroup, value: string) {
+    const { max } = groupMinMax(group)
+    setModalVars(v => {
+      const current = v[group.label] ?? []
+      if (max <= 1) return { ...v, [group.label]: current[0] === value ? [] : [value] }
+      if (current.includes(value)) return { ...v, [group.label]: current.filter(x => x !== value) }
+      if (current.length >= max) return v
+      return { ...v, [group.label]: [...current, value] }
+    })
+  }
   function openProductModal(p: Product) {
     setModalProduct(p)
     setModalVars({})
@@ -1119,13 +1167,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
   }
 
   function confirmModal() {
-    if (!modalProduct) return
+    if (!modalProduct || !modalVariablesOk) return
     const selectedAdds = (modalProduct.options?.additionals ?? []).filter((_, i) => modalAdditionals.has(i))
     const extraPrice   = selectedAdds.reduce((s, a) => s + a.price, 0) + modalVariablePrice
     const variantImage = modalColor && modalProduct.options?.colorVariants?.length
       ? (modalProduct.options.colorVariants.find(v => v.label === modalColor)?.imageUrl ?? null)
       : null
-    const newKey = buildCartKey(modalProduct.id, modalColor, Object.keys(modalVars).length ? modalVars : undefined)
+    const modalVarsClean = Object.fromEntries(Object.entries(modalVars).filter(([, values]) => values.length > 0))
+    const newKey = buildCartKey(modalProduct.id, modalColor, Object.keys(modalVarsClean).length ? modalVarsClean : undefined)
     setCart(prev => {
       const next = { ...prev }
       const baseQty = next[newKey]?.quantity ?? 0
@@ -1135,7 +1184,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
         image_url: variantImage ?? modalProduct.image_url, quantity: baseQty + modalQty,
         options: modalProduct.options ?? undefined,
         selectedOptions: {
-          variables:   Object.keys(modalVars).length ? modalVars : undefined,
+          variables:   Object.keys(modalVarsClean).length ? modalVarsClean : undefined,
           color:       modalColor,
           additionals: selectedAdds.length ? selectedAdds : undefined,
           notes:       modalNotes.trim() || undefined,
@@ -1286,7 +1335,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           const unitTotal = (i.price + i.extraPrice) * i.quantity
           const rows = [`  - ${i.quantity}x ${i.name}  ${currencySymbol}${unitTotal.toFixed(2)}`]
           const so = i.selectedOptions
-          if (so?.variables) Object.entries(so.variables).forEach(([k, v]) => rows.push(`    ${k}: ${v}`))
+          if (so?.variables) Object.entries(so.variables).forEach(([k, v]) => rows.push(`    ${k}: ${variableValueLabel(v)}`))
           if (so?.color)     rows.push(`    Color: ${so.color}`)
           if (so?.additionals?.length) rows.push(`    Extras: ${so.additionals.map(a => a.name).join(', ')}`)
           if (so?.notes)     rows.push(`    Nota: ${so.notes}`)
@@ -1936,17 +1985,24 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
   // Product modal extra price (for footer price display)
   const modalVariablePrice = modalProduct
-    ? Object.entries(modalVars).reduce((sum, [label, value]) => {
-        if (!value) return sum
+    ? Object.entries(modalVars).reduce((sum, [label, values]) => {
         const group = modalProduct!.options?.variables?.find(g => g.label === label)
-        const choice = group?.choices.map(normalizeChoice).find(c => c.value === value)
-        return sum + (choice?.price ?? 0)
+        return sum + values.reduce((s, value) => {
+          const choice = group?.choices.map(normalizeChoice).find(c => c.value === value)
+          return s + (choice?.price ?? 0)
+        }, 0)
       }, 0)
     : 0
 
   const modalExtraPrice = modalProduct
     ? (modalProduct.options?.additionals ?? []).filter((_, i) => modalAdditionals.has(i)).reduce((s, a) => s + a.price, 0) + modalVariablePrice
     : 0
+
+  // Required (min > 0) variable groups must have enough picks before "Agregar" is allowed
+  const modalVariablesOk = !modalProduct || (modalProduct.options?.variables ?? []).every(g => {
+    const { min } = groupMinMax(g)
+    return min <= 0 || (modalVars[g.label] ?? []).length >= min
+  })
 
   const modalDisplayImage = modalProduct
     ? (modalProduct.options?.colorVariants?.length && modalColor
@@ -1970,6 +2026,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
     : []
   const modalWizardActive = cfgModalWizard && modalStep < modalWizardSteps.length
   const modalWizardStep = modalWizardActive ? modalWizardSteps[modalStep] : null
+  const wizardVarMinMax = modalWizardStep?.kind === 'variable' ? groupMinMax(modalWizardStep.group) : { min: 0, max: 1 }
+  const wizardVarCount = modalWizardStep?.kind === 'variable' ? (modalVars[modalWizardStep.group.label] ?? []).length : 0
+  const wizardVarSatisfied = wizardVarCount >= wizardVarMinMax.min
 
   function advanceModalWizard() {
     setTimeout(() => setModalStep(s => s + 1), 220)
@@ -2025,7 +2084,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 {item.selectedOptions && (
                   <div className="sf-co-opts">
                     {item.selectedOptions.variables && Object.entries(item.selectedOptions.variables).map(([k, v]) => (
-                      <span key={k} className="sf-co-opt-tag">{k}: {v}</span>
+                      <span key={k} className="sf-co-opt-tag">{k}: {variableValueLabel(v)}</span>
                     ))}
                     {item.selectedOptions.color && <span className="sf-co-opt-tag">{item.selectedOptions.color}</span>}
                     {item.selectedOptions.additionals?.map(a => (

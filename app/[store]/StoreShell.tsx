@@ -3295,6 +3295,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           <div className="sf-grid">
             {products.filter(p => p.category_id === focusCategory.id).map(renderCard)}
           </div>
+          {renderContentBlocks(focusCategory.id)}
         </div>
       ) : (
       <>

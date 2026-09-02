@@ -98,9 +98,22 @@ type ContentBlock = {
   fontSize?: number; fontWeight?: number; color?: string; align?: 'left' | 'center' | 'right'
   spacing?: number; font?: string; groupId?: string
   buttonStyle?: 'solid' | 'outline' | 'slide'
-  buttonSize?: 'sm' | 'md' | 'lg'
+  buttonSize?: number | 'sm' | 'md' | 'lg'
 }
 type BlockButtonItem = { id: string; label: string; target: 'product' | 'category'; targetId: string }
+// Mirrors StoreShell.tsx's buttonSizeMetrics — keeps the dashboard's draft
+// preview pixel-for-pixel the same as what actually renders on the store.
+function buttonSizeMetrics(buttonSize: number | 'sm' | 'md' | 'lg' | undefined) {
+  const fontSize = typeof buttonSize === 'number' ? buttonSize
+    : buttonSize === 'sm' ? 12 : buttonSize === 'lg' ? 18 : 14
+  const clamped = Math.min(28, Math.max(8, fontSize))
+  const padV = Math.max(2, Math.round(clamped * 0.5))
+  const padH = Math.round(clamped * 1.3)
+  const height = Math.round(clamped * 3.4)
+  const thumb = Math.max(16, height - 10)
+  const pad = Math.round((height - thumb) / 2)
+  return { fontSize: clamped, padV, padH, height, thumb, pad }
+}
 type BlockGroup = {
   id: string; afterId: string; background?: string; borderRadius?: number; padding?: number
   direction?: 'column' | 'row'; gap?: number
@@ -247,7 +260,7 @@ export default function EditorPage() {
   const [newBlockFont, setNewBlockFont] = useState('')
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null)
   const [newBlockButtonStyle, setNewBlockButtonStyle] = useState<'solid' | 'outline' | 'slide'>('solid')
-  const [newBlockButtonSize, setNewBlockButtonSize] = useState<'sm' | 'md' | 'lg'>('md')
+  const [newBlockButtonSize, setNewBlockButtonSize] = useState(14)
   const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'price' | 'categories' | 'brand' | 'blocks' | 'product' | null>(null)
   const [iframeKey, setIframeKey]   = useState(0)
   const [saving, setSaving]         = useState(false)
@@ -528,15 +541,14 @@ export default function EditorPage() {
         draft.style.textAlign = ''
         draft.style.fontFamily = ''
         const label = (draftButtonsLabel ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        const sizeCls = newBlockButtonSize === 'sm' ? ' sf-block-btn-sm' : newBlockButtonSize === 'lg' ? ' sf-block-btn-lg' : ''
-        const slideSizeCls = newBlockButtonSize === 'sm' ? ' sf-block-slide-bar-sm' : newBlockButtonSize === 'lg' ? ' sf-block-slide-bar-lg' : ''
+        const bm = buttonSizeMetrics(newBlockButtonSize)
         draft.innerHTML = newBlockButtonStyle === 'slide'
-          ? `<div class="sf-block-slide-bar${slideSizeCls}" style="pointer-events:none;">
+          ? `<div class="sf-block-slide-bar" style="pointer-events:none; height:${bm.height}px; --sf-slide-thumb:${bm.thumb}px; --sf-slide-pad:${bm.pad}px;">
                <div class="sf-block-slide-fill"></div>
-               <span class="sf-block-slide-label">${label}</span>
+               <span class="sf-block-slide-label" style="font-size:${Math.max(10, bm.fontSize - 2)}px;">${label}</span>
                <div class="sf-block-slide-thumb">&#8594;</div>
              </div>`
-          : `<button type="button" class="sf-block-btn${newBlockButtonStyle === 'outline' ? ' sf-block-btn-outline' : ''}${sizeCls}" style="pointer-events:none; width:100%;">${label}</button>`
+          : `<button type="button" class="sf-block-btn${newBlockButtonStyle === 'outline' ? ' sf-block-btn-outline' : ''}" style="pointer-events:none; width:100%; font-size:${bm.fontSize}px; padding:${bm.padV}px ${bm.padH}px;">${label}</button>`
       }
     } else if (draft) {
       draft.remove()
@@ -715,7 +727,7 @@ export default function EditorPage() {
     setNewBlockSpacing(b.spacing ?? 0)
     setNewBlockFont(b.font ?? '')
     setNewBlockButtonStyle(b.buttonStyle ?? 'solid')
-    setNewBlockButtonSize(b.buttonSize ?? 'md')
+    setNewBlockButtonSize(buttonSizeMetrics(b.buttonSize).fontSize)
   }
   function cancelEditBlock() {
     setEditingBlockId(null)
@@ -728,7 +740,7 @@ export default function EditorPage() {
     setNewBlockSpacing(0)
     setNewBlockFont('')
     setNewBlockButtonStyle('solid')
-    setNewBlockButtonSize('md')
+    setNewBlockButtonSize(14)
   }
 
   function renderBlockItemRow(b: ContentBlock) {
@@ -2193,23 +2205,15 @@ export default function EditorPage() {
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginBottom: 4 }}>Tamano del boton</div>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      {([['sm', 'Pequeno'], ['md', 'Mediano'], ['lg', 'Grande']] as const).map(([sz, label]) => (
-                        <button
-                          key={sz}
-                          onClick={() => setNewBlockButtonSize(sz)}
-                          style={{
-                            flex: 1, padding: '8px 4px', borderRadius: 8,
-                            border: `2px solid ${newBlockButtonSize === sz ? '#7C3AED' : '#E2E8F0'}`,
-                            background: newBlockButtonSize === sz ? '#F5F3FF' : 'white',
-                            color: newBlockButtonSize === sz ? '#7C3AED' : '#64748B',
-                            fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                          }}
-                        >
-                          {label}
-                        </button>
-                      ))}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: '#64748B', flexShrink: 0 }}>Tamano del boton</span>
+                      <input
+                        type="range" min={8} max={26} step={1}
+                        value={newBlockButtonSize}
+                        onChange={e => setNewBlockButtonSize(Number(e.target.value))}
+                        style={{ flex: 1 }}
+                      />
+                      <span style={{ fontSize: 11, color: '#94A3B8', width: 28, flexShrink: 0, textAlign: 'right' }}>{newBlockButtonSize}px</span>
                     </div>
                     <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 4 }}>
                       Util para que varios botones quepan uno al lado del otro dentro de un grupo En fila

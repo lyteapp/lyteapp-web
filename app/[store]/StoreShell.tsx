@@ -44,6 +44,21 @@ const PRODUCT_VIDEO_EXT_RE = /\.(mp4|webm|mov|m4v)(\?|#|$)/i
 function isVideoUrl(url?: string | null): boolean {
   return !!url && PRODUCT_VIDEO_EXT_RE.test(url)
 }
+// Content-block button size: a continuous font-size (px) slider drives every
+// other dimension proportionally. Older blocks saved 'sm'/'md'/'lg' presets —
+// map those to their old equivalents so they keep rendering the same.
+function buttonSizeMetrics(buttonSize: number | 'sm' | 'md' | 'lg' | undefined) {
+  const fontSize = typeof buttonSize === 'number' ? buttonSize
+    : buttonSize === 'sm' ? 12 : buttonSize === 'lg' ? 18 : 14
+  const clamped = Math.min(28, Math.max(8, fontSize))
+  const padV = Math.max(2, Math.round(clamped * 0.5))
+  const padH = Math.round(clamped * 1.3)
+  const height = Math.round(clamped * 3.4)
+  const thumb = Math.max(16, height - 10)
+  const pad = Math.round((height - thumb) / 2)
+  const rowWidth = Math.round(clamped * 13)
+  return { fontSize: clamped, padV, padH, height, thumb, pad, rowWidth }
+}
 type Additional     = { name: string; price: number; calories?: number; fat?: number; protein?: number; carbs?: number }
 type ColorVariant   = { label: string; color: string; imageUrl: string }
 type NutritionInfo  = { enabled?: boolean; calories?: number; fat?: number; protein?: number; carbs?: number }
@@ -107,7 +122,7 @@ type ContentBlock = {
   font?: string
   groupId?: string
   buttonStyle?: 'solid' | 'outline' | 'slide'
-  buttonSize?: 'sm' | 'md' | 'lg'
+  buttonSize?: number | 'sm' | 'md' | 'lg'
 }
 type BlockGroup = {
   id: string; afterId: string; background?: string; borderRadius?: number; padding?: number
@@ -893,8 +908,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   }
 
   function renderSingleBlock(block: ContentBlock, extraStyle?: React.CSSProperties, inRow?: boolean) {
-    const sizeSuffix = block.buttonSize === 'sm' ? ' sf-block-btn-sm' : block.buttonSize === 'lg' ? ' sf-block-btn-lg' : ''
-    const slideSizeSuffix = block.buttonSize === 'sm' ? ' sf-block-slide-bar-sm' : block.buttonSize === 'lg' ? ' sf-block-slide-bar-lg' : ''
+    const bm = buttonSizeMetrics(block.buttonSize)
     return (
       <div key={block.id} id={`sf-cb-${block.id}`} className="sf-content-block" style={{ padding: `${block.spacing ?? 0}px 0`, ...extraStyle }}>
         {block.type === 'text' && (
@@ -948,17 +962,23 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   <div
                     key={b.id}
                     ref={el => { if (el) blockSlideBarRefs.current.set(b.id, el); else blockSlideBarRefs.current.delete(b.id) }}
-                    className={`sf-block-slide-bar${slideSizeSuffix}${inRow ? ' sf-block-slide-bar-row' : ''}${blockSliding[b.id] ? ' sliding' : ''}`}
-                    style={{ '--sf-slide-progress': blockSlideProgress[b.id] ?? 0 } as React.CSSProperties}
+                    className={`sf-block-slide-bar${blockSliding[b.id] ? ' sliding' : ''}`}
+                    style={{
+                      '--sf-slide-progress': blockSlideProgress[b.id] ?? 0,
+                      '--sf-slide-thumb': `${bm.thumb}px`,
+                      '--sf-slide-pad': `${bm.pad}px`,
+                      height: `${bm.height}px`,
+                      width: inRow ? `${bm.rowWidth}px` : undefined,
+                    } as React.CSSProperties}
                     onPointerDown={e => blockSlidePointerDown(b.id, e)}
                     onPointerMove={e => blockSlidePointerMove(b.id, e)}
                     onPointerUp={() => blockSlidePointerUp(b.id, () => activate(b))}
                     onPointerCancel={() => blockSlideCancel(b.id)}
                   >
                     <div className="sf-block-slide-fill" />
-                    <span className="sf-block-slide-label">{b.label}</span>
+                    <span className="sf-block-slide-label" style={{ fontSize: `${Math.max(10, bm.fontSize - 2)}px` }}>{b.label}</span>
                     <div className="sf-block-slide-thumb">
-                      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
+                      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width={Math.round(bm.thumb * 0.4)} height={Math.round(bm.thumb * 0.4)}>
                         <path d="M7 4l6 6-6 6" />
                       </svg>
                     </div>
@@ -969,7 +989,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 <button
                   key={b.id}
                   type="button"
-                  className={`sf-block-btn${block.buttonStyle === 'outline' ? ' sf-block-btn-outline' : ''}${sizeSuffix}`}
+                  className={`sf-block-btn${block.buttonStyle === 'outline' ? ' sf-block-btn-outline' : ''}`}
+                  style={{ fontSize: `${bm.fontSize}px`, padding: `${bm.padV}px ${bm.padH}px` }}
                   onClick={() => activate(b)}
                 >
                   {b.label}

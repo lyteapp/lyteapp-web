@@ -1892,8 +1892,6 @@ html, body { overflow-x: clip; }
   border: 1.5px solid var(--sf-accent-color, #7C3AED);
 }
 .sf-block-btn-outline:hover { background: color-mix(in srgb, var(--sf-accent-color, #7C3AED) 10%, transparent); filter: none; }
-.sf-block-btn-sm { padding: 6px 14px; font-size: 12px; }
-.sf-block-btn-lg { padding: 14px 26px; font-size: 16px; }
 
 /* "Deslizar" button style — drag past ~82% to activate, same mechanic as
    the splash screen's slide-to-reveal keypad bar. */
@@ -1905,8 +1903,6 @@ html, body { overflow-x: clip; }
   background: var(--sf-accent-color, #7C3AED);
   transition: filter 0.15s;
 }
-.sf-block-slide-bar-sm { --sf-slide-thumb: 32px; --sf-slide-pad: 4px; height: 40px; }
-.sf-block-slide-bar-lg { --sf-slide-thumb: 54px; --sf-slide-pad: 5px; height: 64px; }
 .sf-block-slide-fill {
   position: absolute; top: 0; left: 0; bottom: 0;
   width: calc((var(--sf-slide-thumb) + var(--sf-slide-pad) * 2) + var(--sf-slide-progress, 0) * (100% - (var(--sf-slide-thumb) + var(--sf-slide-pad) * 2)));
@@ -1919,8 +1915,6 @@ html, body { overflow-x: clip; }
   font-size: 14px; font-weight: 700; color: white; letter-spacing: -0.01em;
   opacity: calc(1 - var(--sf-slide-progress, 0) * 0.9); pointer-events: none;
 }
-.sf-block-slide-bar-sm .sf-block-slide-label { font-size: 12px; }
-.sf-block-slide-bar-lg .sf-block-slide-label { font-size: 16px; }
 .sf-block-slide-thumb {
   position: absolute; top: var(--sf-slide-pad);
   left: calc(var(--sf-slide-pad) + var(--sf-slide-progress, 0) * (100% - (var(--sf-slide-thumb) + var(--sf-slide-pad) * 2)));
@@ -1941,14 +1935,6 @@ html, body { overflow-x: clip; }
   0%, 15%, 100% { width: calc(var(--sf-slide-thumb) + var(--sf-slide-pad) * 2); }
   40%, 55% { width: calc(25% + var(--sf-slide-thumb)); }
 }
-
-/* When a "Deslizar" button sits in a row-direction group, it needs a
-   real width to fill (its own children are all absolutely positioned,
-   so a shrink-to-fit box would collapse to ~0) — the size preset sets
-   a sensible width for that context instead of always spanning 100%. */
-.sf-block-slide-bar-row.sf-block-slide-bar-sm { width: 140px; }
-.sf-block-slide-bar-row.sf-block-slide-bar-lg { width: 260px; }
-.sf-block-slide-bar-row:not(.sf-block-slide-bar-sm):not(.sf-block-slide-bar-lg) { width: 200px; }
 
 /* Wraps several content blocks together in one enclosed section */
 .sf-block-group { margin: 0; }

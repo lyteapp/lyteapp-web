@@ -97,9 +97,10 @@ function parsePaymentMethods(raw: unknown): PaymentMethod[] {
 type ContentBlock = {
   id: string
   afterId: string
-  type: 'text' | 'image' | 'video'
+  type: 'text' | 'image' | 'video' | 'buttons'
   content: string
 }
+type BlockButtonItem = { id: string; label: string; target: 'product' | 'category'; targetId: string }
 type TemplateConfig = {
   pageBg?: string; pageFont?: string
   fontSize?: 'small' | 'medium' | 'large'
@@ -425,6 +426,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [menuOpen, setMenuOpen]       = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [headerSearchOpen, setHeaderSearchOpen] = useState(false)
+  // A "buttons" content block can send the shopper to a single category's
+  // own focused view instead of scrolling the full catalog.
+  const [focusCategory, setFocusCategory] = useState<{ id: string; name: string } | null>(null)
   const [selectedVariants, setSelectedVariants] = useState<Record<string, number>>({})
 
   // Product options modal
@@ -847,6 +851,32 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 ) : (
                   <video src={block.content} controls className="sf-block-video-el" />
                 )}
+              </div>
+            )}
+            {block.type === 'buttons' && block.content && (
+              <div className="sf-block-buttons">
+                {(() => {
+                  let items: BlockButtonItem[] = []
+                  try { items = JSON.parse(block.content) } catch {}
+                  return items.filter(b => b.label?.trim() && b.targetId).map(b => (
+                    <button
+                      key={b.id}
+                      type="button"
+                      className="sf-block-btn"
+                      onClick={() => {
+                        if (b.target === 'product') {
+                          const p = products.find(pr => pr.id === b.targetId)
+                          if (p) openProductModal(p)
+                        } else {
+                          const cat = categories.find(c => c.id === b.targetId)
+                          if (cat) { setFocusCategory(cat); window.scrollTo({ top: 0 }) }
+                        }
+                      }}
+                    >
+                      {b.label}
+                    </button>
+                  ))
+                })()}
               </div>
             )}
           </div>
@@ -3046,6 +3076,19 @@ export default function StoreShell({ store, products, categories = [], initialBc
         </div>
       )}
 
+      {focusCategory ? (
+        <div className="sf-focus-category">
+          <button className="sf-focus-back" onClick={() => setFocusCategory(null)}>
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16"><path d="M12 15l-5-5 5-5" /></svg>
+            Volver
+          </button>
+          <h2 className="sf-section-title">{focusCategory.name}</h2>
+          <div className="sf-grid">
+            {products.filter(p => p.category_id === focusCategory.id).map(renderCard)}
+          </div>
+        </div>
+      ) : (
+      <>
       {store.banner_url && tpl !== 'vitrina' && tpl !== 'catalogo' && (
         <div className="sf-banner-wrap">
           <div className="sf-banner"><img src={store.banner_url} alt="Banner" className="sf-banner-img" /></div>
@@ -3222,6 +3265,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
           )}
         </div>
       </div>
+      </>
+      )}
 
       {cartCount > 0 && (
         <button className="sf-cart-bar" onClick={() => setView('checkout')}>

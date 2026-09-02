@@ -90,7 +90,9 @@ const CATEGORY_LAYOUTS = [
 ]
 
 type Category = { id: string; name: string }
-type ContentBlock = { id: string; afterId: string; type: 'text' | 'image' | 'video'; content: string }
+type ProductLite = { id: string; name: string }
+type ContentBlock = { id: string; afterId: string; type: 'text' | 'image' | 'video' | 'buttons'; content: string }
+type BlockButtonItem = { id: string; label: string; target: 'product' | 'category'; targetId: string }
 
 function FontSelect({
   value, onChange, options, placeholder,
@@ -194,6 +196,7 @@ export default function EditorPage() {
 
   const [template, setTemplate]             = useState('clasico')
   const [categories, setCategories]         = useState<Category[]>([])
+  const [productsLite, setProductsLite]     = useState<ProductLite[]>([])
   const [categoryShapes, setCategoryShapes] = useState<Record<string, string>>({})
   const [categoryLayouts, setCategoryLayouts] = useState<Record<string, string>>({})
   const [baseConfig, setBaseConfig]         = useState<Record<string, unknown>>({})
@@ -218,8 +221,9 @@ export default function EditorPage() {
   const [headerHeightPx, setHeaderHeightPx] = useState(56)
   const [contentBlocks, setContentBlocks]   = useState<ContentBlock[]>([])
   const [newBlockPos,  setNewBlockPos]      = useState('top')
-  const [newBlockType, setNewBlockType]     = useState<'text' | 'image' | 'video'>('text')
+  const [newBlockType, setNewBlockType]     = useState<'text' | 'image' | 'video' | 'buttons'>('text')
   const [newBlockContent, setNewBlockContent] = useState('')
+  const [newBlockButtons, setNewBlockButtons] = useState<BlockButtonItem[]>([])
   const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'price' | 'categories' | 'brand' | 'blocks' | 'product' | null>(null)
   const [iframeKey, setIframeKey]   = useState(0)
   const [saving, setSaving]         = useState(false)
@@ -304,6 +308,10 @@ export default function EditorPage() {
         .from('categories').select('id,name')
         .eq('store_id', store.id).order('position', { ascending: true })
       if (cats) setCategories(cats)
+      const { data: prods } = await supabase
+        .from('products').select('id,name')
+        .eq('store_id', store.id).order('name', { ascending: true })
+      if (prods) setProductsLite(prods)
     })
   }, [])
 
@@ -1649,7 +1657,7 @@ export default function EditorPage() {
                 {contentBlocks.map(b => (
                   <div key={b.id} className="ed-block-item">
                     <div className="ed-block-item-head">
-                      <span className="ed-block-item-type">{b.type === 'text' ? 'Texto' : b.type === 'image' ? 'Imagen' : 'Video'}</span>
+                      <span className="ed-block-item-type">{b.type === 'text' ? 'Texto' : b.type === 'image' ? 'Imagen' : b.type === 'video' ? 'Video' : 'Botones'}</span>
                       <span className="ed-block-item-pos">
                         {b.afterId === 'top' ? 'Al inicio' : b.afterId === 'bottom' ? 'Al final' : (categories.find(c => c.id === b.afterId)?.name ?? b.afterId)}
                       </span>
@@ -1663,7 +1671,9 @@ export default function EditorPage() {
                       </button>
                     </div>
                     <div className="ed-block-item-preview">
-                      {b.content ? b.content.slice(0, 55) + (b.content.length > 55 ? '...' : '') : '(sin contenido)'}
+                      {b.type === 'buttons'
+                        ? (() => { try { return (JSON.parse(b.content) as BlockButtonItem[]).map(x => x.label).join(' · ') || '(sin botones)' } catch { return '(sin botones)' } })()
+                        : (b.content ? b.content.slice(0, 55) + (b.content.length > 55 ? '...' : '') : '(sin contenido)')}
                     </div>
                   </div>
                 ))}
@@ -1685,7 +1695,7 @@ export default function EditorPage() {
               </select>
 
               <div style={{ display: 'flex', gap: 6 }}>
-                {(['text', 'image', 'video'] as const).map(tp => (
+                {(['text', 'image', 'video', 'buttons'] as const).map(tp => (
                   <button
                     key={tp}
                     onClick={() => setNewBlockType(tp)}
@@ -1697,7 +1707,7 @@ export default function EditorPage() {
                       fontSize: 11, fontWeight: 600, cursor: 'pointer',
                     }}
                   >
-                    {tp === 'text' ? 'Texto' : tp === 'image' ? 'Imagen' : 'Video'}
+                    {tp === 'text' ? 'Texto' : tp === 'image' ? 'Imagen' : tp === 'video' ? 'Video' : 'Botones'}
                   </button>
                 ))}
               </div>
@@ -1710,6 +1720,58 @@ export default function EditorPage() {
                   className="ed-block-textarea"
                   rows={4}
                 />
+              ) : newBlockType === 'buttons' ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {newBlockButtons.map((btn, i) => (
+                    <div key={btn.id} style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: 8, background: '#F8FAFC', borderRadius: 8 }}>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <input
+                          value={btn.label}
+                          onChange={e => setNewBlockButtons(prev => prev.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
+                          placeholder="Texto (ej: Merch)"
+                          className="ed-block-input"
+                          style={{ flex: 1 }}
+                        />
+                        <button
+                          onClick={() => setNewBlockButtons(prev => prev.filter((_, j) => j !== i))}
+                          style={{ flexShrink: 0, width: 30, borderRadius: 8, border: 'none', background: '#FEF2F2', color: '#DC2626', cursor: 'pointer', fontSize: 14 }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <select
+                          value={btn.target}
+                          onChange={e => setNewBlockButtons(prev => prev.map((x, j) => j === i ? { ...x, target: e.target.value as 'product' | 'category', targetId: '' } : x))}
+                          className="ed-block-select"
+                          style={{ flex: '0 0 110px' }}
+                        >
+                          <option value="category">Categoria</option>
+                          <option value="product">Producto</option>
+                        </select>
+                        <select
+                          value={btn.targetId}
+                          onChange={e => setNewBlockButtons(prev => prev.map((x, j) => j === i ? { ...x, targetId: e.target.value } : x))}
+                          className="ed-block-select"
+                          style={{ flex: 1 }}
+                        >
+                          <option value="">
+                            {btn.target === 'product' ? 'Elige un producto...' : 'Elige una categoria...'}
+                          </option>
+                          {(btn.target === 'product' ? productsLite : categories).map(item => (
+                            <option key={item.id} value={item.id}>{item.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => setNewBlockButtons(prev => [...prev, { id: crypto.randomUUID(), label: '', target: 'category', targetId: '' }])}
+                    style={{ padding: '7px 12px', borderRadius: 8, border: '1.5px dashed #E2E8F0', background: 'white', color: '#7C3AED', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    + Agregar boton
+                  </button>
+                </div>
               ) : (
                 <input
                   type="url"
@@ -1722,6 +1784,15 @@ export default function EditorPage() {
 
               <button
                 onClick={() => {
+                  if (newBlockType === 'buttons') {
+                    const valid = newBlockButtons.filter(b => b.label.trim() && b.targetId)
+                    if (valid.length === 0) return
+                    setContentBlocks(prev => [...prev, {
+                      id: crypto.randomUUID(), afterId: newBlockPos, type: 'buttons', content: JSON.stringify(valid),
+                    }])
+                    setNewBlockButtons([])
+                    return
+                  }
                   if (!newBlockContent.trim()) return
                   setContentBlocks(prev => [...prev, {
                     id: crypto.randomUUID(),

@@ -319,7 +319,7 @@ export default function EditorPage() {
   const [newBlockLinkTarget, setNewBlockLinkTarget] = useState<'url' | 'category'>('url')
   const [newBlockLinkCategoryId, setNewBlockLinkCategoryId] = useState('')
   const blockImgRef = useRef<HTMLInputElement>(null)
-  const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'price' | 'categories' | 'brand' | 'blocks' | 'product' | null>(null)
+  const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'price' | 'categories' | 'brand' | 'blocks' | 'product' | 'reorder' | null>(null)
   const [iframeKey, setIframeKey]   = useState(0)
   const [saving, setSaving]         = useState(false)
   const [toolSaved, setToolSaved]   = useState(false)
@@ -1129,6 +1129,18 @@ export default function EditorPage() {
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M9 5l7 7-7 7M4 12h11" />
+          </svg>
+        </button>
+
+        {/* Repetir pedido */}
+        <button
+          className={`ed-tool-btn${activeTool === 'reorder' ? ' ed-tool-active' : ''}`}
+          title="Repetir pedido"
+          onClick={() => setActiveTool(p => p === 'reorder' ? null : 'reorder')}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 12a9 9 0 1 0 3-6.7" />
+            <path d="M3 4v5h5" />
           </svg>
         </button>
 
@@ -2661,7 +2673,14 @@ export default function EditorPage() {
               </div>
             </label>
 
-            <div className="ed-tp-subtitle">Pedir de nuevo</div>
+            <PanelSave />
+          </div>
+        )}
+
+        {activeTool === 'reorder' && (
+          <div className="ed-tool-panel ed-tool-panel-lg">
+            <div className="ed-tp-title">Repetir pedido</div>
+
             <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#F8FAFC', borderRadius: 10, cursor: 'pointer', gap: 12 }}>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', lineHeight: 1.2 }}>Permitir repetir el ultimo pedido</div>

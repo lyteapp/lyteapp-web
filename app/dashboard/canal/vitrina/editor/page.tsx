@@ -487,11 +487,17 @@ export default function EditorPage() {
     }
     el.textContent = buildPreviewCSS()
 
-    // Live draft preview for a text block being composed in "Bloques de
-    // contenido" — a floating banner in the iframe so font/size/color/align
-    // show up as you type, before the block is actually added and saved.
+    // Live draft preview for a block being composed in "Bloques de contenido"
+    // — a floating card in the iframe so text styling, or the chosen button
+    // style (including "Deslizar"), shows up before the block is actually
+    // added and saved.
     let draft = doc.getElementById('ed-draft-block') as HTMLDivElement | null
-    if (activeTool === 'blocks' && newBlockType === 'text' && newBlockContent.trim() && doc.body) {
+    const draftButtonsLabel = newBlockButtons.find(b => b.label.trim())?.label.trim()
+    const showDraft = activeTool === 'blocks' && (
+      (newBlockType === 'text' && !!newBlockContent.trim()) ||
+      (newBlockType === 'buttons' && !!draftButtonsLabel)
+    )
+    if (showDraft && doc.body) {
       if (!draft) {
         draft = doc.createElement('div')
         draft.id = 'ed-draft-block'
@@ -503,12 +509,31 @@ export default function EditorPage() {
         })
         doc.body.appendChild(draft)
       }
-      draft.textContent = newBlockContent
-      draft.style.fontSize = `${newBlockFontSize}px`
-      draft.style.fontWeight = String(newBlockFontWeight)
-      draft.style.color = newBlockColor
-      draft.style.textAlign = newBlockAlign
-      draft.style.fontFamily = newBlockFont && FONT_MAP[newBlockFont] ? FONT_MAP[newBlockFont] : ''
+      if (newBlockType === 'text') {
+        draft.innerHTML = ''
+        draft.textContent = newBlockContent
+        draft.style.padding = '10px 14px'
+        draft.style.fontSize = `${newBlockFontSize}px`
+        draft.style.fontWeight = String(newBlockFontWeight)
+        draft.style.color = newBlockColor
+        draft.style.textAlign = newBlockAlign
+        draft.style.fontFamily = newBlockFont && FONT_MAP[newBlockFont] ? FONT_MAP[newBlockFont] : ''
+      } else {
+        draft.style.padding = '10px'
+        draft.style.fontSize = ''
+        draft.style.fontWeight = ''
+        draft.style.color = ''
+        draft.style.textAlign = ''
+        draft.style.fontFamily = ''
+        const label = (draftButtonsLabel ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        draft.innerHTML = newBlockButtonStyle === 'slide'
+          ? `<div class="sf-block-slide-bar" style="pointer-events:none;">
+               <div class="sf-block-slide-fill"></div>
+               <span class="sf-block-slide-label">${label}</span>
+               <div class="sf-block-slide-thumb">&#8594;</div>
+             </div>`
+          : `<button type="button" class="sf-block-btn${newBlockButtonStyle === 'outline' ? ' sf-block-btn-outline' : ''}" style="pointer-events:none; width:100%;">${label}</button>`
+      }
     } else if (draft) {
       draft.remove()
     }
@@ -531,7 +556,7 @@ export default function EditorPage() {
   useEffect(() => {
     applyPreview()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign, newBlockFont, contentBlocks, blockGroups])
+  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign, newBlockFont, contentBlocks, blockGroups, newBlockButtons, newBlockButtonStyle])
 
   // ── Auto-save category shape (reloads iframe immediately) ─
   async function handleCategoryShape(catId: string, shape: string | null) {

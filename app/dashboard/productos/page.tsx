@@ -233,7 +233,7 @@ export default function ProductosPage() {
     if (!name) return
     const group = optVariables[gi]
     if (!group || (group.choices ?? []).length === 0) return
-    const preset: VariableGroupPreset = { id: crypto.randomUUID(), name, group: { label: group.label, choices: group.choices.map(normalizeChoice) } }
+    const preset: VariableGroupPreset = { id: crypto.randomUUID(), name, group: { label: group.label, choices: group.choices.map(normalizeChoice), min: group.min, max: group.max } }
     const next = [...variableGroupPresets, preset]
     setVariableGroupPresets(next)
     persistOptionPresets({ variableGroups: next, additionalGroups: additionalGroupPresets })
@@ -243,7 +243,7 @@ export default function ProductosPage() {
   function applyVariableGroupPreset() {
     const preset = variableGroupPresets.find(p => p.id === applyVarPresetId)
     if (!preset) return
-    setOptVariables(v => [...v, { label: preset.group.label, choices: (preset.group.choices ?? []).map(normalizeChoice) }])
+    setOptVariables(v => [...v, { label: preset.group.label, choices: (preset.group.choices ?? []).map(normalizeChoice), min: preset.group.min, max: preset.group.max }])
     setIsDirty(true)
     setApplyVarPresetId('')
   }

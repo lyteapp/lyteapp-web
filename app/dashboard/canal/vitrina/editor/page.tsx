@@ -263,6 +263,7 @@ export default function EditorPage() {
   const [productsLite, setProductsLite]     = useState<ProductLite[]>([])
   const [categoryShapes, setCategoryShapes] = useState<Record<string, string>>({})
   const [categoryLayouts, setCategoryLayouts] = useState<Record<string, string>>({})
+  const [hiddenCategoryIds, setHiddenCategoryIds] = useState<string[]>([])
   const [baseConfig, setBaseConfig]         = useState<Record<string, unknown>>({})
 
   const [categoryNavStyle, setCategoryNavStyle] = useState('pills')
@@ -355,6 +356,7 @@ export default function EditorPage() {
       if ((cfg as Record<string,unknown>).productNameFont !== undefined) setProductNameFont((cfg as Record<string,unknown>).productNameFont as string)
       if (cfg.categoryPhotoShapes) setCategoryShapes(cfg.categoryPhotoShapes as Record<string, string>)
       if ((cfg as Record<string,unknown>).categoryLayouts) setCategoryLayouts((cfg as Record<string,unknown>).categoryLayouts as Record<string, string>)
+      if ((cfg as Record<string,unknown>).hiddenCategoryIds) setHiddenCategoryIds((cfg as Record<string,unknown>).hiddenCategoryIds as string[])
       if (cfg.categoryNavStyle) setCategoryNavStyle(cfg.categoryNavStyle as string)
       if (cfg.showCatNav !== undefined) setShowCatNav(cfg.showCatNav as boolean)
       if (cfg.stickyCatNav !== undefined) setStickyCatNav(cfg.stickyCatNav as boolean)
@@ -651,6 +653,21 @@ export default function EditorPage() {
     setIframeKey(k => k + 1)
   }
 
+  // Hides a category from the normal nav/scroll — it's still reachable via a
+  // direct link from the side menu or an image/button block's "Categoria" target.
+  async function handleCategoryHidden(catId: string, hidden: boolean) {
+    const next = hidden ? [...hiddenCategoryIds, catId] : hiddenCategoryIds.filter(id => id !== catId)
+    setHiddenCategoryIds(next)
+    if (!storeId) return
+    const newConfig = {
+      ...baseConfig,
+      hiddenCategoryIds: next.length > 0 ? next : undefined,
+    }
+    await supabase.from('stores').update({ template_config: newConfig }).eq('id', storeId)
+    setBaseConfig(newConfig)
+    setIframeKey(k => k + 1)
+  }
+
   // ── Auto-save logo/name position (reloads iframe) ────
   async function handleLogoPosition(pos: 'left' | 'center' | 'right' | 'none') {
     setLogoPosition(pos)
@@ -690,6 +707,7 @@ export default function EditorPage() {
       ...(Object.keys(categoryLayouts).length > 0
         ? { categoryLayouts }
         : { categoryLayouts: undefined }),
+      hiddenCategoryIds: hiddenCategoryIds.length > 0 ? hiddenCategoryIds : undefined,
     }
     await supabase.from('stores').update({
       template,
@@ -1648,6 +1666,38 @@ export default function EditorPage() {
                       </div>
                     </div>
                   ))}
+                </div>
+              </>
+            )}
+
+            {categories.length > 0 && (
+              <>
+                <div className="ed-tp-divider" />
+                <div className="ed-tp-subtitle">Categorias ocultas</div>
+                <div className="ed-tp-hint" style={{ fontSize: 11, color: '#94A3B8', marginBottom: 8 }}>
+                  Una categoria oculta no aparece en la barra ni en el scroll normal — solo se abre desde el menu lateral o un bloque de imagen/boton que apunte a ella
+                </div>
+                <div className="ed-cat-shapes">
+                  {categories.map(cat => {
+                    const hidden = hiddenCategoryIds.includes(cat.id)
+                    return (
+                      <div key={cat.id} className="ed-cat-shape-row">
+                        <div className="ed-cat-shape-label">{cat.name}</div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={hidden}
+                            onChange={e => handleCategoryHidden(cat.id, e.target.checked)}
+                            style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
+                          />
+                          <div style={{ width: 34, height: 20, borderRadius: 100, background: hidden ? '#7C3AED' : '#D1D5DB', transition: 'background 0.2s', position: 'relative' }}>
+                            <div style={{ position: 'absolute', top: 3, left: hidden ? 17 : 3, width: 14, height: 14, borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
+                          </div>
+                          <span style={{ fontSize: 11, fontWeight: 600, color: hidden ? '#7C3AED' : '#94A3B8' }}>{hidden ? 'Oculta' : 'Visible'}</span>
+                        </label>
+                      </div>
+                    )
+                  })}
                 </div>
               </>
             )}

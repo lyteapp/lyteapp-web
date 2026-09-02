@@ -178,6 +178,7 @@ type TemplateConfig = {
   enableReorder?: boolean
   contentBlocks?: ContentBlock[]
   blockGroups?: BlockGroup[]
+  hiddenCategoryIds?: string[]
   homePage?: {
     enabled?: boolean
     title?: string
@@ -2849,8 +2850,16 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // ── CATALOG ──
   const tpl = store.template ?? 'clasico'
 
-  // Category grouping
+  // Category grouping — a category can be marked "hidden" (only reachable via
+  // a direct link from the menu or an image/button block), so it drops out of
+  // the normal nav/scroll but keeps its own catGroups-shaped list for those.
+  const cfgHiddenCategoryIds = new Set(cfg.hiddenCategoryIds ?? [])
   const catGroups = categories
+    .filter(cat => !cfgHiddenCategoryIds.has(cat.id))
+    .map(cat => ({ cat, items: products.filter(p => p.category_id === cat.id) }))
+    .filter(g => g.items.length > 0)
+  const hiddenCatGroups = categories
+    .filter(cat => cfgHiddenCategoryIds.has(cat.id))
     .map(cat => ({ cat, items: products.filter(p => p.category_id === cat.id) }))
     .filter(g => g.items.length > 0)
   const uncategorized = products.filter(p => !p.category_id || !categories.find(c => c.id === p.category_id))
@@ -3574,7 +3583,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
               </button>
             </div>
 
-            {hasCats && (
+            {(hasCats || hiddenCatGroups.length > 0) && (
               <nav className="sf-drawer-nav">
                 {catGroups.map(({ cat }) => (
                   <button
@@ -3601,6 +3610,19 @@ export default function StoreShell({ store, products, categories = [], initialBc
                     {t('store.ourProducts')}
                   </button>
                 )}
+                {hiddenCatGroups.map(({ cat }) => (
+                  <button
+                    key={cat.id}
+                    className="sf-drawer-link"
+                    onClick={() => {
+                      setMenuOpen(false)
+                      setFocusCategory(cat)
+                      window.scrollTo({ top: 0 })
+                    }}
+                  >
+                    {cat.name}
+                  </button>
+                ))}
               </nav>
             )}
 

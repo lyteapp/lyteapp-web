@@ -852,19 +852,35 @@ html, body { overflow-x: clip; }
 .sf-splash-cedula-hint.error { color: #FCA5A5; font-weight: 600; }
 
 .sf-reorder-banner {
-  position: fixed; right: 16px; bottom: 20px; z-index: 90;
+  position: fixed; z-index: 90;
   max-width: min(300px, calc(100vw - 32px));
   display: flex; flex-direction: column; align-items: stretch; gap: 10px;
   background: color-mix(in srgb, var(--sf-accent-color, #7C3AED) 8%, white);
   border: 1px solid color-mix(in srgb, var(--sf-accent-color, #7C3AED) 25%, transparent);
   border-radius: 16px; padding: 14px 16px;
   box-shadow: 0 12px 32px rgba(0,0,0,0.18);
-  animation: sfReorderFloatIn 0.4s cubic-bezier(0.16,1,0.3,1) both;
 }
-@keyframes sfReorderFloatIn {
-  from { opacity: 0; transform: translateX(24px); }
-  to   { opacity: 1; transform: translateX(0); }
+.sf-reorder-pos-right  { right: 16px; top: 50%; animation: sfReorderInRight 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+.sf-reorder-pos-left   { left: 16px; top: 50%; animation: sfReorderInLeft 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+.sf-reorder-pos-top    { top: 16px; left: 50%; animation: sfReorderInTop 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+.sf-reorder-pos-bottom { bottom: 20px; left: 50%; animation: sfReorderInBottom 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+@keyframes sfReorderInRight {
+  from { opacity: 0; transform: translateY(-50%) translateX(24px); }
+  to   { opacity: 1; transform: translateY(-50%) translateX(0); }
 }
+@keyframes sfReorderInLeft {
+  from { opacity: 0; transform: translateY(-50%) translateX(-24px); }
+  to   { opacity: 1; transform: translateY(-50%) translateX(0); }
+}
+@keyframes sfReorderInTop {
+  from { opacity: 0; transform: translateX(-50%) translateY(-24px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+@keyframes sfReorderInBottom {
+  from { opacity: 0; transform: translateX(-50%) translateY(24px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+.sf-reorder-img { width: 100%; max-height: 120px; object-fit: cover; display: block; }
 .sf-reorder-title { font-size: 14px; font-weight: 700; color: #0F172A; letter-spacing: -0.01em; }
 .sf-reorder-sub { font-size: 12px; color: #64748B; margin-top: 2px; }
 .sf-reorder-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -872,17 +888,29 @@ html, body { overflow-x: clip; }
   background: var(--sf-accent-color, #7C3AED); color: white; border: none;
   border-radius: 100px; padding: 9px 18px; font-size: 13px; font-weight: 600;
   cursor: pointer; white-space: nowrap; font-family: var(--font-geist-sans), sans-serif;
-  transition: filter 0.15s;
+  transition: filter 0.15s; flex: 1;
 }
 .sf-reorder-btn:hover { filter: brightness(0.92); }
+.sf-reorder-btn-outline {
+  background: transparent; color: var(--sf-accent-color, #7C3AED);
+  border: 1.5px solid var(--sf-accent-color, #7C3AED);
+}
+.sf-reorder-btn-outline:hover { background: color-mix(in srgb, var(--sf-accent-color, #7C3AED) 10%, transparent); filter: none; }
 .sf-reorder-close {
   background: none; border: none; cursor: pointer; color: #94A3B8;
   padding: 4px; display: flex; align-items: center; flex-shrink: 0;
 }
 .sf-reorder-close:hover { color: #475569; }
 @media (max-width: 640px) {
-  .sf-reorder-banner { right: 12px; left: 12px; bottom: 12px; max-width: none; }
+  .sf-reorder-banner {
+    right: 12px; left: 12px; bottom: 12px; top: auto;
+    max-width: none; transform: none; animation: sfReorderFloatInMobile 0.4s cubic-bezier(0.16,1,0.3,1) both;
+  }
   .sf-reorder-title { font-size: 13px; }
+}
+@keyframes sfReorderFloatInMobile {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 .sf-splash-btn {
   background: var(--sf-accent-color, #7C3AED); color: white; border: none;

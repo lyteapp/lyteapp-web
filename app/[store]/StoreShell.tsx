@@ -188,6 +188,15 @@ type TemplateConfig = {
   modalWizard?: boolean
   enableReorder?: boolean
   reorderFloatSeconds?: number
+  reorderPosition?: 'top' | 'bottom' | 'left' | 'right'
+  reorderTitle?: string
+  reorderImageUrl?: string
+  reorderFontSize?: number
+  reorderFontWeight?: number
+  reorderColor?: string
+  reorderFont?: string
+  reorderButtonStyle?: 'solid' | 'outline' | 'slide'
+  reorderButtonSize?: number
   contentBlocks?: ContentBlock[]
   blockGroups?: BlockGroup[]
   hiddenCategoryIds?: string[]
@@ -3291,22 +3300,80 @@ export default function StoreShell({ store, products, categories = [], initialBc
         </div>
       </div>
 
-      {showReorder && lastOrder && (
-        <div className="sf-reorder-banner">
-          <div className="sf-reorder-info">
-            <div className="sf-reorder-title">¿Pedimos lo mismo que la ultima vez?</div>
-            <div className="sf-reorder-sub">
-              {lastOrder.items.reduce((s, i) => s + i.quantity, 0)} {lastOrder.items.reduce((s, i) => s + i.quantity, 0) === 1 ? 'producto' : 'productos'}
+      {showReorder && lastOrder && (() => {
+        const reorderBm = buttonSizeMetrics(cfg.reorderButtonSize)
+        const { fontWeight: reorderWeight, strokeWidth: reorderStroke } = textWeightStyle(cfg.reorderFontWeight)
+        const reorderPos = cfg.reorderPosition ?? 'right'
+        const itemCount = lastOrder.items.reduce((s, i) => s + i.quantity, 0)
+        return (
+          <div className={`sf-reorder-banner sf-reorder-pos-${reorderPos}`}>
+            {cfg.reorderImageUrl && (
+              <img
+                src={cfg.reorderImageUrl}
+                alt=""
+                className="sf-reorder-img"
+                style={{ borderRadius: PRODUCT_PHOTO_RADIUS[cfgPhotoShape] ?? undefined }}
+              />
+            )}
+            <div className="sf-reorder-info">
+              <div
+                className="sf-reorder-title"
+                style={{
+                  fontSize: cfg.reorderFontSize ? `${cfg.reorderFontSize}px` : undefined,
+                  fontWeight: reorderWeight,
+                  color: cfg.reorderColor || undefined,
+                  fontFamily: cfg.reorderFont && FONT_MAP[cfg.reorderFont] ? FONT_MAP[cfg.reorderFont] : undefined,
+                  WebkitTextStroke: reorderStroke > 0 ? `${reorderStroke}px currentColor` : undefined,
+                }}
+              >
+                {cfg.reorderTitle || '¿Pedimos lo mismo que la ultima vez?'}
+              </div>
+              <div className="sf-reorder-sub">
+                {itemCount} {itemCount === 1 ? 'producto' : 'productos'}
+              </div>
+            </div>
+            <div className="sf-reorder-actions">
+              {cfg.reorderButtonStyle === 'slide' ? (
+                <div
+                  ref={el => { if (el) blockSlideBarRefs.current.set('reorder', el); else blockSlideBarRefs.current.delete('reorder') }}
+                  className={`sf-block-slide-bar${blockSliding['reorder'] ? ' sliding' : ''}`}
+                  style={{
+                    '--sf-slide-progress': blockSlideProgress['reorder'] ?? 0,
+                    '--sf-slide-thumb': `${reorderBm.thumb}px`,
+                    '--sf-slide-pad': `${reorderBm.pad}px`,
+                    height: `${reorderBm.height}px`,
+                    flex: 1,
+                  } as React.CSSProperties}
+                  onPointerDown={e => blockSlidePointerDown('reorder', e)}
+                  onPointerMove={e => blockSlidePointerMove('reorder', e)}
+                  onPointerUp={() => blockSlidePointerUp('reorder', reorderLast)}
+                  onPointerCancel={() => blockSlideCancel('reorder')}
+                >
+                  <div className="sf-block-slide-fill" />
+                  <span className="sf-block-slide-label" style={{ fontSize: `${Math.max(10, reorderBm.fontSize - 2)}px` }}>Repetir pedido</span>
+                  <div className="sf-block-slide-thumb">
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width={Math.round(reorderBm.thumb * 0.4)} height={Math.round(reorderBm.thumb * 0.4)}>
+                      <path d="M7 4l6 6-6 6" />
+                    </svg>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className={`sf-reorder-btn${cfg.reorderButtonStyle === 'outline' ? ' sf-reorder-btn-outline' : ''}`}
+                  style={{ fontSize: `${reorderBm.fontSize}px`, padding: `${reorderBm.padV}px ${reorderBm.padH}px` }}
+                  onClick={reorderLast}
+                >
+                  Repetir pedido
+                </button>
+              )}
+              <button type="button" className="sf-reorder-close" onClick={() => setShowReorder(false)} aria-label="Cerrar">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path strokeLinecap="round" d="M15 5L5 15M5 5l10 10"/></svg>
+              </button>
             </div>
           </div>
-          <div className="sf-reorder-actions">
-            <button type="button" className="sf-reorder-btn" onClick={reorderLast}>Repetir pedido</button>
-            <button type="button" className="sf-reorder-close" onClick={() => setShowReorder(false)} aria-label="Cerrar">
-              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path strokeLinecap="round" d="M15 5L5 15M5 5l10 10"/></svg>
-            </button>
-          </div>
-        </div>
-      )}
+        )
+      })()}
 
       {focusCategory ? (
         <div

@@ -284,6 +284,17 @@ export default function EditorPage() {
   const [modalWizard, setModalWizard] = useState(false)
   const [enableReorder, setEnableReorder] = useState(false)
   const [reorderFloatSeconds, setReorderFloatSeconds] = useState(0)
+  const [reorderPosition, setReorderPosition] = useState<'top' | 'bottom' | 'left' | 'right'>('right')
+  const [reorderTitle, setReorderTitle] = useState('')
+  const [reorderImageUrl, setReorderImageUrl] = useState('')
+  const [reorderFontSize, setReorderFontSize] = useState(14)
+  const [reorderFontWeight, setReorderFontWeight] = useState(700)
+  const [reorderColor, setReorderColor] = useState('')
+  const [reorderFont, setReorderFont] = useState('')
+  const [reorderButtonStyle, setReorderButtonStyle] = useState<'solid' | 'outline' | 'slide'>('solid')
+  const [reorderButtonSize, setReorderButtonSize] = useState(14)
+  const [reorderImgUploading, setReorderImgUploading] = useState(false)
+  const reorderImgRef = useRef<HTMLInputElement>(null)
   const [headerHeightPx, setHeaderHeightPx] = useState(56)
   const [contentBlocks, setContentBlocks]   = useState<ContentBlock[]>([])
   const [blockGroups, setBlockGroups]       = useState<BlockGroup[]>([])
@@ -388,6 +399,15 @@ export default function EditorPage() {
       if (cfg.modalWizard !== undefined) setModalWizard(cfg.modalWizard as boolean)
       if (cfg.enableReorder !== undefined) setEnableReorder(cfg.enableReorder as boolean)
       if (cfg.reorderFloatSeconds !== undefined) setReorderFloatSeconds(cfg.reorderFloatSeconds as number)
+      if (cfg.reorderPosition !== undefined) setReorderPosition(cfg.reorderPosition as 'top' | 'bottom' | 'left' | 'right')
+      if (cfg.reorderTitle !== undefined) setReorderTitle(cfg.reorderTitle as string)
+      if (cfg.reorderImageUrl !== undefined) setReorderImageUrl(cfg.reorderImageUrl as string)
+      if (cfg.reorderFontSize !== undefined) setReorderFontSize(cfg.reorderFontSize as number)
+      if (cfg.reorderFontWeight !== undefined) setReorderFontWeight(cfg.reorderFontWeight as number)
+      if (cfg.reorderColor !== undefined) setReorderColor(cfg.reorderColor as string)
+      if (cfg.reorderFont !== undefined) setReorderFont(cfg.reorderFont as string)
+      if (cfg.reorderButtonStyle !== undefined) setReorderButtonStyle(cfg.reorderButtonStyle as 'solid' | 'outline' | 'slide')
+      if (cfg.reorderButtonSize !== undefined) setReorderButtonSize(cfg.reorderButtonSize as number)
       if (cfg.headerHeightPx) setHeaderHeightPx(Number(cfg.headerHeightPx))
       if (cfg.contentBlocks) setContentBlocks(cfg.contentBlocks as ContentBlock[])
       if (cfg.blockGroups) setBlockGroups(cfg.blockGroups as BlockGroup[])
@@ -702,6 +722,15 @@ export default function EditorPage() {
       catTitleFont: catTitleFont || undefined, productNameFont: productNameFont || undefined,
       categoryNavStyle, showCatNav, stickyCatNav, catNavOverBanner, categorySpacing,
       logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, showHeaderSearch, showHeaderCart, headerIconColor: headerIconColor || undefined, headerOverBanner, headerSticky, headerHeightPx, modalWizard, enableReorder, reorderFloatSeconds: reorderFloatSeconds > 0 ? reorderFloatSeconds : undefined,
+      reorderPosition: reorderPosition !== 'right' ? reorderPosition : undefined,
+      reorderTitle: reorderTitle.trim() || undefined,
+      reorderImageUrl: reorderImageUrl || undefined,
+      reorderFontSize: reorderFontSize !== 14 ? reorderFontSize : undefined,
+      reorderFontWeight: reorderFontWeight !== 700 ? reorderFontWeight : undefined,
+      reorderColor: reorderColor || undefined,
+      reorderFont: reorderFont || undefined,
+      reorderButtonStyle: reorderButtonStyle !== 'solid' ? reorderButtonStyle : undefined,
+      reorderButtonSize: reorderButtonSize !== 14 ? reorderButtonSize : undefined,
       headerLayout: undefined,
       contentBlocks: contentBlocks.length > 0 ? contentBlocks : undefined,
       blockGroups: blockGroups.length > 0 ? blockGroups : undefined,
@@ -2679,6 +2708,162 @@ export default function EditorPage() {
                   onChange={e => setReorderFloatSeconds(Number(e.target.value))}
                   style={{ width: '100%' }}
                 />
+              </div>
+            )}
+
+            {enableReorder && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '12px 14px', background: '#F8FAFC', borderRadius: 10 }}>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginBottom: 4 }}>De donde sale</div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {([['top', 'Arriba'], ['bottom', 'Abajo'], ['left', 'Izquierda'], ['right', 'Derecha']] as const).map(([pos, label]) => (
+                      <button
+                        key={pos}
+                        onClick={() => setReorderPosition(pos)}
+                        style={{
+                          flex: 1, padding: '8px 4px', borderRadius: 8,
+                          border: `2px solid ${reorderPosition === pos ? '#7C3AED' : '#E2E8F0'}`,
+                          background: reorderPosition === pos ? '#F5F3FF' : 'white',
+                          color: reorderPosition === pos ? '#7C3AED' : '#64748B',
+                          fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                        }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginBottom: 4 }}>Texto del mensaje</div>
+                  <input
+                    type="text"
+                    value={reorderTitle}
+                    onChange={e => setReorderTitle(e.target.value)}
+                    placeholder="¿Pedimos lo mismo que la ultima vez?"
+                    className="ed-block-input"
+                    style={{ width: '100%' }}
+                  />
+                </div>
+
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginBottom: 4 }}>Foto (opcional)</div>
+                  <div
+                    onClick={() => reorderImgRef.current?.click()}
+                    style={{
+                      position: 'relative', width: '100%', height: 90, borderRadius: 8,
+                      border: '1.5px dashed #E2E8F0',
+                      background: reorderImageUrl ? `#F8FAFC center/cover no-repeat url(${reorderImageUrl})` : '#F8FAFC',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', overflow: 'hidden',
+                    }}
+                  >
+                    {!reorderImageUrl && !reorderImgUploading && (
+                      <span style={{ fontSize: 12, color: '#94A3B8', fontWeight: 600, textAlign: 'center', padding: '0 12px' }}>
+                        Toca para subir una foto desde tu dispositivo
+                      </span>
+                    )}
+                    {reorderImgUploading && (
+                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: '#7C3AED' }}>
+                        Subiendo...
+                      </div>
+                    )}
+                    {reorderImageUrl && !reorderImgUploading && (
+                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '4px 8px', background: 'rgba(15,23,42,0.6)', color: 'white', fontSize: 10, fontWeight: 600, textAlign: 'center' }}>
+                        Cambiar foto
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    ref={reorderImgRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={async e => {
+                      const file = e.target.files?.[0]
+                      if (!file || !storeId) return
+                      setReorderImgUploading(true)
+                      try { setReorderImageUrl(await uploadBlockImage(file, storeId)) }
+                      catch { /* keep whatever was there before on failure */ }
+                      setReorderImgUploading(false)
+                      e.target.value = ''
+                    }}
+                  />
+                  {reorderImageUrl && (
+                    <button
+                      onClick={() => setReorderImageUrl('')}
+                      style={{ marginTop: 6, padding: '5px 10px', borderRadius: 8, border: '1.5px solid #E2E8F0', background: 'white', color: '#DC2626', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      Quitar foto
+                    </button>
+                  )}
+                </div>
+
+                <FontSelect
+                  value={reorderFont}
+                  onChange={setReorderFont}
+                  options={[{ id: '', name: 'Fuente de la tienda' }, ...PAGE_FONTS]}
+                  placeholder="Fuente de la tienda"
+                />
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <input
+                    type="number" min={10} max={48} step={1}
+                    value={reorderFontSize}
+                    onChange={e => setReorderFontSize(Number(e.target.value) || 14)}
+                    className="ed-block-input"
+                    style={{ width: 64, flex: 'none' }}
+                    title="Tamano de letra (px)"
+                  />
+                  <span style={{ fontSize: 11, color: '#94A3B8' }}>px</span>
+                  <input
+                    type="color"
+                    value={reorderColor || '#0F172A'}
+                    onChange={e => setReorderColor(e.target.value)}
+                    style={{ width: 34, height: 34, padding: 0, border: '1.5px solid #E2E8F0', borderRadius: 8, cursor: 'pointer', flexShrink: 0, marginLeft: 'auto' }}
+                    title="Color del texto"
+                  />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: '#64748B', flexShrink: 0 }}>Grosor</span>
+                  <input
+                    type="range" min={100} max={1200} step={50}
+                    value={reorderFontWeight}
+                    onChange={e => setReorderFontWeight(Number(e.target.value))}
+                    style={{ flex: 1 }}
+                  />
+                  <span style={{ fontSize: 11, color: '#94A3B8', width: 28, flexShrink: 0, textAlign: 'right' }}>{reorderFontWeight}</span>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginBottom: 4 }}>Estilo del boton</div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {([['solid', 'Solido'], ['outline', 'Contorno'], ['slide', 'Deslizar']] as const).map(([st, label]) => (
+                      <button
+                        key={st}
+                        onClick={() => setReorderButtonStyle(st)}
+                        style={{
+                          flex: 1, padding: '8px 4px', borderRadius: 8,
+                          border: `2px solid ${reorderButtonStyle === st ? '#7C3AED' : '#E2E8F0'}`,
+                          background: reorderButtonStyle === st ? '#F5F3FF' : 'white',
+                          color: reorderButtonStyle === st ? '#7C3AED' : '#64748B',
+                          fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                        }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: '#64748B', flexShrink: 0 }}>Tamano del boton</span>
+                  <input
+                    type="range" min={8} max={26} step={1}
+                    value={reorderButtonSize}
+                    onChange={e => setReorderButtonSize(Number(e.target.value))}
+                    style={{ flex: 1 }}
+                  />
+                  <span style={{ fontSize: 11, color: '#94A3B8', width: 28, flexShrink: 0, textAlign: 'right' }}>{reorderButtonSize}px</span>
+                </div>
               </div>
             )}
 

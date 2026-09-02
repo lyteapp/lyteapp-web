@@ -105,7 +105,9 @@ type ContentBlock = {
   align?: 'left' | 'center' | 'right'
   spacing?: number
   font?: string
+  groupId?: string
 }
+type BlockGroup = { id: string; afterId: string; background?: string; borderRadius?: number; padding?: number }
 type BlockButtonItem = { id: string; label: string; target: 'product' | 'category'; targetId: string }
 type TemplateConfig = {
   pageBg?: string; pageFont?: string
@@ -148,6 +150,7 @@ type TemplateConfig = {
   modalWizard?: boolean
   enableReorder?: boolean
   contentBlocks?: ContentBlock[]
+  blockGroups?: BlockGroup[]
   homePage?: {
     enabled?: boolean
     title?: string
@@ -831,73 +834,100 @@ export default function StoreShell({ store, products, categories = [], initialBc
     ...(cfg.productNameFont && FONT_MAP[cfg.productNameFont] ? { '--sf-product-name-font': FONT_MAP[cfg.productNameFont] } : {}),
   } as React.CSSProperties
 
-  function renderContentBlocks(afterId: string) {
-    const blocks = (cfg.contentBlocks ?? []) as ContentBlock[]
-    const matching = blocks.filter(b => b.afterId === afterId)
-    if (matching.length === 0) return null
+  function renderSingleBlock(block: ContentBlock) {
     return (
-      <>
-        {matching.map(block => (
-          <div key={block.id} className="sf-content-block" style={{ padding: `${block.spacing ?? 8}px 0` }}>
-            {block.type === 'text' && (
-              <div
-                className="sf-block-text"
-                style={{
-                  fontSize: block.fontSize ? `${block.fontSize}px` : undefined,
-                  fontWeight: block.fontWeight || undefined,
-                  color: block.color || undefined,
-                  textAlign: block.align || undefined,
-                  fontFamily: block.font && FONT_MAP[block.font] ? FONT_MAP[block.font] : undefined,
-                }}
-              >
-                {block.content}
-              </div>
-            )}
-            {block.type === 'image' && block.content && (
-              <img src={block.content} alt="" className="sf-block-img" />
-            )}
-            {block.type === 'video' && block.content && (
-              <div className="sf-block-video-wrap">
-                {block.content.includes('youtu') || block.content.includes('vimeo') ? (
-                  <iframe
-                    src={toEmbedUrl(block.content)}
-                    className="sf-block-iframe"
-                    allow="autoplay; fullscreen"
-                    allowFullScreen
-                  />
-                ) : (
-                  <video src={block.content} controls className="sf-block-video-el" />
-                )}
-              </div>
-            )}
-            {block.type === 'buttons' && block.content && (
-              <div className="sf-block-buttons">
-                {(() => {
-                  let items: BlockButtonItem[] = []
-                  try { items = JSON.parse(block.content) } catch {}
-                  return items.filter(b => b.label?.trim() && b.targetId).map(b => (
-                    <button
-                      key={b.id}
-                      type="button"
-                      className="sf-block-btn"
-                      onClick={() => {
-                        if (b.target === 'product') {
-                          const p = products.find(pr => pr.id === b.targetId)
-                          if (p) openProductModal(p)
-                        } else {
-                          const cat = categories.find(c => c.id === b.targetId)
-                          if (cat) { setFocusCategory(cat); window.scrollTo({ top: 0 }) }
-                        }
-                      }}
-                    >
-                      {b.label}
-                    </button>
-                  ))
-                })()}
-              </div>
+      <div key={block.id} className="sf-content-block" style={{ padding: `${block.spacing ?? 8}px 0` }}>
+        {block.type === 'text' && (
+          <div
+            className="sf-block-text"
+            style={{
+              fontSize: block.fontSize ? `${block.fontSize}px` : undefined,
+              fontWeight: block.fontWeight || undefined,
+              color: block.color || undefined,
+              textAlign: block.align || undefined,
+              fontFamily: block.font && FONT_MAP[block.font] ? FONT_MAP[block.font] : undefined,
+            }}
+          >
+            {block.content}
+          </div>
+        )}
+        {block.type === 'image' && block.content && (
+          <img src={block.content} alt="" className="sf-block-img" />
+        )}
+        {block.type === 'video' && block.content && (
+          <div className="sf-block-video-wrap">
+            {block.content.includes('youtu') || block.content.includes('vimeo') ? (
+              <iframe
+                src={toEmbedUrl(block.content)}
+                className="sf-block-iframe"
+                allow="autoplay; fullscreen"
+                allowFullScreen
+              />
+            ) : (
+              <video src={block.content} controls className="sf-block-video-el" />
             )}
           </div>
-        ))}
+        )}
+        {block.type === 'buttons' && block.content && (
+          <div className="sf-block-buttons">
+            {(() => {
+              let items: BlockButtonItem[] = []
+              try { items = JSON.parse(block.content) } catch {}
+              return items.filter(b => b.label?.trim() && b.targetId).map(b => (
+                <button
+                  key={b.id}
+                  type="button"
+                  className="sf-block-btn"
+                  onClick={() => {
+                    if (b.target === 'product') {
+                      const p = products.find(pr => pr.id === b.targetId)
+                      if (p) openProductModal(p)
+                    } else {
+                      const cat = categories.find(c => c.id === b.targetId)
+                      if (cat) { setFocusCategory(cat); window.scrollTo({ top: 0 }) }
+                    }
+                  }}
+                >
+                  {b.label}
+                </button>
+              ))
+            })()}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  function renderContentBlocks(afterId: string) {
+    const blocks = (cfg.contentBlocks ?? []) as ContentBlock[]
+    const groups = (cfg.blockGroups ?? []) as BlockGroup[]
+    const matching = blocks.filter(b => b.afterId === afterId)
+    if (matching.length === 0) return null
+    const renderedGroups = new Set<string>()
+    return (
+      <>
+        {matching.map(block => {
+          if (block.groupId) {
+            if (renderedGroups.has(block.groupId)) return null
+            renderedGroups.add(block.groupId)
+            const groupMeta = groups.find(g => g.id === block.groupId)
+            const members = matching.filter(m => m.groupId === block.groupId)
+            return (
+              <div
+                key={block.groupId}
+                className="sf-block-group"
+                style={{
+                  background: groupMeta?.background || undefined,
+                  borderRadius: groupMeta?.borderRadius !== undefined ? `${groupMeta.borderRadius}px` : undefined,
+                  padding: groupMeta?.padding !== undefined ? `${groupMeta.padding}px` : undefined,
+                }}
+              >
+                {members.map(renderSingleBlock)}
+              </div>
+            )
+          }
+          return renderSingleBlock(block)
+        })}
       </>
     )
   }

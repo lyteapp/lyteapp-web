@@ -2056,6 +2056,20 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
   flex-direction: column;
   gap: 4px;
 }
+.ed-block-group {
+  background: #FAF5FF;
+  border: 1.5px dashed #C4B5FD;
+  border-radius: 12px;
+  padding: 10px;
+}
+.ed-block-group-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ed-block-group .ed-block-item {
+  background: white;
+}
 .ed-block-item-head {
   display: flex;
   align-items: center;

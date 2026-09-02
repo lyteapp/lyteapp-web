@@ -1888,6 +1888,13 @@ html, body { overflow-x: clip; }
 .sf-block-btn:hover { filter: brightness(0.9); }
 .sf-block-btn:active { transform: scale(0.97); }
 
+/* Wraps several content blocks together in one enclosed section */
+.sf-block-group { margin: 8px 16px; }
+.sf-block-group .sf-content-block { padding-left: 0; padding-right: 0; }
+.sf-block-group .sf-block-text,
+.sf-block-group .sf-block-img,
+.sf-block-group .sf-block-buttons { padding-left: 0; padding-right: 0; }
+
 /* Focused single-category view, opened from a "buttons" block */
 .sf-focus-category { padding: 16px; }
 .sf-focus-back {

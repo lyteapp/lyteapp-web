@@ -94,9 +94,10 @@ type ProductLite = { id: string; name: string }
 type ContentBlock = {
   id: string; afterId: string; type: 'text' | 'image' | 'video' | 'buttons'; content: string
   fontSize?: number; fontWeight?: number; color?: string; align?: 'left' | 'center' | 'right'
-  spacing?: number; font?: string
+  spacing?: number; font?: string; groupId?: string
 }
 type BlockButtonItem = { id: string; label: string; target: 'product' | 'category'; targetId: string }
+type BlockGroup = { id: string; afterId: string; background?: string; borderRadius?: number; padding?: number }
 
 function FontSelect({
   value, onChange, options, placeholder,
@@ -224,6 +225,9 @@ export default function EditorPage() {
   const [enableReorder, setEnableReorder] = useState(false)
   const [headerHeightPx, setHeaderHeightPx] = useState(56)
   const [contentBlocks, setContentBlocks]   = useState<ContentBlock[]>([])
+  const [blockGroups, setBlockGroups]       = useState<BlockGroup[]>([])
+  const [groupMode, setGroupMode]           = useState(false)
+  const [selectedForGroup, setSelectedForGroup] = useState<Set<string>>(new Set())
   const [newBlockPos,  setNewBlockPos]      = useState('top')
   const [newBlockType, setNewBlockType]     = useState<'text' | 'image' | 'video' | 'buttons'>('text')
   const [newBlockContent, setNewBlockContent] = useState('')
@@ -314,6 +318,7 @@ export default function EditorPage() {
       if (cfg.enableReorder !== undefined) setEnableReorder(cfg.enableReorder as boolean)
       if (cfg.headerHeightPx) setHeaderHeightPx(Number(cfg.headerHeightPx))
       if (cfg.contentBlocks) setContentBlocks(cfg.contentBlocks as ContentBlock[])
+      if (cfg.blockGroups) setBlockGroups(cfg.blockGroups as BlockGroup[])
       const { data: cats } = await supabase
         .from('categories').select('id,name')
         .eq('store_id', store.id).order('position', { ascending: true })
@@ -570,6 +575,7 @@ export default function EditorPage() {
       logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, showHeaderSearch, showHeaderCart, headerIconColor: headerIconColor || undefined, headerOverBanner, headerSticky, headerHeightPx, modalWizard, enableReorder,
       headerLayout: undefined,
       contentBlocks: contentBlocks.length > 0 ? contentBlocks : undefined,
+      blockGroups: blockGroups.length > 0 ? blockGroups : undefined,
       ...(Object.keys(categoryShapes).length > 0
         ? { categoryPhotoShapes: categoryShapes }
         : { categoryPhotoShapes: undefined }),
@@ -595,6 +601,95 @@ export default function EditorPage() {
   const isCustomPrice = !ACCENT_COLORS.includes(priceColor)
   const isCustomHeaderIcon = headerIconColor !== '' && !ACCENT_COLORS.includes(headerIconColor)
   const isCustomCatTitle = catTitleColor !== '' && !ACCENT_COLORS.includes(catTitleColor)
+
+  // ── Content-block groups: enclose several blocks (same position) in one shared box ──
+  function toggleBlockForGroup(id: string) {
+    setSelectedForGroup(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+  function groupSelectedBlocks() {
+    const selected = contentBlocks.filter(b => selectedForGroup.has(b.id) && !b.groupId)
+    if (selected.length < 2) return
+    const afterId = selected[0].afterId
+    if (!selected.every(b => b.afterId === afterId)) return
+    const groupId = crypto.randomUUID()
+    setContentBlocks(prev => prev.map(b => selectedForGroup.has(b.id) ? { ...b, groupId } : b))
+    setBlockGroups(prev => [...prev, { id: groupId, afterId, background: '#F8FAFC', borderRadius: 12, padding: 16 }])
+    setSelectedForGroup(new Set())
+    setGroupMode(false)
+  }
+  function ungroupBlocks(groupId: string) {
+    setContentBlocks(prev => prev.map(b => b.groupId === groupId ? { ...b, groupId: undefined } : b))
+    setBlockGroups(prev => prev.filter(g => g.id !== groupId))
+  }
+  function updateBlockGroup(groupId: string, patch: Partial<BlockGroup>) {
+    setBlockGroups(prev => prev.map(g => g.id === groupId ? { ...g, ...patch } : g))
+  }
+  type BlockDisplayUnit = { kind: 'single'; block: ContentBlock } | { kind: 'group'; group: BlockGroup; members: ContentBlock[] }
+  function computeBlockDisplayUnits(): BlockDisplayUnit[] {
+    const seen = new Set<string>()
+    const units: BlockDisplayUnit[] = []
+    for (const b of contentBlocks) {
+      if (b.groupId) {
+        if (seen.has(b.groupId)) continue
+        seen.add(b.groupId)
+        const group = blockGroups.find(g => g.id === b.groupId)
+        if (!group) { units.push({ kind: 'single', block: b }); continue }
+        units.push({ kind: 'group', group, members: contentBlocks.filter(m => m.groupId === b.groupId) })
+      } else {
+        units.push({ kind: 'single', block: b })
+      }
+    }
+    return units
+  }
+  function renderBlockItemRow(b: ContentBlock) {
+    return (
+      <div className="ed-block-item">
+        <div className="ed-block-item-head">
+          <span className="ed-block-item-type">{b.type === 'text' ? 'Texto' : b.type === 'image' ? 'Imagen' : b.type === 'video' ? 'Video' : 'Botones'}</span>
+          <span className="ed-block-item-pos">
+            {b.afterId === 'top' ? 'Al inicio' : b.afterId === 'bottom' ? 'Al final' : (categories.find(c => c.id === b.afterId)?.name ?? b.afterId)}
+          </span>
+          <button
+            className="ed-block-delete"
+            onClick={() => {
+              setContentBlocks(prev => prev.filter(x => x.id !== b.id))
+              if (b.groupId) {
+                const remaining = contentBlocks.filter(x => x.groupId === b.groupId && x.id !== b.id)
+                if (remaining.length < 2) ungroupBlocks(b.groupId)
+              }
+            }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>
+            </svg>
+          </button>
+        </div>
+        <div className="ed-block-item-preview">
+          {b.type === 'buttons'
+            ? (() => { try { return (JSON.parse(b.content) as BlockButtonItem[]).map(x => x.label).join(' · ') || '(sin botones)' } catch { return '(sin botones)' } })()
+            : (b.content ? b.content.slice(0, 55) + (b.content.length > 55 ? '...' : '') : '(sin contenido)')}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+          <span style={{ fontSize: 10, color: '#94A3B8', flexShrink: 0 }}>Separacion</span>
+          <input
+            type="range" min={0} max={60} step={2}
+            value={b.spacing ?? 8}
+            onChange={e => {
+              const val = Number(e.target.value)
+              setContentBlocks(prev => prev.map(x => x.id === b.id ? { ...x, spacing: val } : x))
+            }}
+            style={{ flex: 1 }}
+          />
+          <span style={{ fontSize: 10, color: '#94A3B8', width: 28, flexShrink: 0, textAlign: 'right' }}>{b.spacing ?? 8}px</span>
+        </div>
+      </div>
+    )
+  }
 
   function PanelSave() {
     return (
@@ -1689,44 +1784,96 @@ export default function EditorPage() {
             <div className="ed-tp-title">Bloques de contenido</div>
 
             {contentBlocks.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-                {contentBlocks.map(b => (
-                  <div key={b.id} className="ed-block-item">
-                    <div className="ed-block-item-head">
-                      <span className="ed-block-item-type">{b.type === 'text' ? 'Texto' : b.type === 'image' ? 'Imagen' : b.type === 'video' ? 'Video' : 'Botones'}</span>
-                      <span className="ed-block-item-pos">
-                        {b.afterId === 'top' ? 'Al inicio' : b.afterId === 'bottom' ? 'Al final' : (categories.find(c => c.id === b.afterId)?.name ?? b.afterId)}
-                      </span>
+              <>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+                  {groupMode ? (
+                    <div style={{ display: 'flex', gap: 6 }}>
                       <button
-                        className="ed-block-delete"
-                        onClick={() => setContentBlocks(prev => prev.filter(x => x.id !== b.id))}
+                        onClick={groupSelectedBlocks}
+                        disabled={selectedForGroup.size < 2}
+                        style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: selectedForGroup.size < 2 ? '#E2E8F0' : '#7C3AED', color: selectedForGroup.size < 2 ? '#94A3B8' : 'white', fontSize: 11, fontWeight: 600, cursor: selectedForGroup.size < 2 ? 'default' : 'pointer' }}
                       >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                          <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>
-                        </svg>
+                        Encerrar seleccionados ({selectedForGroup.size})
+                      </button>
+                      <button
+                        onClick={() => { setGroupMode(false); setSelectedForGroup(new Set()) }}
+                        style={{ padding: '6px 12px', borderRadius: 8, border: '1.5px solid #E2E8F0', background: 'white', color: '#64748B', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Cancelar
                       </button>
                     </div>
-                    <div className="ed-block-item-preview">
-                      {b.type === 'buttons'
-                        ? (() => { try { return (JSON.parse(b.content) as BlockButtonItem[]).map(x => x.label).join(' · ') || '(sin botones)' } catch { return '(sin botones)' } })()
-                        : (b.content ? b.content.slice(0, 55) + (b.content.length > 55 ? '...' : '') : '(sin contenido)')}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                      <span style={{ fontSize: 10, color: '#94A3B8', flexShrink: 0 }}>Separacion</span>
-                      <input
-                        type="range" min={0} max={60} step={2}
-                        value={b.spacing ?? 8}
-                        onChange={e => {
-                          const val = Number(e.target.value)
-                          setContentBlocks(prev => prev.map(x => x.id === b.id ? { ...x, spacing: val } : x))
-                        }}
-                        style={{ flex: 1 }}
-                      />
-                      <span style={{ fontSize: 10, color: '#94A3B8', width: 28, flexShrink: 0, textAlign: 'right' }}>{b.spacing ?? 8}px</span>
-                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setGroupMode(true)}
+                      style={{ padding: '6px 12px', borderRadius: 8, border: '1.5px solid #E2E8F0', background: 'white', color: '#7C3AED', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      Encerrar bloques en un grupo
+                    </button>
+                  )}
+                </div>
+                {groupMode && (
+                  <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 8 }}>
+                    Elige 2 o mas bloques que esten en la misma posicion para encerrarlos juntos.
                   </div>
-                ))}
-              </div>
+                )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+                  {computeBlockDisplayUnits().map(unit => unit.kind === 'single' ? (
+                    <div key={unit.block.id} style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                      {groupMode && !unit.block.groupId && (
+                        <input
+                          type="checkbox"
+                          checked={selectedForGroup.has(unit.block.id)}
+                          onChange={() => toggleBlockForGroup(unit.block.id)}
+                          style={{ marginTop: 12, flexShrink: 0 }}
+                        />
+                      )}
+                      <div style={{ flex: 1 }}>{renderBlockItemRow(unit.block)}</div>
+                    </div>
+                  ) : (
+                    <div key={unit.group.id} className="ed-block-group">
+                      <div className="ed-block-group-head">
+                        <span className="ed-block-item-type" style={{ background: '#EDE9FE', color: '#7C3AED' }}>Grupo · {unit.members.length} bloques</span>
+                        <button
+                          onClick={() => ungroupBlocks(unit.group.id)}
+                          style={{ marginLeft: 'auto', padding: '4px 10px', borderRadius: 7, border: 'none', background: '#FEF2F2', color: '#DC2626', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}
+                        >
+                          Desagrupar
+                        </button>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '8px 0' }}>
+                        <input
+                          type="color"
+                          value={unit.group.background || '#F8FAFC'}
+                          onChange={e => updateBlockGroup(unit.group.id, { background: e.target.value })}
+                          style={{ width: 30, height: 30, padding: 0, border: '1.5px solid #E2E8F0', borderRadius: 7, cursor: 'pointer', flexShrink: 0 }}
+                          title="Color de fondo del grupo"
+                        />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
+                          <span style={{ fontSize: 10, color: '#94A3B8' }}>Radio</span>
+                          <input
+                            type="range" min={0} max={32} step={2}
+                            value={unit.group.borderRadius ?? 12}
+                            onChange={e => updateBlockGroup(unit.group.id, { borderRadius: Number(e.target.value) })}
+                            style={{ flex: 1 }}
+                          />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
+                          <span style={{ fontSize: 10, color: '#94A3B8' }}>Relleno</span>
+                          <input
+                            type="range" min={0} max={40} step={2}
+                            value={unit.group.padding ?? 16}
+                            onChange={e => updateBlockGroup(unit.group.id, { padding: Number(e.target.value) })}
+                            style={{ flex: 1 }}
+                          />
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {unit.members.map(m => <div key={m.id}>{renderBlockItemRow(m)}</div>)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
 
             <div className="ed-tp-subtitle">Agregar bloque</div>

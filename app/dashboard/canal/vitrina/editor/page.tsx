@@ -6,6 +6,41 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '../../../../lib/supabase'
 import './editor.css'
 
+// Shrinks an uploaded content-block image client-side before it goes to
+// storage — mirrors the same helper in canal/inicio/page.tsx.
+function compressBlockImage(file: File, maxDim = 1920, quality = 0.82): Promise<File> {
+  return new Promise(resolve => {
+    if (!file.type.startsWith('image/') || file.type === 'image/svg+xml') { resolve(file); return }
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height))
+      const w = Math.round(img.width * scale)
+      const h = Math.round(img.height * scale)
+      const canvas = document.createElement('canvas')
+      canvas.width = w; canvas.height = h
+      const ctx = canvas.getContext('2d')
+      if (!ctx) { resolve(file); return }
+      ctx.drawImage(img, 0, 0, w, h)
+      canvas.toBlob(blob => {
+        if (!blob || blob.size >= file.size) { resolve(file); return }
+        resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }))
+      }, 'image/jpeg', quality)
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
+    img.src = url
+  })
+}
+async function uploadBlockImage(file: File, storeId: string) {
+  const compressed = await compressBlockImage(file)
+  const ext = compressed.name.split('.').pop()
+  const path = `blocks/${storeId}-${Date.now()}.${ext}`
+  const { error } = await supabase.storage.from('store-assets').upload(path, compressed, { upsert: true, contentType: compressed.type })
+  if (error) throw error
+  return supabase.storage.from('store-assets').getPublicUrl(path).data.publicUrl
+}
+
 const BG_COLORS = [
   { value: '#FFFFFF', label: 'Blanco',    light: true  },
   { value: '#0F172A', label: 'Negro',     light: false },
@@ -261,6 +296,8 @@ export default function EditorPage() {
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null)
   const [newBlockButtonStyle, setNewBlockButtonStyle] = useState<'solid' | 'outline' | 'slide'>('solid')
   const [newBlockButtonSize, setNewBlockButtonSize] = useState(14)
+  const [blockImgUploading, setBlockImgUploading] = useState(false)
+  const blockImgRef = useRef<HTMLInputElement>(null)
   const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'price' | 'categories' | 'brand' | 'blocks' | 'product' | null>(null)
   const [iframeKey, setIframeKey]   = useState(0)
   const [saving, setSaving]         = useState(false)
@@ -2221,13 +2258,60 @@ export default function EditorPage() {
                   </div>
                 </div>
               ) : (
-                <input
-                  type="url"
-                  value={newBlockContent}
-                  onChange={e => setNewBlockContent(e.target.value)}
-                  placeholder={newBlockType === 'image' ? 'URL de la imagen' : 'URL del video (YouTube, Vimeo...)'}
-                  className="ed-block-input"
-                />
+                <>
+                  {newBlockType === 'image' && (
+                    <>
+                      <div
+                        onClick={() => blockImgRef.current?.click()}
+                        style={{
+                          position: 'relative', width: '100%', height: 120, borderRadius: 8,
+                          border: '1.5px dashed #E2E8F0',
+                          background: newBlockContent ? `#F8FAFC center/cover no-repeat url(${newBlockContent})` : '#F8FAFC',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          cursor: 'pointer', overflow: 'hidden',
+                        }}
+                      >
+                        {!newBlockContent && !blockImgUploading && (
+                          <span style={{ fontSize: 12, color: '#94A3B8', fontWeight: 600, textAlign: 'center', padding: '0 12px' }}>
+                            Toca para subir una imagen desde tu dispositivo
+                          </span>
+                        )}
+                        {blockImgUploading && (
+                          <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: '#7C3AED' }}>
+                            Subiendo...
+                          </div>
+                        )}
+                        {newBlockContent && !blockImgUploading && (
+                          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '4px 8px', background: 'rgba(15,23,42,0.6)', color: 'white', fontSize: 10, fontWeight: 600, textAlign: 'center' }}>
+                            Cambiar imagen
+                          </div>
+                        )}
+                      </div>
+                      <input
+                        ref={blockImgRef}
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={async e => {
+                          const file = e.target.files?.[0]
+                          if (!file || !storeId) return
+                          setBlockImgUploading(true)
+                          try { setNewBlockContent(await uploadBlockImage(file, storeId)) }
+                          catch { /* keep whatever was there before on failure */ }
+                          setBlockImgUploading(false)
+                          e.target.value = ''
+                        }}
+                      />
+                    </>
+                  )}
+                  <input
+                    type="url"
+                    value={newBlockContent}
+                    onChange={e => setNewBlockContent(e.target.value)}
+                    placeholder={newBlockType === 'image' ? 'O pega una URL de imagen' : 'URL del video (YouTube, Vimeo...)'}
+                    className="ed-block-input"
+                  />
+                </>
               )}
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

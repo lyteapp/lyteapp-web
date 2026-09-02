@@ -2312,13 +2312,15 @@ export default function EditorPage() {
                       />
                     </>
                   )}
-                  <input
-                    type="url"
-                    value={newBlockContent}
-                    onChange={e => setNewBlockContent(e.target.value)}
-                    placeholder={newBlockType === 'image' ? 'O pega una URL de imagen' : 'URL del video (YouTube, Vimeo...)'}
-                    className="ed-block-input"
-                  />
+                  {newBlockType !== 'image' && (
+                    <input
+                      type="url"
+                      value={newBlockContent}
+                      onChange={e => setNewBlockContent(e.target.value)}
+                      placeholder="URL del video (YouTube, Vimeo...)"
+                      className="ed-block-input"
+                    />
+                  )}
                   {newBlockType === 'image' && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontSize: 11, fontWeight: 600, color: '#64748B', flexShrink: 0 }}>Tamano</span>

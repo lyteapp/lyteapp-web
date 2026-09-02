@@ -470,12 +470,37 @@ export default function EditorPage() {
       doc.head.appendChild(el)
     }
     el.textContent = buildPreviewCSS()
+
+    // Live draft preview for a text block being composed in "Bloques de
+    // contenido" — a floating banner in the iframe so font/size/color/align
+    // show up as you type, before the block is actually added and saved.
+    let draft = doc.getElementById('ed-draft-block') as HTMLDivElement | null
+    if (activeTool === 'blocks' && newBlockType === 'text' && newBlockContent.trim() && doc.body) {
+      if (!draft) {
+        draft = doc.createElement('div')
+        draft.id = 'ed-draft-block'
+        Object.assign(draft.style, {
+          position: 'fixed', top: '12px', left: '12px', right: '12px', zIndex: '999999',
+          padding: '10px 14px', background: 'white', border: '2px dashed #7C3AED', borderRadius: '10px',
+          whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: '1.5',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+        })
+        doc.body.appendChild(draft)
+      }
+      draft.textContent = newBlockContent
+      draft.style.fontSize = `${newBlockFontSize}px`
+      draft.style.fontWeight = String(newBlockFontWeight)
+      draft.style.color = newBlockColor
+      draft.style.textAlign = newBlockAlign
+    } else if (draft) {
+      draft.remove()
+    }
   }
 
   useEffect(() => {
     applyPreview()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor])
+  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign])
 
   // ── Auto-save category shape (reloads iframe immediately) ─
   async function handleCategoryShape(catId: string, shape: string | null) {

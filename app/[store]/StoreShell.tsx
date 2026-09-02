@@ -840,7 +840,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
   function renderSingleBlock(block: ContentBlock, extraStyle?: React.CSSProperties) {
     return (
-      <div key={block.id} className="sf-content-block" style={{ padding: `${block.spacing ?? 0}px 0`, ...extraStyle }}>
+      <div key={block.id} id={`sf-cb-${block.id}`} className="sf-content-block" style={{ padding: `${block.spacing ?? 0}px 0`, ...extraStyle }}>
         {block.type === 'text' && (
           <div
             className="sf-block-text"
@@ -920,6 +920,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
             return (
               <div
                 key={block.groupId}
+                id={`sf-bg-${block.groupId}`}
                 className="sf-block-group"
                 style={{
                   background: groupMeta?.background || undefined,

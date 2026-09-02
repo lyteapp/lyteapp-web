@@ -510,12 +510,26 @@ export default function EditorPage() {
     } else if (draft) {
       draft.remove()
     }
+
+    // Live spacing/style for already-placed blocks and groups — sliders here
+    // (Separacion, Espacio, Radio, Relleno, color) update the iframe instantly
+    // instead of only showing up after Guardar + reload.
+    let blocksEl = doc.getElementById('ed-blocks-preview') as HTMLStyleElement | null
+    if (!blocksEl) {
+      blocksEl = doc.createElement('style')
+      blocksEl.id = 'ed-blocks-preview'
+      doc.head.appendChild(blocksEl)
+    }
+    blocksEl.textContent = [
+      ...contentBlocks.filter(b => !b.groupId).map(b => `#sf-cb-${b.id} { padding: ${b.spacing ?? 0}px 0 !important; }`),
+      ...blockGroups.map(g => `#sf-bg-${g.id} { gap: ${g.gap ?? 12}px !important; padding: ${g.padding ?? 16}px !important; border-radius: ${g.borderRadius ?? 12}px !important; background: ${g.background || '#F8FAFC'} !important; flex-direction: ${g.direction === 'row' ? 'row' : 'column'} !important; }`),
+    ].join('\n')
   }
 
   useEffect(() => {
     applyPreview()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign, newBlockFont])
+  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign, newBlockFont, contentBlocks, blockGroups])
 
   // ── Auto-save category shape (reloads iframe immediately) ─
   async function handleCategoryShape(catId: string, shape: string | null) {

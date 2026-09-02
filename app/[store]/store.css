@@ -1878,17 +1878,3 @@ html, body { overflow-x: clip; }
   width: 100%;
   display: block;
 }
-.sf-block-buttons {
-  display: flex; overflow-x: auto; scrollbar-width: none;
-  background: rgba(15,23,42,0.75); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-}
-.sf-block-buttons::-webkit-scrollbar { display: none; }
-.sf-block-btn {
-  flex: 1 0 auto; padding: 16px 22px;
-  color: white; font-size: 15px; font-weight: 700; letter-spacing: -0.01em;
-  text-decoration: none; text-align: center; white-space: nowrap;
-  border-right: 1px solid rgba(255,255,255,0.18);
-  transition: background 0.15s;
-}
-.sf-block-btn:last-child { border-right: none; }
-.sf-block-btn:hover { background: rgba(255,255,255,0.1); }

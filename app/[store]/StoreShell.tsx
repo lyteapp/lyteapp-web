@@ -97,10 +97,9 @@ function parsePaymentMethods(raw: unknown): PaymentMethod[] {
 type ContentBlock = {
   id: string
   afterId: string
-  type: 'text' | 'image' | 'video' | 'buttons'
+  type: 'text' | 'image' | 'video'
   content: string
 }
-type BlockButtonItem = { id: string; label: string; url: string }
 type TemplateConfig = {
   pageBg?: string; pageFont?: string
   fontSize?: 'small' | 'medium' | 'large'
@@ -848,17 +847,6 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 ) : (
                   <video src={block.content} controls className="sf-block-video-el" />
                 )}
-              </div>
-            )}
-            {block.type === 'buttons' && block.content && (
-              <div className="sf-block-buttons">
-                {(() => {
-                  let items: BlockButtonItem[] = []
-                  try { items = JSON.parse(block.content) } catch {}
-                  return items.filter(b => b.label?.trim() && b.url?.trim()).map(b => (
-                    <a key={b.id} href={b.url} target="_blank" rel="noopener noreferrer" className="sf-block-btn">{b.label}</a>
-                  ))
-                })()}
               </div>
             )}
           </div>

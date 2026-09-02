@@ -852,7 +852,7 @@ html, body { overflow-x: clip; }
 .sf-splash-cedula-hint.error { color: #FCA5A5; font-weight: 600; }
 
 .sf-reorder-banner {
-  position: fixed; z-index: 90;
+  position: fixed; z-index: 90; overflow: hidden;
   max-width: min(300px, calc(100vw - 32px));
   display: flex; flex-direction: column; align-items: stretch; gap: 10px;
   background: color-mix(in srgb, var(--sf-accent-color, #7C3AED) 8%, white);
@@ -860,6 +860,22 @@ html, body { overflow-x: clip; }
   border-radius: 16px; padding: 14px 16px;
   box-shadow: 0 12px 32px rgba(0,0,0,0.18);
 }
+/* When a photo is set it replaces the tinted background entirely — sits
+   behind everything, clipped to the card's own rounded corners by the
+   parent's overflow:hidden, with a bottom-up scrim so the text and
+   close button stay readable over any photo. */
+.sf-reorder-banner.has-img { background: #0F172A; border-color: transparent; }
+.sf-reorder-banner.has-img .sf-reorder-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; z-index: 0; }
+.sf-reorder-scrim {
+  position: absolute; inset: 0; z-index: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.25) 45%, rgba(0,0,0,0.7) 100%);
+}
+.sf-reorder-banner.has-img .sf-reorder-info,
+.sf-reorder-banner.has-img .sf-reorder-actions { position: relative; z-index: 1; }
+.sf-reorder-banner.has-img .sf-reorder-title { color: white; }
+.sf-reorder-banner.has-img .sf-reorder-sub { color: rgba(255,255,255,0.8); }
+.sf-reorder-banner.has-img .sf-reorder-close { color: rgba(255,255,255,0.8); }
+.sf-reorder-banner.has-img .sf-reorder-close:hover { color: white; }
 .sf-reorder-pos-right  { right: 16px; top: 50%; transform-origin: right center; animation: sfReorderInRight 0.4s cubic-bezier(0.16,1,0.3,1) both; }
 .sf-reorder-pos-left   { left: 16px; top: 50%; transform-origin: left center; animation: sfReorderInLeft 0.4s cubic-bezier(0.16,1,0.3,1) both; }
 .sf-reorder-pos-top    { top: 16px; left: 50%; transform-origin: center top; animation: sfReorderInTop 0.4s cubic-bezier(0.16,1,0.3,1) both; }
@@ -880,7 +896,6 @@ html, body { overflow-x: clip; }
   from { opacity: 0; transform: translateX(-50%) translateY(24px) scale(var(--sf-reorder-scale, 1)); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(var(--sf-reorder-scale, 1)); }
 }
-.sf-reorder-img { width: 100%; max-height: 120px; object-fit: cover; display: block; }
 .sf-reorder-title { font-size: 14px; font-weight: 700; color: #0F172A; letter-spacing: -0.01em; }
 .sf-reorder-sub { font-size: 12px; color: #64748B; margin-top: 2px; }
 .sf-reorder-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }

@@ -638,7 +638,7 @@ export default function EditorPage() {
         reorderDraft.id = 'ed-reorder-preview'
         doc.body.appendChild(reorderDraft)
       }
-      reorderDraft.className = `sf-reorder-banner sf-reorder-pos-${reorderPosition}`
+      reorderDraft.className = `sf-reorder-banner sf-reorder-pos-${reorderPosition}${reorderImageUrl ? ' has-img' : ''}`
       reorderDraft.style.pointerEvents = 'none'
       reorderDraft.style.zIndex = '999999'
       reorderDraft.style.setProperty('--sf-reorder-scale', String(reorderScale / 100))
@@ -647,7 +647,7 @@ export default function EditorPage() {
       const stroke = reorderFontWeight > 900 ? Math.min(1.4, ((reorderFontWeight - 900) / 300) * 1.4) : 0
       const fontFamily = reorderFont && FONT_MAP[reorderFont] ? FONT_MAP[reorderFont] : ''
       const titleText = (reorderTitle || '¿Pedimos lo mismo que la ultima vez?').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      const imgHtml = reorderImageUrl ? `<img src="${reorderImageUrl}" alt="" class="sf-reorder-img" />` : ''
+      const imgHtml = reorderImageUrl ? `<img src="${reorderImageUrl}" alt="" class="sf-reorder-img" /><div class="sf-reorder-scrim"></div>` : ''
       const actionHtml = reorderButtonStyle === 'slide'
         ? `<div class="sf-block-slide-bar" style="pointer-events:none; height:${reorderBm.height}px; flex:1; --sf-slide-thumb:${reorderBm.thumb}px; --sf-slide-pad:${reorderBm.pad}px;">
              <div class="sf-block-slide-fill"></div>
@@ -2812,7 +2812,10 @@ export default function EditorPage() {
                 </div>
 
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginBottom: 4 }}>Foto (opcional)</div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginBottom: 4 }}>Foto de fondo (opcional)</div>
+                  <div style={{ fontSize: 10, color: '#94A3B8', marginBottom: 6 }}>
+                    Si subes una foto, reemplaza el fondo de color y llena todo el cuadro con las mismas esquinas curvas.
+                  </div>
                   <div
                     onClick={() => reorderImgRef.current?.click()}
                     style={{

@@ -3308,16 +3308,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
         const itemCount = lastOrder.items.reduce((s, i) => s + i.quantity, 0)
         return (
           <div
-            className={`sf-reorder-banner sf-reorder-pos-${reorderPos}`}
+            className={`sf-reorder-banner sf-reorder-pos-${reorderPos}${cfg.reorderImageUrl ? ' has-img' : ''}`}
             style={{ '--sf-reorder-scale': (cfg.reorderScale ?? 100) / 100 } as React.CSSProperties}
           >
             {cfg.reorderImageUrl && (
-              <img
-                src={cfg.reorderImageUrl}
-                alt=""
-                className="sf-reorder-img"
-                style={{ borderRadius: PRODUCT_PHOTO_RADIUS[cfgPhotoShape] ?? undefined }}
-              />
+              <>
+                <img src={cfg.reorderImageUrl} alt="" className="sf-reorder-img" />
+                <div className="sf-reorder-scrim" />
+              </>
             )}
             <div className="sf-reorder-info">
               <div

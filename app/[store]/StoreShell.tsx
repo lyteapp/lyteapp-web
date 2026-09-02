@@ -103,6 +103,7 @@ type ContentBlock = {
   fontWeight?: number
   color?: string
   align?: 'left' | 'center' | 'right'
+  spacing?: number
 }
 type BlockButtonItem = { id: string; label: string; target: 'product' | 'category'; targetId: string }
 type TemplateConfig = {
@@ -836,7 +837,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     return (
       <>
         {matching.map(block => (
-          <div key={block.id} className="sf-content-block">
+          <div key={block.id} className="sf-content-block" style={{ padding: `${block.spacing ?? 8}px 0` }}>
             {block.type === 'text' && (
               <div
                 className="sf-block-text"

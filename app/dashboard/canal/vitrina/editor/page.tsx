@@ -94,6 +94,7 @@ type ProductLite = { id: string; name: string }
 type ContentBlock = {
   id: string; afterId: string; type: 'text' | 'image' | 'video' | 'buttons'; content: string
   fontSize?: number; fontWeight?: number; color?: string; align?: 'left' | 'center' | 'right'
+  spacing?: number
 }
 type BlockButtonItem = { id: string; label: string; target: 'product' | 'category'; targetId: string }
 
@@ -231,6 +232,7 @@ export default function EditorPage() {
   const [newBlockFontWeight, setNewBlockFontWeight] = useState(400)
   const [newBlockColor, setNewBlockColor] = useState('#0F172A')
   const [newBlockAlign, setNewBlockAlign] = useState<'left' | 'center' | 'right'>('left')
+  const [newBlockSpacing, setNewBlockSpacing] = useState(8)
   const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'price' | 'categories' | 'brand' | 'blocks' | 'product' | null>(null)
   const [iframeKey, setIframeKey]   = useState(0)
   const [saving, setSaving]         = useState(false)
@@ -1868,6 +1870,17 @@ export default function EditorPage() {
                 />
               )}
 
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: '#64748B', flexShrink: 0 }}>Separacion</span>
+                <input
+                  type="range" min={0} max={60} step={2}
+                  value={newBlockSpacing}
+                  onChange={e => setNewBlockSpacing(Number(e.target.value))}
+                  style={{ flex: 1 }}
+                />
+                <span style={{ fontSize: 11, color: '#94A3B8', width: 32, flexShrink: 0, textAlign: 'right' }}>{newBlockSpacing}px</span>
+              </div>
+
               <button
                 onClick={() => {
                   if (newBlockType === 'buttons') {
@@ -1875,6 +1888,7 @@ export default function EditorPage() {
                     if (valid.length === 0) return
                     setContentBlocks(prev => [...prev, {
                       id: crypto.randomUUID(), afterId: newBlockPos, type: 'buttons', content: JSON.stringify(valid),
+                      spacing: newBlockSpacing,
                     }])
                     setNewBlockButtons([])
                     return
@@ -1885,6 +1899,7 @@ export default function EditorPage() {
                     afterId: newBlockPos,
                     type: newBlockType,
                     content: newBlockContent.trim(),
+                    spacing: newBlockSpacing,
                     ...(newBlockType === 'text' ? {
                       fontSize: newBlockFontSize, fontWeight: newBlockFontWeight,
                       color: newBlockColor, align: newBlockAlign,

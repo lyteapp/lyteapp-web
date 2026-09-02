@@ -1386,6 +1386,12 @@ html, body { overflow-x: clip; }
 .sf-modal-base-price {
   font-size: 18px; font-weight: 800; color: var(--sf-accent-color, #7C3AED);
   margin-top: 6px; letter-spacing: -0.03em;
+  display: flex; align-items: baseline; gap: 8px;
+  transition: color 0.15s;
+}
+.sf-modal-base-price-was {
+  font-size: 13px; font-weight: 500; color: #94A3B8;
+  text-decoration: line-through;
 }
 
 .sf-modal-body {

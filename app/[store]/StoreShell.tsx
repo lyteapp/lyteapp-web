@@ -938,7 +938,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
             <div className="sf-modal-product-info">
               <div className="sf-modal-name">{modalProduct.name}</div>
               {modalProduct.description && <div className="sf-modal-desc">{modalProduct.description}</div>}
-              <div className="sf-modal-base-price">{currencySymbol}{Number(modalProduct.price).toFixed(2)}</div>
+              <div className="sf-modal-base-price">
+                {currencySymbol}{(modalProduct.price + modalExtraPrice).toFixed(2)}
+                {modalExtraPrice > 0 && <span className="sf-modal-base-price-was">{currencySymbol}{Number(modalProduct.price).toFixed(2)}</span>}
+              </div>
             </div>
           </div>
 

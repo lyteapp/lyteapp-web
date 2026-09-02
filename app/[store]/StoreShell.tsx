@@ -107,7 +107,10 @@ type ContentBlock = {
   font?: string
   groupId?: string
 }
-type BlockGroup = { id: string; afterId: string; background?: string; borderRadius?: number; padding?: number }
+type BlockGroup = {
+  id: string; afterId: string; background?: string; borderRadius?: number; padding?: number
+  direction?: 'column' | 'row'; gap?: number
+}
 type BlockButtonItem = { id: string; label: string; target: 'product' | 'category'; targetId: string }
 type TemplateConfig = {
   pageBg?: string; pageFont?: string
@@ -834,9 +837,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
     ...(cfg.productNameFont && FONT_MAP[cfg.productNameFont] ? { '--sf-product-name-font': FONT_MAP[cfg.productNameFont] } : {}),
   } as React.CSSProperties
 
-  function renderSingleBlock(block: ContentBlock) {
+  function renderSingleBlock(block: ContentBlock, extraStyle?: React.CSSProperties) {
     return (
-      <div key={block.id} className="sf-content-block" style={{ padding: `${block.spacing ?? 8}px 0` }}>
+      <div key={block.id} className="sf-content-block" style={{ padding: `${block.spacing ?? 8}px 0`, ...extraStyle }}>
         {block.type === 'text' && (
           <div
             className="sf-block-text"
@@ -912,6 +915,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
             renderedGroups.add(block.groupId)
             const groupMeta = groups.find(g => g.id === block.groupId)
             const members = matching.filter(m => m.groupId === block.groupId)
+            const isRow = groupMeta?.direction === 'row'
             return (
               <div
                 key={block.groupId}
@@ -920,9 +924,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   background: groupMeta?.background || undefined,
                   borderRadius: groupMeta?.borderRadius !== undefined ? `${groupMeta.borderRadius}px` : undefined,
                   padding: groupMeta?.padding !== undefined ? `${groupMeta.padding}px` : undefined,
+                  display: isRow ? 'flex' : undefined,
+                  flexWrap: isRow ? 'wrap' : undefined,
+                  gap: isRow ? `${groupMeta?.gap ?? 12}px` : undefined,
                 }}
               >
-                {members.map(renderSingleBlock)}
+                {members.map(m => renderSingleBlock(m, isRow ? { flex: '1 1 0', minWidth: 0, padding: 0 } : undefined))}
               </div>
             )
           }

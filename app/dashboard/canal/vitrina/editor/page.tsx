@@ -774,6 +774,57 @@ export default function EditorPage() {
     }
     return units
   }
+  function renderOrderArrows(afterId: string, index: number, count: number) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0, marginTop: 2 }}>
+        <button
+          onClick={() => moveDisplayUnit(afterId, index, -1)}
+          disabled={index === 0}
+          style={{ width: 20, height: 16, border: 'none', background: 'transparent', color: '#94A3B8', cursor: index === 0 ? 'default' : 'pointer', fontSize: 10, padding: 0, opacity: index === 0 ? 0.3 : 1, lineHeight: 1 }}
+        >
+          ▲
+        </button>
+        <button
+          onClick={() => moveDisplayUnit(afterId, index, 1)}
+          disabled={index >= count - 1}
+          style={{ width: 20, height: 16, border: 'none', background: 'transparent', color: '#94A3B8', cursor: index >= count - 1 ? 'default' : 'pointer', fontSize: 10, padding: 0, opacity: index >= count - 1 ? 0.3 : 1, lineHeight: 1 }}
+        >
+          ▼
+        </button>
+      </div>
+    )
+  }
+  // Reorders a display unit (a single block, or a whole group moved as one)
+  // relative to the other units sharing the same position — units at a
+  // different afterId are never touched, since they render somewhere else
+  // on the page entirely.
+  function moveDisplayUnit(afterId: string, unitIndex: number, dir: -1 | 1) {
+    const matching = contentBlocks.filter(b => b.afterId === afterId)
+    const seen = new Set<string>()
+    const units: string[][] = []
+    for (const b of matching) {
+      if (b.groupId) {
+        if (seen.has(b.groupId)) continue
+        seen.add(b.groupId)
+        units.push(matching.filter(m => m.groupId === b.groupId).map(m => m.id))
+      } else {
+        units.push([b.id])
+      }
+    }
+    const otherIndex = unitIndex + dir
+    if (otherIndex < 0 || otherIndex >= units.length) return
+    const newUnits = [...units]
+    ;[newUnits[unitIndex], newUnits[otherIndex]] = [newUnits[otherIndex], newUnits[unitIndex]]
+    const newOrderIds = newUnits.flat()
+    const matchingIdSet = new Set(matching.map(b => b.id))
+    const blockById = new Map(contentBlocks.map(b => [b.id, b]))
+    let ptr = 0
+    setContentBlocks(contentBlocks.map(b => {
+      if (!matchingIdSet.has(b.id)) return b
+      const replacementId = newOrderIds[ptr++]
+      return blockById.get(replacementId)!
+    }))
+  }
   function startEditBlock(b: ContentBlock) {
     setEditingBlockId(b.id)
     setNewBlockPos(b.afterId)
@@ -887,6 +938,19 @@ export default function EditorPage() {
         </button>
       </div>
     )
+  }
+
+  // Precomputed once per render: which index each display unit sits at
+  // within its own position (afterId), and how many units share that
+  // position — drives the reorder arrows' enabled/disabled state.
+  const blockDisplayUnits = computeBlockDisplayUnits()
+  const blockUnitPositionIndex = new Map<BlockDisplayUnit, number>()
+  const blockUnitPositionCount: Record<string, number> = {}
+  for (const u of blockDisplayUnits) {
+    const key = u.kind === 'single' ? u.block.afterId : u.group.afterId
+    const idx = blockUnitPositionCount[key] ?? 0
+    blockUnitPositionIndex.set(u, idx)
+    blockUnitPositionCount[key] = idx + 1
   }
 
   return (
@@ -2032,8 +2096,13 @@ export default function EditorPage() {
                   </div>
                 )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-                  {computeBlockDisplayUnits().map(unit => unit.kind === 'single' ? (
+                  {blockDisplayUnits.map(unit => {
+                    const afterId = unit.kind === 'single' ? unit.block.afterId : unit.group.afterId
+                    const index = blockUnitPositionIndex.get(unit) ?? 0
+                    const count = blockUnitPositionCount[afterId] ?? 1
+                    return unit.kind === 'single' ? (
                     <div key={unit.block.id} style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                      {renderOrderArrows(afterId, index, count)}
                       {groupMode && !unit.block.groupId && (
                         <input
                           type="checkbox"
@@ -2047,6 +2116,7 @@ export default function EditorPage() {
                   ) : (
                     <div key={unit.group.id} className="ed-block-group">
                       <div className="ed-block-group-head">
+                        {renderOrderArrows(afterId, index, count)}
                         <span className="ed-block-item-type" style={{ background: '#EDE9FE', color: '#7C3AED' }}>Grupo · {unit.members.length} bloques</span>
                         <button
                           onClick={() => ungroupBlocks(unit.group.id)}
@@ -2133,7 +2203,7 @@ export default function EditorPage() {
                         </select>
                       )}
                     </div>
-                  ))}
+                  )})}
                 </div>
               </>
             )}

@@ -91,7 +91,10 @@ const CATEGORY_LAYOUTS = [
 
 type Category = { id: string; name: string }
 type ProductLite = { id: string; name: string }
-type ContentBlock = { id: string; afterId: string; type: 'text' | 'image' | 'video' | 'buttons'; content: string }
+type ContentBlock = {
+  id: string; afterId: string; type: 'text' | 'image' | 'video' | 'buttons'; content: string
+  fontSize?: number; fontWeight?: number; color?: string; align?: 'left' | 'center' | 'right'
+}
 type BlockButtonItem = { id: string; label: string; target: 'product' | 'category'; targetId: string }
 
 function FontSelect({
@@ -224,6 +227,10 @@ export default function EditorPage() {
   const [newBlockType, setNewBlockType]     = useState<'text' | 'image' | 'video' | 'buttons'>('text')
   const [newBlockContent, setNewBlockContent] = useState('')
   const [newBlockButtons, setNewBlockButtons] = useState<BlockButtonItem[]>([])
+  const [newBlockFontSize, setNewBlockFontSize] = useState(15)
+  const [newBlockFontWeight, setNewBlockFontWeight] = useState(400)
+  const [newBlockColor, setNewBlockColor] = useState('#0F172A')
+  const [newBlockAlign, setNewBlockAlign] = useState<'left' | 'center' | 'right'>('left')
   const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'price' | 'categories' | 'brand' | 'blocks' | 'product' | null>(null)
   const [iframeKey, setIframeKey]   = useState(0)
   const [saving, setSaving]         = useState(false)
@@ -1713,13 +1720,67 @@ export default function EditorPage() {
               </div>
 
               {newBlockType === 'text' ? (
-                <textarea
-                  value={newBlockContent}
-                  onChange={e => setNewBlockContent(e.target.value)}
-                  placeholder="Escribe tu texto aqui..."
-                  className="ed-block-textarea"
-                  rows={4}
-                />
+                <>
+                  <textarea
+                    value={newBlockContent}
+                    onChange={e => setNewBlockContent(e.target.value)}
+                    placeholder="Escribe tu texto aqui..."
+                    className="ed-block-textarea"
+                    rows={4}
+                  />
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <input
+                      type="number" min={10} max={48} step={1}
+                      value={newBlockFontSize}
+                      onChange={e => setNewBlockFontSize(Number(e.target.value) || 15)}
+                      className="ed-block-input"
+                      style={{ width: 64, flex: 'none' }}
+                      title="Tamano de letra (px)"
+                    />
+                    <span style={{ fontSize: 11, color: '#94A3B8' }}>px</span>
+                    <input
+                      type="color"
+                      value={newBlockColor}
+                      onChange={e => setNewBlockColor(e.target.value)}
+                      style={{ width: 34, height: 34, padding: 0, border: '1.5px solid #E2E8F0', borderRadius: 8, cursor: 'pointer', flexShrink: 0, marginLeft: 'auto' }}
+                      title="Color del texto"
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {([[400, 'Normal'], [600, 'Medio'], [700, 'Negrita']] as const).map(([w, label]) => (
+                      <button
+                        key={w}
+                        onClick={() => setNewBlockFontWeight(w)}
+                        style={{
+                          flex: 1, padding: '7px 4px', borderRadius: 8,
+                          border: `2px solid ${newBlockFontWeight === w ? '#7C3AED' : '#E2E8F0'}`,
+                          background: newBlockFontWeight === w ? '#F5F3FF' : 'white',
+                          color: newBlockFontWeight === w ? '#7C3AED' : '#64748B',
+                          fontSize: 11, fontWeight: w, cursor: 'pointer',
+                        }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {([['left', 'Izquierda'], ['center', 'Centro'], ['right', 'Derecha']] as const).map(([al, label]) => (
+                      <button
+                        key={al}
+                        onClick={() => setNewBlockAlign(al)}
+                        style={{
+                          flex: 1, padding: '7px 4px', borderRadius: 8,
+                          border: `2px solid ${newBlockAlign === al ? '#7C3AED' : '#E2E8F0'}`,
+                          background: newBlockAlign === al ? '#F5F3FF' : 'white',
+                          color: newBlockAlign === al ? '#7C3AED' : '#64748B',
+                          fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                        }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </>
               ) : newBlockType === 'buttons' ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {newBlockButtons.map((btn, i) => (
@@ -1799,6 +1860,10 @@ export default function EditorPage() {
                     afterId: newBlockPos,
                     type: newBlockType,
                     content: newBlockContent.trim(),
+                    ...(newBlockType === 'text' ? {
+                      fontSize: newBlockFontSize, fontWeight: newBlockFontWeight,
+                      color: newBlockColor, align: newBlockAlign,
+                    } : {}),
                   }])
                   setNewBlockContent('')
                 }}

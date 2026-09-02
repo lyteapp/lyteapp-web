@@ -99,6 +99,10 @@ type ContentBlock = {
   afterId: string
   type: 'text' | 'image' | 'video' | 'buttons'
   content: string
+  fontSize?: number
+  fontWeight?: number
+  color?: string
+  align?: 'left' | 'center' | 'right'
 }
 type BlockButtonItem = { id: string; label: string; target: 'product' | 'category'; targetId: string }
 type TemplateConfig = {
@@ -834,7 +838,17 @@ export default function StoreShell({ store, products, categories = [], initialBc
         {matching.map(block => (
           <div key={block.id} className="sf-content-block">
             {block.type === 'text' && (
-              <div className="sf-block-text">{block.content}</div>
+              <div
+                className="sf-block-text"
+                style={{
+                  fontSize: block.fontSize ? `${block.fontSize}px` : undefined,
+                  fontWeight: block.fontWeight || undefined,
+                  color: block.color || undefined,
+                  textAlign: block.align || undefined,
+                }}
+              >
+                {block.content}
+              </div>
             )}
             {block.type === 'image' && block.content && (
               <img src={block.content} alt="" className="sf-block-img" />

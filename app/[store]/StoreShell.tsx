@@ -729,6 +729,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     librebask:    'var(--font-libre-baskerville), "Libre Baskerville", serif',
     caveat:       'var(--font-caveat), Caveat, cursive',
     abril:        'var(--font-abril-fatface), "Abril Fatface", serif',
+    fredoka:      'var(--font-fredoka), Fredoka, sans-serif',
   }
   const cfg          = store.template_config ?? {}
   const cfgFontFamily  = cfg.pageFont ? FONT_MAP[cfg.pageFont] : undefined

@@ -13,7 +13,7 @@ import {
   Merriweather, Raleway, Nunito, Oswald, Cormorant_Garamond,
   Inter, Roboto, DM_Sans, Work_Sans, Manrope, Outfit,
   Space_Grotesk, Quicksand, Josefin_Sans, Bebas_Neue,
-  Libre_Baskerville, Caveat, Abril_Fatface,
+  Libre_Baskerville, Caveat, Abril_Fatface, Fredoka,
 } from "next/font/google";
 import { LocaleProvider } from "./lib/LocaleProvider";
 import "./globals.css";
@@ -57,6 +57,7 @@ const bebasNeue       = Bebas_Neue({ variable: "--font-bebas-neue", subsets: ["l
 const libreBaskerville = Libre_Baskerville({ variable: "--font-libre-baskerville", subsets: ["latin"], weight: ["400", "700"], display: "swap" });
 const caveat          = Caveat({ variable: "--font-caveat", subsets: ["latin"], weight: ["400", "700"], display: "swap" });
 const abrilFatface    = Abril_Fatface({ variable: "--font-abril-fatface", subsets: ["latin"], weight: "400", display: "swap" });
+const fredoka          = Fredoka({ variable: "--font-fredoka", subsets: ["latin"], weight: ["500", "600", "700"], display: "swap" });
 
 export const metadata: Metadata = {
   title: "LyteApp — Tu negocio. Más liviano. Más rápido.",
@@ -91,7 +92,7 @@ export default function RootLayout({
     <html
       lang="es"
       data-scroll-behavior="smooth"
-      className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} ${poppins.variable} ${playfair.variable} ${montserrat.variable} ${lato.variable} ${merriweather.variable} ${raleway.variable} ${nunito.variable} ${oswald.variable} ${cormorant.variable} ${inter.variable} ${roboto.variable} ${dmSans.variable} ${workSans.variable} ${manrope.variable} ${outfit.variable} ${spaceGrotesk.variable} ${quicksand.variable} ${josefinSans.variable} ${bebasNeue.variable} ${libreBaskerville.variable} ${caveat.variable} ${abrilFatface.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} ${poppins.variable} ${playfair.variable} ${montserrat.variable} ${lato.variable} ${merriweather.variable} ${raleway.variable} ${nunito.variable} ${oswald.variable} ${cormorant.variable} ${inter.variable} ${roboto.variable} ${dmSans.variable} ${workSans.variable} ${manrope.variable} ${outfit.variable} ${spaceGrotesk.variable} ${quicksand.variable} ${josefinSans.variable} ${bebasNeue.variable} ${libreBaskerville.variable} ${caveat.variable} ${abrilFatface.variable} ${fredoka.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <LocaleProvider>{children}</LocaleProvider>

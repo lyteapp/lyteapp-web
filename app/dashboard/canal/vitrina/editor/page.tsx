@@ -48,6 +48,7 @@ const FONT_MAP: Record<string, string> = {
   librebask:    'var(--font-libre-baskerville), "Libre Baskerville", serif',
   caveat:       'var(--font-caveat), Caveat, cursive',
   abril:        'var(--font-abril-fatface), "Abril Fatface", serif',
+  fredoka:      'var(--font-fredoka), Fredoka, sans-serif',
 }
 
 const PAGE_FONTS = [
@@ -69,6 +70,7 @@ const PAGE_FONTS = [
   { id: 'nunito',       name: 'Nunito'     },
   { id: 'oswald',       name: 'Oswald'     },
   { id: 'bebas',        name: 'Bebas Neue' },
+  { id: 'fredoka',      name: 'Fredoka'    },
   { id: 'fraunces',     name: 'Elegante'   },
   { id: 'playfair',     name: 'Clasica'    },
   { id: 'merriweather', name: 'Editorial'  },

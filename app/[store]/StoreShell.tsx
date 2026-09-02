@@ -59,6 +59,9 @@ function buttonSizeMetrics(buttonSize: number | 'sm' | 'md' | 'lg' | undefined) 
   const rowWidth = Math.round(clamped * 13)
   return { fontSize: clamped, padV, padH, height, thumb, pad, rowWidth }
 }
+// Same corner radius the store's product photos use (cfg.photoShape),
+// so a content-block image can match them instead of always being sharp.
+const PRODUCT_PHOTO_RADIUS: Record<string, string> = { square: '18px', sharp: '4px', circle: '50%' }
 type Additional     = { name: string; price: number; calories?: number; fat?: number; protein?: number; carbs?: number }
 type ColorVariant   = { label: string; color: string; imageUrl: string }
 type NutritionInfo  = { enabled?: boolean; calories?: number; fat?: number; protein?: number; carbs?: number }
@@ -123,6 +126,7 @@ type ContentBlock = {
   groupId?: string
   buttonStyle?: 'solid' | 'outline' | 'slide'
   buttonSize?: number | 'sm' | 'md' | 'lg'
+  imageSize?: number
 }
 type BlockGroup = {
   id: string; afterId: string; background?: string; borderRadius?: number; padding?: number
@@ -926,7 +930,16 @@ export default function StoreShell({ store, products, categories = [], initialBc
           </div>
         )}
         {block.type === 'image' && block.content && (
-          <img src={block.content} alt="" className="sf-block-img" />
+          <img
+            src={block.content}
+            alt=""
+            className="sf-block-img"
+            style={{
+              maxWidth: `${block.imageSize ?? 100}%`,
+              margin: (block.imageSize ?? 100) < 100 ? '0 auto' : undefined,
+              borderRadius: PRODUCT_PHOTO_RADIUS[cfgPhotoShape] ?? undefined,
+            }}
+          />
         )}
         {block.type === 'video' && block.content && (
           <div className="sf-block-video-wrap">

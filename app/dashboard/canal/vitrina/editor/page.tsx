@@ -134,6 +134,7 @@ type ContentBlock = {
   spacing?: number; font?: string; groupId?: string
   buttonStyle?: 'solid' | 'outline' | 'slide'
   buttonSize?: number | 'sm' | 'md' | 'lg'
+  imageSize?: number
 }
 type BlockButtonItem = { id: string; label: string; target: 'product' | 'category'; targetId: string }
 // Mirrors StoreShell.tsx's buttonSizeMetrics — keeps the dashboard's draft
@@ -297,6 +298,7 @@ export default function EditorPage() {
   const [newBlockButtonStyle, setNewBlockButtonStyle] = useState<'solid' | 'outline' | 'slide'>('solid')
   const [newBlockButtonSize, setNewBlockButtonSize] = useState(14)
   const [blockImgUploading, setBlockImgUploading] = useState(false)
+  const [newBlockImageSize, setNewBlockImageSize] = useState(100)
   const blockImgRef = useRef<HTMLInputElement>(null)
   const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'price' | 'categories' | 'brand' | 'blocks' | 'product' | null>(null)
   const [iframeKey, setIframeKey]   = useState(0)
@@ -765,6 +767,7 @@ export default function EditorPage() {
     setNewBlockFont(b.font ?? '')
     setNewBlockButtonStyle(b.buttonStyle ?? 'solid')
     setNewBlockButtonSize(buttonSizeMetrics(b.buttonSize).fontSize)
+    setNewBlockImageSize(b.imageSize ?? 100)
   }
   function cancelEditBlock() {
     setEditingBlockId(null)
@@ -778,6 +781,7 @@ export default function EditorPage() {
     setNewBlockFont('')
     setNewBlockButtonStyle('solid')
     setNewBlockButtonSize(14)
+    setNewBlockImageSize(100)
   }
 
   function renderBlockItemRow(b: ContentBlock) {
@@ -2311,6 +2315,18 @@ export default function EditorPage() {
                     placeholder={newBlockType === 'image' ? 'O pega una URL de imagen' : 'URL del video (YouTube, Vimeo...)'}
                     className="ed-block-input"
                   />
+                  {newBlockType === 'image' && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: '#64748B', flexShrink: 0 }}>Tamano</span>
+                      <input
+                        type="range" min={10} max={100} step={5}
+                        value={newBlockImageSize}
+                        onChange={e => setNewBlockImageSize(Number(e.target.value))}
+                        style={{ flex: 1 }}
+                      />
+                      <span style={{ fontSize: 11, color: '#94A3B8', width: 32, flexShrink: 0, textAlign: 'right' }}>{newBlockImageSize}%</span>
+                    </div>
+                  )}
                 </>
               )}
 
@@ -2356,6 +2372,7 @@ export default function EditorPage() {
                       color: newBlockType === 'text' ? newBlockColor : undefined,
                       align: newBlockType === 'text' ? newBlockAlign : undefined,
                       font: newBlockType === 'text' ? (newBlockFont || undefined) : undefined,
+                      imageSize: newBlockType === 'image' ? newBlockImageSize : undefined,
                     }
                     if (editingBlockId) {
                       setContentBlocks(prev => prev.map(x => x.id === editingBlockId ? { ...x, ...fields } : x))

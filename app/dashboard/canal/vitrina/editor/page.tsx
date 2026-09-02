@@ -2201,22 +2201,15 @@ export default function EditorPage() {
                       title="Color del texto"
                     />
                   </div>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    {([[400, 'Normal'], [600, 'Medio'], [700, 'Negrita']] as const).map(([w, label]) => (
-                      <button
-                        key={w}
-                        onClick={() => setNewBlockFontWeight(w)}
-                        style={{
-                          flex: 1, padding: '7px 4px', borderRadius: 8,
-                          border: `2px solid ${newBlockFontWeight === w ? '#7C3AED' : '#E2E8F0'}`,
-                          background: newBlockFontWeight === w ? '#F5F3FF' : 'white',
-                          color: newBlockFontWeight === w ? '#7C3AED' : '#64748B',
-                          fontSize: 11, fontWeight: w, cursor: 'pointer',
-                        }}
-                      >
-                        {label}
-                      </button>
-                    ))}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: '#64748B', flexShrink: 0 }}>Grosor</span>
+                    <input
+                      type="range" min={100} max={900} step={100}
+                      value={newBlockFontWeight}
+                      onChange={e => setNewBlockFontWeight(Number(e.target.value))}
+                      style={{ flex: 1 }}
+                    />
+                    <span style={{ fontSize: 11, color: '#94A3B8', width: 28, flexShrink: 0, textAlign: 'right', fontWeight: newBlockFontWeight }}>{newBlockFontWeight}</span>
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
                     {([['left', 'Izquierda'], ['center', 'Centro'], ['right', 'Derecha']] as const).map(([al, label]) => (

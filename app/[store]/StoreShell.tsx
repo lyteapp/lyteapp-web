@@ -187,6 +187,7 @@ type TemplateConfig = {
   headerHeightPx?: number
   modalWizard?: boolean
   enableReorder?: boolean
+  reorderFloatSeconds?: number
   contentBlocks?: ContentBlock[]
   blockGroups?: BlockGroup[]
   hiddenCategoryIds?: string[]
@@ -403,6 +404,16 @@ export default function StoreShell({ store, products, categories = [], initialBc
       .catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customerPhone])
+
+  // Auto-hides the floating "Repetir pedido" card after the configured
+  // number of seconds — 0 (or unset) means it stays until closed by hand.
+  useEffect(() => {
+    if (!showReorder) return
+    const seconds = store.template_config?.reorderFloatSeconds
+    if (!seconds || seconds <= 0) return
+    const t = setTimeout(() => setShowReorder(false), seconds * 1000)
+    return () => clearTimeout(t)
+  }, [showReorder, store.template_config?.reorderFloatSeconds])
 
   function reorderLast() {
     if (!lastOrder) return

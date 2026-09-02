@@ -283,6 +283,7 @@ export default function EditorPage() {
   const [headerSticky, setHeaderSticky] = useState(false)
   const [modalWizard, setModalWizard] = useState(false)
   const [enableReorder, setEnableReorder] = useState(false)
+  const [reorderFloatSeconds, setReorderFloatSeconds] = useState(0)
   const [headerHeightPx, setHeaderHeightPx] = useState(56)
   const [contentBlocks, setContentBlocks]   = useState<ContentBlock[]>([])
   const [blockGroups, setBlockGroups]       = useState<BlockGroup[]>([])
@@ -386,6 +387,7 @@ export default function EditorPage() {
       if (cfg.headerSticky !== undefined) setHeaderSticky(cfg.headerSticky as boolean)
       if (cfg.modalWizard !== undefined) setModalWizard(cfg.modalWizard as boolean)
       if (cfg.enableReorder !== undefined) setEnableReorder(cfg.enableReorder as boolean)
+      if (cfg.reorderFloatSeconds !== undefined) setReorderFloatSeconds(cfg.reorderFloatSeconds as number)
       if (cfg.headerHeightPx) setHeaderHeightPx(Number(cfg.headerHeightPx))
       if (cfg.contentBlocks) setContentBlocks(cfg.contentBlocks as ContentBlock[])
       if (cfg.blockGroups) setBlockGroups(cfg.blockGroups as BlockGroup[])
@@ -699,7 +701,7 @@ export default function EditorPage() {
       priceColor, accentColor, priceFont: priceFont || pageFont, priceSize,
       catTitleFont: catTitleFont || undefined, productNameFont: productNameFont || undefined,
       categoryNavStyle, showCatNav, stickyCatNav, catNavOverBanner, categorySpacing,
-      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, showHeaderSearch, showHeaderCart, headerIconColor: headerIconColor || undefined, headerOverBanner, headerSticky, headerHeightPx, modalWizard, enableReorder,
+      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, showHeaderSearch, showHeaderCart, headerIconColor: headerIconColor || undefined, headerOverBanner, headerSticky, headerHeightPx, modalWizard, enableReorder, reorderFloatSeconds: reorderFloatSeconds > 0 ? reorderFloatSeconds : undefined,
       headerLayout: undefined,
       contentBlocks: contentBlocks.length > 0 ? contentBlocks : undefined,
       blockGroups: blockGroups.length > 0 ? blockGroups : undefined,
@@ -2656,6 +2658,29 @@ export default function EditorPage() {
                 </div>
               </div>
             </label>
+
+            {enableReorder && (
+              <div style={{ padding: '12px 14px', background: '#F8FAFC', borderRadius: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#0F172A' }}>Segundos flotando</span>
+                  <span style={{ fontSize: 12, color: '#7C3AED', fontWeight: 600 }}>
+                    {reorderFloatSeconds > 0 ? `${reorderFloatSeconds}s` : 'No se oculta'}
+                  </span>
+                </div>
+                <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 8 }}>
+                  Cuanto tiempo se muestra el boton flotante antes de ocultarse solo. En 0 se queda hasta que el cliente lo cierre.
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={60}
+                  step={1}
+                  value={reorderFloatSeconds}
+                  onChange={e => setReorderFloatSeconds(Number(e.target.value))}
+                  style={{ width: '100%' }}
+                />
+              </div>
+            )}
 
             <PanelSave />
           </div>

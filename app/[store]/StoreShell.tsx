@@ -104,6 +104,7 @@ type ContentBlock = {
   color?: string
   align?: 'left' | 'center' | 'right'
   spacing?: number
+  font?: string
 }
 type BlockButtonItem = { id: string; label: string; target: 'product' | 'category'; targetId: string }
 type TemplateConfig = {
@@ -846,6 +847,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   fontWeight: block.fontWeight || undefined,
                   color: block.color || undefined,
                   textAlign: block.align || undefined,
+                  fontFamily: block.font && FONT_MAP[block.font] ? FONT_MAP[block.font] : undefined,
                 }}
               >
                 {block.content}

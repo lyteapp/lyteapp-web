@@ -94,7 +94,7 @@ type ProductLite = { id: string; name: string }
 type ContentBlock = {
   id: string; afterId: string; type: 'text' | 'image' | 'video' | 'buttons'; content: string
   fontSize?: number; fontWeight?: number; color?: string; align?: 'left' | 'center' | 'right'
-  spacing?: number
+  spacing?: number; font?: string
 }
 type BlockButtonItem = { id: string; label: string; target: 'product' | 'category'; targetId: string }
 
@@ -233,6 +233,7 @@ export default function EditorPage() {
   const [newBlockColor, setNewBlockColor] = useState('#0F172A')
   const [newBlockAlign, setNewBlockAlign] = useState<'left' | 'center' | 'right'>('left')
   const [newBlockSpacing, setNewBlockSpacing] = useState(8)
+  const [newBlockFont, setNewBlockFont] = useState('')
   const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'price' | 'categories' | 'brand' | 'blocks' | 'product' | null>(null)
   const [iframeKey, setIframeKey]   = useState(0)
   const [saving, setSaving]         = useState(false)
@@ -494,6 +495,7 @@ export default function EditorPage() {
       draft.style.fontWeight = String(newBlockFontWeight)
       draft.style.color = newBlockColor
       draft.style.textAlign = newBlockAlign
+      draft.style.fontFamily = newBlockFont && FONT_MAP[newBlockFont] ? FONT_MAP[newBlockFont] : ''
     } else if (draft) {
       draft.remove()
     }
@@ -502,7 +504,7 @@ export default function EditorPage() {
   useEffect(() => {
     applyPreview()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign])
+  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign, newBlockFont])
 
   // ── Auto-save category shape (reloads iframe immediately) ─
   async function handleCategoryShape(catId: string, shape: string | null) {
@@ -1755,6 +1757,12 @@ export default function EditorPage() {
                     className="ed-block-textarea"
                     rows={4}
                   />
+                  <FontSelect
+                    value={newBlockFont}
+                    onChange={setNewBlockFont}
+                    options={[{ id: '', name: 'Fuente de la tienda' }, ...PAGE_FONTS]}
+                    placeholder="Fuente de la tienda"
+                  />
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                     <input
                       type="number" min={10} max={48} step={1}
@@ -1902,7 +1910,7 @@ export default function EditorPage() {
                     spacing: newBlockSpacing,
                     ...(newBlockType === 'text' ? {
                       fontSize: newBlockFontSize, fontWeight: newBlockFontWeight,
-                      color: newBlockColor, align: newBlockAlign,
+                      color: newBlockColor, align: newBlockAlign, font: newBlockFont || undefined,
                     } : {}),
                   }])
                   setNewBlockContent('')

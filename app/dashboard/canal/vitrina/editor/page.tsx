@@ -625,6 +625,48 @@ export default function EditorPage() {
       draft.remove()
     }
 
+    // Live draft preview for the "Repetir pedido" floating card while its
+    // own tool is open, so position/text/photo/button choices show up
+    // immediately without needing a real matched last-order lookup.
+    let reorderDraft = doc.getElementById('ed-reorder-preview') as HTMLDivElement | null
+    const showReorderDraft = activeTool === 'reorder' && enableReorder
+    if (showReorderDraft && doc.body) {
+      if (!reorderDraft) {
+        reorderDraft = doc.createElement('div')
+        reorderDraft.id = 'ed-reorder-preview'
+        doc.body.appendChild(reorderDraft)
+      }
+      reorderDraft.className = `sf-reorder-banner sf-reorder-pos-${reorderPosition}`
+      reorderDraft.style.pointerEvents = 'none'
+      reorderDraft.style.zIndex = '999999'
+      const reorderBm = buttonSizeMetrics(reorderButtonSize)
+      const weight = Math.min(900, reorderFontWeight)
+      const stroke = reorderFontWeight > 900 ? Math.min(1.4, ((reorderFontWeight - 900) / 300) * 1.4) : 0
+      const fontFamily = reorderFont && FONT_MAP[reorderFont] ? FONT_MAP[reorderFont] : ''
+      const titleText = (reorderTitle || '¿Pedimos lo mismo que la ultima vez?').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      const imgHtml = reorderImageUrl ? `<img src="${reorderImageUrl}" alt="" class="sf-reorder-img" />` : ''
+      const actionHtml = reorderButtonStyle === 'slide'
+        ? `<div class="sf-block-slide-bar" style="pointer-events:none; height:${reorderBm.height}px; flex:1; --sf-slide-thumb:${reorderBm.thumb}px; --sf-slide-pad:${reorderBm.pad}px;">
+             <div class="sf-block-slide-fill"></div>
+             <span class="sf-block-slide-label" style="font-size:${Math.max(10, reorderBm.fontSize - 2)}px;">Repetir pedido</span>
+             <div class="sf-block-slide-thumb">&#8594;</div>
+           </div>`
+        : `<button type="button" class="sf-reorder-btn${reorderButtonStyle === 'outline' ? ' sf-reorder-btn-outline' : ''}" style="pointer-events:none; font-size:${reorderBm.fontSize}px; padding:${reorderBm.padV}px ${reorderBm.padH}px;">Repetir pedido</button>`
+      reorderDraft.innerHTML = `
+        ${imgHtml}
+        <div class="sf-reorder-info">
+          <div class="sf-reorder-title" style="font-size:${reorderFontSize}px; font-weight:${weight}; color:${reorderColor || ''}; font-family:${fontFamily}; -webkit-text-stroke:${stroke > 0 ? `${stroke}px currentColor` : ''};">${titleText}</div>
+          <div class="sf-reorder-sub">2 productos</div>
+        </div>
+        <div class="sf-reorder-actions">
+          ${actionHtml}
+          <button type="button" class="sf-reorder-close" style="pointer-events:none;"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" d="M15 5L5 15M5 5l10 10"/></svg></button>
+        </div>
+      `
+    } else if (reorderDraft) {
+      reorderDraft.remove()
+    }
+
     // Live spacing/style for already-placed blocks and groups — sliders here
     // (Separacion, Espacio, Radio, Relleno, color) update the iframe instantly
     // instead of only showing up after Guardar + reload.
@@ -643,7 +685,7 @@ export default function EditorPage() {
   useEffect(() => {
     applyPreview()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign, newBlockFont, contentBlocks, blockGroups, newBlockButtons, newBlockButtonStyle, newBlockButtonSize])
+  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign, newBlockFont, contentBlocks, blockGroups, newBlockButtons, newBlockButtonStyle, newBlockButtonSize, enableReorder, reorderPosition, reorderTitle, reorderImageUrl, reorderFontSize, reorderFontWeight, reorderColor, reorderFont, reorderButtonStyle, reorderButtonSize])
 
   // ── Auto-save category shape (reloads iframe immediately) ─
   async function handleCategoryShape(catId: string, shape: string | null) {

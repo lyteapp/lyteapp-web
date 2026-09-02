@@ -136,6 +136,8 @@ type ContentBlock = {
   buttonSize?: number | 'sm' | 'md' | 'lg'
   imageSize?: number
   linkUrl?: string
+  linkTarget?: 'url' | 'category'
+  linkCategoryId?: string
 }
 type BlockButtonItem = { id: string; label: string; target: 'product' | 'category'; targetId: string }
 // Mirrors StoreShell.tsx's buttonSizeMetrics — keeps the dashboard's draft
@@ -301,6 +303,8 @@ export default function EditorPage() {
   const [blockImgUploading, setBlockImgUploading] = useState(false)
   const [newBlockImageSize, setNewBlockImageSize] = useState(100)
   const [newBlockLinkUrl, setNewBlockLinkUrl] = useState('')
+  const [newBlockLinkTarget, setNewBlockLinkTarget] = useState<'url' | 'category'>('url')
+  const [newBlockLinkCategoryId, setNewBlockLinkCategoryId] = useState('')
   const blockImgRef = useRef<HTMLInputElement>(null)
   const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'price' | 'categories' | 'brand' | 'blocks' | 'product' | null>(null)
   const [iframeKey, setIframeKey]   = useState(0)
@@ -771,6 +775,8 @@ export default function EditorPage() {
     setNewBlockButtonSize(buttonSizeMetrics(b.buttonSize).fontSize)
     setNewBlockImageSize(b.imageSize ?? 100)
     setNewBlockLinkUrl(b.linkUrl ?? '')
+    setNewBlockLinkTarget(b.linkTarget ?? 'url')
+    setNewBlockLinkCategoryId(b.linkCategoryId ?? '')
   }
   function cancelEditBlock() {
     setEditingBlockId(null)
@@ -786,6 +792,8 @@ export default function EditorPage() {
     setNewBlockButtonSize(14)
     setNewBlockImageSize(100)
     setNewBlockLinkUrl('')
+    setNewBlockLinkTarget('url')
+    setNewBlockLinkCategoryId('')
   }
 
   function renderBlockItemRow(b: ContentBlock) {
@@ -2334,13 +2342,46 @@ export default function EditorPage() {
                     </div>
                   )}
                   {newBlockType === 'image' && (
-                    <input
-                      type="url"
-                      value={newBlockLinkUrl}
-                      onChange={e => setNewBlockLinkUrl(e.target.value)}
-                      placeholder="Enlace al hacer clic (opcional)"
-                      className="ed-block-input"
-                    />
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginBottom: 4 }}>Al hacer clic (opcional)</div>
+                      <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                        {([['url', 'Enlace'], ['category', 'Categoria']] as const).map(([tg, label]) => (
+                          <button
+                            key={tg}
+                            onClick={() => setNewBlockLinkTarget(tg)}
+                            style={{
+                              flex: 1, padding: '8px 4px', borderRadius: 8,
+                              border: `2px solid ${newBlockLinkTarget === tg ? '#7C3AED' : '#E2E8F0'}`,
+                              background: newBlockLinkTarget === tg ? '#F5F3FF' : 'white',
+                              color: newBlockLinkTarget === tg ? '#7C3AED' : '#64748B',
+                              fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                            }}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                      {newBlockLinkTarget === 'category' ? (
+                        <select
+                          value={newBlockLinkCategoryId}
+                          onChange={e => setNewBlockLinkCategoryId(e.target.value)}
+                          className="ed-block-select"
+                        >
+                          <option value="">Elige una categoria...</option>
+                          {categories.map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type="url"
+                          value={newBlockLinkUrl}
+                          onChange={e => setNewBlockLinkUrl(e.target.value)}
+                          placeholder="https://..."
+                          className="ed-block-input"
+                        />
+                      )}
+                    </div>
                   )}
                 </>
               )}
@@ -2389,6 +2430,8 @@ export default function EditorPage() {
                       font: newBlockType === 'text' ? (newBlockFont || undefined) : undefined,
                       imageSize: newBlockType === 'image' ? newBlockImageSize : undefined,
                       linkUrl: newBlockType === 'image' ? (newBlockLinkUrl.trim() || undefined) : undefined,
+                      linkTarget: newBlockType === 'image' ? newBlockLinkTarget : undefined,
+                      linkCategoryId: newBlockType === 'image' ? (newBlockLinkCategoryId || undefined) : undefined,
                     }
                     if (editingBlockId) {
                       setContentBlocks(prev => prev.map(x => x.id === editingBlockId ? { ...x, ...fields } : x))

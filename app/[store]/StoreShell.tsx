@@ -128,6 +128,8 @@ type ContentBlock = {
   buttonSize?: number | 'sm' | 'md' | 'lg'
   imageSize?: number
   linkUrl?: string
+  linkTarget?: 'url' | 'category'
+  linkCategoryId?: string
 }
 type BlockGroup = {
   id: string; afterId: string; background?: string; borderRadius?: number; padding?: number
@@ -931,6 +933,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
           </div>
         )}
         {block.type === 'image' && block.content && (() => {
+          const isCategoryLink = block.linkTarget === 'category' && !!block.linkCategoryId
+          const isUrlLink = (block.linkTarget ?? 'url') === 'url' && !!block.linkUrl?.trim()
           const img = (
             <img
               src={block.content}
@@ -941,11 +945,15 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 margin: (block.imageSize ?? 100) < 100 ? '0 auto' : undefined,
                 borderRadius: PRODUCT_PHOTO_RADIUS[cfgPhotoShape] ?? undefined,
                 display: 'block',
-                cursor: block.linkUrl?.trim() ? 'pointer' : undefined,
+                cursor: (isCategoryLink || isUrlLink) ? 'pointer' : undefined,
               }}
+              onClick={isCategoryLink ? () => {
+                const cat = categories.find(c => c.id === block.linkCategoryId)
+                if (cat) { setFocusCategory(cat); window.scrollTo({ top: 0 }) }
+              } : undefined}
             />
           )
-          return block.linkUrl?.trim()
+          return isUrlLink
             ? <a href={block.linkUrl} target="_blank" rel="noopener noreferrer">{img}</a>
             : img
         })()}

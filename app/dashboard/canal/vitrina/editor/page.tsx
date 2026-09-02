@@ -135,6 +135,7 @@ type ContentBlock = {
   buttonStyle?: 'solid' | 'outline' | 'slide'
   buttonSize?: number | 'sm' | 'md' | 'lg'
   imageSize?: number
+  linkUrl?: string
 }
 type BlockButtonItem = { id: string; label: string; target: 'product' | 'category'; targetId: string }
 // Mirrors StoreShell.tsx's buttonSizeMetrics — keeps the dashboard's draft
@@ -299,6 +300,7 @@ export default function EditorPage() {
   const [newBlockButtonSize, setNewBlockButtonSize] = useState(14)
   const [blockImgUploading, setBlockImgUploading] = useState(false)
   const [newBlockImageSize, setNewBlockImageSize] = useState(100)
+  const [newBlockLinkUrl, setNewBlockLinkUrl] = useState('')
   const blockImgRef = useRef<HTMLInputElement>(null)
   const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'price' | 'categories' | 'brand' | 'blocks' | 'product' | null>(null)
   const [iframeKey, setIframeKey]   = useState(0)
@@ -768,6 +770,7 @@ export default function EditorPage() {
     setNewBlockButtonStyle(b.buttonStyle ?? 'solid')
     setNewBlockButtonSize(buttonSizeMetrics(b.buttonSize).fontSize)
     setNewBlockImageSize(b.imageSize ?? 100)
+    setNewBlockLinkUrl(b.linkUrl ?? '')
   }
   function cancelEditBlock() {
     setEditingBlockId(null)
@@ -782,6 +785,7 @@ export default function EditorPage() {
     setNewBlockButtonStyle('solid')
     setNewBlockButtonSize(14)
     setNewBlockImageSize(100)
+    setNewBlockLinkUrl('')
   }
 
   function renderBlockItemRow(b: ContentBlock) {
@@ -2327,6 +2331,15 @@ export default function EditorPage() {
                       <span style={{ fontSize: 11, color: '#94A3B8', width: 32, flexShrink: 0, textAlign: 'right' }}>{newBlockImageSize}%</span>
                     </div>
                   )}
+                  {newBlockType === 'image' && (
+                    <input
+                      type="url"
+                      value={newBlockLinkUrl}
+                      onChange={e => setNewBlockLinkUrl(e.target.value)}
+                      placeholder="Enlace al hacer clic (opcional)"
+                      className="ed-block-input"
+                    />
+                  )}
                 </>
               )}
 
@@ -2373,6 +2386,7 @@ export default function EditorPage() {
                       align: newBlockType === 'text' ? newBlockAlign : undefined,
                       font: newBlockType === 'text' ? (newBlockFont || undefined) : undefined,
                       imageSize: newBlockType === 'image' ? newBlockImageSize : undefined,
+                      linkUrl: newBlockType === 'image' ? (newBlockLinkUrl.trim() || undefined) : undefined,
                     }
                     if (editingBlockId) {
                       setContentBlocks(prev => prev.map(x => x.id === editingBlockId ? { ...x, ...fields } : x))

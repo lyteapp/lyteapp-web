@@ -127,6 +127,7 @@ type ContentBlock = {
   buttonStyle?: 'solid' | 'outline' | 'slide'
   buttonSize?: number | 'sm' | 'md' | 'lg'
   imageSize?: number
+  linkUrl?: string
 }
 type BlockGroup = {
   id: string; afterId: string; background?: string; borderRadius?: number; padding?: number
@@ -929,18 +930,25 @@ export default function StoreShell({ store, products, categories = [], initialBc
             {block.content}
           </div>
         )}
-        {block.type === 'image' && block.content && (
-          <img
-            src={block.content}
-            alt=""
-            className="sf-block-img"
-            style={{
-              maxWidth: `${block.imageSize ?? 100}%`,
-              margin: (block.imageSize ?? 100) < 100 ? '0 auto' : undefined,
-              borderRadius: PRODUCT_PHOTO_RADIUS[cfgPhotoShape] ?? undefined,
-            }}
-          />
-        )}
+        {block.type === 'image' && block.content && (() => {
+          const img = (
+            <img
+              src={block.content}
+              alt=""
+              className="sf-block-img"
+              style={{
+                maxWidth: `${block.imageSize ?? 100}%`,
+                margin: (block.imageSize ?? 100) < 100 ? '0 auto' : undefined,
+                borderRadius: PRODUCT_PHOTO_RADIUS[cfgPhotoShape] ?? undefined,
+                display: 'block',
+                cursor: block.linkUrl?.trim() ? 'pointer' : undefined,
+              }}
+            />
+          )
+          return block.linkUrl?.trim()
+            ? <a href={block.linkUrl} target="_blank" rel="noopener noreferrer">{img}</a>
+            : img
+        })()}
         {block.type === 'video' && block.content && (
           <div className="sf-block-video-wrap">
             {block.content.includes('youtu') || block.content.includes('vimeo') ? (

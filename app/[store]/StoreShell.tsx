@@ -197,6 +197,7 @@ type TemplateConfig = {
   reorderFont?: string
   reorderButtonStyle?: 'solid' | 'outline' | 'slide'
   reorderButtonSize?: number
+  reorderButtonColor?: string
   reorderScale?: number
   contentBlocks?: ContentBlock[]
   blockGroups?: BlockGroup[]
@@ -3309,7 +3310,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
         return (
           <div
             className={`sf-reorder-banner sf-reorder-pos-${reorderPos}${cfg.reorderImageUrl ? ' has-img' : ''}`}
-            style={{ '--sf-reorder-scale': (cfg.reorderScale ?? 100) / 100 } as React.CSSProperties}
+            style={{
+              '--sf-reorder-scale': (cfg.reorderScale ?? 100) / 100,
+              ...(cfg.reorderButtonColor ? { '--sf-accent-color': cfg.reorderButtonColor } : {}),
+            } as React.CSSProperties}
           >
             {cfg.reorderImageUrl && (
               <>

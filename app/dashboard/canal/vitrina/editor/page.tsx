@@ -293,6 +293,7 @@ export default function EditorPage() {
   const [reorderFont, setReorderFont] = useState('')
   const [reorderButtonStyle, setReorderButtonStyle] = useState<'solid' | 'outline' | 'slide'>('solid')
   const [reorderButtonSize, setReorderButtonSize] = useState(14)
+  const [reorderButtonColor, setReorderButtonColor] = useState('')
   const [reorderScale, setReorderScale] = useState(100)
   const [reorderImgUploading, setReorderImgUploading] = useState(false)
   const reorderImgRef = useRef<HTMLInputElement>(null)
@@ -409,6 +410,7 @@ export default function EditorPage() {
       if (cfg.reorderFont !== undefined) setReorderFont(cfg.reorderFont as string)
       if (cfg.reorderButtonStyle !== undefined) setReorderButtonStyle(cfg.reorderButtonStyle as 'solid' | 'outline' | 'slide')
       if (cfg.reorderButtonSize !== undefined) setReorderButtonSize(cfg.reorderButtonSize as number)
+      if (cfg.reorderButtonColor !== undefined) setReorderButtonColor(cfg.reorderButtonColor as string)
       if (cfg.reorderScale !== undefined) setReorderScale(cfg.reorderScale as number)
       if (cfg.headerHeightPx) setHeaderHeightPx(Number(cfg.headerHeightPx))
       if (cfg.contentBlocks) setContentBlocks(cfg.contentBlocks as ContentBlock[])
@@ -642,6 +644,8 @@ export default function EditorPage() {
       reorderDraft.style.pointerEvents = 'none'
       reorderDraft.style.zIndex = '999999'
       reorderDraft.style.setProperty('--sf-reorder-scale', String(reorderScale / 100))
+      if (reorderButtonColor) reorderDraft.style.setProperty('--sf-accent-color', reorderButtonColor)
+      else reorderDraft.style.removeProperty('--sf-accent-color')
       const reorderBm = buttonSizeMetrics(reorderButtonSize)
       const weight = Math.min(900, reorderFontWeight)
       const stroke = reorderFontWeight > 900 ? Math.min(1.4, ((reorderFontWeight - 900) / 300) * 1.4) : 0
@@ -688,7 +692,7 @@ export default function EditorPage() {
   useEffect(() => {
     applyPreview()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign, newBlockFont, contentBlocks, blockGroups, newBlockButtons, newBlockButtonStyle, newBlockButtonSize, enableReorder, reorderPosition, reorderTitle, reorderImageUrl, reorderFontSize, reorderFontWeight, reorderColor, reorderFont, reorderButtonStyle, reorderButtonSize, reorderScale])
+  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign, newBlockFont, contentBlocks, blockGroups, newBlockButtons, newBlockButtonStyle, newBlockButtonSize, enableReorder, reorderPosition, reorderTitle, reorderImageUrl, reorderFontSize, reorderFontWeight, reorderColor, reorderFont, reorderButtonStyle, reorderButtonSize, reorderButtonColor, reorderScale])
 
   // ── Auto-save category shape (reloads iframe immediately) ─
   async function handleCategoryShape(catId: string, shape: string | null) {
@@ -776,6 +780,7 @@ export default function EditorPage() {
       reorderFont: reorderFont || undefined,
       reorderButtonStyle: reorderButtonStyle !== 'solid' ? reorderButtonStyle : undefined,
       reorderButtonSize: reorderButtonSize !== 14 ? reorderButtonSize : undefined,
+      reorderButtonColor: reorderButtonColor || undefined,
       reorderScale: reorderScale !== 100 ? reorderScale : undefined,
       headerLayout: undefined,
       contentBlocks: contentBlocks.length > 0 ? contentBlocks : undefined,
@@ -2931,6 +2936,24 @@ export default function EditorPage() {
                     style={{ flex: 1 }}
                   />
                   <span style={{ fontSize: 11, color: '#94A3B8', width: 28, flexShrink: 0, textAlign: 'right' }}>{reorderButtonSize}px</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: '#64748B', flexShrink: 0 }}>Color del boton</span>
+                  <input
+                    type="color"
+                    value={reorderButtonColor || '#7C3AED'}
+                    onChange={e => setReorderButtonColor(e.target.value)}
+                    style={{ width: 34, height: 34, padding: 0, border: '1.5px solid #E2E8F0', borderRadius: 8, cursor: 'pointer', flexShrink: 0 }}
+                    title="Color del boton"
+                  />
+                  {reorderButtonColor && (
+                    <button
+                      onClick={() => setReorderButtonColor('')}
+                      style={{ padding: '5px 10px', borderRadius: 8, border: '1.5px solid #E2E8F0', background: 'white', color: '#64748B', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      Usar color de la tienda
+                    </button>
+                  )}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 11, fontWeight: 600, color: '#64748B', flexShrink: 0 }}>Tamano del anuncio</span>

@@ -106,6 +106,7 @@ type ContentBlock = {
   spacing?: number
   font?: string
   groupId?: string
+  buttonStyle?: 'solid' | 'outline' | 'slide'
 }
 type BlockGroup = {
   id: string; afterId: string; background?: string; borderRadius?: number; padding?: number
@@ -441,6 +442,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // A "buttons" content block can send the shopper to a single category's
   // own focused view instead of scrolling the full catalog.
   const [focusCategory, setFocusCategory] = useState<{ id: string; name: string } | null>(null)
+  // "Deslizar" button style in content blocks — drag past ~82% to activate,
+  // same mechanic as the splash screen's slide-to-reveal keypad bar.
+  const [blockSlideProgress, setBlockSlideProgress] = useState<Record<string, number>>({})
+  const [blockSliding, setBlockSliding] = useState<Record<string, boolean>>({})
+  const blockSlideBarRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+  const blockSlideDraggingRef = useRef<Record<string, boolean>>({})
   const [selectedVariants, setSelectedVariants] = useState<Record<string, number>>({})
 
   // Product options modal
@@ -838,6 +845,48 @@ export default function StoreShell({ store, products, categories = [], initialBc
     ...(cfg.productNameFont && FONT_MAP[cfg.productNameFont] ? { '--sf-product-name-font': FONT_MAP[cfg.productNameFont] } : {}),
   } as React.CSSProperties
 
+  function blockSlideUpdate(btnId: string, clientX: number) {
+    const bar = blockSlideBarRefs.current.get(btnId)
+    if (!bar) return
+    const rect = bar.getBoundingClientRect()
+    const thumbSize = 48, pad = 4
+    const travel = rect.width - thumbSize - pad * 2
+    const raw = travel > 0 ? (clientX - rect.left - pad - thumbSize / 2) / travel : 0
+    setBlockSlideProgress(prev => ({ ...prev, [btnId]: Math.min(1, Math.max(0, raw)) }))
+  }
+  function blockSlidePointerDown(btnId: string, e: React.PointerEvent) {
+    blockSlideDraggingRef.current[btnId] = true
+    setBlockSliding(prev => ({ ...prev, [btnId]: true }))
+    e.currentTarget.setPointerCapture(e.pointerId)
+    blockSlideUpdate(btnId, e.clientX)
+  }
+  function blockSlidePointerMove(btnId: string, e: React.PointerEvent) {
+    if (!blockSlideDraggingRef.current[btnId]) return
+    blockSlideUpdate(btnId, e.clientX)
+  }
+  function blockSlidePointerUp(btnId: string, onActivate: () => void) {
+    if (!blockSlideDraggingRef.current[btnId]) return
+    blockSlideDraggingRef.current[btnId] = false
+    setBlockSliding(prev => ({ ...prev, [btnId]: false }))
+    setBlockSlideProgress(prev => {
+      const p = prev[btnId] ?? 0
+      if (p >= 0.82) {
+        setTimeout(() => {
+          onActivate()
+          setBlockSlideProgress(p2 => ({ ...p2, [btnId]: 0 }))
+        }, 200)
+        return { ...prev, [btnId]: 1 }
+      }
+      return { ...prev, [btnId]: 0 }
+    })
+  }
+  function blockSlideCancel(btnId: string) {
+    if (!blockSlideDraggingRef.current[btnId]) return
+    blockSlideDraggingRef.current[btnId] = false
+    setBlockSliding(prev => ({ ...prev, [btnId]: false }))
+    setBlockSlideProgress(prev => ({ ...prev, [btnId]: 0 }))
+  }
+
   function renderSingleBlock(block: ContentBlock, extraStyle?: React.CSSProperties) {
     return (
       <div key={block.id} id={`sf-cb-${block.id}`} className="sf-content-block" style={{ padding: `${block.spacing ?? 0}px 0`, ...extraStyle }}>
@@ -873,24 +922,48 @@ export default function StoreShell({ store, products, categories = [], initialBc
           </div>
         )}
         {block.type === 'buttons' && block.content && (
-          <div className="sf-block-buttons">
+          <div className={`sf-block-buttons${block.buttonStyle === 'slide' ? ' sf-block-buttons-slide' : ''}`}>
             {(() => {
               let items: BlockButtonItem[] = []
               try { items = JSON.parse(block.content) } catch {}
-              return items.filter(b => b.label?.trim() && b.targetId).map(b => (
+              const valid = items.filter(b => b.label?.trim() && b.targetId)
+              const activate = (b: BlockButtonItem) => {
+                if (b.target === 'product') {
+                  const p = products.find(pr => pr.id === b.targetId)
+                  if (p) openProductModal(p)
+                } else {
+                  const cat = categories.find(c => c.id === b.targetId)
+                  if (cat) { setFocusCategory(cat); window.scrollTo({ top: 0 }) }
+                }
+              }
+              if (block.buttonStyle === 'slide') {
+                return valid.map(b => (
+                  <div
+                    key={b.id}
+                    ref={el => { if (el) blockSlideBarRefs.current.set(b.id, el); else blockSlideBarRefs.current.delete(b.id) }}
+                    className={`sf-block-slide-bar${blockSliding[b.id] ? ' sliding' : ''}`}
+                    style={{ '--sf-slide-progress': blockSlideProgress[b.id] ?? 0 } as React.CSSProperties}
+                    onPointerDown={e => blockSlidePointerDown(b.id, e)}
+                    onPointerMove={e => blockSlidePointerMove(b.id, e)}
+                    onPointerUp={() => blockSlidePointerUp(b.id, () => activate(b))}
+                    onPointerCancel={() => blockSlideCancel(b.id)}
+                  >
+                    <div className="sf-block-slide-fill" />
+                    <span className="sf-block-slide-label">{b.label}</span>
+                    <div className="sf-block-slide-thumb">
+                      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
+                        <path d="M7 4l6 6-6 6" />
+                      </svg>
+                    </div>
+                  </div>
+                ))
+              }
+              return valid.map(b => (
                 <button
                   key={b.id}
                   type="button"
-                  className="sf-block-btn"
-                  onClick={() => {
-                    if (b.target === 'product') {
-                      const p = products.find(pr => pr.id === b.targetId)
-                      if (p) openProductModal(p)
-                    } else {
-                      const cat = categories.find(c => c.id === b.targetId)
-                      if (cat) { setFocusCategory(cat); window.scrollTo({ top: 0 }) }
-                    }
-                  }}
+                  className={`sf-block-btn${block.buttonStyle === 'outline' ? ' sf-block-btn-outline' : ''}`}
+                  onClick={() => activate(b)}
                 >
                   {b.label}
                 </button>

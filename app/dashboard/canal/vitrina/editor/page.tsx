@@ -97,6 +97,7 @@ type ContentBlock = {
   id: string; afterId: string; type: 'text' | 'image' | 'video' | 'buttons'; content: string
   fontSize?: number; fontWeight?: number; color?: string; align?: 'left' | 'center' | 'right'
   spacing?: number; font?: string; groupId?: string
+  buttonStyle?: 'solid' | 'outline' | 'slide'
 }
 type BlockButtonItem = { id: string; label: string; target: 'product' | 'category'; targetId: string }
 type BlockGroup = {
@@ -244,6 +245,7 @@ export default function EditorPage() {
   const [newBlockSpacing, setNewBlockSpacing] = useState(0)
   const [newBlockFont, setNewBlockFont] = useState('')
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null)
+  const [newBlockButtonStyle, setNewBlockButtonStyle] = useState<'solid' | 'outline' | 'slide'>('solid')
   const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'price' | 'categories' | 'brand' | 'blocks' | 'product' | null>(null)
   const [iframeKey, setIframeKey]   = useState(0)
   const [saving, setSaving]         = useState(false)
@@ -683,6 +685,7 @@ export default function EditorPage() {
     setNewBlockAlign(b.align ?? 'left')
     setNewBlockSpacing(b.spacing ?? 0)
     setNewBlockFont(b.font ?? '')
+    setNewBlockButtonStyle(b.buttonStyle ?? 'solid')
   }
   function cancelEditBlock() {
     setEditingBlockId(null)
@@ -694,6 +697,7 @@ export default function EditorPage() {
     setNewBlockAlign('left')
     setNewBlockSpacing(0)
     setNewBlockFont('')
+    setNewBlockButtonStyle('solid')
   }
 
   function renderBlockItemRow(b: ContentBlock) {
@@ -2137,6 +2141,26 @@ export default function EditorPage() {
                   >
                     + Agregar boton
                   </button>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginBottom: 4 }}>Estilo del boton</div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {([['solid', 'Solido'], ['outline', 'Contorno'], ['slide', 'Deslizar']] as const).map(([st, label]) => (
+                        <button
+                          key={st}
+                          onClick={() => setNewBlockButtonStyle(st)}
+                          style={{
+                            flex: 1, padding: '8px 4px', borderRadius: 8,
+                            border: `2px solid ${newBlockButtonStyle === st ? '#7C3AED' : '#E2E8F0'}`,
+                            background: newBlockButtonStyle === st ? '#F5F3FF' : 'white',
+                            color: newBlockButtonStyle === st ? '#7C3AED' : '#64748B',
+                            fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                          }}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <input
@@ -2167,14 +2191,14 @@ export default function EditorPage() {
                       if (valid.length === 0) return
                       if (editingBlockId) {
                         setContentBlocks(prev => prev.map(x => x.id === editingBlockId
-                          ? { ...x, afterId: newBlockPos, type: 'buttons' as const, content: JSON.stringify(valid), spacing: newBlockSpacing }
+                          ? { ...x, afterId: newBlockPos, type: 'buttons' as const, content: JSON.stringify(valid), spacing: newBlockSpacing, buttonStyle: newBlockButtonStyle }
                           : x))
                         cancelEditBlock()
                         return
                       }
                       setContentBlocks(prev => [...prev, {
                         id: crypto.randomUUID(), afterId: newBlockPos, type: 'buttons', content: JSON.stringify(valid),
-                        spacing: newBlockSpacing,
+                        spacing: newBlockSpacing, buttonStyle: newBlockButtonStyle,
                       }])
                       setNewBlockButtons([])
                       return

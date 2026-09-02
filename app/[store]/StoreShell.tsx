@@ -1230,7 +1230,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
               </div>
               <div className="sf-modal-wizard-question">
                 {modalWizardStep.kind === 'variable' ? modalWizardStep.group.label : 'Color'}
-                {modalWizardStep.kind === 'variable' && wizardVarMinMax.max > 1 && (
+                {modalWizardStep.kind === 'variable' && (
                   <span className={`sf-modal-count${wizardVarMinMax.min > 0 && wizardVarCount < wizardVarMinMax.min ? '' : ' complete'}`}>{wizardVarCount}/{wizardVarMinMax.max}</span>
                 )}
                 {modalWizardStep.kind === 'variable' && wizardVarMinMax.min > 0 && (
@@ -1310,9 +1310,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   <div key={gi} className="sf-modal-section">
                     <div className="sf-modal-section-title">
                       {g.label}
-                      {max > 1 && (
-                        <span className={`sf-modal-count${min > 0 && count < min ? '' : ' complete'}`}>{count}/{max}</span>
-                      )}
+                      <span className={`sf-modal-count${min > 0 && count < min ? '' : ' complete'}`}>{count}/{max}</span>
                       {min > 0
                         ? <span className="sf-required">requerido{max > 1 ? ` · elige ${min === max ? min : `${min}-${max}`}` : ''}</span>
                         : max > 1 && <span className="sf-optional">opcional · hasta {max}</span>}

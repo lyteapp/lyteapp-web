@@ -932,8 +932,15 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   gap: `${groupMeta?.gap ?? 12}px`,
                 }}
               >
-                {/* Members inside a group share one gap control instead of stacking their own individual spacing */}
-                {members.map(m => renderSingleBlock(m, isRow ? { flex: '1 1 0', minWidth: 0, padding: 0 } : { padding: 0 }))}
+                {/* Members inside a group share one gap control instead of stacking their own individual spacing.
+                    In a row, text/buttons hug their own content so they sit right next to their neighbor instead
+                    of each being stretched into an equal-width column (which left dead space around short text) —
+                    image/video still take an equal share since their box needs a real width to size from. */}
+                {members.map(m => renderSingleBlock(m, isRow
+                  ? (m.type === 'image' || m.type === 'video'
+                      ? { flex: '1 1 0', minWidth: 0, padding: 0 }
+                      : { flex: '0 0 auto', padding: 0 })
+                  : { padding: 0 }))}
               </div>
             )
           }

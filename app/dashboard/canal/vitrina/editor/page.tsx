@@ -241,6 +241,7 @@ export default function EditorPage() {
   const [newBlockAlign, setNewBlockAlign] = useState<'left' | 'center' | 'right'>('left')
   const [newBlockSpacing, setNewBlockSpacing] = useState(8)
   const [newBlockFont, setNewBlockFont] = useState('')
+  const [editingBlockId, setEditingBlockId] = useState<string | null>(null)
   const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'price' | 'categories' | 'brand' | 'blocks' | 'product' | null>(null)
   const [iframeKey, setIframeKey]   = useState(0)
   const [saving, setSaving]         = useState(false)
@@ -649,14 +650,54 @@ export default function EditorPage() {
     }
     return units
   }
+  function startEditBlock(b: ContentBlock) {
+    setEditingBlockId(b.id)
+    setNewBlockPos(b.afterId)
+    setNewBlockType(b.type)
+    if (b.type === 'buttons') {
+      try { setNewBlockButtons(JSON.parse(b.content)) } catch { setNewBlockButtons([]) }
+      setNewBlockContent('')
+    } else {
+      setNewBlockContent(b.content)
+      setNewBlockButtons([])
+    }
+    setNewBlockFontSize(b.fontSize ?? 15)
+    setNewBlockFontWeight(b.fontWeight ?? 400)
+    setNewBlockColor(b.color ?? '#0F172A')
+    setNewBlockAlign(b.align ?? 'left')
+    setNewBlockSpacing(b.spacing ?? 8)
+    setNewBlockFont(b.font ?? '')
+  }
+  function cancelEditBlock() {
+    setEditingBlockId(null)
+    setNewBlockContent('')
+    setNewBlockButtons([])
+    setNewBlockFontSize(15)
+    setNewBlockFontWeight(400)
+    setNewBlockColor('#0F172A')
+    setNewBlockAlign('left')
+    setNewBlockSpacing(8)
+    setNewBlockFont('')
+  }
+
   function renderBlockItemRow(b: ContentBlock) {
     return (
-      <div className="ed-block-item">
+      <div className="ed-block-item" style={editingBlockId === b.id ? { outline: '2px solid #7C3AED', outlineOffset: 2 } : undefined}>
         <div className="ed-block-item-head">
           <span className="ed-block-item-type">{b.type === 'text' ? 'Texto' : b.type === 'image' ? 'Imagen' : b.type === 'video' ? 'Video' : 'Botones'}</span>
           <span className="ed-block-item-pos">
             {b.afterId === 'top' ? 'Al inicio' : b.afterId === 'bottom' ? 'Al final' : (categories.find(c => c.id === b.afterId)?.name ?? b.afterId)}
           </span>
+          <button
+            onClick={() => startEditBlock(b)}
+            style={{ width: 26, height: 26, borderRadius: 6, border: 'none', background: 'transparent', color: '#94A3B8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 }}
+            title="Editar bloque"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
+              <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+          </button>
           <button
             className="ed-block-delete"
             onClick={() => {
@@ -665,6 +706,7 @@ export default function EditorPage() {
                 const remaining = contentBlocks.filter(x => x.groupId === b.groupId && x.id !== b.id)
                 if (remaining.length < 2) ungroupBlocks(b.groupId)
               }
+              if (editingBlockId === b.id) cancelEditBlock()
             }}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -1928,7 +1970,7 @@ export default function EditorPage() {
               </>
             )}
 
-            <div className="ed-tp-subtitle">Agregar bloque</div>
+            <div className="ed-tp-subtitle">{editingBlockId ? 'Editando bloque' : 'Agregar bloque'}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <select
                 value={newBlockPos}
@@ -2101,41 +2143,69 @@ export default function EditorPage() {
                 <span style={{ fontSize: 11, color: '#94A3B8', width: 32, flexShrink: 0, textAlign: 'right' }}>{newBlockSpacing}px</span>
               </div>
 
-              <button
-                onClick={() => {
-                  if (newBlockType === 'buttons') {
-                    const valid = newBlockButtons.filter(b => b.label.trim() && b.targetId)
-                    if (valid.length === 0) return
-                    setContentBlocks(prev => [...prev, {
-                      id: crypto.randomUUID(), afterId: newBlockPos, type: 'buttons', content: JSON.stringify(valid),
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => {
+                    if (newBlockType === 'buttons') {
+                      const valid = newBlockButtons.filter(b => b.label.trim() && b.targetId)
+                      if (valid.length === 0) return
+                      if (editingBlockId) {
+                        setContentBlocks(prev => prev.map(x => x.id === editingBlockId
+                          ? { ...x, afterId: newBlockPos, type: 'buttons' as const, content: JSON.stringify(valid), spacing: newBlockSpacing }
+                          : x))
+                        cancelEditBlock()
+                        return
+                      }
+                      setContentBlocks(prev => [...prev, {
+                        id: crypto.randomUUID(), afterId: newBlockPos, type: 'buttons', content: JSON.stringify(valid),
+                        spacing: newBlockSpacing,
+                      }])
+                      setNewBlockButtons([])
+                      return
+                    }
+                    if (!newBlockContent.trim()) return
+                    const fields = {
+                      afterId: newBlockPos,
+                      type: newBlockType,
+                      content: newBlockContent.trim(),
                       spacing: newBlockSpacing,
-                    }])
-                    setNewBlockButtons([])
-                    return
-                  }
-                  if (!newBlockContent.trim()) return
-                  setContentBlocks(prev => [...prev, {
-                    id: crypto.randomUUID(),
-                    afterId: newBlockPos,
-                    type: newBlockType,
-                    content: newBlockContent.trim(),
-                    spacing: newBlockSpacing,
-                    ...(newBlockType === 'text' ? {
-                      fontSize: newBlockFontSize, fontWeight: newBlockFontWeight,
-                      color: newBlockColor, align: newBlockAlign, font: newBlockFont || undefined,
-                    } : {}),
-                  }])
-                  setNewBlockContent('')
-                }}
-                style={{
-                  padding: '9px 16px', borderRadius: 8,
-                  background: '#7C3AED', color: 'white',
-                  border: 'none', fontSize: 13, fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Agregar
-              </button>
+                      fontSize: newBlockType === 'text' ? newBlockFontSize : undefined,
+                      fontWeight: newBlockType === 'text' ? newBlockFontWeight : undefined,
+                      color: newBlockType === 'text' ? newBlockColor : undefined,
+                      align: newBlockType === 'text' ? newBlockAlign : undefined,
+                      font: newBlockType === 'text' ? (newBlockFont || undefined) : undefined,
+                    }
+                    if (editingBlockId) {
+                      setContentBlocks(prev => prev.map(x => x.id === editingBlockId ? { ...x, ...fields } : x))
+                      cancelEditBlock()
+                      return
+                    }
+                    setContentBlocks(prev => [...prev, { id: crypto.randomUUID(), ...fields }])
+                    setNewBlockContent('')
+                  }}
+                  style={{
+                    flex: 1, padding: '9px 16px', borderRadius: 8,
+                    background: '#7C3AED', color: 'white',
+                    border: 'none', fontSize: 13, fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {editingBlockId ? 'Guardar cambios' : 'Agregar'}
+                </button>
+                {editingBlockId && (
+                  <button
+                    onClick={cancelEditBlock}
+                    style={{
+                      padding: '9px 16px', borderRadius: 8,
+                      background: 'white', color: '#64748B',
+                      border: '1.5px solid #E2E8F0', fontSize: 13, fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                )}
+              </div>
             </div>
 
             <PanelSave />

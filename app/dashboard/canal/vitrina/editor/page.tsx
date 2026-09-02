@@ -295,6 +295,7 @@ export default function EditorPage() {
   const [reorderButtonSize, setReorderButtonSize] = useState(14)
   const [reorderButtonColor, setReorderButtonColor] = useState('')
   const [reorderScale, setReorderScale] = useState(100)
+  const [reorderInset, setReorderInset] = useState(16)
   const [reorderImgUploading, setReorderImgUploading] = useState(false)
   const reorderImgRef = useRef<HTMLInputElement>(null)
   const [headerHeightPx, setHeaderHeightPx] = useState(56)
@@ -412,6 +413,7 @@ export default function EditorPage() {
       if (cfg.reorderButtonSize !== undefined) setReorderButtonSize(cfg.reorderButtonSize as number)
       if (cfg.reorderButtonColor !== undefined) setReorderButtonColor(cfg.reorderButtonColor as string)
       if (cfg.reorderScale !== undefined) setReorderScale(cfg.reorderScale as number)
+      if (cfg.reorderInset !== undefined) setReorderInset(cfg.reorderInset as number)
       if (cfg.headerHeightPx) setHeaderHeightPx(Number(cfg.headerHeightPx))
       if (cfg.contentBlocks) setContentBlocks(cfg.contentBlocks as ContentBlock[])
       if (cfg.blockGroups) setBlockGroups(cfg.blockGroups as BlockGroup[])
@@ -644,6 +646,7 @@ export default function EditorPage() {
       reorderDraft.style.pointerEvents = 'none'
       reorderDraft.style.zIndex = '999999'
       reorderDraft.style.setProperty('--sf-reorder-scale', String(reorderScale / 100))
+      reorderDraft.style.setProperty('--sf-reorder-inset', `${reorderInset}px`)
       if (reorderButtonColor) reorderDraft.style.setProperty('--sf-accent-color', reorderButtonColor)
       else reorderDraft.style.removeProperty('--sf-accent-color')
       const reorderBm = buttonSizeMetrics(reorderButtonSize)
@@ -692,7 +695,7 @@ export default function EditorPage() {
   useEffect(() => {
     applyPreview()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign, newBlockFont, contentBlocks, blockGroups, newBlockButtons, newBlockButtonStyle, newBlockButtonSize, enableReorder, reorderPosition, reorderTitle, reorderImageUrl, reorderFontSize, reorderFontWeight, reorderColor, reorderFont, reorderButtonStyle, reorderButtonSize, reorderButtonColor, reorderScale])
+  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign, newBlockFont, contentBlocks, blockGroups, newBlockButtons, newBlockButtonStyle, newBlockButtonSize, enableReorder, reorderPosition, reorderTitle, reorderImageUrl, reorderFontSize, reorderFontWeight, reorderColor, reorderFont, reorderButtonStyle, reorderButtonSize, reorderButtonColor, reorderScale, reorderInset])
 
   // ── Auto-save category shape (reloads iframe immediately) ─
   async function handleCategoryShape(catId: string, shape: string | null) {
@@ -782,6 +785,7 @@ export default function EditorPage() {
       reorderButtonSize: reorderButtonSize !== 14 ? reorderButtonSize : undefined,
       reorderButtonColor: reorderButtonColor || undefined,
       reorderScale: reorderScale !== 100 ? reorderScale : undefined,
+      reorderInset: reorderInset !== 16 ? reorderInset : undefined,
       headerLayout: undefined,
       contentBlocks: contentBlocks.length > 0 ? contentBlocks : undefined,
       blockGroups: blockGroups.length > 0 ? blockGroups : undefined,
@@ -2964,6 +2968,16 @@ export default function EditorPage() {
                     style={{ flex: 1 }}
                   />
                   <span style={{ fontSize: 11, color: '#94A3B8', width: 32, flexShrink: 0, textAlign: 'right' }}>{reorderScale}%</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: '#64748B', flexShrink: 0 }}>Separacion de la pantalla</span>
+                  <input
+                    type="range" min={0} max={60} step={2}
+                    value={reorderInset}
+                    onChange={e => setReorderInset(Number(e.target.value))}
+                    style={{ flex: 1 }}
+                  />
+                  <span style={{ fontSize: 11, color: '#94A3B8', width: 32, flexShrink: 0, textAlign: 'right' }}>{reorderInset}px</span>
                 </div>
               </div>
             )}

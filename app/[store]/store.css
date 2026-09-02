@@ -856,14 +856,13 @@ html, body { overflow-x: clip; }
   max-width: min(300px, calc(100vw - 32px));
   display: flex; flex-direction: column; align-items: stretch; gap: 10px;
   background: color-mix(in srgb, var(--sf-accent-color, #7C3AED) 8%, white);
-  border: 1px solid color-mix(in srgb, var(--sf-accent-color, #7C3AED) 25%, transparent);
   border-radius: 16px; padding: 14px 16px;
   box-shadow: 0 12px 32px rgba(0,0,0,0.18);
 }
 /* When a photo is set it replaces the tinted background entirely — shown
    as-is, clipped to the card's own rounded corners by the parent's
    overflow:hidden. */
-.sf-reorder-banner.has-img { background: #0F172A; border-color: transparent; }
+.sf-reorder-banner.has-img { background: #0F172A; }
 .sf-reorder-banner.has-img .sf-reorder-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; z-index: 0; }
 .sf-reorder-banner.has-img .sf-reorder-info,
 .sf-reorder-banner.has-img .sf-reorder-actions { position: relative; z-index: 1; }
@@ -871,10 +870,10 @@ html, body { overflow-x: clip; }
 .sf-reorder-banner.has-img .sf-reorder-sub { color: rgba(255,255,255,0.8); }
 .sf-reorder-banner.has-img .sf-reorder-close { color: rgba(255,255,255,0.8); }
 .sf-reorder-banner.has-img .sf-reorder-close:hover { color: white; }
-.sf-reorder-pos-right  { right: 16px; top: 50%; transform-origin: right center; animation: sfReorderInRight 0.4s cubic-bezier(0.16,1,0.3,1) both; }
-.sf-reorder-pos-left   { left: 16px; top: 50%; transform-origin: left center; animation: sfReorderInLeft 0.4s cubic-bezier(0.16,1,0.3,1) both; }
-.sf-reorder-pos-top    { top: 16px; left: 50%; transform-origin: center top; animation: sfReorderInTop 0.4s cubic-bezier(0.16,1,0.3,1) both; }
-.sf-reorder-pos-bottom { bottom: 20px; left: 50%; transform-origin: center bottom; animation: sfReorderInBottom 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+.sf-reorder-pos-right  { right: var(--sf-reorder-inset, 16px); top: 50%; transform-origin: right center; animation: sfReorderInRight 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+.sf-reorder-pos-left   { left: var(--sf-reorder-inset, 16px); top: 50%; transform-origin: left center; animation: sfReorderInLeft 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+.sf-reorder-pos-top    { top: var(--sf-reorder-inset, 16px); left: 50%; transform-origin: center top; animation: sfReorderInTop 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+.sf-reorder-pos-bottom { bottom: var(--sf-reorder-inset, 20px); left: 50%; transform-origin: center bottom; animation: sfReorderInBottom 0.4s cubic-bezier(0.16,1,0.3,1) both; }
 @keyframes sfReorderInRight {
   from { opacity: 0; transform: translateY(-50%) translateX(24px) scale(var(--sf-reorder-scale, 1)); }
   to   { opacity: 1; transform: translateY(-50%) translateX(0) scale(var(--sf-reorder-scale, 1)); }
@@ -913,10 +912,10 @@ html, body { overflow-x: clip; }
 .sf-reorder-close:hover { color: #475569; }
 @media (max-width: 640px) {
   .sf-reorder-banner { max-width: min(260px, calc(100vw - 24px)); }
-  .sf-reorder-pos-right  { right: 12px; }
-  .sf-reorder-pos-left   { left: 12px; }
-  .sf-reorder-pos-top    { top: 12px; }
-  .sf-reorder-pos-bottom { bottom: 12px; }
+  .sf-reorder-pos-right  { right: var(--sf-reorder-inset, 12px); }
+  .sf-reorder-pos-left   { left: var(--sf-reorder-inset, 12px); }
+  .sf-reorder-pos-top    { top: var(--sf-reorder-inset, 12px); }
+  .sf-reorder-pos-bottom { bottom: var(--sf-reorder-inset, 12px); }
   .sf-reorder-title { font-size: 13px; }
 }
 .sf-splash-btn {

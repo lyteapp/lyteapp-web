@@ -1449,6 +1449,18 @@ html, body { overflow-x: clip; }
 .sf-modal-section-title .sf-optional { margin-left: 6px; font-size: 11px; text-transform: none; }
 .sf-modal-section-hint { font-size: 11px; font-weight: 600; color: #F59E0B; margin-top: -4px; }
 
+/* Live "picked/max" counter on a variable group — lets the customer see
+   at a glance how many more picks they need to satisfy min/max. */
+.sf-modal-count {
+  display: inline-block; margin-left: 8px; vertical-align: middle;
+  font-size: 11px; font-weight: 700; letter-spacing: 0; text-transform: none;
+  color: #94A3B8; background: #F1F5F9; border-radius: 100px; padding: 2px 8px;
+}
+.sf-modal-count.complete {
+  color: var(--sf-accent-color, #7C3AED);
+  background: color-mix(in srgb, var(--sf-accent-color, #7C3AED) 12%, white);
+}
+
 /* Chips (variables / colors) */
 .sf-modal-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .sf-modal-chip {

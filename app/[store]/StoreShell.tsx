@@ -122,6 +122,7 @@ type TemplateConfig = {
   headerSticky?: boolean
   headerHeightPx?: number
   modalWizard?: boolean
+  enableReorder?: boolean
   contentBlocks?: ContentBlock[]
   homePage?: {
     enabled?: boolean
@@ -143,7 +144,6 @@ type TemplateConfig = {
     images?: { id: string; url: string; x: number; y: number; width: number; height: number; flipped?: boolean }[]
     inactivityTimeout?: { enabled?: boolean; minutes?: number }
     orderReturnTimeout?: { enabled?: boolean; seconds?: number }
-    enableReorder?: boolean
     reveal?: {
       greeting?: string
       subtitlePrefix?: string
@@ -322,7 +322,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [customerNotes, setCustomerNotes] = useState('')
 
   useEffect(() => {
-    if (!store.template_config?.homePage?.enableReorder) return
+    if (!store.template_config?.enableReorder) return
     const ph = customerPhone.replace(/\D/g, '')
     if (!ph || reorderCheckedRef.current) return
     reorderCheckedRef.current = true

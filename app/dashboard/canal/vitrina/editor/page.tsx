@@ -214,6 +214,7 @@ export default function EditorPage() {
   const [headerOverBanner, setHeaderOverBanner] = useState(false)
   const [headerSticky, setHeaderSticky] = useState(false)
   const [modalWizard, setModalWizard] = useState(false)
+  const [enableReorder, setEnableReorder] = useState(false)
   const [headerHeightPx, setHeaderHeightPx] = useState(56)
   const [contentBlocks, setContentBlocks]   = useState<ContentBlock[]>([])
   const [newBlockPos,  setNewBlockPos]      = useState('top')
@@ -296,6 +297,7 @@ export default function EditorPage() {
       if (cfg.headerOverBanner !== undefined) setHeaderOverBanner(cfg.headerOverBanner as boolean)
       if (cfg.headerSticky !== undefined) setHeaderSticky(cfg.headerSticky as boolean)
       if (cfg.modalWizard !== undefined) setModalWizard(cfg.modalWizard as boolean)
+      if (cfg.enableReorder !== undefined) setEnableReorder(cfg.enableReorder as boolean)
       if (cfg.headerHeightPx) setHeaderHeightPx(Number(cfg.headerHeightPx))
       if (cfg.contentBlocks) setContentBlocks(cfg.contentBlocks as ContentBlock[])
       const { data: cats } = await supabase
@@ -521,7 +523,7 @@ export default function EditorPage() {
       priceColor, accentColor, priceFont: priceFont || pageFont, priceSize,
       catTitleFont: catTitleFont || undefined, productNameFont: productNameFont || undefined,
       categoryNavStyle, showCatNav, stickyCatNav, catNavOverBanner, categorySpacing,
-      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, showHeaderSearch, showHeaderCart, headerIconColor: headerIconColor || undefined, headerOverBanner, headerSticky, headerHeightPx, modalWizard,
+      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, showHeaderSearch, showHeaderCart, headerIconColor: headerIconColor || undefined, headerOverBanner, headerSticky, headerHeightPx, modalWizard, enableReorder,
       headerLayout: undefined,
       contentBlocks: contentBlocks.length > 0 ? contentBlocks : undefined,
       ...(Object.keys(categoryShapes).length > 0
@@ -1769,6 +1771,33 @@ export default function EditorPage() {
                 }}>
                   <div style={{
                     position: 'absolute', top: 4, left: modalWizard ? 18 : 4,
+                    width: 14, height: 14, borderRadius: '50%', background: 'white',
+                    transition: 'left 0.2s',
+                  }} />
+                </div>
+              </div>
+            </label>
+
+            <div className="ed-tp-subtitle">Pedir de nuevo</div>
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#F8FAFC', borderRadius: 10, cursor: 'pointer', gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', lineHeight: 1.2 }}>Permitir repetir el ultimo pedido</div>
+                <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 3 }}>Si reconocemos al cliente (por cedula o por telefono en este dispositivo) y tiene un pedido anterior, le mostramos un boton para repetirlo</div>
+              </div>
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <input
+                  type="checkbox"
+                  checked={enableReorder}
+                  onChange={e => setEnableReorder(e.target.checked)}
+                  style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
+                />
+                <div style={{
+                  width: 38, height: 22, borderRadius: 100,
+                  background: enableReorder ? '#7C3AED' : '#D1D5DB',
+                  transition: 'background 0.2s', cursor: 'pointer', position: 'relative',
+                }}>
+                  <div style={{
+                    position: 'absolute', top: 4, left: enableReorder ? 18 : 4,
                     width: 14, height: 14, borderRadius: '50%', background: 'white',
                     transition: 'left 0.2s',
                   }} />

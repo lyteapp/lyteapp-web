@@ -241,7 +241,7 @@ export default function EditorPage() {
   const [newBlockFontWeight, setNewBlockFontWeight] = useState(400)
   const [newBlockColor, setNewBlockColor] = useState('#0F172A')
   const [newBlockAlign, setNewBlockAlign] = useState<'left' | 'center' | 'right'>('left')
-  const [newBlockSpacing, setNewBlockSpacing] = useState(8)
+  const [newBlockSpacing, setNewBlockSpacing] = useState(0)
   const [newBlockFont, setNewBlockFont] = useState('')
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null)
   const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'price' | 'categories' | 'brand' | 'blocks' | 'product' | null>(null)
@@ -667,7 +667,7 @@ export default function EditorPage() {
     setNewBlockFontWeight(b.fontWeight ?? 400)
     setNewBlockColor(b.color ?? '#0F172A')
     setNewBlockAlign(b.align ?? 'left')
-    setNewBlockSpacing(b.spacing ?? 8)
+    setNewBlockSpacing(b.spacing ?? 0)
     setNewBlockFont(b.font ?? '')
   }
   function cancelEditBlock() {
@@ -678,7 +678,7 @@ export default function EditorPage() {
     setNewBlockFontWeight(400)
     setNewBlockColor('#0F172A')
     setNewBlockAlign('left')
-    setNewBlockSpacing(8)
+    setNewBlockSpacing(0)
     setNewBlockFont('')
   }
 
@@ -721,19 +721,21 @@ export default function EditorPage() {
             ? (() => { try { return (JSON.parse(b.content) as BlockButtonItem[]).map(x => x.label).join(' · ') || '(sin botones)' } catch { return '(sin botones)' } })()
             : (b.content ? b.content.slice(0, 55) + (b.content.length > 55 ? '...' : '') : '(sin contenido)')}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-          <span style={{ fontSize: 10, color: '#94A3B8', flexShrink: 0 }}>Separacion</span>
-          <input
-            type="range" min={0} max={60} step={2}
-            value={b.spacing ?? 8}
-            onChange={e => {
-              const val = Number(e.target.value)
-              setContentBlocks(prev => prev.map(x => x.id === b.id ? { ...x, spacing: val } : x))
-            }}
-            style={{ flex: 1 }}
-          />
-          <span style={{ fontSize: 10, color: '#94A3B8', width: 28, flexShrink: 0, textAlign: 'right' }}>{b.spacing ?? 8}px</span>
-        </div>
+        {!b.groupId && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+            <span style={{ fontSize: 10, color: '#94A3B8', flexShrink: 0 }}>Separacion</span>
+            <input
+              type="range" min={0} max={60} step={2}
+              value={b.spacing ?? 0}
+              onChange={e => {
+                const val = Number(e.target.value)
+                setContentBlocks(prev => prev.map(x => x.id === b.id ? { ...x, spacing: val } : x))
+              }}
+              style={{ flex: 1 }}
+            />
+            <span style={{ fontSize: 10, color: '#94A3B8', width: 28, flexShrink: 0, textAlign: 'right' }}>{b.spacing ?? 0}px</span>
+          </div>
+        )}
       </div>
     )
   }
@@ -1932,17 +1934,15 @@ export default function EditorPage() {
                             </button>
                           ))}
                         </div>
-                        {unit.group.direction === 'row' && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
-                            <span style={{ fontSize: 10, color: '#94A3B8' }}>Espacio</span>
-                            <input
-                              type="range" min={0} max={40} step={2}
-                              value={unit.group.gap ?? 12}
-                              onChange={e => updateBlockGroup(unit.group.id, { gap: Number(e.target.value) })}
-                              style={{ flex: 1 }}
-                            />
-                          </div>
-                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
+                          <span style={{ fontSize: 10, color: '#94A3B8' }}>Espacio</span>
+                          <input
+                            type="range" min={0} max={40} step={2}
+                            value={unit.group.gap ?? 12}
+                            onChange={e => updateBlockGroup(unit.group.id, { gap: Number(e.target.value) })}
+                            style={{ flex: 1 }}
+                          />
+                        </div>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                         {unit.members.map(m => <div key={m.id}>{renderBlockItemRow(m)}</div>)}

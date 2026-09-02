@@ -840,7 +840,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
   function renderSingleBlock(block: ContentBlock, extraStyle?: React.CSSProperties) {
     return (
-      <div key={block.id} className="sf-content-block" style={{ padding: `${block.spacing ?? 8}px 0`, ...extraStyle }}>
+      <div key={block.id} className="sf-content-block" style={{ padding: `${block.spacing ?? 0}px 0`, ...extraStyle }}>
         {block.type === 'text' && (
           <div
             className="sf-block-text"
@@ -925,12 +925,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   background: groupMeta?.background || undefined,
                   borderRadius: groupMeta?.borderRadius !== undefined ? `${groupMeta.borderRadius}px` : undefined,
                   padding: groupMeta?.padding !== undefined ? `${groupMeta.padding}px` : undefined,
-                  display: isRow ? 'flex' : undefined,
+                  display: 'flex',
+                  flexDirection: isRow ? 'row' : 'column',
                   flexWrap: isRow ? 'wrap' : undefined,
-                  gap: isRow ? `${groupMeta?.gap ?? 12}px` : undefined,
+                  gap: `${groupMeta?.gap ?? 12}px`,
                 }}
               >
-                {members.map(m => renderSingleBlock(m, isRow ? { flex: '1 1 0', minWidth: 0, padding: 0 } : undefined))}
+                {/* Members inside a group share one gap control instead of stacking their own individual spacing */}
+                {members.map(m => renderSingleBlock(m, isRow ? { flex: '1 1 0', minWidth: 0, padding: 0 } : { padding: 0 }))}
               </div>
             )
           }

@@ -1849,7 +1849,7 @@ html, body { overflow-x: clip; }
 
 /* ── Content blocks ───────────────────────────────────── */
 .sf-content-block {
-  padding: 8px 0;
+  padding: 0;
 }
 .sf-block-text {
   padding: 0 16px;

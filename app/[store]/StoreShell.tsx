@@ -107,6 +107,7 @@ type ContentBlock = {
   font?: string
   groupId?: string
   buttonStyle?: 'solid' | 'outline' | 'slide'
+  buttonSize?: 'sm' | 'md' | 'lg'
 }
 type BlockGroup = {
   id: string; afterId: string; background?: string; borderRadius?: number; padding?: number
@@ -849,7 +850,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
     const bar = blockSlideBarRefs.current.get(btnId)
     if (!bar) return
     const rect = bar.getBoundingClientRect()
-    const thumbSize = 48, pad = 4
+    // Measure the actual thumb instead of assuming one fixed size, since
+    // buttonSize (sm/md/lg) changes the thumb/bar dimensions via CSS.
+    const thumbEl = bar.querySelector('.sf-block-slide-thumb') as HTMLElement | null
+    const thumbSize = thumbEl?.getBoundingClientRect().width || 48
+    const pad = Math.max(2, (rect.height - thumbSize) / 2)
     const travel = rect.width - thumbSize - pad * 2
     const raw = travel > 0 ? (clientX - rect.left - pad - thumbSize / 2) / travel : 0
     setBlockSlideProgress(prev => ({ ...prev, [btnId]: Math.min(1, Math.max(0, raw)) }))
@@ -887,7 +892,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
     setBlockSlideProgress(prev => ({ ...prev, [btnId]: 0 }))
   }
 
-  function renderSingleBlock(block: ContentBlock, extraStyle?: React.CSSProperties) {
+  function renderSingleBlock(block: ContentBlock, extraStyle?: React.CSSProperties, inRow?: boolean) {
+    const sizeSuffix = block.buttonSize === 'sm' ? ' sf-block-btn-sm' : block.buttonSize === 'lg' ? ' sf-block-btn-lg' : ''
+    const slideSizeSuffix = block.buttonSize === 'sm' ? ' sf-block-slide-bar-sm' : block.buttonSize === 'lg' ? ' sf-block-slide-bar-lg' : ''
     return (
       <div key={block.id} id={`sf-cb-${block.id}`} className="sf-content-block" style={{ padding: `${block.spacing ?? 0}px 0`, ...extraStyle }}>
         {block.type === 'text' && (
@@ -941,7 +948,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   <div
                     key={b.id}
                     ref={el => { if (el) blockSlideBarRefs.current.set(b.id, el); else blockSlideBarRefs.current.delete(b.id) }}
-                    className={`sf-block-slide-bar${blockSliding[b.id] ? ' sliding' : ''}`}
+                    className={`sf-block-slide-bar${slideSizeSuffix}${inRow ? ' sf-block-slide-bar-row' : ''}${blockSliding[b.id] ? ' sliding' : ''}`}
                     style={{ '--sf-slide-progress': blockSlideProgress[b.id] ?? 0 } as React.CSSProperties}
                     onPointerDown={e => blockSlidePointerDown(b.id, e)}
                     onPointerMove={e => blockSlidePointerMove(b.id, e)}
@@ -962,7 +969,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 <button
                   key={b.id}
                   type="button"
-                  className={`sf-block-btn${block.buttonStyle === 'outline' ? ' sf-block-btn-outline' : ''}`}
+                  className={`sf-block-btn${block.buttonStyle === 'outline' ? ' sf-block-btn-outline' : ''}${sizeSuffix}`}
                   onClick={() => activate(b)}
                 >
                   {b.label}
@@ -1013,7 +1020,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   ? (m.type === 'image' || m.type === 'video'
                       ? { flex: '1 1 0', minWidth: 0, padding: 0 }
                       : { flex: '0 0 auto', padding: 0 })
-                  : { padding: 0 }))}
+                  : { padding: 0 }, isRow))}
               </div>
             )
           }

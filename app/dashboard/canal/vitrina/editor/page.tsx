@@ -98,6 +98,7 @@ type ContentBlock = {
   fontSize?: number; fontWeight?: number; color?: string; align?: 'left' | 'center' | 'right'
   spacing?: number; font?: string; groupId?: string
   buttonStyle?: 'solid' | 'outline' | 'slide'
+  buttonSize?: 'sm' | 'md' | 'lg'
 }
 type BlockButtonItem = { id: string; label: string; target: 'product' | 'category'; targetId: string }
 type BlockGroup = {
@@ -246,6 +247,7 @@ export default function EditorPage() {
   const [newBlockFont, setNewBlockFont] = useState('')
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null)
   const [newBlockButtonStyle, setNewBlockButtonStyle] = useState<'solid' | 'outline' | 'slide'>('solid')
+  const [newBlockButtonSize, setNewBlockButtonSize] = useState<'sm' | 'md' | 'lg'>('md')
   const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'price' | 'categories' | 'brand' | 'blocks' | 'product' | null>(null)
   const [iframeKey, setIframeKey]   = useState(0)
   const [saving, setSaving]         = useState(false)
@@ -526,13 +528,15 @@ export default function EditorPage() {
         draft.style.textAlign = ''
         draft.style.fontFamily = ''
         const label = (draftButtonsLabel ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        const sizeCls = newBlockButtonSize === 'sm' ? ' sf-block-btn-sm' : newBlockButtonSize === 'lg' ? ' sf-block-btn-lg' : ''
+        const slideSizeCls = newBlockButtonSize === 'sm' ? ' sf-block-slide-bar-sm' : newBlockButtonSize === 'lg' ? ' sf-block-slide-bar-lg' : ''
         draft.innerHTML = newBlockButtonStyle === 'slide'
-          ? `<div class="sf-block-slide-bar" style="pointer-events:none;">
+          ? `<div class="sf-block-slide-bar${slideSizeCls}" style="pointer-events:none;">
                <div class="sf-block-slide-fill"></div>
                <span class="sf-block-slide-label">${label}</span>
                <div class="sf-block-slide-thumb">&#8594;</div>
              </div>`
-          : `<button type="button" class="sf-block-btn${newBlockButtonStyle === 'outline' ? ' sf-block-btn-outline' : ''}" style="pointer-events:none; width:100%;">${label}</button>`
+          : `<button type="button" class="sf-block-btn${newBlockButtonStyle === 'outline' ? ' sf-block-btn-outline' : ''}${sizeCls}" style="pointer-events:none; width:100%;">${label}</button>`
       }
     } else if (draft) {
       draft.remove()
@@ -556,7 +560,7 @@ export default function EditorPage() {
   useEffect(() => {
     applyPreview()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign, newBlockFont, contentBlocks, blockGroups, newBlockButtons, newBlockButtonStyle])
+  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign, newBlockFont, contentBlocks, blockGroups, newBlockButtons, newBlockButtonStyle, newBlockButtonSize])
 
   // ── Auto-save category shape (reloads iframe immediately) ─
   async function handleCategoryShape(catId: string, shape: string | null) {
@@ -711,6 +715,7 @@ export default function EditorPage() {
     setNewBlockSpacing(b.spacing ?? 0)
     setNewBlockFont(b.font ?? '')
     setNewBlockButtonStyle(b.buttonStyle ?? 'solid')
+    setNewBlockButtonSize(b.buttonSize ?? 'md')
   }
   function cancelEditBlock() {
     setEditingBlockId(null)
@@ -723,6 +728,7 @@ export default function EditorPage() {
     setNewBlockSpacing(0)
     setNewBlockFont('')
     setNewBlockButtonStyle('solid')
+    setNewBlockButtonSize('md')
   }
 
   function renderBlockItemRow(b: ContentBlock) {
@@ -2186,6 +2192,29 @@ export default function EditorPage() {
                       ))}
                     </div>
                   </div>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginBottom: 4 }}>Tamano del boton</div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {([['sm', 'Pequeno'], ['md', 'Mediano'], ['lg', 'Grande']] as const).map(([sz, label]) => (
+                        <button
+                          key={sz}
+                          onClick={() => setNewBlockButtonSize(sz)}
+                          style={{
+                            flex: 1, padding: '8px 4px', borderRadius: 8,
+                            border: `2px solid ${newBlockButtonSize === sz ? '#7C3AED' : '#E2E8F0'}`,
+                            background: newBlockButtonSize === sz ? '#F5F3FF' : 'white',
+                            color: newBlockButtonSize === sz ? '#7C3AED' : '#64748B',
+                            fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                          }}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 4 }}>
+                      Util para que varios botones quepan uno al lado del otro dentro de un grupo En fila
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <input
@@ -2216,14 +2245,14 @@ export default function EditorPage() {
                       if (valid.length === 0) return
                       if (editingBlockId) {
                         setContentBlocks(prev => prev.map(x => x.id === editingBlockId
-                          ? { ...x, afterId: newBlockPos, type: 'buttons' as const, content: JSON.stringify(valid), spacing: newBlockSpacing, buttonStyle: newBlockButtonStyle }
+                          ? { ...x, afterId: newBlockPos, type: 'buttons' as const, content: JSON.stringify(valid), spacing: newBlockSpacing, buttonStyle: newBlockButtonStyle, buttonSize: newBlockButtonSize }
                           : x))
                         cancelEditBlock()
                         return
                       }
                       setContentBlocks(prev => [...prev, {
                         id: crypto.randomUUID(), afterId: newBlockPos, type: 'buttons', content: JSON.stringify(valid),
-                        spacing: newBlockSpacing, buttonStyle: newBlockButtonStyle,
+                        spacing: newBlockSpacing, buttonStyle: newBlockButtonStyle, buttonSize: newBlockButtonSize,
                       }])
                       setNewBlockButtons([])
                       return

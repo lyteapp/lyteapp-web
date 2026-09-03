@@ -506,6 +506,7 @@ html, body { overflow-x: clip; }
 .sf-co-info { flex: 1; }
 .sf-co-name { font-size: 13px; font-weight: 600; color: #0F172A; }
 .sf-co-price { font-size: 13px; font-weight: 700; color: var(--sf-price-color, #7C3AED); margin-top: 2px; }
+.sf-co-cal { font-size: 11px; font-weight: 600; color: #94A3B8; margin-top: 1px; }
 .sf-co-total {
   display: flex; justify-content: space-between; align-items: center;
   padding-top: 14px; margin-top: 6px; border-top: 2px solid #F1F5F9;

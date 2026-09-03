@@ -106,6 +106,28 @@ type DeliveryZone  = { id: string; name: string; fee: number; color: string; rad
 type LastOrderItem = { product_id: string | null; product_name: string; product_price: number; quantity: number; selected_options: SelectedOptions | null }
 type LastOrder = { orderId: string; items: LastOrderItem[] }
 
+// Calories for one cart line, base + whatever variables/additionals the
+// customer picked for it — null when the product never opted into nutrition
+// info, so the checkout summary can skip the line entirely instead of
+// showing a stray "0 kcal". Multiplied by quantity to match how the price
+// on the same row already reflects the line's full quantity.
+function cartItemCalories(item: CartItem): number | null {
+  const nutrition = item.options?.nutrition
+  if (!nutrition?.enabled) return null
+  let perUnit = nutrition.calories ?? 0
+  for (const a of item.selectedOptions?.additionals ?? []) perUnit += a.calories ?? 0
+  const groups = item.options?.variables ?? []
+  for (const [label, values] of Object.entries(item.selectedOptions?.variables ?? {})) {
+    const group = groups.find(g => g.label === label)
+    if (!group) continue
+    for (const v of variableValues(values)) {
+      const choice = group.choices.map(normalizeChoice).find(c => c.value === v)
+      perUnit += choice?.calories ?? 0
+    }
+  }
+  return perUnit * item.quantity
+}
+
 const PM_LABELS: Record<string, string> = {
   pago_movil: 'Pago Móvil', zelle: 'Zelle', efectivo_usd: 'Efectivo USD',
   efectivo_bs: 'Efectivo Bs', usdt: 'USDT / Cripto', binance: 'Binance Pay',
@@ -2353,7 +2375,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
             <h3 className="sf-co-section-title">{t('store.summary')}</h3>
             <button className="sf-co-clear-btn" onClick={clearCart}>Vaciar</button>
           </div>
-          {cartItems.map(item => (
+          {cartItems.map(item => {
+            const cal = cartItemCalories(item)
+            return (
             <div key={item.id} className="sf-co-row">
               {item.image_url
                 ? (isVideoUrl(item.image_url)
@@ -2377,6 +2401,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   </div>
                 )}
                 <div className="sf-co-price">{currencySymbol}{((item.price + item.extraPrice) * item.quantity).toFixed(2)}</div>
+                {cal !== null && <div className="sf-co-cal">{Math.round(cal)} kcal</div>}
               </div>
               <div className="sf-qty">
                 <button onClick={() => updateQty(item.id, -1)}>−</button>
@@ -2384,7 +2409,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 <button onClick={() => updateQty(item.id, +1)}>+</button>
               </div>
             </div>
-          ))}
+            )
+          })}
           {deliveryType === 'delivery' && cs.deliveryEnabled && (
             <div className="sf-co-total" style={{ fontWeight: 400, fontSize: 13, color: '#64748B', borderTop: 'none', paddingTop: 0 }}>
               <span>Envio{matchedZone ? ` · ${matchedZone.name}` : ''}</span>

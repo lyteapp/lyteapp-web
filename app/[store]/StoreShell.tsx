@@ -169,6 +169,31 @@ type BlockGroup = {
   direction?: 'column' | 'row'; gap?: number
 }
 type BlockButtonItem = { id: string; label: string; target: 'product' | 'category'; targetId: string }
+type Ad = {
+  id: string
+  enabled?: boolean
+  placement: 'float' | 'popup' | 'bar-top' | 'bar-bottom'
+  title?: string
+  imageUrl?: string
+  buttonLabel?: string
+  buttonStyle?: 'solid' | 'outline' | 'slide'
+  buttonSize?: number
+  buttonColor?: string
+  linkTarget?: 'none' | 'url' | 'category' | 'product'
+  linkUrl?: string
+  linkCategoryId?: string
+  linkProductId?: string
+  fontSize?: number
+  fontWeight?: number
+  color?: string
+  font?: string
+  position?: 'top' | 'bottom' | 'left' | 'right'
+  inset?: number
+  scale?: number
+  delaySeconds?: number
+  onceOnly?: boolean
+  floatSeconds?: number
+}
 type TemplateConfig = {
   pageBg?: string; pageFont?: string
   fontSize?: 'small' | 'medium' | 'large'
@@ -224,6 +249,7 @@ type TemplateConfig = {
   reorderInset?: number
   contentBlocks?: ContentBlock[]
   blockGroups?: BlockGroup[]
+  ads?: Ad[]
   hiddenCategoryIds?: string[]
   homePage?: {
     enabled?: boolean
@@ -448,6 +474,60 @@ export default function StoreShell({ store, products, categories = [], initialBc
     const t = setTimeout(() => setShowReorder(false), seconds * 1000)
     return () => clearTimeout(t)
   }, [showReorder, store.template_config?.reorderFloatSeconds])
+
+  // Ads: each one schedules its own reveal (immediately, or after its
+  // configured delay), skipping ones already dismissed this device when
+  // marked "once per visit" — checked once on mount rather than per-ad
+  // hooks, since the number of ads is dynamic and hooks can't be called
+  // in a loop.
+  const [adVisible, setAdVisible] = useState<Record<string, boolean>>({})
+  useEffect(() => {
+    const ads = (store.template_config?.ads ?? []).filter(a => a.enabled !== false)
+    const timers: ReturnType<typeof setTimeout>[] = []
+    for (const ad of ads) {
+      if (ad.onceOnly) {
+        try {
+          if (localStorage.getItem(`ad-seen-${store.slug}-${ad.id}`)) continue
+        } catch {}
+      }
+      const delay = Math.max(0, ad.delaySeconds ?? 0) * 1000
+      timers.push(setTimeout(() => setAdVisible(v => ({ ...v, [ad.id]: true })), delay))
+    }
+    return () => timers.forEach(clearTimeout)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store.slug])
+
+  // Auto-hides each visible ad after its own configured number of seconds —
+  // 0 (or unset) means it stays until closed by hand.
+  useEffect(() => {
+    const ads = store.template_config?.ads ?? []
+    const timers: ReturnType<typeof setTimeout>[] = []
+    for (const ad of ads) {
+      if (!adVisible[ad.id] || !ad.floatSeconds || ad.floatSeconds <= 0) continue
+      timers.push(setTimeout(() => setAdVisible(v => ({ ...v, [ad.id]: false })), ad.floatSeconds * 1000))
+    }
+    return () => timers.forEach(clearTimeout)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adVisible, store.template_config?.ads])
+
+  function closeAd(ad: Ad) {
+    setAdVisible(v => ({ ...v, [ad.id]: false }))
+    if (ad.onceOnly) {
+      try { localStorage.setItem(`ad-seen-${store.slug}-${ad.id}`, '1') } catch {}
+    }
+  }
+
+  function activateAd(ad: Ad) {
+    if (ad.linkTarget === 'product' && ad.linkProductId) {
+      const p = products.find(pr => pr.id === ad.linkProductId)
+      if (p) openProductModal(p)
+    } else if (ad.linkTarget === 'category' && ad.linkCategoryId) {
+      const cat = categories.find(c => c.id === ad.linkCategoryId)
+      if (cat) { setFocusCategory(cat); window.scrollTo({ top: 0 }) }
+    } else if (ad.linkTarget === 'url' && ad.linkUrl?.trim()) {
+      window.open(ad.linkUrl, '_blank', 'noopener,noreferrer')
+    }
+  }
 
   function reorderLast() {
     if (!lastOrder) return
@@ -1151,6 +1231,117 @@ export default function StoreShell({ store, products, categories = [], initialBc
         })}
       </>
     )
+  }
+
+  function renderAdButton(ad: Ad, bm: ReturnType<typeof buttonSizeMetrics>) {
+    if (!ad.buttonLabel?.trim()) return null
+    if (ad.buttonStyle === 'slide') {
+      return (
+        <div
+          ref={el => { if (el) blockSlideBarRefs.current.set(ad.id, el); else blockSlideBarRefs.current.delete(ad.id) }}
+          className={`sf-block-slide-bar${blockSliding[ad.id] ? ' sliding' : ''}`}
+          style={{
+            '--sf-slide-progress': blockSlideProgress[ad.id] ?? 0,
+            '--sf-slide-thumb': `${bm.thumb}px`,
+            '--sf-slide-pad': `${bm.pad}px`,
+            height: `${bm.height}px`,
+          } as React.CSSProperties}
+          onPointerDown={e => blockSlidePointerDown(ad.id, e)}
+          onPointerMove={e => blockSlidePointerMove(ad.id, e)}
+          onPointerUp={() => blockSlidePointerUp(ad.id, () => activateAd(ad))}
+          onPointerCancel={() => blockSlideCancel(ad.id)}
+        >
+          <div className="sf-block-slide-fill" />
+          <span className="sf-block-slide-label" style={{ fontSize: `${Math.max(10, bm.fontSize - 2)}px` }}>{ad.buttonLabel}</span>
+          <div className="sf-block-slide-thumb">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width={Math.round(bm.thumb * 0.4)} height={Math.round(bm.thumb * 0.4)}>
+              <path d="M7 4l6 6-6 6" />
+            </svg>
+          </div>
+        </div>
+      )
+    }
+    return (
+      <button
+        type="button"
+        className={`sf-ad-btn${ad.buttonStyle === 'outline' ? ' sf-ad-btn-outline' : ''}`}
+        style={{ fontSize: `${bm.fontSize}px`, padding: `${bm.padV}px ${bm.padH}px` }}
+        onClick={() => activateAd(ad)}
+      >
+        {ad.buttonLabel}
+      </button>
+    )
+  }
+
+  function renderAd(ad: Ad) {
+    if (!adVisible[ad.id]) return null
+    const bm = buttonSizeMetrics(ad.buttonSize)
+    const { fontWeight, strokeWidth } = textWeightStyle(ad.fontWeight)
+    const titleStyle: React.CSSProperties = {
+      fontSize: ad.fontSize ? `${ad.fontSize}px` : undefined,
+      fontWeight,
+      color: ad.color || undefined,
+      fontFamily: ad.font && FONT_MAP[ad.font] ? FONT_MAP[ad.font] : undefined,
+      WebkitTextStroke: strokeWidth > 0 ? `${strokeWidth}px currentColor` : undefined,
+    }
+    const accentVars = (ad.buttonColor ? { '--sf-accent-color': ad.buttonColor } : {}) as React.CSSProperties
+
+    if (ad.placement === 'float') {
+      const pos = ad.position ?? 'right'
+      return (
+        <div
+          key={ad.id}
+          className={`sf-ad-float sf-ad-float-pos-${pos}${ad.imageUrl ? ' has-img' : ''}`}
+          style={{
+            '--sf-ad-scale': (ad.scale ?? 100) / 100,
+            ...(ad.inset !== undefined ? { '--sf-ad-inset': `${ad.inset}px` } : {}),
+            ...accentVars,
+          } as React.CSSProperties}
+        >
+          {ad.imageUrl && <img src={ad.imageUrl} alt="" className="sf-ad-float-img" />}
+          {ad.title && <div className="sf-ad-title sf-ad-float-title" style={titleStyle}>{ad.title}</div>}
+          <div className="sf-ad-float-actions">
+            {renderAdButton(ad, bm)}
+            <button type="button" className="sf-ad-close" onClick={() => closeAd(ad)} aria-label="Cerrar">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path strokeLinecap="round" d="M15 5L5 15M5 5l10 10"/></svg>
+            </button>
+          </div>
+        </div>
+      )
+    }
+
+    if (ad.placement === 'popup') {
+      return (
+        <div key={ad.id} className="sf-ad-popup-overlay" onClick={() => closeAd(ad)}>
+          <div className="sf-ad-popup-card" style={accentVars} onClick={e => e.stopPropagation()}>
+            <button type="button" className="sf-ad-popup-close" onClick={() => closeAd(ad)} aria-label="Cerrar">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path strokeLinecap="round" d="M15 5L5 15M5 5l10 10"/></svg>
+            </button>
+            {ad.imageUrl && <img src={ad.imageUrl} alt="" className="sf-ad-popup-img" />}
+            <div className="sf-ad-popup-body">
+              {ad.title && <div className="sf-ad-title" style={titleStyle}>{ad.title}</div>}
+              {renderAdButton(ad, bm)}
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div key={ad.id} className={`sf-ad-bar sf-ad-bar-${ad.placement === 'bar-top' ? 'top' : 'bottom'}`} style={accentVars}>
+        {ad.title && <div className="sf-ad-title sf-ad-bar-title" style={titleStyle}>{ad.title}</div>}
+        {renderAdButton(ad, bm)}
+        <button type="button" className="sf-ad-close" onClick={() => closeAd(ad)} aria-label="Cerrar">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path strokeLinecap="round" d="M15 5L5 15M5 5l10 10"/></svg>
+        </button>
+      </div>
+    )
+  }
+
+  function renderAds() {
+    const ads = (cfg.ads ?? []).filter(a => a.enabled !== false)
+    if (ads.length === 0) return null
+    return <>{ads.map(renderAd)}</>
   }
 
   function renderProductGrid(items: Product[], layoutKey: string) {
@@ -3419,6 +3610,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
           </div>
         )
       })()}
+
+      {renderAds()}
 
       {focusCategory ? (
         <div

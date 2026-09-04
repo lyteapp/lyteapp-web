@@ -157,6 +157,34 @@ type BlockGroup = {
   id: string; afterId: string; background?: string; borderRadius?: number; padding?: number
   direction?: 'column' | 'row'; gap?: number
 }
+type Ad = {
+  id: string
+  enabled?: boolean
+  placement: 'float' | 'popup' | 'bar-top' | 'bar-bottom'
+  title?: string
+  imageUrl?: string
+  buttonLabel?: string
+  buttonStyle?: 'solid' | 'outline' | 'slide'
+  buttonSize?: number
+  buttonColor?: string
+  linkTarget?: 'none' | 'url' | 'category' | 'product'
+  linkUrl?: string
+  linkCategoryId?: string
+  linkProductId?: string
+  fontSize?: number
+  fontWeight?: number
+  color?: string
+  font?: string
+  position?: 'top' | 'bottom' | 'left' | 'right'
+  inset?: number
+  scale?: number
+  delaySeconds?: number
+  onceOnly?: boolean
+  floatSeconds?: number
+}
+function newAd(): Ad {
+  return { id: crypto.randomUUID(), enabled: true, placement: 'float' }
+}
 
 function FontSelect({
   value, onChange, options, placeholder,
@@ -296,6 +324,16 @@ export default function EditorPage() {
   const [reorderButtonColor, setReorderButtonColor] = useState('')
   const [reorderScale, setReorderScale] = useState(100)
   const [reorderInset, setReorderInset] = useState(16)
+  const [ads, setAds] = useState<Ad[]>([])
+  const adImgRef = useRef<HTMLInputElement>(null)
+  const adImgTargetRef = useRef<string | null>(null)
+  const [adImgUploadingId, setAdImgUploadingId] = useState<string | null>(null)
+  function updateAd(id: string, patch: Partial<Ad>) {
+    setAds(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a))
+  }
+  function removeAd(id: string) {
+    setAds(prev => prev.filter(a => a.id !== id))
+  }
   const [reorderImgUploading, setReorderImgUploading] = useState(false)
   const reorderImgRef = useRef<HTMLInputElement>(null)
   const [headerHeightPx, setHeaderHeightPx] = useState(56)
@@ -322,7 +360,7 @@ export default function EditorPage() {
   const [newBlockLinkTarget, setNewBlockLinkTarget] = useState<'url' | 'category'>('url')
   const [newBlockLinkCategoryId, setNewBlockLinkCategoryId] = useState('')
   const blockImgRef = useRef<HTMLInputElement>(null)
-  const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'price' | 'categories' | 'brand' | 'blocks' | 'product' | 'reorder' | null>(null)
+  const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'price' | 'categories' | 'brand' | 'blocks' | 'product' | 'reorder' | 'ads' | null>(null)
   const [iframeKey, setIframeKey]   = useState(0)
   const [saving, setSaving]         = useState(false)
   const [toolSaved, setToolSaved]   = useState(false)
@@ -414,6 +452,7 @@ export default function EditorPage() {
       if (cfg.reorderButtonColor !== undefined) setReorderButtonColor(cfg.reorderButtonColor as string)
       if (cfg.reorderScale !== undefined) setReorderScale(cfg.reorderScale as number)
       if (cfg.reorderInset !== undefined) setReorderInset(cfg.reorderInset as number)
+      if (cfg.ads) setAds(cfg.ads as Ad[])
       if (cfg.headerHeightPx) setHeaderHeightPx(Number(cfg.headerHeightPx))
       if (cfg.contentBlocks) setContentBlocks(cfg.contentBlocks as ContentBlock[])
       if (cfg.blockGroups) setBlockGroups(cfg.blockGroups as BlockGroup[])
@@ -677,6 +716,67 @@ export default function EditorPage() {
       reorderDraft.remove()
     }
 
+    // Live draft preview for the "Anuncios" tool — shows every enabled ad
+    // immediately (ignoring its delay/once-only trigger, which only matter
+    // on the real storefront) so placement/text/photo/button choices are
+    // visible while editing.
+    let adsPreview = doc.getElementById('ed-ads-preview') as HTMLDivElement | null
+    const visibleAds = activeTool === 'ads' ? ads.filter(a => a.enabled !== false) : []
+    if (visibleAds.length > 0 && doc.body) {
+      if (!adsPreview) {
+        adsPreview = doc.createElement('div')
+        adsPreview.id = 'ed-ads-preview'
+        doc.body.appendChild(adsPreview)
+      }
+      const closeBtn = (cls: string) => `<button type="button" class="${cls}" style="pointer-events:none;"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" d="M15 5L5 15M5 5l10 10"/></svg></button>`
+      adsPreview.innerHTML = visibleAds.map(ad => {
+        const bm = buttonSizeMetrics(ad.buttonSize)
+        const weight = Math.min(900, ad.fontWeight ?? 700)
+        const stroke = (ad.fontWeight ?? 0) > 900 ? Math.min(1.4, (((ad.fontWeight ?? 0) - 900) / 300) * 1.4) : 0
+        const fontFamily = ad.font && FONT_MAP[ad.font] ? FONT_MAP[ad.font] : ''
+        const titleText = (ad.title ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        const titleStyle = `font-size:${ad.fontSize ?? 14}px; font-weight:${weight}; color:${ad.color || ''}; font-family:${fontFamily}; -webkit-text-stroke:${stroke > 0 ? `${stroke}px currentColor` : ''};`
+        const accentStyle = ad.buttonColor ? `--sf-accent-color:${ad.buttonColor};` : ''
+        const btnHtml = !ad.buttonLabel?.trim() ? '' : ad.buttonStyle === 'slide'
+          ? `<div class="sf-block-slide-bar" style="pointer-events:none; height:${bm.height}px; --sf-slide-thumb:${bm.thumb}px; --sf-slide-pad:${bm.pad}px;">
+               <div class="sf-block-slide-fill"></div>
+               <span class="sf-block-slide-label" style="font-size:${Math.max(10, bm.fontSize - 2)}px;">${ad.buttonLabel}</span>
+               <div class="sf-block-slide-thumb">&#8594;</div>
+             </div>`
+          : `<button type="button" class="sf-ad-btn${ad.buttonStyle === 'outline' ? ' sf-ad-btn-outline' : ''}" style="pointer-events:none; font-size:${bm.fontSize}px; padding:${bm.padV}px ${bm.padH}px;">${ad.buttonLabel}</button>`
+
+        if (ad.placement === 'float') {
+          const pos = ad.position ?? 'right'
+          const imgHtml = ad.imageUrl ? `<img src="${ad.imageUrl}" alt="" class="sf-ad-float-img" />` : ''
+          return `<div class="sf-ad-float sf-ad-float-pos-${pos}${ad.imageUrl ? ' has-img' : ''}" style="pointer-events:none; --sf-ad-scale:${(ad.scale ?? 100) / 100}; --sf-ad-inset:${ad.inset ?? 16}px; ${accentStyle}">
+            ${imgHtml}
+            ${ad.title ? `<div class="sf-ad-title sf-ad-float-title" style="${titleStyle}">${titleText}</div>` : ''}
+            <div class="sf-ad-float-actions">${btnHtml}${closeBtn('sf-ad-close')}</div>
+          </div>`
+        }
+        if (ad.placement === 'popup') {
+          const imgHtml = ad.imageUrl ? `<img src="${ad.imageUrl}" alt="" class="sf-ad-popup-img" />` : ''
+          return `<div class="sf-ad-popup-overlay" style="pointer-events:none;">
+            <div class="sf-ad-popup-card" style="${accentStyle}">
+              ${closeBtn('sf-ad-popup-close')}
+              ${imgHtml}
+              <div class="sf-ad-popup-body">
+                ${ad.title ? `<div class="sf-ad-title" style="${titleStyle}">${titleText}</div>` : ''}
+                ${btnHtml}
+              </div>
+            </div>
+          </div>`
+        }
+        return `<div class="sf-ad-bar sf-ad-bar-${ad.placement === 'bar-top' ? 'top' : 'bottom'}" style="pointer-events:none; ${accentStyle}">
+          ${ad.title ? `<div class="sf-ad-title sf-ad-bar-title" style="${titleStyle}">${titleText}</div>` : ''}
+          ${btnHtml}
+          ${closeBtn('sf-ad-close')}
+        </div>`
+      }).join('')
+    } else if (adsPreview) {
+      adsPreview.remove()
+    }
+
     // Live spacing/style for already-placed blocks and groups — sliders here
     // (Separacion, Espacio, Radio, Relleno, color) update the iframe instantly
     // instead of only showing up after Guardar + reload.
@@ -695,7 +795,7 @@ export default function EditorPage() {
   useEffect(() => {
     applyPreview()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign, newBlockFont, contentBlocks, blockGroups, newBlockButtons, newBlockButtonStyle, newBlockButtonSize, enableReorder, reorderPosition, reorderTitle, reorderImageUrl, reorderFontSize, reorderFontWeight, reorderColor, reorderFont, reorderButtonStyle, reorderButtonSize, reorderButtonColor, reorderScale, reorderInset])
+  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign, newBlockFont, contentBlocks, blockGroups, newBlockButtons, newBlockButtonStyle, newBlockButtonSize, enableReorder, reorderPosition, reorderTitle, reorderImageUrl, reorderFontSize, reorderFontWeight, reorderColor, reorderFont, reorderButtonStyle, reorderButtonSize, reorderButtonColor, reorderScale, reorderInset, ads])
 
   // ── Auto-save category shape (reloads iframe immediately) ─
   async function handleCategoryShape(catId: string, shape: string | null) {
@@ -786,6 +886,7 @@ export default function EditorPage() {
       reorderButtonColor: reorderButtonColor || undefined,
       reorderScale: reorderScale !== 100 ? reorderScale : undefined,
       reorderInset: reorderInset !== 16 ? reorderInset : undefined,
+      ads: ads.length > 0 ? ads : undefined,
       headerLayout: undefined,
       contentBlocks: contentBlocks.length > 0 ? contentBlocks : undefined,
       blockGroups: blockGroups.length > 0 ? blockGroups : undefined,
@@ -1196,6 +1297,19 @@ export default function EditorPage() {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 12a9 9 0 1 0 3-6.7" />
             <path d="M3 4v5h5" />
+          </svg>
+        </button>
+
+        {/* Anuncios */}
+        <button
+          className={`ed-tool-btn${activeTool === 'ads' ? ' ed-tool-active' : ''}`}
+          title="Anuncios"
+          onClick={() => setActiveTool(p => p === 'ads' ? null : 'ads')}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 11v2a2 2 0 002 2h1l3 5V4L6 9H5a2 2 0 00-2 2z" />
+            <path d="M14 8a4 4 0 010 8" />
+            <path d="M17 5a8 8 0 010 14" />
           </svg>
         </button>
 
@@ -2981,6 +3095,366 @@ export default function EditorPage() {
                 </div>
               </div>
             )}
+
+            <PanelSave />
+          </div>
+        )}
+
+        {activeTool === 'ads' && (
+          <div className="ed-tool-panel ed-tool-panel-lg">
+            <div className="ed-tp-title">Anuncios</div>
+            <div style={{ fontSize: 11, color: '#94A3B8', marginTop: -8 }}>
+              Crea uno o varios anuncios y elige como aparecen en la tienda: tarjeta flotante, ventana emergente o barra fija arriba/abajo.
+            </div>
+
+            {ads.map(ad => (
+              <div key={ad.id} style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '12px 14px', background: '#F8FAFC', borderRadius: 10, border: '1px solid #E2E8F0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                      <input
+                        type="checkbox"
+                        checked={ad.enabled !== false}
+                        onChange={e => updateAd(ad.id, { enabled: e.target.checked })}
+                        style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
+                      />
+                      <div style={{
+                        width: 34, height: 20, borderRadius: 100,
+                        background: ad.enabled !== false ? '#7C3AED' : '#D1D5DB',
+                        transition: 'background 0.2s', cursor: 'pointer', position: 'relative',
+                      }}>
+                        <div style={{
+                          position: 'absolute', top: 3, left: ad.enabled !== false ? 16 : 3,
+                          width: 14, height: 14, borderRadius: '50%', background: 'white',
+                          transition: 'left 0.2s',
+                        }} />
+                      </div>
+                    </div>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: '#0F172A' }}>{ad.title?.trim() || 'Anuncio sin titulo'}</span>
+                  </label>
+                  <button
+                    onClick={() => removeAd(ad.id)}
+                    style={{ flexShrink: 0, width: 28, height: 28, borderRadius: 8, border: 'none', background: '#FEF2F2', color: '#DC2626', cursor: 'pointer', fontSize: 14 }}
+                    title="Eliminar anuncio"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginBottom: 4 }}>Donde aparece</div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {([['float', 'Flotante'], ['popup', 'Emergente'], ['bar-top', 'Barra arriba'], ['bar-bottom', 'Barra abajo']] as const).map(([pl, label]) => (
+                      <button
+                        key={pl}
+                        onClick={() => updateAd(ad.id, { placement: pl })}
+                        style={{
+                          flex: 1, padding: '7px 3px', borderRadius: 8,
+                          border: `2px solid ${ad.placement === pl ? '#7C3AED' : '#E2E8F0'}`,
+                          background: ad.placement === pl ? '#F5F3FF' : 'white',
+                          color: ad.placement === pl ? '#7C3AED' : '#64748B',
+                          fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                        }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginBottom: 4 }}>Texto</div>
+                  <input
+                    type="text"
+                    value={ad.title ?? ''}
+                    onChange={e => updateAd(ad.id, { title: e.target.value })}
+                    placeholder="Ej: 2x1 en postres esta semana"
+                    className="ed-block-input"
+                    style={{ width: '100%' }}
+                  />
+                </div>
+
+                {(ad.placement === 'float' || ad.placement === 'popup') && (
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginBottom: 4 }}>Foto (opcional)</div>
+                    <div
+                      onClick={() => { adImgTargetRef.current = ad.id; adImgRef.current?.click() }}
+                      style={{
+                        position: 'relative', width: '100%', height: 90, borderRadius: 8,
+                        border: '1.5px dashed #E2E8F0',
+                        background: ad.imageUrl ? `#F8FAFC center/cover no-repeat url(${ad.imageUrl})` : '#F8FAFC',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer', overflow: 'hidden',
+                      }}
+                    >
+                      {!ad.imageUrl && adImgUploadingId !== ad.id && (
+                        <span style={{ fontSize: 12, color: '#94A3B8', fontWeight: 600, textAlign: 'center', padding: '0 12px' }}>
+                          Toca para subir una foto
+                        </span>
+                      )}
+                      {adImgUploadingId === ad.id && (
+                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: '#7C3AED' }}>
+                          Subiendo...
+                        </div>
+                      )}
+                      {ad.imageUrl && adImgUploadingId !== ad.id && (
+                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '4px 8px', background: 'rgba(15,23,42,0.6)', color: 'white', fontSize: 10, fontWeight: 600, textAlign: 'center' }}>
+                          Cambiar foto
+                        </div>
+                      )}
+                    </div>
+                    {ad.imageUrl && (
+                      <button
+                        onClick={() => updateAd(ad.id, { imageUrl: '' })}
+                        style={{ marginTop: 6, padding: '5px 10px', borderRadius: 8, border: '1.5px solid #E2E8F0', background: 'white', color: '#DC2626', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Quitar foto
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                <FontSelect
+                  value={ad.font ?? ''}
+                  onChange={v => updateAd(ad.id, { font: v })}
+                  options={[{ id: '', name: 'Fuente de la tienda' }, ...PAGE_FONTS]}
+                  placeholder="Fuente de la tienda"
+                />
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <input
+                    type="number" min={10} max={48} step={1}
+                    value={ad.fontSize ?? 14}
+                    onChange={e => updateAd(ad.id, { fontSize: Number(e.target.value) || 14 })}
+                    className="ed-block-input"
+                    style={{ width: 64, flex: 'none' }}
+                    title="Tamano de letra (px)"
+                  />
+                  <span style={{ fontSize: 11, color: '#94A3B8' }}>px</span>
+                  <input
+                    type="color"
+                    value={ad.color || '#0F172A'}
+                    onChange={e => updateAd(ad.id, { color: e.target.value })}
+                    style={{ width: 34, height: 34, padding: 0, border: '1.5px solid #E2E8F0', borderRadius: 8, cursor: 'pointer', flexShrink: 0, marginLeft: 'auto' }}
+                    title="Color del texto"
+                  />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: '#64748B', flexShrink: 0 }}>Grosor</span>
+                  <input
+                    type="range" min={100} max={1200} step={50}
+                    value={ad.fontWeight ?? 700}
+                    onChange={e => updateAd(ad.id, { fontWeight: Number(e.target.value) })}
+                    style={{ flex: 1 }}
+                  />
+                  <span style={{ fontSize: 11, color: '#94A3B8', width: 28, flexShrink: 0, textAlign: 'right' }}>{ad.fontWeight ?? 700}</span>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginBottom: 4 }}>Boton (opcional)</div>
+                  <input
+                    type="text"
+                    value={ad.buttonLabel ?? ''}
+                    onChange={e => updateAd(ad.id, { buttonLabel: e.target.value })}
+                    placeholder="Ej: Ver oferta"
+                    className="ed-block-input"
+                    style={{ width: '100%', marginBottom: 6 }}
+                  />
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                    <select
+                      value={ad.linkTarget ?? 'none'}
+                      onChange={e => updateAd(ad.id, { linkTarget: e.target.value as Ad['linkTarget'] })}
+                      className="ed-block-select"
+                      style={{ flex: '0 0 110px' }}
+                    >
+                      <option value="none">Sin enlace</option>
+                      <option value="category">Categoria</option>
+                      <option value="product">Producto</option>
+                      <option value="url">URL</option>
+                    </select>
+                    {ad.linkTarget === 'url' ? (
+                      <input
+                        type="text"
+                        value={ad.linkUrl ?? ''}
+                        onChange={e => updateAd(ad.id, { linkUrl: e.target.value })}
+                        placeholder="https://..."
+                        className="ed-block-input"
+                        style={{ flex: 1 }}
+                      />
+                    ) : ad.linkTarget === 'category' ? (
+                      <select
+                        value={ad.linkCategoryId ?? ''}
+                        onChange={e => updateAd(ad.id, { linkCategoryId: e.target.value })}
+                        className="ed-block-select"
+                        style={{ flex: 1 }}
+                      >
+                        <option value="">Elige una categoria...</option>
+                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                    ) : ad.linkTarget === 'product' ? (
+                      <select
+                        value={ad.linkProductId ?? ''}
+                        onChange={e => updateAd(ad.id, { linkProductId: e.target.value })}
+                        className="ed-block-select"
+                        style={{ flex: 1 }}
+                      >
+                        <option value="">Elige un producto...</option>
+                        {productsLite.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                      </select>
+                    ) : null}
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                    {([['solid', 'Solido'], ['outline', 'Contorno'], ['slide', 'Deslizar']] as const).map(([st, label]) => (
+                      <button
+                        key={st}
+                        onClick={() => updateAd(ad.id, { buttonStyle: st })}
+                        style={{
+                          flex: 1, padding: '7px 3px', borderRadius: 8,
+                          border: `2px solid ${(ad.buttonStyle ?? 'solid') === st ? '#7C3AED' : '#E2E8F0'}`,
+                          background: (ad.buttonStyle ?? 'solid') === st ? '#F5F3FF' : 'white',
+                          color: (ad.buttonStyle ?? 'solid') === st ? '#7C3AED' : '#64748B',
+                          fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                        }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: '#64748B', flexShrink: 0 }}>Tamano</span>
+                    <input
+                      type="range" min={8} max={26} step={1}
+                      value={ad.buttonSize ?? 14}
+                      onChange={e => updateAd(ad.id, { buttonSize: Number(e.target.value) })}
+                      style={{ flex: 1 }}
+                    />
+                    <span style={{ fontSize: 11, color: '#94A3B8', width: 28, flexShrink: 0, textAlign: 'right' }}>{ad.buttonSize ?? 14}px</span>
+                    <input
+                      type="color"
+                      value={ad.buttonColor || '#7C3AED'}
+                      onChange={e => updateAd(ad.id, { buttonColor: e.target.value })}
+                      style={{ width: 34, height: 34, padding: 0, border: '1.5px solid #E2E8F0', borderRadius: 8, cursor: 'pointer', flexShrink: 0 }}
+                      title="Color del boton"
+                    />
+                  </div>
+                </div>
+
+                {ad.placement === 'float' && (
+                  <>
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginBottom: 4 }}>De donde sale</div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        {([['top', 'Arriba'], ['bottom', 'Abajo'], ['left', 'Izquierda'], ['right', 'Derecha']] as const).map(([pos, label]) => (
+                          <button
+                            key={pos}
+                            onClick={() => updateAd(ad.id, { position: pos })}
+                            style={{
+                              flex: 1, padding: '7px 3px', borderRadius: 8,
+                              border: `2px solid ${(ad.position ?? 'right') === pos ? '#7C3AED' : '#E2E8F0'}`,
+                              background: (ad.position ?? 'right') === pos ? '#F5F3FF' : 'white',
+                              color: (ad.position ?? 'right') === pos ? '#7C3AED' : '#64748B',
+                              fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                            }}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: '#64748B', flexShrink: 0 }}>Tamano del anuncio</span>
+                      <input
+                        type="range" min={40} max={150} step={5}
+                        value={ad.scale ?? 100}
+                        onChange={e => updateAd(ad.id, { scale: Number(e.target.value) })}
+                        style={{ flex: 1 }}
+                      />
+                      <span style={{ fontSize: 11, color: '#94A3B8', width: 32, flexShrink: 0, textAlign: 'right' }}>{ad.scale ?? 100}%</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: '#64748B', flexShrink: 0 }}>Separacion de la pantalla</span>
+                      <input
+                        type="range" min={0} max={60} step={2}
+                        value={ad.inset ?? 16}
+                        onChange={e => updateAd(ad.id, { inset: Number(e.target.value) })}
+                        style={{ flex: 1 }}
+                      />
+                      <span style={{ fontSize: 11, color: '#94A3B8', width: 32, flexShrink: 0, textAlign: 'right' }}>{ad.inset ?? 16}px</span>
+                    </div>
+                  </>
+                )}
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: '#64748B', flexShrink: 0 }}>Aparece despues de</span>
+                  <input
+                    type="range" min={0} max={30} step={1}
+                    value={ad.delaySeconds ?? 0}
+                    onChange={e => updateAd(ad.id, { delaySeconds: Number(e.target.value) })}
+                    style={{ flex: 1 }}
+                  />
+                  <span style={{ fontSize: 11, color: '#94A3B8', width: 40, flexShrink: 0, textAlign: 'right' }}>
+                    {ad.delaySeconds ? `${ad.delaySeconds}s` : 'Ya mismo'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: '#64748B', flexShrink: 0 }}>Se oculta solo despues de</span>
+                  <input
+                    type="range" min={0} max={60} step={1}
+                    value={ad.floatSeconds ?? 0}
+                    onChange={e => updateAd(ad.id, { floatSeconds: Number(e.target.value) })}
+                    style={{ flex: 1 }}
+                  />
+                  <span style={{ fontSize: 11, color: '#94A3B8', width: 40, flexShrink: 0, textAlign: 'right' }}>
+                    {ad.floatSeconds ? `${ad.floatSeconds}s` : 'Nunca'}
+                  </span>
+                </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <input
+                      type="checkbox"
+                      checked={!!ad.onceOnly}
+                      onChange={e => updateAd(ad.id, { onceOnly: e.target.checked })}
+                      style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
+                    />
+                    <div style={{
+                      width: 34, height: 20, borderRadius: 100,
+                      background: ad.onceOnly ? '#7C3AED' : '#D1D5DB',
+                      transition: 'background 0.2s', cursor: 'pointer', position: 'relative',
+                    }}>
+                      <div style={{
+                        position: 'absolute', top: 3, left: ad.onceOnly ? 16 : 3,
+                        width: 14, height: 14, borderRadius: '50%', background: 'white',
+                        transition: 'left 0.2s',
+                      }} />
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 12, color: '#475569' }}>Mostrar solo una vez por cliente</span>
+                </label>
+              </div>
+            ))}
+
+            <input
+              ref={adImgRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={async e => {
+                const file = e.target.files?.[0]
+                const targetId = adImgTargetRef.current
+                if (!file || !storeId || !targetId) return
+                setAdImgUploadingId(targetId)
+                try { updateAd(targetId, { imageUrl: await uploadBlockImage(file, storeId) }) }
+                catch { /* keep whatever was there before on failure */ }
+                setAdImgUploadingId(null)
+                e.target.value = ''
+              }}
+            />
+
+            <button
+              onClick={() => setAds(prev => [...prev, newAd()])}
+              style={{ padding: '9px 12px', borderRadius: 8, border: '1.5px dashed #E2E8F0', background: 'white', color: '#7C3AED', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+            >
+              + Nuevo anuncio
+            </button>
 
             <PanelSave />
           </div>

@@ -919,6 +919,117 @@ html, body { overflow-x: clip; }
   .sf-reorder-pos-bottom { bottom: var(--sf-reorder-inset, 12px); }
   .sf-reorder-title { font-size: 13px; }
 }
+/* ── Ads ─────────────────────────────────────────────── */
+.sf-ad-title { font-weight: 700; color: #0F172A; letter-spacing: -0.01em; }
+.sf-ad-btn {
+  background: var(--sf-accent-color, #7C3AED); color: white; border: none;
+  border-radius: 100px; padding: 9px 18px; font-size: 13px; font-weight: 600;
+  cursor: pointer; white-space: nowrap; font-family: var(--font-geist-sans), sans-serif;
+  transition: filter 0.15s;
+}
+.sf-ad-btn:hover { filter: brightness(0.92); }
+.sf-ad-btn-outline {
+  background: transparent; color: var(--sf-accent-color, #7C3AED);
+  border: 1.5px solid var(--sf-accent-color, #7C3AED);
+}
+.sf-ad-btn-outline:hover { background: color-mix(in srgb, var(--sf-accent-color, #7C3AED) 10%, transparent); filter: none; }
+.sf-ad-close {
+  background: none; border: none; cursor: pointer; color: #94A3B8;
+  padding: 4px; display: flex; align-items: center; flex-shrink: 0;
+}
+.sf-ad-close:hover { color: #475569; }
+
+/* Float — a floating card anchored to a screen edge, same mechanic as the
+   "Repetir pedido" card: a scale/inset custom property baked into each
+   position's own placement + entrance keyframe. */
+.sf-ad-float {
+  position: fixed; z-index: 89; overflow: hidden;
+  max-width: min(280px, calc(100vw - 32px));
+  display: flex; flex-direction: column; align-items: stretch; gap: 8px;
+  background: white; border-radius: 16px; padding: 14px 16px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.18);
+}
+.sf-ad-float.has-img { background: #0F172A; }
+.sf-ad-float-img { width: 100%; max-height: 140px; object-fit: cover; display: block; border-radius: 10px; }
+.sf-ad-float.has-img .sf-ad-title { color: white; }
+.sf-ad-float-title { font-size: 15px; }
+.sf-ad-float-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sf-ad-float-pos-right  { right: var(--sf-ad-inset, 16px); top: 50%; transform-origin: right center; animation: sfAdInRight 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+.sf-ad-float-pos-left   { left: var(--sf-ad-inset, 16px); top: 50%; transform-origin: left center; animation: sfAdInLeft 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+.sf-ad-float-pos-top    { top: var(--sf-ad-inset, 16px); left: 50%; transform-origin: center top; animation: sfAdInTop 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+.sf-ad-float-pos-bottom { bottom: var(--sf-ad-inset, 20px); left: 50%; transform-origin: center bottom; animation: sfAdInBottom 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+@keyframes sfAdInRight {
+  from { opacity: 0; transform: translateY(-50%) translateX(24px) scale(var(--sf-ad-scale, 1)); }
+  to   { opacity: 1; transform: translateY(-50%) translateX(0) scale(var(--sf-ad-scale, 1)); }
+}
+@keyframes sfAdInLeft {
+  from { opacity: 0; transform: translateY(-50%) translateX(-24px) scale(var(--sf-ad-scale, 1)); }
+  to   { opacity: 1; transform: translateY(-50%) translateX(0) scale(var(--sf-ad-scale, 1)); }
+}
+@keyframes sfAdInTop {
+  from { opacity: 0; transform: translateX(-50%) translateY(-24px) scale(var(--sf-ad-scale, 1)); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(var(--sf-ad-scale, 1)); }
+}
+@keyframes sfAdInBottom {
+  from { opacity: 0; transform: translateX(-50%) translateY(24px) scale(var(--sf-ad-scale, 1)); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(var(--sf-ad-scale, 1)); }
+}
+@media (max-width: 640px) {
+  .sf-ad-float { max-width: min(260px, calc(100vw - 24px)); }
+  .sf-ad-float-pos-right  { right: var(--sf-ad-inset, 12px); }
+  .sf-ad-float-pos-left   { left: var(--sf-ad-inset, 12px); }
+  .sf-ad-float-pos-top    { top: var(--sf-ad-inset, 12px); }
+  .sf-ad-float-pos-bottom { bottom: var(--sf-ad-inset, 12px); }
+}
+
+/* Popup — centered card over a dimmed backdrop. */
+.sf-ad-popup-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(15,23,42,0.55);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  animation: sfAdPopupFadeIn 0.2s ease both;
+}
+@keyframes sfAdPopupFadeIn { from { opacity: 0; } to { opacity: 1; } }
+.sf-ad-popup-card {
+  position: relative; width: 100%; max-width: 360px;
+  background: white; border-radius: 20px; overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+  animation: sfAdPopupIn 0.3s cubic-bezier(0.16,1,0.3,1) both;
+}
+@keyframes sfAdPopupIn {
+  from { opacity: 0; transform: scale(0.94) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.sf-ad-popup-img { width: 100%; max-height: 220px; object-fit: cover; display: block; }
+.sf-ad-popup-body { padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
+.sf-ad-popup-body .sf-ad-title { font-size: 19px; }
+.sf-ad-popup-body .sf-ad-btn, .sf-ad-popup-body .sf-ad-btn-outline { width: 100%; padding: 12px 18px; font-size: 14px; }
+.sf-ad-popup-close {
+  position: absolute; top: 12px; right: 12px; z-index: 1;
+  width: 30px; height: 30px; border-radius: 50%; border: none;
+  background: rgba(255,255,255,0.9); color: #475569;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.sf-ad-popup-close:hover { background: white; color: #0F172A; }
+
+/* Bar — a thin strip pinned to the top or bottom edge of the screen. */
+.sf-ad-bar {
+  position: fixed; left: 0; right: 0; z-index: 88;
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  padding: 10px 44px 10px 16px; background: var(--sf-accent-color, #7C3AED);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+.sf-ad-bar .sf-ad-title { color: white; font-size: 13px; font-weight: 600; }
+.sf-ad-bar .sf-ad-btn { background: white; color: var(--sf-accent-color, #7C3AED); }
+.sf-ad-bar .sf-ad-btn-outline { border-color: white; color: white; }
+.sf-ad-bar .sf-ad-close { position: absolute; right: 10px; color: rgba(255,255,255,0.85); }
+.sf-ad-bar .sf-ad-close:hover { color: white; }
+.sf-ad-bar-top { top: 0; animation: sfAdBarInTop 0.3s ease both; }
+.sf-ad-bar-bottom { bottom: 0; animation: sfAdBarInBottom 0.3s ease both; }
+@keyframes sfAdBarInTop { from { opacity: 0; transform: translateY(-100%); } to { opacity: 1; transform: translateY(0); } }
+@keyframes sfAdBarInBottom { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: translateY(0); } }
+
 .sf-splash-btn {
   background: var(--sf-accent-color, #7C3AED); color: white; border: none;
   cursor: pointer; padding: 15px 40px; border-radius: 100px;

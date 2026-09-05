@@ -1095,8 +1095,15 @@ export default function StoreShell({ store, products, categories = [], initialBc
     '--sf-ad-bar-offset': `${topScreenAdHeight}px`,
     ...(cfg.catTitleFont && FONT_MAP[cfg.catTitleFont] ? { '--sf-cat-title-font': FONT_MAP[cfg.catTitleFont] } : {}),
     ...(cfg.productNameFont && FONT_MAP[cfg.productNameFont] ? { '--sf-product-name-font': FONT_MAP[cfg.productNameFont] } : {}),
-    ...(topScreenAdHeight > 0 ? { paddingTop: topScreenAdHeight } : {}),
   } as React.CSSProperties
+  // A screen-anchored ad's header push-down only makes sense in the catalog
+  // view (the only place that ad renders) — pageStyle itself is shared with
+  // the splash and checkout views too, so this extra padding is applied
+  // separately, only where it's actually needed.
+  const catalogPageStyle: React.CSSProperties = {
+    ...pageStyle,
+    ...(topScreenAdHeight > 0 ? { paddingTop: topScreenAdHeight } : {}),
+  }
 
   function blockSlideUpdate(btnId: string, clientX: number) {
     const bar = blockSlideBarRefs.current.get(btnId)
@@ -3588,7 +3595,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     <>
     {renderLogoMorphOverlay()}
     {installed && <div className="sf-statusbar-strip" />}
-    <div className={`sf-page sf-tpl-${tpl} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize} sf-vshape-${cfgVariantShape} sf-eshape-${cfgExtraShape}${catalogEnter ? ` sf-catalog-enter sf-trans-${store.template_config?.homePage?.transition || 'slide'}` : ''}`} style={pageStyle}>
+    <div className={`sf-page sf-tpl-${tpl} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize} sf-vshape-${cfgVariantShape} sf-eshape-${cfgExtraShape}${catalogEnter ? ` sf-catalog-enter sf-trans-${store.template_config?.homePage?.transition || 'slide'}` : ''}`} style={catalogPageStyle}>
       <div className={`sf-topbar${cfgHeaderOverBanner ? ' sf-topbar-glass' : ''}${cfgHeaderSticky && !cfgHeaderOverBanner ? ' sf-topbar-sticky' : ''}${cfgHeaderSticky && cfgHeaderOverBanner ? ' sf-topbar-pinned' : ''}`}>
         <div className="sf-topbar-inner sf-topbar-3col">
           <div className="sf-topbar-slot-left">

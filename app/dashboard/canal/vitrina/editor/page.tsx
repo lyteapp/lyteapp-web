@@ -181,6 +181,11 @@ type Ad = {
   delaySeconds?: number
   onceOnly?: boolean
   floatSeconds?: number
+  categoryId?: string
+  barStyle?: 'static' | 'marquee' | 'rotate'
+  messages?: string[]
+  rotateSeconds?: number
+  marqueeSeconds?: number
 }
 function newAd(): Ad {
   return { id: crypto.randomUUID(), enabled: true, placement: 'float' }
@@ -767,7 +772,30 @@ export default function EditorPage() {
             </div>
           </div>`
         }
-        return `<div class="sf-ad-bar sf-ad-bar-${ad.placement === 'bar-top' ? 'top' : 'bottom'}" style="pointer-events:none; ${accentStyle}">
+        const barSide = ad.placement === 'bar-top' ? 'top' : 'bottom'
+        const barStyleKind = ad.barStyle ?? 'static'
+        if (barStyleKind === 'marquee') {
+          return `<div class="sf-ad-bar sf-ad-bar-${barSide} sf-ad-bar-marquee" style="pointer-events:none; ${accentStyle}">
+            <div class="sf-ad-bar-marquee-viewport">
+              <div class="sf-ad-bar-marquee-track" style="animation-duration:${ad.marqueeSeconds && ad.marqueeSeconds > 0 ? ad.marqueeSeconds : 12}s;">
+                <span class="sf-ad-title sf-ad-bar-title" style="${titleStyle}">${titleText}</span>
+                <span class="sf-ad-title sf-ad-bar-title" style="${titleStyle}">${titleText}</span>
+              </div>
+            </div>
+            ${btnHtml}
+            ${closeBtn('sf-ad-close')}
+          </div>`
+        }
+        if (barStyleKind === 'rotate') {
+          const msgs = (ad.messages ?? []).filter(m => m.trim())
+          const firstMsg = (msgs[0] ?? ad.title ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          return `<div class="sf-ad-bar sf-ad-bar-${barSide}" style="pointer-events:none; ${accentStyle}">
+            ${firstMsg ? `<div class="sf-ad-title sf-ad-bar-title" style="${titleStyle}">${firstMsg}</div>` : ''}
+            ${btnHtml}
+            ${closeBtn('sf-ad-close')}
+          </div>`
+        }
+        return `<div class="sf-ad-bar sf-ad-bar-${barSide}" style="pointer-events:none; ${accentStyle}">
           ${ad.title ? `<div class="sf-ad-title sf-ad-bar-title" style="${titleStyle}">${titleText}</div>` : ''}
           ${btnHtml}
           ${closeBtn('sf-ad-close')}
@@ -3163,6 +3191,22 @@ export default function EditorPage() {
                 </div>
 
                 <div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginBottom: 4 }}>Solo en esta categoria (opcional)</div>
+                  <select
+                    value={ad.categoryId ?? ''}
+                    onChange={e => updateAd(ad.id, { categoryId: e.target.value || undefined })}
+                    className="ed-block-select"
+                    style={{ width: '100%' }}
+                  >
+                    <option value="">Toda la tienda</option>
+                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                  <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 4 }}>
+                    Si eliges una categoria, el anuncio solo aparece mientras el cliente esta viendo esa seccion en el catalogo.
+                  </div>
+                </div>
+
+                <div>
                   <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginBottom: 4 }}>Texto</div>
                   <input
                     type="text"
@@ -3173,6 +3217,84 @@ export default function EditorPage() {
                     style={{ width: '100%' }}
                   />
                 </div>
+
+                {(ad.placement === 'bar-top' || ad.placement === 'bar-bottom') && (
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginBottom: 4 }}>Estilo de la barra</div>
+                    <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                      {([['static', 'Fija'], ['marquee', 'Deslizante'], ['rotate', 'Rotativo']] as const).map(([bs, label]) => (
+                        <button
+                          key={bs}
+                          onClick={() => updateAd(ad.id, { barStyle: bs })}
+                          style={{
+                            flex: 1, padding: '7px 3px', borderRadius: 8,
+                            border: `2px solid ${(ad.barStyle ?? 'static') === bs ? '#7C3AED' : '#E2E8F0'}`,
+                            background: (ad.barStyle ?? 'static') === bs ? '#F5F3FF' : 'white',
+                            color: (ad.barStyle ?? 'static') === bs ? '#7C3AED' : '#64748B',
+                            fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                          }}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {ad.barStyle === 'marquee' && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: '#64748B', flexShrink: 0 }}>Velocidad</span>
+                        <input
+                          type="range" min={4} max={30} step={1}
+                          value={ad.marqueeSeconds ?? 12}
+                          onChange={e => updateAd(ad.id, { marqueeSeconds: Number(e.target.value) })}
+                          style={{ flex: 1 }}
+                        />
+                        <span style={{ fontSize: 11, color: '#94A3B8', width: 32, flexShrink: 0, textAlign: 'right' }}>{ad.marqueeSeconds ?? 12}s</span>
+                      </div>
+                    )}
+
+                    {ad.barStyle === 'rotate' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <div style={{ fontSize: 10, color: '#94A3B8' }}>
+                          Estos mensajes reemplazan al texto de arriba, rotando uno a la vez.
+                        </div>
+                        {(ad.messages ?? []).map((msg, i) => (
+                          <div key={i} style={{ display: 'flex', gap: 6 }}>
+                            <input
+                              type="text"
+                              value={msg}
+                              onChange={e => updateAd(ad.id, { messages: (ad.messages ?? []).map((m, j) => j === i ? e.target.value : m) })}
+                              placeholder={`Mensaje ${i + 1}`}
+                              className="ed-block-input"
+                              style={{ flex: 1 }}
+                            />
+                            <button
+                              onClick={() => updateAd(ad.id, { messages: (ad.messages ?? []).filter((_, j) => j !== i) })}
+                              style={{ flexShrink: 0, width: 30, borderRadius: 8, border: 'none', background: '#FEF2F2', color: '#DC2626', cursor: 'pointer', fontSize: 14 }}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          onClick={() => updateAd(ad.id, { messages: [...(ad.messages ?? []), ''] })}
+                          style={{ padding: '7px 12px', borderRadius: 8, border: '1.5px dashed #E2E8F0', background: 'white', color: '#7C3AED', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                        >
+                          + Agregar mensaje
+                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 11, fontWeight: 600, color: '#64748B', flexShrink: 0 }}>Cambia cada</span>
+                          <input
+                            type="range" min={2} max={15} step={1}
+                            value={ad.rotateSeconds ?? 4}
+                            onChange={e => updateAd(ad.id, { rotateSeconds: Number(e.target.value) })}
+                            style={{ flex: 1 }}
+                          />
+                          <span style={{ fontSize: 11, color: '#94A3B8', width: 32, flexShrink: 0, textAlign: 'right' }}>{ad.rotateSeconds ?? 4}s</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {(ad.placement === 'float' || ad.placement === 'popup') && (
                   <div>

@@ -1030,6 +1030,23 @@ html, body { overflow-x: clip; }
 @keyframes sfAdBarInTop { from { opacity: 0; transform: translateY(-100%); } to { opacity: 1; transform: translateY(0); } }
 @keyframes sfAdBarInBottom { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: translateY(0); } }
 
+/* Bar — "deslizante" (marquee): the track holds the text twice back to back
+   and slides exactly half its width, so the loop point is invisible. */
+.sf-ad-bar-marquee-viewport { flex: 1; min-width: 0; overflow: hidden; }
+.sf-ad-bar-marquee-track {
+  display: flex; width: max-content; white-space: nowrap;
+  animation-name: sfAdMarquee; animation-timing-function: linear; animation-iteration-count: infinite;
+}
+/* Each copy carries its own trailing gap so the two copies are exactly
+   equal-width halves of the track — a clean -50% translation loops them
+   with no visible seam, regardless of how long the text is. */
+.sf-ad-bar-marquee-track .sf-ad-title { flex-shrink: 0; padding-right: 64px; }
+@keyframes sfAdMarquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+/* Bar — "rotativo": each message fades/slides in as it takes its turn. */
+.sf-ad-bar-rotate-msg { animation: sfAdBarMsgIn 0.35s ease both; }
+@keyframes sfAdBarMsgIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
 .sf-splash-btn {
   background: var(--sf-accent-color, #7C3AED); color: white; border: none;
   cursor: pointer; padding: 15px 40px; border-radius: 100px;

@@ -193,6 +193,11 @@ type Ad = {
   delaySeconds?: number
   onceOnly?: boolean
   floatSeconds?: number
+  categoryId?: string
+  barStyle?: 'static' | 'marquee' | 'rotate'
+  messages?: string[]
+  rotateSeconds?: number
+  marqueeSeconds?: number
 }
 type TemplateConfig = {
   pageBg?: string; pageFont?: string
@@ -508,6 +513,27 @@ export default function StoreShell({ store, products, categories = [], initialBc
     }
     return () => timers.forEach(clearTimeout)
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adVisible, store.template_config?.ads])
+
+  // Cycles a "rotativo" bar ad through its list of messages — one interval
+  // per visible rotating ad, restarted whenever the ad list or visibility
+  // changes.
+  const [adMsgIndex, setAdMsgIndex] = useState<Record<string, number>>({})
+  useEffect(() => {
+    const ads = store.template_config?.ads ?? []
+    const intervals: ReturnType<typeof setInterval>[] = []
+    for (const ad of ads) {
+      if (!adVisible[ad.id]) continue
+      if (ad.placement !== 'bar-top' && ad.placement !== 'bar-bottom') continue
+      if ((ad.barStyle ?? 'static') !== 'rotate') continue
+      const msgs = (ad.messages ?? []).filter(m => m.trim())
+      if (msgs.length < 2) continue
+      const seconds = ad.rotateSeconds && ad.rotateSeconds > 0 ? ad.rotateSeconds : 4
+      intervals.push(setInterval(() => {
+        setAdMsgIndex(prev => ({ ...prev, [ad.id]: ((prev[ad.id] ?? 0) + 1) % msgs.length }))
+      }, seconds * 1000))
+    }
+    return () => intervals.forEach(clearInterval)
   }, [adVisible, store.template_config?.ads])
 
   function closeAd(ad: Ad) {
@@ -1275,6 +1301,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
   function renderAd(ad: Ad) {
     if (!adVisible[ad.id]) return null
+    if (ad.categoryId && activeCatId !== ad.categoryId) return null
     const bm = buttonSizeMetrics(ad.buttonSize)
     const { fontWeight, strokeWidth } = textWeightStyle(ad.fontWeight)
     const titleStyle: React.CSSProperties = {
@@ -1327,8 +1354,43 @@ export default function StoreShell({ store, products, categories = [], initialBc
       )
     }
 
+    const barSide = ad.placement === 'bar-top' ? 'top' : 'bottom'
+    const barStyleKind = ad.barStyle ?? 'static'
+
+    if (barStyleKind === 'marquee') {
+      return (
+        <div key={ad.id} className={`sf-ad-bar sf-ad-bar-${barSide} sf-ad-bar-marquee`} style={accentVars}>
+          <div className="sf-ad-bar-marquee-viewport">
+            <div className="sf-ad-bar-marquee-track" style={{ animationDuration: `${ad.marqueeSeconds && ad.marqueeSeconds > 0 ? ad.marqueeSeconds : 12}s` }}>
+              <span className="sf-ad-title sf-ad-bar-title" style={titleStyle}>{ad.title}</span>
+              <span className="sf-ad-title sf-ad-bar-title" style={titleStyle} aria-hidden="true">{ad.title}</span>
+            </div>
+          </div>
+          {renderAdButton(ad, bm)}
+          <button type="button" className="sf-ad-close" onClick={() => closeAd(ad)} aria-label="Cerrar">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path strokeLinecap="round" d="M15 5L5 15M5 5l10 10"/></svg>
+          </button>
+        </div>
+      )
+    }
+
+    if (barStyleKind === 'rotate') {
+      const msgs = (ad.messages ?? []).filter(m => m.trim())
+      const idx = adMsgIndex[ad.id] ?? 0
+      const text = msgs.length > 0 ? msgs[idx % msgs.length] : ad.title
+      return (
+        <div key={ad.id} className={`sf-ad-bar sf-ad-bar-${barSide}`} style={accentVars}>
+          {text && <div key={idx} className="sf-ad-title sf-ad-bar-title sf-ad-bar-rotate-msg" style={titleStyle}>{text}</div>}
+          {renderAdButton(ad, bm)}
+          <button type="button" className="sf-ad-close" onClick={() => closeAd(ad)} aria-label="Cerrar">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path strokeLinecap="round" d="M15 5L5 15M5 5l10 10"/></svg>
+          </button>
+        </div>
+      )
+    }
+
     return (
-      <div key={ad.id} className={`sf-ad-bar sf-ad-bar-${ad.placement === 'bar-top' ? 'top' : 'bottom'}`} style={accentVars}>
+      <div key={ad.id} className={`sf-ad-bar sf-ad-bar-${barSide}`} style={accentVars}>
         {ad.title && <div className="sf-ad-title sf-ad-bar-title" style={titleStyle}>{ad.title}</div>}
         {renderAdButton(ad, bm)}
         <button type="button" className="sf-ad-close" onClick={() => closeAd(ad)} aria-label="Cerrar">

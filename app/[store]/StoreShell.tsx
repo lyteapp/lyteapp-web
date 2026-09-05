@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, Fragment } from 'react'
+import { useState, useEffect, useRef, Fragment } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -199,6 +199,19 @@ type Ad = {
   rotateSeconds?: number
   marqueeSeconds?: number
   topAnchor?: 'screen' | 'header' | 'catnav'
+}
+// Analytical (not measured) height of a bar ad, so a "screen"-anchored top
+// bar can push the header down by the right amount on the very first paint
+// — measuring the real rendered element asynchronously (ResizeObserver)
+// left a window where the header briefly rendered under the ad, or never
+// caught up at all depending on when the ad itself became visible.
+function estimateAdBarHeight(ad: Ad): number {
+  const bm = buttonSizeMetrics(ad.buttonSize)
+  const fontSize = ad.fontSize ?? 13
+  const textHeight = ad.title?.trim() ? fontSize * 1.3 : 0
+  const buttonHeight = ad.buttonLabel?.trim() ? (ad.buttonStyle === 'slide' ? bm.height : bm.fontSize + bm.padV * 2) : 0
+  const contentHeight = Math.max(textHeight, buttonHeight, 22)
+  return Math.round(contentHeight + 20)
 }
 type TemplateConfig = {
   pageBg?: string; pageFont?: string
@@ -563,22 +576,13 @@ export default function StoreShell({ store, products, categories = [], initialBc
   }, [view])
 
   // A "bar-top" ad anchored to "arriba de todo" floats above the header —
-  // this pushes the header (and everything below it) down by the ad's own
-  // measured height so the two sit stacked instead of the ad overlapping
-  // the header. A callback ref (rather than a plain useEffect) is used
-  // because the wrapping div only exists in the DOM while such an ad is
-  // actually visible, and a callback ref fires exactly on that mount/unmount.
-  const topScreenAdRoRef = useRef<ResizeObserver | null>(null)
-  const [topScreenAdHeight, setTopScreenAdHeight] = useState(0)
-  const topScreenAdWrapRef = useCallback((node: HTMLDivElement | null) => {
-    topScreenAdRoRef.current?.disconnect()
-    topScreenAdRoRef.current = null
-    if (!node) { setTopScreenAdHeight(0); return }
-    const ro = new ResizeObserver(() => setTopScreenAdHeight(node.getBoundingClientRect().height))
-    ro.observe(node)
-    topScreenAdRoRef.current = ro
-    setTopScreenAdHeight(node.getBoundingClientRect().height)
-  }, [])
+  // this pushes the header (and everything below it) down by the ad's
+  // (analytically estimated, not measured) height so the two sit stacked
+  // instead of the ad overlapping the header, correct from the very first
+  // render an ad becomes visible.
+  const topScreenAdHeight = (store.template_config?.ads ?? [])
+    .filter(a => a.enabled !== false && a.placement === 'bar-top' && (a.topAnchor ?? 'screen') === 'screen' && adVisible[a.id])
+    .reduce((sum, a) => sum + estimateAdBarHeight(a), 0)
 
   function closeAd(ad: Ad) {
     setAdVisible(v => ({ ...v, [ad.id]: false }))
@@ -1452,17 +1456,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   function renderAds() {
     const ads = (cfg.ads ?? []).filter(a => a.enabled !== false)
     if (ads.length === 0) return null
-    const isScreenTopBar = (a: Ad) => a.placement === 'bar-top' && (a.topAnchor ?? 'screen') === 'screen'
-    const screenTopBars = ads.filter(isScreenTopBar)
-    const rest = ads.filter(a => !isScreenTopBar(a))
-    return (
-      <>
-        {screenTopBars.length > 0 && (
-          <div ref={topScreenAdWrapRef}>{screenTopBars.map(renderAd)}</div>
-        )}
-        {rest.map(renderAd)}
-      </>
-    )
+    return <>{ads.map(renderAd)}</>
   }
 
   function renderProductGrid(items: Product[], layoutKey: string) {

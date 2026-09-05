@@ -35,8 +35,8 @@ export async function generateMetadata({ params }: { params: Promise<{ store: st
       statusBarStyle: 'black-translucent' as const,
       title: data.name,
     },
-    ...(data.logo_url && {
-      icons: { apple: [{ url: data.logo_url, sizes: '180x180' }] },
+    ...((data.template_config?.pwaIconUrl || data.logo_url) && {
+      icons: { apple: [{ url: data.template_config?.pwaIconUrl || data.logo_url, sizes: '180x180' }] },
     }),
   }
 }

@@ -71,8 +71,10 @@ export default function TiendaPage() {
   const [showInstagram, setShowInstagram] = useState(true)
   const [logoUrl, setLogoUrl] = useState('')
   const [bannerUrl, setBannerUrl] = useState('')
+  const [pwaIconUrl, setPwaIconUrl] = useState('')
   const [logoUploading, setLogoUploading]   = useState(false)
   const [bannerUploading, setBannerUploading] = useState(false)
+  const [pwaIconUploading, setPwaIconUploading] = useState(false)
   const [storeAddress, setStoreAddress]     = useState('')
   const [storeLat, setStoreLat]             = useState<number | null>(null)
   const [storeLng, setStoreLng]             = useState<number | null>(null)
@@ -80,6 +82,7 @@ export default function TiendaPage() {
 
   const logoRef   = useRef<HTMLInputElement>(null)
   const bannerRef = useRef<HTMLInputElement>(null)
+  const pwaIconRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!user) return
@@ -96,6 +99,7 @@ export default function TiendaPage() {
         setShowInstagram(data.template_config?.showInstagram !== false)
         setLogoUrl(data.logo_url ?? '')
         setBannerUrl(data.banner_url ?? '')
+        setPwaIconUrl((data.template_config?.pwaIconUrl as string | undefined) ?? '')
         setStoreAddress(data.store_address ?? '')
         setStoreLat(data.store_lat ?? null)
         setStoreLng(data.store_lng ?? null)
@@ -133,6 +137,15 @@ export default function TiendaPage() {
     try { setBannerUrl(await uploadFile(file, 'store-assets', 'banners')) }
     catch { setError('No se pudo subir el banner.') }
     setBannerUploading(false)
+  }
+
+  async function handlePwaIconUpload(e: { target: { files: FileList | null } }) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPwaIconUploading(true)
+    try { setPwaIconUrl(await uploadFile(file, 'store-assets', 'pwa-icons')) }
+    catch { setError('No se pudo subir el icono.') }
+    setPwaIconUploading(false)
   }
 
   async function handleDetectLocation() {
@@ -184,6 +197,7 @@ export default function TiendaPage() {
         ...(store?.template_config && typeof store.template_config === 'object' ? store.template_config : {}),
         showWhatsapp,
         showInstagram,
+        pwaIconUrl: pwaIconUrl || undefined,
       },
     }
     const { error: err, data } = store
@@ -224,6 +238,7 @@ export default function TiendaPage() {
         {bannerUrl && !bannerUploading && <div className="ts-banner-hint">Haz clic para cambiar el banner</div>}
       </div>
       <input ref={bannerRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleBannerUpload} />
+      <input ref={pwaIconRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePwaIconUpload} />
 
       <div className="ts-body">
 
@@ -296,6 +311,32 @@ export default function TiendaPage() {
                 <button className="ts-photo-btn" onClick={e => { e.stopPropagation(); bannerRef.current?.click() }}>
                   {bannerUrl ? 'Cambiar banner' : 'Subir banner'}
                 </button>
+              </div>
+            </div>
+
+            <div className="ts-photo-card" onClick={() => pwaIconRef.current?.click()}>
+              <div className="ts-photo-preview ts-photo-square">
+                {pwaIconUrl
+                  ? <img src={pwaIconUrl} alt="Icono" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 10 }} />
+                  : <div className="ts-photo-empty"><span>📲</span><span>Icono</span></div>
+                }
+                {pwaIconUploading && <div className="ts-photo-uploading">Subiendo...</div>}
+              </div>
+              <div className="ts-photo-info">
+                <div className="ts-photo-label">Icono para pantalla de inicio</div>
+                <div className="ts-photo-hint">Se usa al guardar o descargar la tienda como app · cuadrado, fondo solido, mín. 512×512. Si no subes uno, se usa el logo.</div>
+                <button className="ts-photo-btn" onClick={e => { e.stopPropagation(); pwaIconRef.current?.click() }}>
+                  {pwaIconUrl ? 'Cambiar icono' : 'Subir icono'}
+                </button>
+                {pwaIconUrl && (
+                  <button
+                    className="ts-photo-btn"
+                    style={{ marginTop: 6, background: 'transparent', color: '#DC2626' }}
+                    onClick={e => { e.stopPropagation(); setPwaIconUrl('') }}
+                  >
+                    Quitar y usar el logo
+                  </button>
+                )}
               </div>
             </div>
 
@@ -406,7 +447,7 @@ export default function TiendaPage() {
           {store && (
             <Link href={`/${store.slug}`} target="_blank" className="ts-ghost-btn">Ver mi tienda →</Link>
           )}
-          <button className="ts-save-btn" onClick={handleSave} disabled={saving || logoUploading || bannerUploading}>
+          <button className="ts-save-btn" onClick={handleSave} disabled={saving || logoUploading || bannerUploading || pwaIconUploading}>
             {saving ? 'Guardando...' : saved ? '✓ Guardado' : store ? 'Guardar cambios' : 'Crear tienda'}
           </button>
         </div>

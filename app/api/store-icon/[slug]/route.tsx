@@ -15,18 +15,22 @@ export async function GET(
 
   const { data: store } = await supabase
     .from('stores')
-    .select('name, logo_url, brand_color')
+    .select('name, logo_url, brand_color, template_config')
     .eq('slug', slug)
     .maybeSingle()
 
-  const bg      = store?.brand_color ?? '#7C3AED'
-  const logoUrl = store?.logo_url ?? null
-  const name    = store?.name ?? slug
+  const bg = store?.brand_color ?? '#7C3AED'
+  const name = store?.name ?? slug
+  // A dedicated home-screen icon (set in "Mi tienda") takes priority over
+  // the regular store logo, since the logo is often a transparent-background
+  // mark that reads poorly as a solid app icon.
+  const templateConfig = (store?.template_config ?? null) as { pwaIconUrl?: string } | null
+  const iconUrl = templateConfig?.pwaIconUrl || store?.logo_url || null
 
-  // Proxy the logo directly from Supabase storage — same origin for Chrome
-  if (logoUrl) {
+  // Proxy the image directly from Supabase storage — same origin for Chrome
+  if (iconUrl) {
     try {
-      const res = await fetch(logoUrl)
+      const res = await fetch(iconUrl)
       if (res.ok) {
         const bytes = await res.arrayBuffer()
         const ct    = res.headers.get('content-type') ?? 'image/png'

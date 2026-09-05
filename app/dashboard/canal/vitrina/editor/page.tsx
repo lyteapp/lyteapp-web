@@ -191,6 +191,17 @@ type Ad = {
 function newAd(): Ad {
   return { id: crypto.randomUUID(), enabled: true, placement: 'float' }
 }
+// Mirrors StoreShell.tsx's estimateAdBarHeight so the preview's header
+// push-down matches the real storefront's, pixel for pixel.
+function estimateAdBarHeight(ad: Ad): number {
+  const bm = buttonSizeMetrics(ad.buttonSize)
+  const fontSize = ad.fontSize ?? 13
+  const hasText = !!ad.title?.trim() || (ad.messages ?? []).some(m => m.trim())
+  const textHeight = hasText ? fontSize * 1.2 : 0
+  const buttonHeight = ad.buttonLabel?.trim() ? (ad.buttonStyle === 'slide' ? bm.height : bm.fontSize * 1.2 + bm.padV * 2) : 0
+  const contentHeight = Math.max(textHeight, buttonHeight, 16)
+  return Math.round(contentHeight + 20)
+}
 
 function FontSelect({
   value, onChange, options, placeholder,
@@ -775,7 +786,6 @@ export default function EditorPage() {
         }
         const barSide = ad.placement === 'bar-top' ? 'top' : 'bottom'
         const barStyleKind = ad.barStyle ?? 'static'
-        const isScreenTopBar = barSide === 'top' && (!ad.topAnchor || ad.topAnchor === 'screen')
         let topStyle = ''
         if (barSide === 'top' && ad.topAnchor && ad.topAnchor !== 'screen') {
           const header = doc.querySelector<HTMLElement>('.sf-topbar')
@@ -784,9 +794,8 @@ export default function EditorPage() {
           const catNavBottom = catNav ? Math.max(0, catNav.getBoundingClientRect().bottom) : headerBottom
           topStyle = `top:${ad.topAnchor === 'header' ? headerBottom : catNavBottom}px;`
         }
-        const screenTopAttr = isScreenTopBar ? ' data-sf-ad-screen-bar="1"' : ''
         if (barStyleKind === 'marquee') {
-          return `<div class="sf-ad-bar sf-ad-bar-${barSide} sf-ad-bar-marquee" style="pointer-events:none; ${accentStyle} ${topStyle}"${screenTopAttr}>
+          return `<div class="sf-ad-bar sf-ad-bar-${barSide} sf-ad-bar-marquee" style="pointer-events:none; ${accentStyle} ${topStyle}">
             <div class="sf-ad-bar-marquee-viewport">
               <div class="sf-ad-bar-marquee-track" style="animation-duration:${ad.marqueeSeconds && ad.marqueeSeconds > 0 ? ad.marqueeSeconds : 12}s;">
                 <span class="sf-ad-title sf-ad-bar-title" style="${titleStyle}">${titleText}</span>
@@ -794,18 +803,19 @@ export default function EditorPage() {
               </div>
             </div>
             ${btnHtml}
+            ${closeBtn('sf-ad-close')}
           </div>`
         }
         if (barStyleKind === 'rotate') {
           const msgs = (ad.messages ?? []).filter(m => m.trim())
           const firstMsg = (msgs[0] ?? ad.title ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-          return `<div class="sf-ad-bar sf-ad-bar-${barSide}" style="pointer-events:none; ${accentStyle} ${topStyle}"${screenTopAttr}>
+          return `<div class="sf-ad-bar sf-ad-bar-${barSide}" style="pointer-events:none; ${accentStyle} ${topStyle}">
             ${firstMsg ? `<div class="sf-ad-title sf-ad-bar-title" style="${titleStyle}">${firstMsg}</div>` : ''}
             ${btnHtml}
             ${closeBtn('sf-ad-close')}
           </div>`
         }
-        return `<div class="sf-ad-bar sf-ad-bar-${barSide}" style="pointer-events:none; ${accentStyle} ${topStyle}"${screenTopAttr}>
+        return `<div class="sf-ad-bar sf-ad-bar-${barSide}" style="pointer-events:none; ${accentStyle} ${topStyle}">
           ${ad.title ? `<div class="sf-ad-title sf-ad-bar-title" style="${titleStyle}">${titleText}</div>` : ''}
           ${btnHtml}
           ${closeBtn('sf-ad-close')}
@@ -816,14 +826,13 @@ export default function EditorPage() {
     }
 
     // A screen-anchored top bar ad pushes the header (and whatever it's
-    // sticky/glass/fixed to) down by its own rendered height, mirroring the
+    // sticky/glass/fixed to) down by its own estimated height, mirroring the
     // real storefront's --sf-ad-bar-offset mechanism — injected as !important
     // overrides so they win over the page's own React-managed inline styles.
-    // Measured directly (rather than estimated) since the HTML is already
-    // in the DOM by this point — no async timing concern here.
     let adOffsetEl = doc.getElementById('ed-ad-offset-preview') as HTMLStyleElement | null
-    const screenTopBarEls = Array.from(doc.querySelectorAll<HTMLElement>('[data-sf-ad-screen-bar="1"]'))
-    const screenTopBarHeight = screenTopBarEls.reduce((sum, el) => sum + el.getBoundingClientRect().height, 0)
+    const screenTopBarHeight = visibleAds
+      .filter(a => a.placement === 'bar-top' && (a.topAnchor ?? 'screen') === 'screen')
+      .reduce((sum, a) => sum + estimateAdBarHeight(a), 0)
     if (screenTopBarHeight > 0) {
       if (!adOffsetEl) {
         adOffsetEl = doc.createElement('style')

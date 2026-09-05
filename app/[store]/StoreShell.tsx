@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useLayoutEffect, useRef, Fragment } from 'react'
+import { useState, useEffect, useRef, Fragment } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -581,21 +581,13 @@ export default function StoreShell({ store, products, categories = [], initialBc
   }, [view])
 
   // A "bar-top" ad anchored to "arriba de todo" floats above the header —
-  // this pushes the header (and everything below it) down by the ad's own
-  // height so the two sit stacked instead of the ad overlapping the header.
-  // Seeded with an analytical estimate (correct on the very first paint, no
-  // flash of overlap) then refined to the exact rendered height via a
-  // layout effect — real font metrics never match a formula pixel-for-
-  // pixel, and even a couple of px off left a visible sliver of gap.
-  const topScreenAdHeightEstimate = (store.template_config?.ads ?? [])
+  // this pushes the header (and everything below it) down by the ad's
+  // (analytically estimated, not measured) height so the two sit stacked
+  // instead of the ad overlapping the header, correct from the very first
+  // render an ad becomes visible.
+  const topScreenAdHeight = (store.template_config?.ads ?? [])
     .filter(a => a.enabled !== false && a.placement === 'bar-top' && (a.topAnchor ?? 'screen') === 'screen' && adVisible[a.id])
     .reduce((sum, a) => sum + estimateAdBarHeight(a), 0)
-  const [topScreenAdHeight, setTopScreenAdHeight] = useState(topScreenAdHeightEstimate)
-  useLayoutEffect(() => {
-    const els = document.querySelectorAll<HTMLElement>('[data-sf-ad-screen-bar="1"]')
-    const total = Array.from(els).reduce((sum, el) => sum + el.getBoundingClientRect().height, 0)
-    setTopScreenAdHeight(total || topScreenAdHeightEstimate)
-  }, [topScreenAdHeightEstimate, adVisible, store.template_config?.ads])
 
   function closeAd(ad: Ad) {
     setAdVisible(v => ({ ...v, [ad.id]: false }))
@@ -1419,15 +1411,13 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
     const barSide = ad.placement === 'bar-top' ? 'top' : 'bottom'
     const barStyleKind = ad.barStyle ?? 'static'
-    const isScreenTopBar = barSide === 'top' && (!ad.topAnchor || ad.topAnchor === 'screen')
     const barPositionVars: React.CSSProperties = barSide === 'top' && ad.topAnchor && ad.topAnchor !== 'screen'
       ? { top: `${ad.topAnchor === 'header' ? adBarHeaderBottom : adBarCatNavBottom}px` }
       : {}
-    const screenTopBarProps = isScreenTopBar ? { 'data-sf-ad-screen-bar': '1' } : {}
 
     if (barStyleKind === 'marquee') {
       return (
-        <div key={ad.id} className={`sf-ad-bar sf-ad-bar-${barSide} sf-ad-bar-marquee`} style={{ ...accentVars, ...barPositionVars }} {...screenTopBarProps}>
+        <div key={ad.id} className={`sf-ad-bar sf-ad-bar-${barSide} sf-ad-bar-marquee`} style={{ ...accentVars, ...barPositionVars }}>
           <div className="sf-ad-bar-marquee-viewport">
             <div className="sf-ad-bar-marquee-track" style={{ animationDuration: `${ad.marqueeSeconds && ad.marqueeSeconds > 0 ? ad.marqueeSeconds : 12}s` }}>
               <span className="sf-ad-title sf-ad-bar-title" style={titleStyle}>{ad.title}</span>
@@ -1435,6 +1425,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
             </div>
           </div>
           {renderAdButton(ad, bm)}
+          <button type="button" className="sf-ad-close" onClick={() => closeAd(ad)} aria-label="Cerrar">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path strokeLinecap="round" d="M15 5L5 15M5 5l10 10"/></svg>
+          </button>
         </div>
       )
     }
@@ -1444,7 +1437,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       const idx = adMsgIndex[ad.id] ?? 0
       const text = msgs.length > 0 ? msgs[idx % msgs.length] : ad.title
       return (
-        <div key={ad.id} className={`sf-ad-bar sf-ad-bar-${barSide}`} style={{ ...accentVars, ...barPositionVars }} {...screenTopBarProps}>
+        <div key={ad.id} className={`sf-ad-bar sf-ad-bar-${barSide}`} style={{ ...accentVars, ...barPositionVars }}>
           {text && <div key={idx} className="sf-ad-title sf-ad-bar-title sf-ad-bar-rotate-msg" style={titleStyle}>{text}</div>}
           {renderAdButton(ad, bm)}
           <button type="button" className="sf-ad-close" onClick={() => closeAd(ad)} aria-label="Cerrar">
@@ -1455,7 +1448,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     }
 
     return (
-      <div key={ad.id} className={`sf-ad-bar sf-ad-bar-${barSide}`} style={{ ...accentVars, ...barPositionVars }} {...screenTopBarProps}>
+      <div key={ad.id} className={`sf-ad-bar sf-ad-bar-${barSide}`} style={{ ...accentVars, ...barPositionVars }}>
         {ad.title && <div className="sf-ad-title sf-ad-bar-title" style={titleStyle}>{ad.title}</div>}
         {renderAdButton(ad, bm)}
         <button type="button" className="sf-ad-close" onClick={() => closeAd(ad)} aria-label="Cerrar">

@@ -1425,9 +1425,6 @@ export default function StoreShell({ store, products, categories = [], initialBc
             </div>
           </div>
           {renderAdButton(ad, bm)}
-          <button type="button" className="sf-ad-close" onClick={() => closeAd(ad)} aria-label="Cerrar">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path strokeLinecap="round" d="M15 5L5 15M5 5l10 10"/></svg>
-          </button>
         </div>
       )
     }

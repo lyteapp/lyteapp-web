@@ -803,7 +803,6 @@ export default function EditorPage() {
               </div>
             </div>
             ${btnHtml}
-            ${closeBtn('sf-ad-close')}
           </div>`
         }
         if (barStyleKind === 'rotate') {

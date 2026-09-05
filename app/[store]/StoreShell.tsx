@@ -208,9 +208,14 @@ type Ad = {
 function estimateAdBarHeight(ad: Ad): number {
   const bm = buttonSizeMetrics(ad.buttonSize)
   const fontSize = ad.fontSize ?? 13
-  const textHeight = ad.title?.trim() ? fontSize * 1.3 : 0
-  const buttonHeight = ad.buttonLabel?.trim() ? (ad.buttonStyle === 'slide' ? bm.height : bm.fontSize + bm.padV * 2) : 0
-  const contentHeight = Math.max(textHeight, buttonHeight, 22)
+  // The close (x) button is position:absolute inside a bar ad — it never
+  // contributes to the bar's own flow height, so it's excluded here (an
+  // earlier version floored the estimate at its size, over-pushing the
+  // header down and leaving a visible gap under the ad).
+  const hasText = !!ad.title?.trim() || (ad.messages ?? []).some(m => m.trim())
+  const textHeight = hasText ? fontSize * 1.2 : 0
+  const buttonHeight = ad.buttonLabel?.trim() ? (ad.buttonStyle === 'slide' ? bm.height : bm.fontSize * 1.2 + bm.padV * 2) : 0
+  const contentHeight = Math.max(textHeight, buttonHeight, 16)
   return Math.round(contentHeight + 20)
 }
 type TemplateConfig = {

@@ -196,9 +196,10 @@ function newAd(): Ad {
 function estimateAdBarHeight(ad: Ad): number {
   const bm = buttonSizeMetrics(ad.buttonSize)
   const fontSize = ad.fontSize ?? 13
-  const textHeight = ad.title?.trim() ? fontSize * 1.3 : 0
-  const buttonHeight = ad.buttonLabel?.trim() ? (ad.buttonStyle === 'slide' ? bm.height : bm.fontSize + bm.padV * 2) : 0
-  const contentHeight = Math.max(textHeight, buttonHeight, 22)
+  const hasText = !!ad.title?.trim() || (ad.messages ?? []).some(m => m.trim())
+  const textHeight = hasText ? fontSize * 1.2 : 0
+  const buttonHeight = ad.buttonLabel?.trim() ? (ad.buttonStyle === 'slide' ? bm.height : bm.fontSize * 1.2 + bm.padV * 2) : 0
+  const contentHeight = Math.max(textHeight, buttonHeight, 16)
   return Math.round(contentHeight + 20)
 }
 

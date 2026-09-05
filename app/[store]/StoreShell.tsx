@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, Fragment } from 'react'
+import { useState, useEffect, useRef, useCallback, Fragment } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -562,6 +562,24 @@ export default function StoreShell({ store, products, categories = [], initialBc
     return () => ro.disconnect()
   }, [view])
 
+  // A "bar-top" ad anchored to "arriba de todo" floats above the header —
+  // this pushes the header (and everything below it) down by the ad's own
+  // measured height so the two sit stacked instead of the ad overlapping
+  // the header. A callback ref (rather than a plain useEffect) is used
+  // because the wrapping div only exists in the DOM while such an ad is
+  // actually visible, and a callback ref fires exactly on that mount/unmount.
+  const topScreenAdRoRef = useRef<ResizeObserver | null>(null)
+  const [topScreenAdHeight, setTopScreenAdHeight] = useState(0)
+  const topScreenAdWrapRef = useCallback((node: HTMLDivElement | null) => {
+    topScreenAdRoRef.current?.disconnect()
+    topScreenAdRoRef.current = null
+    if (!node) { setTopScreenAdHeight(0); return }
+    const ro = new ResizeObserver(() => setTopScreenAdHeight(node.getBoundingClientRect().height))
+    ro.observe(node)
+    topScreenAdRoRef.current = ro
+    setTopScreenAdHeight(node.getBoundingClientRect().height)
+  }, [])
+
   function closeAd(ad: Ad) {
     setAdVisible(v => ({ ...v, [ad.id]: false }))
     if (ad.onceOnly) {
@@ -1067,6 +1085,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     '--sf-catnav-overlap': `-${catNavHeightMeasured ?? 52}px`,
     ...(cfg.catTitleFont && FONT_MAP[cfg.catTitleFont] ? { '--sf-cat-title-font': FONT_MAP[cfg.catTitleFont] } : {}),
     ...(cfg.productNameFont && FONT_MAP[cfg.productNameFont] ? { '--sf-product-name-font': FONT_MAP[cfg.productNameFont] } : {}),
+    ...(topScreenAdHeight > 0 ? { paddingTop: topScreenAdHeight } : {}),
   } as React.CSSProperties
 
   function blockSlideUpdate(btnId: string, clientX: number) {
@@ -1432,7 +1451,17 @@ export default function StoreShell({ store, products, categories = [], initialBc
   function renderAds() {
     const ads = (cfg.ads ?? []).filter(a => a.enabled !== false)
     if (ads.length === 0) return null
-    return <>{ads.map(renderAd)}</>
+    const isScreenTopBar = (a: Ad) => a.placement === 'bar-top' && (a.topAnchor ?? 'screen') === 'screen'
+    const screenTopBars = ads.filter(isScreenTopBar)
+    const rest = ads.filter(a => !isScreenTopBar(a))
+    return (
+      <>
+        {screenTopBars.length > 0 && (
+          <div ref={topScreenAdWrapRef}>{screenTopBars.map(renderAd)}</div>
+        )}
+        {rest.map(renderAd)}
+      </>
+    )
   }
 
   function renderProductGrid(items: Product[], layoutKey: string) {

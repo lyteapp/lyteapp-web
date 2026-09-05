@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, Fragment } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, Fragment } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -199,6 +199,24 @@ type Ad = {
   rotateSeconds?: number
   marqueeSeconds?: number
   topAnchor?: 'screen' | 'header' | 'catnav'
+}
+// Analytical (not measured) height of a bar ad, so a "screen"-anchored top
+// bar can push the header down by the right amount on the very first paint
+// — measuring the real rendered element asynchronously (ResizeObserver)
+// left a window where the header briefly rendered under the ad, or never
+// caught up at all depending on when the ad itself became visible.
+function estimateAdBarHeight(ad: Ad): number {
+  const bm = buttonSizeMetrics(ad.buttonSize)
+  const fontSize = ad.fontSize ?? 13
+  // The close (x) button is position:absolute inside a bar ad — it never
+  // contributes to the bar's own flow height, so it's excluded here (an
+  // earlier version floored the estimate at its size, over-pushing the
+  // header down and leaving a visible gap under the ad).
+  const hasText = !!ad.title?.trim() || (ad.messages ?? []).some(m => m.trim())
+  const textHeight = hasText ? fontSize * 1.2 : 0
+  const buttonHeight = ad.buttonLabel?.trim() ? (ad.buttonStyle === 'slide' ? bm.height : bm.fontSize * 1.2 + bm.padV * 2) : 0
+  const contentHeight = Math.max(textHeight, buttonHeight, 16)
+  return Math.round(contentHeight + 20)
 }
 type TemplateConfig = {
   pageBg?: string; pageFont?: string
@@ -561,6 +579,23 @@ export default function StoreShell({ store, products, categories = [], initialBc
     if (catNav) ro.observe(catNav)
     return () => ro.disconnect()
   }, [view])
+
+  // A "bar-top" ad anchored to "arriba de todo" floats above the header —
+  // this pushes the header (and everything below it) down by the ad's own
+  // height so the two sit stacked instead of the ad overlapping the header.
+  // Seeded with an analytical estimate (correct on the very first paint, no
+  // flash of overlap) then refined to the exact rendered height via a
+  // layout effect — real font metrics never match a formula pixel-for-
+  // pixel, and even a couple of px off left a visible sliver of gap.
+  const topScreenAdHeightEstimate = (store.template_config?.ads ?? [])
+    .filter(a => a.enabled !== false && a.placement === 'bar-top' && (a.topAnchor ?? 'screen') === 'screen' && adVisible[a.id])
+    .reduce((sum, a) => sum + estimateAdBarHeight(a), 0)
+  const [topScreenAdHeight, setTopScreenAdHeight] = useState(topScreenAdHeightEstimate)
+  useLayoutEffect(() => {
+    const els = document.querySelectorAll<HTMLElement>('[data-sf-ad-screen-bar="1"]')
+    const total = Array.from(els).reduce((sum, el) => sum + el.getBoundingClientRect().height, 0)
+    setTopScreenAdHeight(total || topScreenAdHeightEstimate)
+  }, [topScreenAdHeightEstimate, adVisible, store.template_config?.ads])
 
   function closeAd(ad: Ad) {
     setAdVisible(v => ({ ...v, [ad.id]: false }))
@@ -999,7 +1034,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // (a tall logo, a wrapping name) can render taller than that. Measuring the
   // actual element avoids the category bar landing under/over the header by
   // however many pixels the configured value was off by.
-  const cfgStickyOffsetPx = cfgHeaderSticky ? (headerHeightMeasured ?? cfg.headerHeightPx ?? 56) : 0
+  const cfgStickyOffsetPx = (cfgHeaderSticky ? (headerHeightMeasured ?? cfg.headerHeightPx ?? 56) : 0) + topScreenAdHeight
   const cfgModalWizard = !!cfg.modalWizard
 
   // ── iOS Safari reveals <body>'s own background during the rubber-band
@@ -1065,8 +1100,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
     ...(cfg.headerIconColor ? { '--sf-header-icon-color': cfg.headerIconColor } : {}),
     '--sf-sticky-offset': `${cfgStickyOffsetPx}px`,
     '--sf-catnav-overlap': `-${catNavHeightMeasured ?? 52}px`,
+    '--sf-ad-bar-offset': `${topScreenAdHeight}px`,
     ...(cfg.catTitleFont && FONT_MAP[cfg.catTitleFont] ? { '--sf-cat-title-font': FONT_MAP[cfg.catTitleFont] } : {}),
     ...(cfg.productNameFont && FONT_MAP[cfg.productNameFont] ? { '--sf-product-name-font': FONT_MAP[cfg.productNameFont] } : {}),
+    ...(topScreenAdHeight > 0 ? { paddingTop: topScreenAdHeight } : {}),
   } as React.CSSProperties
 
   function blockSlideUpdate(btnId: string, clientX: number) {
@@ -1383,19 +1420,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
     const barSide = ad.placement === 'bar-top' ? 'top' : 'bottom'
     const barStyleKind = ad.barStyle ?? 'static'
     const isScreenTopBar = barSide === 'top' && (!ad.topAnchor || ad.topAnchor === 'screen')
-    // A "screen"-anchored top bar renders as a real in-flow block (not the
-    // usual fixed overlay) placed before the header in the JSX — that way
-    // the header simply follows it in normal document flow, flush, with no
-    // height to measure or estimate and therefore no chance of a gap.
-    const barPositionVars: React.CSSProperties = isScreenTopBar
-      ? { position: 'static' }
-      : barSide === 'top' && ad.topAnchor && ad.topAnchor !== 'screen'
+    const barPositionVars: React.CSSProperties = barSide === 'top' && ad.topAnchor && ad.topAnchor !== 'screen'
       ? { top: `${ad.topAnchor === 'header' ? adBarHeaderBottom : adBarCatNavBottom}px` }
       : {}
+    const screenTopBarProps = isScreenTopBar ? { 'data-sf-ad-screen-bar': '1' } : {}
 
     if (barStyleKind === 'marquee') {
       return (
-        <div key={ad.id} className={`sf-ad-bar sf-ad-bar-${barSide} sf-ad-bar-marquee`} style={{ ...accentVars, ...barPositionVars }}>
+        <div key={ad.id} className={`sf-ad-bar sf-ad-bar-${barSide} sf-ad-bar-marquee`} style={{ ...accentVars, ...barPositionVars }} {...screenTopBarProps}>
           <div className="sf-ad-bar-marquee-viewport">
             <div className="sf-ad-bar-marquee-track" style={{ animationDuration: `${ad.marqueeSeconds && ad.marqueeSeconds > 0 ? ad.marqueeSeconds : 12}s` }}>
               <span className="sf-ad-title sf-ad-bar-title" style={titleStyle}>{ad.title}</span>
@@ -1412,7 +1444,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       const idx = adMsgIndex[ad.id] ?? 0
       const text = msgs.length > 0 ? msgs[idx % msgs.length] : ad.title
       return (
-        <div key={ad.id} className={`sf-ad-bar sf-ad-bar-${barSide}`} style={{ ...accentVars, ...barPositionVars }}>
+        <div key={ad.id} className={`sf-ad-bar sf-ad-bar-${barSide}`} style={{ ...accentVars, ...barPositionVars }} {...screenTopBarProps}>
           {text && <div key={idx} className="sf-ad-title sf-ad-bar-title sf-ad-bar-rotate-msg" style={titleStyle}>{text}</div>}
           {renderAdButton(ad, bm)}
           <button type="button" className="sf-ad-close" onClick={() => closeAd(ad)} aria-label="Cerrar">
@@ -1423,7 +1455,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     }
 
     return (
-      <div key={ad.id} className={`sf-ad-bar sf-ad-bar-${barSide}`} style={{ ...accentVars, ...barPositionVars }}>
+      <div key={ad.id} className={`sf-ad-bar sf-ad-bar-${barSide}`} style={{ ...accentVars, ...barPositionVars }} {...screenTopBarProps}>
         {ad.title && <div className="sf-ad-title sf-ad-bar-title" style={titleStyle}>{ad.title}</div>}
         {renderAdButton(ad, bm)}
         <button type="button" className="sf-ad-close" onClick={() => closeAd(ad)} aria-label="Cerrar">
@@ -1433,21 +1465,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
     )
   }
 
-  // "Arriba de todo" top-bar ads render separately, right before the
-  // header in the JSX (see renderScreenTopBars), so they're excluded here
-  // to avoid rendering them twice.
   function renderAds() {
-    const ads = (cfg.ads ?? []).filter(a =>
-      a.enabled !== false && !(a.placement === 'bar-top' && (!a.topAnchor || a.topAnchor === 'screen'))
-    )
-    if (ads.length === 0) return null
-    return <>{ads.map(renderAd)}</>
-  }
-
-  function renderScreenTopBars() {
-    const ads = (cfg.ads ?? []).filter(a =>
-      a.enabled !== false && a.placement === 'bar-top' && (!a.topAnchor || a.topAnchor === 'screen')
-    )
+    const ads = (cfg.ads ?? []).filter(a => a.enabled !== false)
     if (ads.length === 0) return null
     return <>{ads.map(renderAd)}</>
   }
@@ -3580,7 +3599,6 @@ export default function StoreShell({ store, products, categories = [], initialBc
     {renderLogoMorphOverlay()}
     {installed && <div className="sf-statusbar-strip" />}
     <div className={`sf-page sf-tpl-${tpl} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize} sf-vshape-${cfgVariantShape} sf-eshape-${cfgExtraShape}${catalogEnter ? ` sf-catalog-enter sf-trans-${store.template_config?.homePage?.transition || 'slide'}` : ''}`} style={pageStyle}>
-      {renderScreenTopBars()}
       <div className={`sf-topbar${cfgHeaderOverBanner ? ' sf-topbar-glass' : ''}${cfgHeaderSticky && !cfgHeaderOverBanner ? ' sf-topbar-sticky' : ''}${cfgHeaderSticky && cfgHeaderOverBanner ? ' sf-topbar-pinned' : ''}`}>
         <div className="sf-topbar-inner sf-topbar-3col">
           <div className="sf-topbar-slot-left">

@@ -39,7 +39,7 @@ html, body { overflow-x: clip; }
 /* "Encabezado sobre el banner" — floats the topbar over the banner image
    in a frosted-glass strip instead of stacking above it in normal flow. */
 .sf-topbar-glass {
-  position: absolute; top: 0; left: 0; right: 0; z-index: 20;
+  position: absolute; top: var(--sf-ad-bar-offset, 0px); left: 0; right: 0; z-index: 20;
   background: rgba(255,255,255,0.22);
   backdrop-filter: blur(14px) saturate(160%);
   -webkit-backdrop-filter: blur(14px) saturate(160%);
@@ -50,8 +50,10 @@ html, body { overflow-x: clip; }
 .sf-topbar-glass .sf-menu-btn:hover { opacity: 0.75; }
 /* "Fijar encabezado al hacer scroll" — anchors the header to the top;
    the category bar (sticky or pinned-glass) sticks right below it via
-   --sf-sticky-offset instead of the two overlapping at top:0. */
-.sf-topbar-sticky { position: sticky; top: 0; z-index: 25; }
+   --sf-sticky-offset instead of the two overlapping at top:0. A screen-
+   anchored top bar ad, if present, pushes both down by its own height via
+   --sf-ad-bar-offset so it doesn't get covered by either. */
+.sf-topbar-sticky { position: sticky; top: var(--sf-ad-bar-offset, 0px); z-index: 25; }
 /* Same option, but for a glass header floating over the banner: it's
    already positioned at top:0 (absolute, so it normally scrolls away
    with the banner) — anchoring just swaps that for fixed, from the

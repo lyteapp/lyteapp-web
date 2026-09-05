@@ -725,80 +725,16 @@ export default function EditorPage() {
     // Live draft preview for the "Anuncios" tool — shows every enabled ad
     // immediately (ignoring its delay/once-only trigger, which only matter
     // on the real storefront) so placement/text/photo/button choices are
-    // visible while editing. A "screen"-anchored top bar renders separately,
-    // as a real first child of .sf-page (matching the real storefront),
-    // so the header simply follows it in flow — no offset math needed.
-    const closeBtn = (cls: string) => `<button type="button" class="${cls}" style="pointer-events:none;"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" d="M15 5L5 15M5 5l10 10"/></svg></button>`
-    const isScreenTopBarAd = (a: Ad) => a.placement === 'bar-top' && (!a.topAnchor || a.topAnchor === 'screen')
-    const allVisibleAds = activeTool === 'ads' ? ads.filter(a => a.enabled !== false) : []
-    const screenTopBarAds = allVisibleAds.filter(isScreenTopBarAd)
-    const visibleAds = allVisibleAds.filter(a => !isScreenTopBarAd(a))
-
-    const buildScreenTopBarHtml = (ad: Ad): string => {
-      const bm = buttonSizeMetrics(ad.buttonSize)
-      const weight = Math.min(900, ad.fontWeight ?? 700)
-      const stroke = (ad.fontWeight ?? 0) > 900 ? Math.min(1.4, (((ad.fontWeight ?? 0) - 900) / 300) * 1.4) : 0
-      const fontFamily = ad.font && FONT_MAP[ad.font] ? FONT_MAP[ad.font] : ''
-      const titleText = (ad.title ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      const titleStyle = `font-size:${ad.fontSize ?? 14}px; font-weight:${weight}; color:${ad.color || ''}; font-family:${fontFamily}; -webkit-text-stroke:${stroke > 0 ? `${stroke}px currentColor` : ''};`
-      const accentStyle = ad.buttonColor ? `--sf-accent-color:${ad.buttonColor};` : ''
-      const btnHtml = !ad.buttonLabel?.trim() ? '' : ad.buttonStyle === 'slide'
-        ? `<div class="sf-block-slide-bar" style="height:${bm.height}px; --sf-slide-thumb:${bm.thumb}px; --sf-slide-pad:${bm.pad}px;">
-             <div class="sf-block-slide-fill"></div>
-             <span class="sf-block-slide-label" style="font-size:${Math.max(10, bm.fontSize - 2)}px;">${ad.buttonLabel}</span>
-             <div class="sf-block-slide-thumb">&#8594;</div>
-           </div>`
-        : `<button type="button" class="sf-ad-btn${ad.buttonStyle === 'outline' ? ' sf-ad-btn-outline' : ''}" style="font-size:${bm.fontSize}px; padding:${bm.padV}px ${bm.padH}px;">${ad.buttonLabel}</button>`
-      const barStyleKind = ad.barStyle ?? 'static'
-      if (barStyleKind === 'marquee') {
-        return `<div class="sf-ad-bar sf-ad-bar-top sf-ad-bar-marquee" style="position:static; ${accentStyle}">
-          <div class="sf-ad-bar-marquee-viewport">
-            <div class="sf-ad-bar-marquee-track" style="animation-duration:${ad.marqueeSeconds && ad.marqueeSeconds > 0 ? ad.marqueeSeconds : 12}s;">
-              <span class="sf-ad-title sf-ad-bar-title" style="${titleStyle}">${titleText}</span>
-              <span class="sf-ad-title sf-ad-bar-title" style="${titleStyle}">${titleText}</span>
-            </div>
-          </div>
-          ${btnHtml}
-        </div>`
-      }
-      if (barStyleKind === 'rotate') {
-        const msgs = (ad.messages ?? []).filter(m => m.trim())
-        const firstMsg = (msgs[0] ?? ad.title ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        return `<div class="sf-ad-bar sf-ad-bar-top" style="position:static; ${accentStyle}">
-          ${firstMsg ? `<div class="sf-ad-title sf-ad-bar-title" style="${titleStyle}">${firstMsg}</div>` : ''}
-          ${btnHtml}
-          ${closeBtn('sf-ad-close')}
-        </div>`
-      }
-      return `<div class="sf-ad-bar sf-ad-bar-top" style="position:static; ${accentStyle}">
-        ${ad.title ? `<div class="sf-ad-title sf-ad-bar-title" style="${titleStyle}">${titleText}</div>` : ''}
-        ${btnHtml}
-        ${closeBtn('sf-ad-close')}
-      </div>`
-    }
-
-    let screenTopPreview = doc.getElementById('ed-ads-screen-top-preview') as HTMLDivElement | null
-    if (screenTopBarAds.length > 0) {
-      const pageEl = doc.querySelector<HTMLElement>('.sf-page')
-      if (pageEl) {
-        if (!screenTopPreview) {
-          screenTopPreview = doc.createElement('div')
-          screenTopPreview.id = 'ed-ads-screen-top-preview'
-          pageEl.insertBefore(screenTopPreview, pageEl.firstChild)
-        }
-        screenTopPreview.innerHTML = screenTopBarAds.map(buildScreenTopBarHtml).join('')
-      }
-    } else if (screenTopPreview) {
-      screenTopPreview.remove()
-    }
-
+    // visible while editing.
     let adsPreview = doc.getElementById('ed-ads-preview') as HTMLDivElement | null
+    const visibleAds = activeTool === 'ads' ? ads.filter(a => a.enabled !== false) : []
     if (visibleAds.length > 0 && doc.body) {
       if (!adsPreview) {
         adsPreview = doc.createElement('div')
         adsPreview.id = 'ed-ads-preview'
         doc.body.appendChild(adsPreview)
       }
+      const closeBtn = (cls: string) => `<button type="button" class="${cls}" style="pointer-events:none;"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" d="M15 5L5 15M5 5l10 10"/></svg></button>`
       adsPreview.innerHTML = visibleAds.map(ad => {
         const bm = buttonSizeMetrics(ad.buttonSize)
         const weight = Math.min(900, ad.fontWeight ?? 700)
@@ -839,6 +775,7 @@ export default function EditorPage() {
         }
         const barSide = ad.placement === 'bar-top' ? 'top' : 'bottom'
         const barStyleKind = ad.barStyle ?? 'static'
+        const isScreenTopBar = barSide === 'top' && (!ad.topAnchor || ad.topAnchor === 'screen')
         let topStyle = ''
         if (barSide === 'top' && ad.topAnchor && ad.topAnchor !== 'screen') {
           const header = doc.querySelector<HTMLElement>('.sf-topbar')
@@ -847,8 +784,9 @@ export default function EditorPage() {
           const catNavBottom = catNav ? Math.max(0, catNav.getBoundingClientRect().bottom) : headerBottom
           topStyle = `top:${ad.topAnchor === 'header' ? headerBottom : catNavBottom}px;`
         }
+        const screenTopAttr = isScreenTopBar ? ' data-sf-ad-screen-bar="1"' : ''
         if (barStyleKind === 'marquee') {
-          return `<div class="sf-ad-bar sf-ad-bar-${barSide} sf-ad-bar-marquee" style="pointer-events:none; ${accentStyle} ${topStyle}">
+          return `<div class="sf-ad-bar sf-ad-bar-${barSide} sf-ad-bar-marquee" style="pointer-events:none; ${accentStyle} ${topStyle}"${screenTopAttr}>
             <div class="sf-ad-bar-marquee-viewport">
               <div class="sf-ad-bar-marquee-track" style="animation-duration:${ad.marqueeSeconds && ad.marqueeSeconds > 0 ? ad.marqueeSeconds : 12}s;">
                 <span class="sf-ad-title sf-ad-bar-title" style="${titleStyle}">${titleText}</span>
@@ -861,13 +799,13 @@ export default function EditorPage() {
         if (barStyleKind === 'rotate') {
           const msgs = (ad.messages ?? []).filter(m => m.trim())
           const firstMsg = (msgs[0] ?? ad.title ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-          return `<div class="sf-ad-bar sf-ad-bar-${barSide}" style="pointer-events:none; ${accentStyle} ${topStyle}">
+          return `<div class="sf-ad-bar sf-ad-bar-${barSide}" style="pointer-events:none; ${accentStyle} ${topStyle}"${screenTopAttr}>
             ${firstMsg ? `<div class="sf-ad-title sf-ad-bar-title" style="${titleStyle}">${firstMsg}</div>` : ''}
             ${btnHtml}
             ${closeBtn('sf-ad-close')}
           </div>`
         }
-        return `<div class="sf-ad-bar sf-ad-bar-${barSide}" style="pointer-events:none; ${accentStyle} ${topStyle}">
+        return `<div class="sf-ad-bar sf-ad-bar-${barSide}" style="pointer-events:none; ${accentStyle} ${topStyle}"${screenTopAttr}>
           ${ad.title ? `<div class="sf-ad-title sf-ad-bar-title" style="${titleStyle}">${titleText}</div>` : ''}
           ${btnHtml}
           ${closeBtn('sf-ad-close')}
@@ -875,6 +813,26 @@ export default function EditorPage() {
       }).join('')
     } else if (adsPreview) {
       adsPreview.remove()
+    }
+
+    // A screen-anchored top bar ad pushes the header (and whatever it's
+    // sticky/glass/fixed to) down by its own rendered height, mirroring the
+    // real storefront's --sf-ad-bar-offset mechanism — injected as !important
+    // overrides so they win over the page's own React-managed inline styles.
+    // Measured directly (rather than estimated) since the HTML is already
+    // in the DOM by this point — no async timing concern here.
+    let adOffsetEl = doc.getElementById('ed-ad-offset-preview') as HTMLStyleElement | null
+    const screenTopBarEls = Array.from(doc.querySelectorAll<HTMLElement>('[data-sf-ad-screen-bar="1"]'))
+    const screenTopBarHeight = screenTopBarEls.reduce((sum, el) => sum + el.getBoundingClientRect().height, 0)
+    if (screenTopBarHeight > 0) {
+      if (!adOffsetEl) {
+        adOffsetEl = doc.createElement('style')
+        adOffsetEl.id = 'ed-ad-offset-preview'
+        doc.head.appendChild(adOffsetEl)
+      }
+      adOffsetEl.textContent = `.sf-page { padding-top: ${screenTopBarHeight}px !important; } .sf-topbar-sticky, .sf-topbar-glass { top: ${screenTopBarHeight}px !important; }`
+    } else if (adOffsetEl) {
+      adOffsetEl.remove()
     }
 
     // Live spacing/style for already-placed blocks and groups — sliders here

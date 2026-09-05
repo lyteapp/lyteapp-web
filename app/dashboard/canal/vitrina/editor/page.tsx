@@ -775,6 +775,7 @@ export default function EditorPage() {
         }
         const barSide = ad.placement === 'bar-top' ? 'top' : 'bottom'
         const barStyleKind = ad.barStyle ?? 'static'
+        const isScreenTopBar = barSide === 'top' && (!ad.topAnchor || ad.topAnchor === 'screen')
         let topStyle = ''
         if (barSide === 'top' && ad.topAnchor && ad.topAnchor !== 'screen') {
           const header = doc.querySelector<HTMLElement>('.sf-topbar')
@@ -783,8 +784,9 @@ export default function EditorPage() {
           const catNavBottom = catNav ? Math.max(0, catNav.getBoundingClientRect().bottom) : headerBottom
           topStyle = `top:${ad.topAnchor === 'header' ? headerBottom : catNavBottom}px;`
         }
+        const screenTopAttr = isScreenTopBar ? ' data-screen-top-ad="1"' : ''
         if (barStyleKind === 'marquee') {
-          return `<div class="sf-ad-bar sf-ad-bar-${barSide} sf-ad-bar-marquee" style="pointer-events:none; ${accentStyle} ${topStyle}">
+          return `<div class="sf-ad-bar sf-ad-bar-${barSide} sf-ad-bar-marquee" style="pointer-events:none; ${accentStyle} ${topStyle}"${screenTopAttr}>
             <div class="sf-ad-bar-marquee-viewport">
               <div class="sf-ad-bar-marquee-track" style="animation-duration:${ad.marqueeSeconds && ad.marqueeSeconds > 0 ? ad.marqueeSeconds : 12}s;">
                 <span class="sf-ad-title sf-ad-bar-title" style="${titleStyle}">${titleText}</span>
@@ -798,13 +800,13 @@ export default function EditorPage() {
         if (barStyleKind === 'rotate') {
           const msgs = (ad.messages ?? []).filter(m => m.trim())
           const firstMsg = (msgs[0] ?? ad.title ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-          return `<div class="sf-ad-bar sf-ad-bar-${barSide}" style="pointer-events:none; ${accentStyle} ${topStyle}">
+          return `<div class="sf-ad-bar sf-ad-bar-${barSide}" style="pointer-events:none; ${accentStyle} ${topStyle}"${screenTopAttr}>
             ${firstMsg ? `<div class="sf-ad-title sf-ad-bar-title" style="${titleStyle}">${firstMsg}</div>` : ''}
             ${btnHtml}
             ${closeBtn('sf-ad-close')}
           </div>`
         }
-        return `<div class="sf-ad-bar sf-ad-bar-${barSide}" style="pointer-events:none; ${accentStyle} ${topStyle}">
+        return `<div class="sf-ad-bar sf-ad-bar-${barSide}" style="pointer-events:none; ${accentStyle} ${topStyle}"${screenTopAttr}>
           ${ad.title ? `<div class="sf-ad-title sf-ad-bar-title" style="${titleStyle}">${titleText}</div>` : ''}
           ${btnHtml}
           ${closeBtn('sf-ad-close')}
@@ -812,6 +814,24 @@ export default function EditorPage() {
       }).join('')
     } else if (adsPreview) {
       adsPreview.remove()
+    }
+
+    // A screen-anchored top bar ad pushes the header (and whatever it's
+    // sticky/glass/fixed to) down by its own rendered height, mirroring the
+    // real storefront's --sf-ad-bar-offset mechanism — injected as !important
+    // overrides so they win over the page's own React-managed inline styles.
+    let adOffsetEl = doc.getElementById('ed-ad-offset-preview') as HTMLStyleElement | null
+    const screenTopBarEls = Array.from(doc.querySelectorAll<HTMLElement>('[data-screen-top-ad="1"]'))
+    const screenTopBarHeight = screenTopBarEls.reduce((sum, el) => sum + el.getBoundingClientRect().height, 0)
+    if (screenTopBarHeight > 0) {
+      if (!adOffsetEl) {
+        adOffsetEl = doc.createElement('style')
+        adOffsetEl.id = 'ed-ad-offset-preview'
+        doc.head.appendChild(adOffsetEl)
+      }
+      adOffsetEl.textContent = `.sf-page { padding-top: ${screenTopBarHeight}px !important; } .sf-topbar-sticky, .sf-topbar-glass { top: ${screenTopBarHeight}px !important; }`
+    } else if (adOffsetEl) {
+      adOffsetEl.remove()
     }
 
     // Live spacing/style for already-placed blocks and groups — sliders here

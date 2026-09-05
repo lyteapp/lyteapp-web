@@ -1017,7 +1017,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // (a tall logo, a wrapping name) can render taller than that. Measuring the
   // actual element avoids the category bar landing under/over the header by
   // however many pixels the configured value was off by.
-  const cfgStickyOffsetPx = cfgHeaderSticky ? (headerHeightMeasured ?? cfg.headerHeightPx ?? 56) : 0
+  const cfgStickyOffsetPx = (cfgHeaderSticky ? (headerHeightMeasured ?? cfg.headerHeightPx ?? 56) : 0) + topScreenAdHeight
   const cfgModalWizard = !!cfg.modalWizard
 
   // ── iOS Safari reveals <body>'s own background during the rubber-band
@@ -1083,6 +1083,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     ...(cfg.headerIconColor ? { '--sf-header-icon-color': cfg.headerIconColor } : {}),
     '--sf-sticky-offset': `${cfgStickyOffsetPx}px`,
     '--sf-catnav-overlap': `-${catNavHeightMeasured ?? 52}px`,
+    '--sf-ad-bar-offset': `${topScreenAdHeight}px`,
     ...(cfg.catTitleFont && FONT_MAP[cfg.catTitleFont] ? { '--sf-cat-title-font': FONT_MAP[cfg.catTitleFont] } : {}),
     ...(cfg.productNameFont && FONT_MAP[cfg.productNameFont] ? { '--sf-product-name-font': FONT_MAP[cfg.productNameFont] } : {}),
     ...(topScreenAdHeight > 0 ? { paddingTop: topScreenAdHeight } : {}),

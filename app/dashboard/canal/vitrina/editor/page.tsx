@@ -186,6 +186,7 @@ type Ad = {
   messages?: string[]
   rotateSeconds?: number
   marqueeSeconds?: number
+  topAnchor?: 'screen' | 'header' | 'catnav'
 }
 function newAd(): Ad {
   return { id: crypto.randomUUID(), enabled: true, placement: 'float' }
@@ -774,8 +775,16 @@ export default function EditorPage() {
         }
         const barSide = ad.placement === 'bar-top' ? 'top' : 'bottom'
         const barStyleKind = ad.barStyle ?? 'static'
+        let topStyle = ''
+        if (barSide === 'top' && ad.topAnchor && ad.topAnchor !== 'screen') {
+          const header = doc.querySelector<HTMLElement>('.sf-topbar')
+          const catNav = doc.querySelector<HTMLElement>('.sf-cat-nav')
+          const headerBottom = header ? Math.max(0, header.getBoundingClientRect().bottom) : 0
+          const catNavBottom = catNav ? Math.max(0, catNav.getBoundingClientRect().bottom) : headerBottom
+          topStyle = `top:${ad.topAnchor === 'header' ? headerBottom : catNavBottom}px;`
+        }
         if (barStyleKind === 'marquee') {
-          return `<div class="sf-ad-bar sf-ad-bar-${barSide} sf-ad-bar-marquee" style="pointer-events:none; ${accentStyle}">
+          return `<div class="sf-ad-bar sf-ad-bar-${barSide} sf-ad-bar-marquee" style="pointer-events:none; ${accentStyle} ${topStyle}">
             <div class="sf-ad-bar-marquee-viewport">
               <div class="sf-ad-bar-marquee-track" style="animation-duration:${ad.marqueeSeconds && ad.marqueeSeconds > 0 ? ad.marqueeSeconds : 12}s;">
                 <span class="sf-ad-title sf-ad-bar-title" style="${titleStyle}">${titleText}</span>
@@ -789,13 +798,13 @@ export default function EditorPage() {
         if (barStyleKind === 'rotate') {
           const msgs = (ad.messages ?? []).filter(m => m.trim())
           const firstMsg = (msgs[0] ?? ad.title ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-          return `<div class="sf-ad-bar sf-ad-bar-${barSide}" style="pointer-events:none; ${accentStyle}">
+          return `<div class="sf-ad-bar sf-ad-bar-${barSide}" style="pointer-events:none; ${accentStyle} ${topStyle}">
             ${firstMsg ? `<div class="sf-ad-title sf-ad-bar-title" style="${titleStyle}">${firstMsg}</div>` : ''}
             ${btnHtml}
             ${closeBtn('sf-ad-close')}
           </div>`
         }
-        return `<div class="sf-ad-bar sf-ad-bar-${barSide}" style="pointer-events:none; ${accentStyle}">
+        return `<div class="sf-ad-bar sf-ad-bar-${barSide}" style="pointer-events:none; ${accentStyle} ${topStyle}">
           ${ad.title ? `<div class="sf-ad-title sf-ad-bar-title" style="${titleStyle}">${titleText}</div>` : ''}
           ${btnHtml}
           ${closeBtn('sf-ad-close')}
@@ -3238,6 +3247,29 @@ export default function EditorPage() {
                         </button>
                       ))}
                     </div>
+
+                    {ad.placement === 'bar-top' && (
+                      <div style={{ marginBottom: 8 }}>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginBottom: 4 }}>Debajo de</div>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          {([['screen', 'Arriba de todo'], ['header', 'El encabezado'], ['catnav', 'La barra de categorias']] as const).map(([an, label]) => (
+                            <button
+                              key={an}
+                              onClick={() => updateAd(ad.id, { topAnchor: an })}
+                              style={{
+                                flex: 1, padding: '7px 3px', borderRadius: 8,
+                                border: `2px solid ${(ad.topAnchor ?? 'screen') === an ? '#7C3AED' : '#E2E8F0'}`,
+                                background: (ad.topAnchor ?? 'screen') === an ? '#F5F3FF' : 'white',
+                                color: (ad.topAnchor ?? 'screen') === an ? '#7C3AED' : '#64748B',
+                                fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                              }}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {ad.barStyle === 'marquee' && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

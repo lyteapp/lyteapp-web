@@ -198,6 +198,7 @@ type Ad = {
   messages?: string[]
   rotateSeconds?: number
   marqueeSeconds?: number
+  topAnchor?: 'screen' | 'header' | 'catnav'
 }
 type TemplateConfig = {
   pageBg?: string; pageFont?: string
@@ -535,6 +536,38 @@ export default function StoreShell({ store, products, categories = [], initialBc
     }
     return () => intervals.forEach(clearInterval)
   }, [adVisible, store.template_config?.ads])
+
+  // Live bottom edge (viewport-relative) of the header and category nav bar,
+  // so a "bar-top" ad can anchor itself just below either one instead of
+  // always sitting at the very top of the screen. Re-measured on scroll (a
+  // non-sticky header's bottom edge moves as it scrolls away) and on any
+  // size change, not just once on mount.
+  const [adBarHeaderBottom, setAdBarHeaderBottom] = useState(0)
+  const [adBarCatNavBottom, setAdBarCatNavBottom] = useState(0)
+  useEffect(() => {
+    if (view !== 'catalog') return
+    const header = document.querySelector<HTMLElement>('.sf-topbar')
+    const catNav = document.querySelector<HTMLElement>('.sf-cat-nav')
+    let raf = 0
+    const measure = () => {
+      const headerBottom = header ? Math.max(0, header.getBoundingClientRect().bottom) : 0
+      setAdBarHeaderBottom(headerBottom)
+      setAdBarCatNavBottom(catNav ? Math.max(0, catNav.getBoundingClientRect().bottom) : headerBottom)
+    }
+    measure()
+    const onChange = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(measure) }
+    window.addEventListener('scroll', onChange, { passive: true })
+    window.addEventListener('resize', onChange)
+    const ro = new ResizeObserver(onChange)
+    if (header) ro.observe(header)
+    if (catNav) ro.observe(catNav)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('scroll', onChange)
+      window.removeEventListener('resize', onChange)
+      ro.disconnect()
+    }
+  }, [view])
 
   function closeAd(ad: Ad) {
     setAdVisible(v => ({ ...v, [ad.id]: false }))
@@ -1356,10 +1389,13 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
     const barSide = ad.placement === 'bar-top' ? 'top' : 'bottom'
     const barStyleKind = ad.barStyle ?? 'static'
+    const barPositionVars: React.CSSProperties = barSide === 'top' && ad.topAnchor && ad.topAnchor !== 'screen'
+      ? { top: `${ad.topAnchor === 'header' ? adBarHeaderBottom : adBarCatNavBottom}px` }
+      : {}
 
     if (barStyleKind === 'marquee') {
       return (
-        <div key={ad.id} className={`sf-ad-bar sf-ad-bar-${barSide} sf-ad-bar-marquee`} style={accentVars}>
+        <div key={ad.id} className={`sf-ad-bar sf-ad-bar-${barSide} sf-ad-bar-marquee`} style={{ ...accentVars, ...barPositionVars }}>
           <div className="sf-ad-bar-marquee-viewport">
             <div className="sf-ad-bar-marquee-track" style={{ animationDuration: `${ad.marqueeSeconds && ad.marqueeSeconds > 0 ? ad.marqueeSeconds : 12}s` }}>
               <span className="sf-ad-title sf-ad-bar-title" style={titleStyle}>{ad.title}</span>
@@ -1379,7 +1415,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       const idx = adMsgIndex[ad.id] ?? 0
       const text = msgs.length > 0 ? msgs[idx % msgs.length] : ad.title
       return (
-        <div key={ad.id} className={`sf-ad-bar sf-ad-bar-${barSide}`} style={accentVars}>
+        <div key={ad.id} className={`sf-ad-bar sf-ad-bar-${barSide}`} style={{ ...accentVars, ...barPositionVars }}>
           {text && <div key={idx} className="sf-ad-title sf-ad-bar-title sf-ad-bar-rotate-msg" style={titleStyle}>{text}</div>}
           {renderAdButton(ad, bm)}
           <button type="button" className="sf-ad-close" onClick={() => closeAd(ad)} aria-label="Cerrar">
@@ -1390,7 +1426,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     }
 
     return (
-      <div key={ad.id} className={`sf-ad-bar sf-ad-bar-${barSide}`} style={accentVars}>
+      <div key={ad.id} className={`sf-ad-bar sf-ad-bar-${barSide}`} style={{ ...accentVars, ...barPositionVars }}>
         {ad.title && <div className="sf-ad-title sf-ad-bar-title" style={titleStyle}>{ad.title}</div>}
         {renderAdButton(ad, bm)}
         <button type="button" className="sf-ad-close" onClick={() => closeAd(ad)} aria-label="Cerrar">

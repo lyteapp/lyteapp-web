@@ -537,36 +537,29 @@ export default function StoreShell({ store, products, categories = [], initialBc
     return () => intervals.forEach(clearInterval)
   }, [adVisible, store.template_config?.ads])
 
-  // Live bottom edge (viewport-relative) of the header and category nav bar,
-  // so a "bar-top" ad can anchor itself just below either one instead of
-  // always sitting at the very top of the screen. Re-measured on scroll (a
-  // non-sticky header's bottom edge moves as it scrolls away) and on any
-  // size change, not just once on mount.
+  // Bottom edge (viewport-relative) of the header and category nav bar, so
+  // a "bar-top" ad can anchor itself just below either one instead of
+  // always sitting at the very top of the screen. Both are sticky/fixed in
+  // their configurable layouts, so their on-screen bottom edge is constant
+  // once settled — measured on mount and on size changes only (no scroll
+  // listener: re-measuring on every scroll frame re-rendered this whole
+  // component and made scrolling visibly laggy for no benefit here).
   const [adBarHeaderBottom, setAdBarHeaderBottom] = useState(0)
   const [adBarCatNavBottom, setAdBarCatNavBottom] = useState(0)
   useEffect(() => {
     if (view !== 'catalog') return
     const header = document.querySelector<HTMLElement>('.sf-topbar')
     const catNav = document.querySelector<HTMLElement>('.sf-cat-nav')
-    let raf = 0
     const measure = () => {
       const headerBottom = header ? Math.max(0, header.getBoundingClientRect().bottom) : 0
       setAdBarHeaderBottom(headerBottom)
       setAdBarCatNavBottom(catNav ? Math.max(0, catNav.getBoundingClientRect().bottom) : headerBottom)
     }
     measure()
-    const onChange = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(measure) }
-    window.addEventListener('scroll', onChange, { passive: true })
-    window.addEventListener('resize', onChange)
-    const ro = new ResizeObserver(onChange)
+    const ro = new ResizeObserver(measure)
     if (header) ro.observe(header)
     if (catNav) ro.observe(catNav)
-    return () => {
-      cancelAnimationFrame(raf)
-      window.removeEventListener('scroll', onChange)
-      window.removeEventListener('resize', onChange)
-      ro.disconnect()
-    }
+    return () => ro.disconnect()
   }, [view])
 
   function closeAd(ad: Ad) {

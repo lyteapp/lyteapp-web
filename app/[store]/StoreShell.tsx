@@ -1446,8 +1446,13 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
     const barSide = ad.placement === 'bar-top' ? 'top' : 'bottom'
     const barStyleKind = ad.barStyle ?? 'static'
-    const barPositionVars: React.CSSProperties = barSide === 'top' && ad.topAnchor && ad.topAnchor !== 'screen'
-      ? { top: `${ad.topAnchor === 'header' ? adBarHeaderBottom : adBarCatNavBottom}px` }
+    const barPositionVars: React.CSSProperties = barSide === 'top' && ad.topAnchor === 'header'
+      ? { top: `${adBarHeaderBottom}px` }
+      // "catnav" renders as a real sticky sibling right after the nav (see
+      // renderCatNavAnchoredBars) instead of a fixed overlay, so it's
+      // correctly positioned before scrolling too, not just once stuck.
+      : barSide === 'top' && ad.topAnchor === 'catnav'
+      ? { position: 'sticky', top: `${adBarCatNavBottom}px` }
       : {}
     // Marks a "debajo del encabezado" bar so its rendered height can be
     // measured and fed into the category nav's own sticky offset — without
@@ -1495,8 +1500,23 @@ export default function StoreShell({ store, products, categories = [], initialBc
     )
   }
 
+  // "Debajo de la barra de categorias" ads render right after the category
+  // nav in the JSX (see renderCatNavAnchoredBars), as real sticky siblings
+  // instead of a fixed overlay positioned by a coordinate computed for its
+  // eventual stuck state — that coordinate was only correct once actually
+  // scrolled there, so before scrolling the ad floated wherever the math
+  // said, cutting across the banner instead of sitting under the nav.
+  // Excluded here to avoid rendering them twice.
   function renderAds() {
-    const ads = (cfg.ads ?? []).filter(a => a.enabled !== false)
+    const ads = (cfg.ads ?? []).filter(a =>
+      a.enabled !== false && !(a.placement === 'bar-top' && a.topAnchor === 'catnav')
+    )
+    if (ads.length === 0) return null
+    return <>{ads.map(renderAd)}</>
+  }
+
+  function renderCatNavAnchoredBars() {
+    const ads = (cfg.ads ?? []).filter(a => a.enabled !== false && a.placement === 'bar-top' && a.topAnchor === 'catnav')
     if (ads.length === 0) return null
     return <>{ads.map(renderAd)}</>
   }
@@ -3793,6 +3813,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
         </div>
       )}
       {cfgCatNavOverBanner && catNavEl}
+      {cfgCatNavOverBanner && renderCatNavAnchoredBars()}
 
       {(store.description || (store.instagram && cfg.showInstagram !== false)) && (
         <div className="sf-header">
@@ -3819,6 +3840,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       )}
 
       {!cfgCatNavOverBanner && catNavEl}
+      {!cfgCatNavOverBanner && renderCatNavAnchoredBars()}
 
       <div className="sf-products-section">
         <div className="sf-section-inner">

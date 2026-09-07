@@ -875,7 +875,7 @@ html, body { overflow-x: clip; }
 .sf-reorder-banner.has-img .sf-reorder-close:hover { color: white; }
 .sf-reorder-pos-right  { right: var(--sf-reorder-inset, 16px); top: 50%; transform-origin: right center; animation: sfReorderInRight 0.4s cubic-bezier(0.16,1,0.3,1) both; }
 .sf-reorder-pos-left   { left: var(--sf-reorder-inset, 16px); top: 50%; transform-origin: left center; animation: sfReorderInLeft 0.4s cubic-bezier(0.16,1,0.3,1) both; }
-.sf-reorder-pos-top    { top: var(--sf-reorder-inset, 16px); left: 50%; transform-origin: center top; animation: sfReorderInTop 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+.sf-reorder-pos-top    { top: calc(env(safe-area-inset-top, 0px) + var(--sf-reorder-inset, 16px)); left: 50%; transform-origin: center top; animation: sfReorderInTop 0.4s cubic-bezier(0.16,1,0.3,1) both; }
 .sf-reorder-pos-bottom { bottom: var(--sf-reorder-inset, 20px); left: 50%; transform-origin: center bottom; animation: sfReorderInBottom 0.4s cubic-bezier(0.16,1,0.3,1) both; }
 @keyframes sfReorderInRight {
   from { opacity: 0; transform: translateY(-50%) translateX(24px) scale(var(--sf-reorder-scale, 1)); }
@@ -917,7 +917,7 @@ html, body { overflow-x: clip; }
   .sf-reorder-banner { max-width: min(260px, calc(100vw - 24px)); }
   .sf-reorder-pos-right  { right: var(--sf-reorder-inset, 12px); }
   .sf-reorder-pos-left   { left: var(--sf-reorder-inset, 12px); }
-  .sf-reorder-pos-top    { top: var(--sf-reorder-inset, 12px); }
+  .sf-reorder-pos-top    { top: calc(env(safe-area-inset-top, 0px) + var(--sf-reorder-inset, 12px)); }
   .sf-reorder-pos-bottom { bottom: var(--sf-reorder-inset, 12px); }
   .sf-reorder-title { font-size: 13px; }
 }
@@ -958,7 +958,7 @@ html, body { overflow-x: clip; }
 .sf-ad-float-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .sf-ad-float-pos-right  { right: var(--sf-ad-inset, 16px); top: 50%; transform-origin: right center; animation: sfAdInRight 0.4s cubic-bezier(0.16,1,0.3,1) both; }
 .sf-ad-float-pos-left   { left: var(--sf-ad-inset, 16px); top: 50%; transform-origin: left center; animation: sfAdInLeft 0.4s cubic-bezier(0.16,1,0.3,1) both; }
-.sf-ad-float-pos-top    { top: var(--sf-ad-inset, 16px); left: 50%; transform-origin: center top; animation: sfAdInTop 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+.sf-ad-float-pos-top    { top: calc(env(safe-area-inset-top, 0px) + var(--sf-ad-inset, 16px)); left: 50%; transform-origin: center top; animation: sfAdInTop 0.4s cubic-bezier(0.16,1,0.3,1) both; }
 .sf-ad-float-pos-bottom { bottom: var(--sf-ad-inset, 20px); left: 50%; transform-origin: center bottom; animation: sfAdInBottom 0.4s cubic-bezier(0.16,1,0.3,1) both; }
 @keyframes sfAdInRight {
   from { opacity: 0; transform: translateY(-50%) translateX(24px) scale(var(--sf-ad-scale, 1)); }
@@ -980,7 +980,7 @@ html, body { overflow-x: clip; }
   .sf-ad-float { max-width: min(260px, calc(100vw - 24px)); }
   .sf-ad-float-pos-right  { right: var(--sf-ad-inset, 12px); }
   .sf-ad-float-pos-left   { left: var(--sf-ad-inset, 12px); }
-  .sf-ad-float-pos-top    { top: var(--sf-ad-inset, 12px); }
+  .sf-ad-float-pos-top    { top: calc(env(safe-area-inset-top, 0px) + var(--sf-ad-inset, 12px)); }
   .sf-ad-float-pos-bottom { bottom: var(--sf-ad-inset, 12px); }
 }
 
@@ -1032,7 +1032,7 @@ html, body { overflow-x: clip; }
 .sf-ad-bar .sf-ad-btn-outline { border-color: white; color: white; }
 .sf-ad-bar .sf-ad-close { position: absolute; right: 10px; color: rgba(255,255,255,0.85); }
 .sf-ad-bar .sf-ad-close:hover { color: white; }
-.sf-ad-bar-top { top: 0; animation: sfAdBarInTop 0.3s ease both; }
+.sf-ad-bar-top { top: env(safe-area-inset-top, 0px); animation: sfAdBarInTop 0.3s ease both; }
 .sf-ad-bar-bottom { bottom: 0; animation: sfAdBarInBottom 0.3s ease both; }
 @keyframes sfAdBarInTop { from { opacity: 0; transform: translateY(-100%); } to { opacity: 1; transform: translateY(0); } }
 @keyframes sfAdBarInBottom { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: translateY(0); } }

@@ -589,6 +589,24 @@ export default function StoreShell({ store, products, categories = [], initialBc
     .filter(a => a.enabled !== false && a.placement === 'bar-top' && (a.topAnchor ?? 'screen') === 'screen' && adVisible[a.id])
     .reduce((sum, a) => sum + estimateAdBarHeight(a), 0)
 
+  // A "debajo del encabezado" ad sits between the header and the category
+  // nav — the nav's own sticky offset needs to grow by this ad's real
+  // rendered height, or the nav sticks right where the ad already is and
+  // covers it while scrolling. Measured (not estimated) since it only has
+  // to be right once settled, same as the header/catnav bottom edges above.
+  const [headerAdHeight, setHeaderAdHeight] = useState(0)
+  useEffect(() => {
+    if (view !== 'catalog') return
+    const measure = () => {
+      const els = document.querySelectorAll<HTMLElement>('[data-sf-ad-header-bar="1"]')
+      setHeaderAdHeight(Array.from(els).reduce((sum, el) => sum + el.getBoundingClientRect().height, 0))
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    document.querySelectorAll<HTMLElement>('[data-sf-ad-header-bar="1"]').forEach(el => ro.observe(el))
+    return () => ro.disconnect()
+  }, [view, adVisible, store.template_config?.ads])
+
   function closeAd(ad: Ad) {
     setAdVisible(v => ({ ...v, [ad.id]: false }))
     if (ad.onceOnly) {
@@ -1026,7 +1044,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // (a tall logo, a wrapping name) can render taller than that. Measuring the
   // actual element avoids the category bar landing under/over the header by
   // however many pixels the configured value was off by.
-  const cfgStickyOffsetPx = (cfgHeaderSticky ? (headerHeightMeasured ?? cfg.headerHeightPx ?? 56) : 0) + topScreenAdHeight
+  const cfgStickyOffsetPx = (cfgHeaderSticky ? (headerHeightMeasured ?? cfg.headerHeightPx ?? 56) : 0) + topScreenAdHeight + headerAdHeight
   const cfgModalWizard = !!cfg.modalWizard
 
   // ── iOS Safari reveals <body>'s own background during the rubber-band
@@ -1421,10 +1439,15 @@ export default function StoreShell({ store, products, categories = [], initialBc
     const barPositionVars: React.CSSProperties = barSide === 'top' && ad.topAnchor && ad.topAnchor !== 'screen'
       ? { top: `${ad.topAnchor === 'header' ? adBarHeaderBottom : adBarCatNavBottom}px` }
       : {}
+    // Marks a "debajo del encabezado" bar so its rendered height can be
+    // measured and fed into the category nav's own sticky offset — without
+    // that, the nav would stick right below the header too, landing on top
+    // of (covering) this ad instead of the ad staying visible above it.
+    const headerBarProps = barSide === 'top' && ad.topAnchor === 'header' ? { 'data-sf-ad-header-bar': '1' } : {}
 
     if (barStyleKind === 'marquee') {
       return (
-        <div key={ad.id} className={`sf-ad-bar sf-ad-bar-${barSide} sf-ad-bar-marquee`} style={{ ...accentVars, ...barPositionVars }}>
+        <div key={ad.id} className={`sf-ad-bar sf-ad-bar-${barSide} sf-ad-bar-marquee`} style={{ ...accentVars, ...barPositionVars }} {...headerBarProps}>
           <div className="sf-ad-bar-marquee-viewport">
             <div className="sf-ad-bar-marquee-track" style={{ animationDuration: `${ad.marqueeSeconds && ad.marqueeSeconds > 0 ? ad.marqueeSeconds : 12}s` }}>
               <span className="sf-ad-title sf-ad-bar-title" style={titleStyle}>{ad.title}</span>
@@ -1441,7 +1464,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       const idx = adMsgIndex[ad.id] ?? 0
       const text = msgs.length > 0 ? msgs[idx % msgs.length] : ad.title
       return (
-        <div key={ad.id} className={`sf-ad-bar sf-ad-bar-${barSide}`} style={{ ...accentVars, ...barPositionVars }}>
+        <div key={ad.id} className={`sf-ad-bar sf-ad-bar-${barSide}`} style={{ ...accentVars, ...barPositionVars }} {...headerBarProps}>
           {text && <div key={idx} className="sf-ad-title sf-ad-bar-title sf-ad-bar-rotate-msg" style={titleStyle}>{text}</div>}
           {renderAdButton(ad, bm)}
           <button type="button" className="sf-ad-close" onClick={() => closeAd(ad)} aria-label="Cerrar">
@@ -1452,7 +1475,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     }
 
     return (
-      <div key={ad.id} className={`sf-ad-bar sf-ad-bar-${barSide}`} style={{ ...accentVars, ...barPositionVars }}>
+      <div key={ad.id} className={`sf-ad-bar sf-ad-bar-${barSide}`} style={{ ...accentVars, ...barPositionVars }} {...headerBarProps}>
         {ad.title && <div className="sf-ad-title sf-ad-bar-title" style={titleStyle}>{ad.title}</div>}
         {renderAdButton(ad, bm)}
         <button type="button" className="sf-ad-close" onClick={() => closeAd(ad)} aria-label="Cerrar">

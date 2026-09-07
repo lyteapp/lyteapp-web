@@ -855,7 +855,7 @@ html, body { overflow-x: clip; }
 .sf-splash-cedula-hint.error { color: #FCA5A5; font-weight: 600; }
 
 .sf-reorder-banner {
-  position: fixed; z-index: 90; overflow: hidden;
+  position: fixed; z-index: 1000; overflow: hidden;
   max-width: min(300px, calc(100vw - 32px));
   display: flex; flex-direction: column; align-items: stretch; gap: 10px;
   background: color-mix(in srgb, var(--sf-accent-color, #7C3AED) 8%, white);
@@ -945,7 +945,7 @@ html, body { overflow-x: clip; }
    "Repetir pedido" card: a scale/inset custom property baked into each
    position's own placement + entrance keyframe. */
 .sf-ad-float {
-  position: fixed; z-index: 89; overflow: hidden;
+  position: fixed; z-index: 1000; overflow: hidden;
   max-width: min(280px, calc(100vw - 32px));
   display: flex; flex-direction: column; align-items: stretch; gap: 8px;
   background: white; border-radius: 16px; padding: 14px 16px;
@@ -986,7 +986,7 @@ html, body { overflow-x: clip; }
 
 /* Popup — centered card over a dimmed backdrop. */
 .sf-ad-popup-overlay {
-  position: fixed; inset: 0; z-index: 200;
+  position: fixed; inset: 0; z-index: 1001;
   background: rgba(15,23,42,0.55);
   display: flex; align-items: center; justify-content: center; padding: 20px;
   animation: sfAdPopupFadeIn 0.2s ease both;
@@ -1017,7 +1017,12 @@ html, body { overflow-x: clip; }
 
 /* Bar — a thin strip pinned to the top or bottom edge of the screen. */
 .sf-ad-bar {
-  position: fixed; left: 0; right: 0; z-index: 88;
+  /* Above .sf-statusbar-strip's z-index:999 — installed/standalone mode
+     renders that translucent status-bar tint at the very top with a
+     higher z-index, which otherwise painted over (hid) a "screen"-
+     anchored top bar ad even though it wasn't visible in a normal
+     browser tab (no strip there). */
+  position: fixed; left: 0; right: 0; z-index: 1000;
   display: flex; align-items: center; justify-content: center; gap: 12px;
   padding: 10px 44px 10px 16px; background: var(--sf-accent-color, #7C3AED);
   box-shadow: 0 4px 16px rgba(0,0,0,0.12);

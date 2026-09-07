@@ -555,23 +555,27 @@ export default function StoreShell({ store, products, categories = [], initialBc
     return () => intervals.forEach(clearInterval)
   }, [adVisible, store.template_config?.ads])
 
-  // Bottom edge (viewport-relative) of the header and category nav bar, so
-  // a "bar-top" ad can anchor itself just below either one instead of
-  // always sitting at the very top of the screen. Both are sticky/fixed in
-  // their configurable layouts, so their on-screen bottom edge is constant
-  // once settled — measured on mount and on size changes only (no scroll
-  // listener: re-measuring on every scroll frame re-rendered this whole
-  // component and made scrolling visibly laggy for no benefit here).
+  // Bottom edge (viewport-relative) of the header, so a "bar-top" ad can
+  // anchor itself just below it instead of always sitting at the very top
+  // of the screen. The header is sticky/fixed in its configurable layouts,
+  // so its on-screen bottom edge is constant once settled — measured on
+  // mount and on size changes only (no scroll listener: re-measuring on
+  // every scroll frame re-rendered this whole component and made
+  // scrolling visibly laggy for no benefit here).
   const [adBarHeaderBottom, setAdBarHeaderBottom] = useState(0)
-  const [adBarCatNavBottom, setAdBarCatNavBottom] = useState(0)
+  // The category nav's own height (not its current bottom edge — that's
+  // scroll-dependent before it engages its sticky position, unlike the
+  // header, which sits at the very top from the start). Combined below
+  // with its sticky offset (which is scroll-independent) to get the
+  // bottom edge it will actually have once stuck.
+  const [catNavOwnHeight, setCatNavOwnHeight] = useState(0)
   useEffect(() => {
     if (view !== 'catalog') return
     const header = document.querySelector<HTMLElement>('.sf-topbar')
     const catNav = document.querySelector<HTMLElement>('.sf-cat-nav')
     const measure = () => {
-      const headerBottom = header ? Math.max(0, header.getBoundingClientRect().bottom) : 0
-      setAdBarHeaderBottom(headerBottom)
-      setAdBarCatNavBottom(catNav ? Math.max(0, catNav.getBoundingClientRect().bottom) : headerBottom)
+      setAdBarHeaderBottom(header ? Math.max(0, header.getBoundingClientRect().bottom) : 0)
+      setCatNavOwnHeight(catNav ? catNav.getBoundingClientRect().height : 0)
     }
     measure()
     const ro = new ResizeObserver(measure)
@@ -1045,6 +1049,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // actual element avoids the category bar landing under/over the header by
   // however many pixels the configured value was off by.
   const cfgStickyOffsetPx = (cfgHeaderSticky ? (headerHeightMeasured ?? cfg.headerHeightPx ?? 56) : 0) + topScreenAdHeight + headerAdHeight
+  // Where the category nav's bottom edge actually lands once it's stuck —
+  // cfgStickyOffsetPx is exactly its own stuck top edge (that's what its
+  // sticky "top" is set to), so adding its own height gives the bottom
+  // edge a "debajo de la barra de categorias" ad should anchor to,
+  // regardless of current scroll position.
+  const adBarCatNavBottom = cfgStickyOffsetPx + catNavOwnHeight
   const cfgModalWizard = !!cfg.modalWizard
 
   // ── iOS Safari reveals <body>'s own background during the rubber-band

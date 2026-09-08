@@ -467,53 +467,29 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // splash screen's real width and scales those pixel values to match it.
   const splashScreenRef = useRef<HTMLDivElement>(null)
   const [splashScale, setSplashScale] = useState(1)
+  // Installed on an iPhone home screen, the viewport height iOS reports
+  // right at launch can come up short of the real screen (a WebKit
+  // standalone-mode quirk that settles a moment later) — 100dvh alone then
+  // leaves a blank strip below the splash background. Measuring it and
+  // driving the height through React state (not a direct DOM mutation,
+  // which React's own re-renders would just overwrite back to 100dvh) fixes
+  // it for good once the corrected value comes in.
+  const [splashHeightPx, setSplashHeightPx] = useState<number | null>(null)
   useEffect(() => {
     if (view !== 'splash') return
     const measure = () => {
       const w = splashScreenRef.current?.getBoundingClientRect().width
       if (w) setSplashScale(w / 380)
+      setSplashHeightPx(window.visualViewport?.height ?? window.innerHeight)
     }
     measure()
+    const timers = [100, 300, 800].map(ms => setTimeout(measure, ms))
     window.addEventListener('resize', measure)
-    return () => window.removeEventListener('resize', measure)
-  }, [view])
-
-  // Installed on an iPhone home screen, the viewport height iOS reports
-  // right at launch can come up short of the real screen (a WebKit
-  // standalone-mode quirk that settles a moment after load, or as soon as
-  // the page scrolls) — leaving a blank strip below the splash background
-  // until something re-triggers a measurement. Re-checking on a couple of
-  // delays plus scroll/resize covers both cases without waiting on the user.
-  useEffect(() => {
-    if (view !== 'splash') return
-    const applyHeight = () => {
-      const h = window.visualViewport?.height ?? window.innerHeight
-      splashScreenRef.current?.style.setProperty('--sf-splash-vh', `${h}px`)
-    }
-    applyHeight()
-    const timers = [100, 300, 800].map(ms => setTimeout(applyHeight, ms))
-    window.addEventListener('resize', applyHeight)
-    window.addEventListener('scroll', applyHeight)
-    window.visualViewport?.addEventListener('resize', applyHeight)
-    window.visualViewport?.addEventListener('scroll', applyHeight)
-
-    // Re-measuring on its own wasn't enough — the value itself only becomes
-    // correct once an actual scroll happens. Nudging the page by a pixel and
-    // back mimics that scroll programmatically, without the customer having
-    // to do it, then applyHeight (already listening for scroll) picks up
-    // the corrected value.
-    const nudge = requestAnimationFrame(() => {
-      window.scrollTo(0, 1)
-      requestAnimationFrame(() => window.scrollTo(0, 0))
-    })
-
+    window.visualViewport?.addEventListener('resize', measure)
     return () => {
       timers.forEach(clearTimeout)
-      cancelAnimationFrame(nudge)
-      window.removeEventListener('resize', applyHeight)
-      window.removeEventListener('scroll', applyHeight)
-      window.visualViewport?.removeEventListener('resize', applyHeight)
-      window.visualViewport?.removeEventListener('scroll', applyHeight)
+      window.removeEventListener('resize', measure)
+      window.visualViewport?.removeEventListener('resize', measure)
     }
   }, [view])
 
@@ -2538,6 +2514,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
         className={`sf-splash-screen sf-trans-${transitionId}${splashLeaving ? ' sf-splash-leaving' : ''}`}
         style={{
           ...pageStyle,
+          ...(splashHeightPx ? { height: `${splashHeightPx}px` } : {}),
           background: hp.imageUrl
             ? `linear-gradient(rgba(15,23,42,0.25), rgba(15,23,42,0.55)), url(${hp.imageUrl}) center/cover no-repeat`
             : (hp.bgColor || '#0F172A'),

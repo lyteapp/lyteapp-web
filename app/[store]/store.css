@@ -1492,25 +1492,25 @@ html, body { overflow-x: clip; }
    floating tooltip above the chip, touch-only (see chipPressStart). */
 .sf-chip-nutrition-tip {
   position: fixed; z-index: 50;
-  transform: translate(-50%, calc(-100% - 10px));
-  display: flex; gap: 10px;
+  transform: translate(-50%, calc(-100% - 36px));
+  display: flex; gap: 14px;
   background: rgba(15, 23, 42, 0.94); color: white;
-  border-radius: 10px; padding: 8px 12px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  border-radius: 14px; padding: 12px 18px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.3);
   pointer-events: none; white-space: nowrap;
   animation: sfChipTipIn 0.15s ease both;
 }
 .sf-chip-nutrition-tip::after {
   content: ''; position: absolute; top: 100%; left: 50%;
   transform: translateX(-50%);
-  border: 5px solid transparent; border-top-color: rgba(15, 23, 42, 0.94);
+  border: 7px solid transparent; border-top-color: rgba(15, 23, 42, 0.94);
 }
-.sf-chip-nutrition-tip-item { display: flex; flex-direction: column; align-items: center; gap: 1px; }
-.sf-chip-nutrition-tip-item strong { font-size: 13px; font-weight: 700; }
-.sf-chip-nutrition-tip-item span { font-size: 9px; color: rgba(255, 255, 255, 0.65); text-transform: uppercase; letter-spacing: 0.02em; }
+.sf-chip-nutrition-tip-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.sf-chip-nutrition-tip-item strong { font-size: 17px; font-weight: 700; }
+.sf-chip-nutrition-tip-item span { font-size: 11px; color: rgba(255, 255, 255, 0.65); text-transform: uppercase; letter-spacing: 0.02em; }
 @keyframes sfChipTipIn {
-  from { opacity: 0; transform: translate(-50%, calc(-100% - 4px)); }
-  to   { opacity: 1; transform: translate(-50%, calc(-100% - 10px)); }
+  from { opacity: 0; transform: translate(-50%, calc(-100% - 28px)); }
+  to   { opacity: 1; transform: translate(-50%, calc(-100% - 36px)); }
 }
 .sf-tpl-oscuro .sf-modal-nutrition-legend { color: #94A3B8; }
 .sf-tpl-oscuro .sf-modal-nutrition-legend-item strong { color: #F1F5F9; }

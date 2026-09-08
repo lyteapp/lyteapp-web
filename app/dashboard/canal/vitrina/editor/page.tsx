@@ -10,7 +10,10 @@ import './editor.css'
 // storage — mirrors the same helper in canal/inicio/page.tsx.
 function compressBlockImage(file: File, maxDim = 1920, quality = 0.82): Promise<File> {
   return new Promise(resolve => {
-    if (!file.type.startsWith('image/') || file.type === 'image/svg+xml') { resolve(file); return }
+    // GIFs pass through untouched too — drawing one to a canvas and
+    // re-exporting only captures its first frame, so compressing a GIF
+    // here would silently turn an animated block into a static image.
+    if (!file.type.startsWith('image/') || file.type === 'image/svg+xml' || file.type === 'image/gif') { resolve(file); return }
     const img = new Image()
     const url = URL.createObjectURL(file)
     img.onload = () => {

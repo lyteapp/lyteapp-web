@@ -35,6 +35,13 @@ export async function generateMetadata({ params }: { params: Promise<{ store: st
       statusBarStyle: 'black-translucent' as const,
       title: data.name,
     },
+    // This fork's appleWebApp.capable only emits the generic
+    // mobile-web-app-capable tag, not apple-mobile-web-app-capable — iOS
+    // still keys some of its standalone/full-screen safe-area behavior off
+    // the Apple-specific one, so it's added explicitly here.
+    other: {
+      'apple-mobile-web-app-capable': 'yes',
+    },
     ...((data.template_config?.pwaIconUrl || data.logo_url) && {
       icons: { apple: [{ url: data.template_config?.pwaIconUrl || data.logo_url, sizes: '180x180' }] },
     }),

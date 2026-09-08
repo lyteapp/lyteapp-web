@@ -157,6 +157,10 @@ function buttonSizeMetrics(buttonSize: number | 'sm' | 'md' | 'lg' | undefined) 
 type BlockGroup = {
   id: string; afterId: string; background?: string; borderRadius?: number; padding?: number
   direction?: 'column' | 'row'; gap?: number
+  // Nests this group inside another (top-level) group, as one more flex
+  // item alongside its regular block members — one level deep only, so a
+  // group that's already nested can't itself be chosen as a target here.
+  parentGroupId?: string
 }
 type Ad = {
   id: string
@@ -1008,7 +1012,10 @@ export default function EditorPage() {
   }
   function ungroupBlocks(groupId: string) {
     setContentBlocks(prev => prev.map(b => b.groupId === groupId ? { ...b, groupId: undefined } : b))
-    setBlockGroups(prev => prev.filter(g => g.id !== groupId))
+    // Any sub-groups nested inside this one are promoted back to top-level
+    // instead of being orphaned (a group with a parentGroupId pointing
+    // nowhere would silently vanish from the editor's list).
+    setBlockGroups(prev => prev.filter(g => g.id !== groupId).map(g => g.parentGroupId === groupId ? { ...g, parentGroupId: undefined } : g))
   }
   function updateBlockGroup(groupId: string, patch: Partial<BlockGroup>) {
     setBlockGroups(prev => prev.map(g => g.id === groupId ? { ...g, ...patch } : g))
@@ -1019,9 +1026,12 @@ export default function EditorPage() {
     const units: BlockDisplayUnit[] = []
     for (const b of contentBlocks) {
       if (b.groupId) {
+        const group = blockGroups.find(g => g.id === b.groupId)
+        // Nested inside another group — shown there instead of as its own
+        // top-level row (see the "Sub-grupo" section of the group panel).
+        if (group?.parentGroupId) continue
         if (seen.has(b.groupId)) continue
         seen.add(b.groupId)
-        const group = blockGroups.find(g => g.id === b.groupId)
         if (!group) { units.push({ kind: 'single', block: b }); continue }
         units.push({ kind: 'group', group, members: contentBlocks.filter(m => m.groupId === b.groupId) })
       } else {
@@ -2482,6 +2492,110 @@ export default function EditorPage() {
                             <option key={b.id} value={b.id}>
                               {b.type === 'text' ? 'Texto' : b.type === 'image' ? 'Imagen' : b.type === 'video' ? 'Video' : 'Botones'}: {b.content.slice(0, 24)}
                             </option>
+                          ))}
+                        </select>
+                      )}
+
+                      {blockGroups.filter(g => g.parentGroupId === unit.group.id).map(sub => (
+                        <div key={sub.id} className="ed-block-group" style={{ marginTop: 10, background: '#F1F5F9' }}>
+                          <div className="ed-block-group-head">
+                            <span className="ed-block-item-type" style={{ background: '#DBEAFE', color: '#2563EB' }}>
+                              Sub-grupo · {contentBlocks.filter(m => m.groupId === sub.id).length} bloques
+                            </span>
+                            <button
+                              onClick={() => updateBlockGroup(sub.id, { parentGroupId: undefined })}
+                              style={{ marginLeft: 6, padding: '4px 10px', borderRadius: 7, border: 'none', background: '#F1F5F9', color: '#475569', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}
+                            >
+                              Sacar del grupo
+                            </button>
+                            <button
+                              onClick={() => ungroupBlocks(sub.id)}
+                              style={{ marginLeft: 'auto', padding: '4px 10px', borderRadius: 7, border: 'none', background: '#FEF2F2', color: '#DC2626', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}
+                            >
+                              Desagrupar
+                            </button>
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '8px 0' }}>
+                            <input
+                              type="color"
+                              value={sub.background || '#F8FAFC'}
+                              onChange={e => updateBlockGroup(sub.id, { background: e.target.value })}
+                              style={{ width: 30, height: 30, padding: 0, border: '1.5px solid #E2E8F0', borderRadius: 7, cursor: 'pointer', flexShrink: 0 }}
+                              title="Color de fondo del sub-grupo"
+                            />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
+                              <span style={{ fontSize: 10, color: '#94A3B8' }}>Radio</span>
+                              <input
+                                type="range" min={0} max={32} step={2}
+                                value={sub.borderRadius ?? 12}
+                                onChange={e => updateBlockGroup(sub.id, { borderRadius: Number(e.target.value) })}
+                                style={{ flex: 1 }}
+                              />
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
+                              <span style={{ fontSize: 10, color: '#94A3B8' }}>Relleno</span>
+                              <input
+                                type="range" min={0} max={40} step={2}
+                                value={sub.padding ?? 16}
+                                onChange={e => updateBlockGroup(sub.id, { padding: Number(e.target.value) })}
+                                style={{ flex: 1 }}
+                              />
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                            <div style={{ display: 'flex', gap: 4, flex: 1 }}>
+                              {([['column', 'Apilado'], ['row', 'En fila']] as const).map(([dir, label]) => (
+                                <button
+                                  key={dir}
+                                  onClick={() => updateBlockGroup(sub.id, { direction: dir })}
+                                  style={{
+                                    flex: 1, padding: '6px 4px', borderRadius: 7,
+                                    border: `1.5px solid ${(sub.direction ?? 'column') === dir ? '#7C3AED' : '#E2E8F0'}`,
+                                    background: (sub.direction ?? 'column') === dir ? '#F5F3FF' : 'white',
+                                    color: (sub.direction ?? 'column') === dir ? '#7C3AED' : '#64748B',
+                                    fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                                  }}
+                                >
+                                  {label}
+                                </button>
+                              ))}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
+                              <span style={{ fontSize: 10, color: '#94A3B8' }}>Espacio</span>
+                              <input
+                                type="range" min={0} max={40} step={2}
+                                value={sub.gap ?? 12}
+                                onChange={e => updateBlockGroup(sub.id, { gap: Number(e.target.value) })}
+                                style={{ flex: 1 }}
+                              />
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            {contentBlocks.filter(m => m.groupId === sub.id).map(m => <div key={m.id}>{renderBlockItemRow(m)}</div>)}
+                          </div>
+                        </div>
+                      ))}
+
+                      {blockGroups.filter(g =>
+                        g.id !== unit.group.id && g.afterId === unit.group.afterId && !g.parentGroupId
+                        && !blockGroups.some(x => x.parentGroupId === g.id)
+                      ).length > 0 && (
+                        <select
+                          value=""
+                          onChange={e => {
+                            const id = e.target.value
+                            if (!id) return
+                            updateBlockGroup(id, { parentGroupId: unit.group.id })
+                          }}
+                          className="ed-block-select"
+                          style={{ marginTop: 6, fontSize: 11 }}
+                        >
+                          <option value="">+ Anidar un grupo existente aqui...</option>
+                          {blockGroups.filter(g =>
+                            g.id !== unit.group.id && g.afterId === unit.group.afterId && !g.parentGroupId
+                            && !blockGroups.some(x => x.parentGroupId === g.id)
+                          ).map(g => (
+                            <option key={g.id} value={g.id}>Grupo ({contentBlocks.filter(m => m.groupId === g.id).length} bloques)</option>
                           ))}
                         </select>
                       )}

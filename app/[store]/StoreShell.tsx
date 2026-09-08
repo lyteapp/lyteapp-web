@@ -168,6 +168,7 @@ type ContentBlock = {
 type BlockGroup = {
   id: string; afterId: string; background?: string; borderRadius?: number; padding?: number
   direction?: 'column' | 'row'; gap?: number
+  parentGroupId?: string
 }
 type BlockButtonItem = { id: string; label: string; target: 'product' | 'category'; targetId: string }
 type Ad = {
@@ -1336,6 +1337,46 @@ export default function StoreShell({ store, products, categories = [], initialBc
     )
   }
 
+  // Renders one group's wrapper + members, then recurses into any groups
+  // nested inside it (one level deep — a sub-group can't itself have a
+  // sub-group, enforced in the editor) so two groups can share a row.
+  function renderBlockGroup(groupMeta: BlockGroup, allBlocks: ContentBlock[], allGroups: BlockGroup[], extraStyle?: React.CSSProperties) {
+    const members = allBlocks.filter(m => m.groupId === groupMeta.id)
+    const isRow = groupMeta.direction === 'row'
+    const subGroups = allGroups.filter(g => g.parentGroupId === groupMeta.id)
+    return (
+      <div
+        key={groupMeta.id}
+        id={`sf-bg-${groupMeta.id}`}
+        className="sf-block-group"
+        style={{
+          background: groupMeta.background || undefined,
+          borderRadius: groupMeta.borderRadius !== undefined ? `${groupMeta.borderRadius}px` : undefined,
+          padding: groupMeta.padding !== undefined ? `${groupMeta.padding}px` : undefined,
+          display: 'flex',
+          flexDirection: isRow ? 'row' : 'column',
+          flexWrap: isRow ? 'wrap' : undefined,
+          gap: `${groupMeta.gap ?? 12}px`,
+          ...extraStyle,
+        }}
+      >
+        {/* Members inside a group share one gap control instead of stacking their own individual spacing.
+            In a row, text/buttons hug their own content so they sit right next to their neighbor instead
+            of each being stretched into an equal-width column (which left dead space around short text) —
+            image/video still take an equal share since their box needs a real width to size from. */}
+        {members.map(m => renderSingleBlock(m, isRow
+          ? (m.type === 'image' || m.type === 'video'
+              ? { flex: '1 1 0', minWidth: 0, padding: 0 }
+              : { flex: '0 0 auto', padding: 0 })
+          : { padding: 0 }, isRow))}
+        {/* A nested sub-group shares the row equally by default, same as
+            image/video members — it's the "two groups sharing a space"
+            case, so an equal split is the most useful starting point. */}
+        {subGroups.map(sub => renderBlockGroup(sub, allBlocks, allGroups, isRow ? { flex: '1 1 0', minWidth: 0 } : undefined))}
+      </div>
+    )
+  }
+
   function renderContentBlocks(afterId: string) {
     const blocks = (cfg.contentBlocks ?? []) as ContentBlock[]
     const groups = (cfg.blockGroups ?? []) as BlockGroup[]
@@ -1346,37 +1387,13 @@ export default function StoreShell({ store, products, categories = [], initialBc
       <>
         {matching.map(block => {
           if (block.groupId) {
+            const groupMeta = groups.find(g => g.id === block.groupId)
+            // Nested inside another group — rendered by that group instead.
+            if (groupMeta?.parentGroupId) return null
             if (renderedGroups.has(block.groupId)) return null
             renderedGroups.add(block.groupId)
-            const groupMeta = groups.find(g => g.id === block.groupId)
-            const members = matching.filter(m => m.groupId === block.groupId)
-            const isRow = groupMeta?.direction === 'row'
-            return (
-              <div
-                key={block.groupId}
-                id={`sf-bg-${block.groupId}`}
-                className="sf-block-group"
-                style={{
-                  background: groupMeta?.background || undefined,
-                  borderRadius: groupMeta?.borderRadius !== undefined ? `${groupMeta.borderRadius}px` : undefined,
-                  padding: groupMeta?.padding !== undefined ? `${groupMeta.padding}px` : undefined,
-                  display: 'flex',
-                  flexDirection: isRow ? 'row' : 'column',
-                  flexWrap: isRow ? 'wrap' : undefined,
-                  gap: `${groupMeta?.gap ?? 12}px`,
-                }}
-              >
-                {/* Members inside a group share one gap control instead of stacking their own individual spacing.
-                    In a row, text/buttons hug their own content so they sit right next to their neighbor instead
-                    of each being stretched into an equal-width column (which left dead space around short text) —
-                    image/video still take an equal share since their box needs a real width to size from. */}
-                {members.map(m => renderSingleBlock(m, isRow
-                  ? (m.type === 'image' || m.type === 'video'
-                      ? { flex: '1 1 0', minWidth: 0, padding: 0 }
-                      : { flex: '0 0 auto', padding: 0 })
-                  : { padding: 0 }, isRow))}
-              </div>
-            )
+            if (!groupMeta) return renderSingleBlock(block)
+            return renderBlockGroup(groupMeta, blocks, groups)
           }
           return renderSingleBlock(block)
         })}

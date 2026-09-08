@@ -1236,22 +1236,40 @@ export default function StoreShell({ store, products, categories = [], initialBc
         {block.type === 'image' && block.content && (() => {
           const isCategoryLink = block.linkTarget === 'category' && !!block.linkCategoryId
           const isUrlLink = (block.linkTarget ?? 'url') === 'url' && !!block.linkUrl?.trim()
-          const img = (
+          // A short clip picked from an iPhone's photo library for a "GIF" block
+          // often comes through as an actual video file (.mov/.mp4), not a real
+          // animated GIF — Safari quietly plays those through an <img> tag but
+          // Chrome does not, so it must render as a real muted looping <video>.
+          const isVideoFile = /\.(mov|mp4|webm|m4v)(\?.*)?$/i.test(block.content)
+          const sharedStyle: React.CSSProperties = {
+            maxWidth: `${block.imageSize ?? 100}%`,
+            margin: (block.imageSize ?? 100) < 100 ? '0 auto' : undefined,
+            borderRadius: PRODUCT_PHOTO_RADIUS[cfgPhotoShape] ?? undefined,
+            display: 'block',
+            cursor: (isCategoryLink || isUrlLink) ? 'pointer' : undefined,
+          }
+          const onClickHandler = isCategoryLink ? () => {
+            const cat = categories.find(c => c.id === block.linkCategoryId)
+            if (cat) { setFocusCategory(cat); window.scrollTo({ top: 0 }) }
+          } : undefined
+          const img = isVideoFile ? (
+            <video
+              src={block.content}
+              className="sf-block-img"
+              style={sharedStyle}
+              onClick={onClickHandler}
+              autoPlay
+              muted
+              loop
+              playsInline
+            />
+          ) : (
             <img
               src={block.content}
               alt=""
               className="sf-block-img"
-              style={{
-                maxWidth: `${block.imageSize ?? 100}%`,
-                margin: (block.imageSize ?? 100) < 100 ? '0 auto' : undefined,
-                borderRadius: PRODUCT_PHOTO_RADIUS[cfgPhotoShape] ?? undefined,
-                display: 'block',
-                cursor: (isCategoryLink || isUrlLink) ? 'pointer' : undefined,
-              }}
-              onClick={isCategoryLink ? () => {
-                const cat = categories.find(c => c.id === block.linkCategoryId)
-                if (cat) { setFocusCategory(cat); window.scrollTo({ top: 0 }) }
-              } : undefined}
+              style={sharedStyle}
+              onClick={onClickHandler}
             />
           )
           return isUrlLink

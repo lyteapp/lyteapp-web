@@ -2868,7 +2868,7 @@ export default function EditorPage() {
                       <input
                         ref={blockImgRef}
                         type="file"
-                        accept="image/*"
+                        accept="image/*,video/mp4,video/quicktime,video/webm"
                         style={{ display: 'none' }}
                         onChange={async e => {
                           const file = e.target.files?.[0]

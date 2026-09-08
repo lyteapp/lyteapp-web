@@ -162,8 +162,9 @@ type ContentBlock = {
   buttonWidth?: number
   imageSize?: number
   linkUrl?: string
-  linkTarget?: 'url' | 'category'
+  linkTarget?: 'url' | 'category' | 'product'
   linkCategoryId?: string
+  linkProductId?: string
 }
 type BlockGroup = {
   id: string; afterId: string; background?: string; borderRadius?: number; padding?: number
@@ -1235,6 +1236,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
         })()}
         {block.type === 'image' && block.content && (() => {
           const isCategoryLink = block.linkTarget === 'category' && !!block.linkCategoryId
+          const isProductLink = block.linkTarget === 'product' && !!block.linkProductId
           const isUrlLink = (block.linkTarget ?? 'url') === 'url' && !!block.linkUrl?.trim()
           // A short clip picked from an iPhone's photo library for a "GIF" block
           // often comes through as an actual video file (.mov/.mp4), not a real
@@ -1246,11 +1248,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
             margin: (block.imageSize ?? 100) < 100 ? '0 auto' : undefined,
             borderRadius: PRODUCT_PHOTO_RADIUS[cfgPhotoShape] ?? undefined,
             display: 'block',
-            cursor: (isCategoryLink || isUrlLink) ? 'pointer' : undefined,
+            cursor: (isCategoryLink || isProductLink || isUrlLink) ? 'pointer' : undefined,
           }
           const onClickHandler = isCategoryLink ? () => {
             const cat = categories.find(c => c.id === block.linkCategoryId)
             if (cat) { setFocusCategory(cat); window.scrollTo({ top: 0 }) }
+          } : isProductLink ? () => {
+            const p = products.find(pr => pr.id === block.linkProductId)
+            if (p) openProductModal(p)
           } : undefined
           const img = isVideoFile ? (
             <video

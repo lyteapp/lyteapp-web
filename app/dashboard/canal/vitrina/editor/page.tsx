@@ -150,8 +150,9 @@ type ContentBlock = {
   buttonWidth?: number
   imageSize?: number
   linkUrl?: string
-  linkTarget?: 'url' | 'category'
+  linkTarget?: 'url' | 'category' | 'product'
   linkCategoryId?: string
+  linkProductId?: string
 }
 type BlockButtonItem = { id: string; label: string; target: 'product' | 'category'; targetId: string }
 // Mirrors StoreShell.tsx's buttonSizeMetrics — keeps the dashboard's draft
@@ -393,8 +394,9 @@ export default function EditorPage() {
   const [blockImgUploading, setBlockImgUploading] = useState(false)
   const [newBlockImageSize, setNewBlockImageSize] = useState(100)
   const [newBlockLinkUrl, setNewBlockLinkUrl] = useState('')
-  const [newBlockLinkTarget, setNewBlockLinkTarget] = useState<'url' | 'category'>('url')
+  const [newBlockLinkTarget, setNewBlockLinkTarget] = useState<'url' | 'category' | 'product'>('url')
   const [newBlockLinkCategoryId, setNewBlockLinkCategoryId] = useState('')
+  const [newBlockLinkProductId, setNewBlockLinkProductId] = useState('')
   const blockImgRef = useRef<HTMLInputElement>(null)
   const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'price' | 'categories' | 'brand' | 'blocks' | 'product' | 'reorder' | 'ads' | null>(null)
   const [iframeKey, setIframeKey]   = useState(0)
@@ -1133,6 +1135,7 @@ export default function EditorPage() {
     setNewBlockLinkUrl(b.linkUrl ?? '')
     setNewBlockLinkTarget(b.linkTarget ?? 'url')
     setNewBlockLinkCategoryId(b.linkCategoryId ?? '')
+    setNewBlockLinkProductId(b.linkProductId ?? '')
   }
   function cancelEditBlock() {
     setEditingBlockId(null)
@@ -1151,6 +1154,7 @@ export default function EditorPage() {
     setNewBlockLinkUrl('')
     setNewBlockLinkTarget('url')
     setNewBlockLinkCategoryId('')
+    setNewBlockLinkProductId('')
   }
 
   function renderBlockItemRow(b: ContentBlock) {
@@ -2907,7 +2911,7 @@ export default function EditorPage() {
                     <div>
                       <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginBottom: 4 }}>Al hacer clic (opcional)</div>
                       <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-                        {([['url', 'Enlace'], ['category', 'Categoria']] as const).map(([tg, label]) => (
+                        {([['url', 'Enlace'], ['category', 'Categoria'], ['product', 'Producto']] as const).map(([tg, label]) => (
                           <button
                             key={tg}
                             onClick={() => setNewBlockLinkTarget(tg)}
@@ -2932,6 +2936,17 @@ export default function EditorPage() {
                           <option value="">Elige una categoria...</option>
                           {categories.map(c => (
                             <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                      ) : newBlockLinkTarget === 'product' ? (
+                        <select
+                          value={newBlockLinkProductId}
+                          onChange={e => setNewBlockLinkProductId(e.target.value)}
+                          className="ed-block-select"
+                        >
+                          <option value="">Elige un producto...</option>
+                          {productsLite.map(p => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
                           ))}
                         </select>
                       ) : (
@@ -2994,6 +3009,7 @@ export default function EditorPage() {
                       linkUrl: newBlockType === 'image' ? (newBlockLinkUrl.trim() || undefined) : undefined,
                       linkTarget: newBlockType === 'image' ? newBlockLinkTarget : undefined,
                       linkCategoryId: newBlockType === 'image' ? (newBlockLinkCategoryId || undefined) : undefined,
+                      linkProductId: newBlockType === 'image' ? (newBlockLinkProductId || undefined) : undefined,
                     }
                     if (editingBlockId) {
                       setContentBlocks(prev => prev.map(x => x.id === editingBlockId ? { ...x, ...fields } : x))

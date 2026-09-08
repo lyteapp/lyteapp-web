@@ -661,13 +661,13 @@ html, body { overscroll-behavior-y: none; }
 .sf-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ── HOME SPLASH ── */
-/* min-height:100vh/100dvh in normal document flow — the same sizing .sf-page
-   already uses successfully for the catalog/checkout. position:fixed was
-   tried here first (to sidestep a suspected 100dvh-comes-up-short issue)
-   but on real iOS that made it WORSE: fixed elements didn't size against
-   the true viewport the way normal-flow content does, leaving a blank
-   strip at the bottom that no amount of measuring or repositioning fixed —
-   confirmed by the fact the catalog (normal flow) never had this problem. */
+/* min-height:100vh in normal document flow — the exact sizing .sf-page
+   already uses successfully for the catalog/checkout. Two things were
+   tried and ruled out first: position:fixed (fixed elements didn't size
+   against the true viewport the way normal-flow content does on the
+   device this was debugged on) and 100dvh (computed shorter than 100vh
+   there too) — both left a blank strip at the bottom. Matching .sf-page's
+   plain min-height:100vh exactly is what finally fixed it. */
 .sf-splash-bg-img {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
@@ -680,7 +680,7 @@ html, body { overscroll-behavior-y: none; }
 }
 .sf-splash-screen {
   position: relative;
-  min-height: 100vh; min-height: 100dvh;
+  min-height: 100vh;
   overflow: hidden;
   display: flex; align-items: center; justify-content: center;
   padding: calc(env(safe-area-inset-top) + 24px) 24px 24px;
@@ -1131,7 +1131,7 @@ html, body { overscroll-behavior-y: none; }
 @keyframes sfRevealLineGrow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 @keyframes sfRevealFade { from { opacity: 0; } to { opacity: 1; } }
 .sf-reveal-screen {
-  height: 100vh; height: 100dvh; overflow: hidden;
+  min-height: 100vh; overflow: hidden;
   background: var(--sf-reveal-bg, #111111);
   display: flex; align-items: center; justify-content: center;
   position: relative;
@@ -1192,7 +1192,7 @@ html, body { overscroll-behavior-y: none; }
 
 /* ── CONFIRMATION ── */
 .sf-confirm-screen {
-  min-height: 100vh; min-height: 100dvh; background: #FAFAF9;
+  min-height: 100vh; background: #FAFAF9;
   display: flex; align-items: center; justify-content: center;
   padding: calc(env(safe-area-inset-top) + 24px) 24px 24px;
   font-family: var(--font-geist-sans), sans-serif;

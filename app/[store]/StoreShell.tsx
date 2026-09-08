@@ -1214,7 +1214,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   function renderSingleBlock(block: ContentBlock, extraStyle?: React.CSSProperties, inRow?: boolean) {
     const bm = buttonSizeMetrics(block.buttonSize)
     return (
-      <div key={block.id} id={`sf-cb-${block.id}`} className="sf-content-block" style={{ padding: `${block.spacing ?? 0}px 0`, ...extraStyle }}>
+      <div key={block.id} id={`sf-cb-${block.id}`} className="sf-content-block" style={{ margin: `${block.spacing ?? 0}px 0`, ...extraStyle }}>
         {block.type === 'text' && (() => {
           const { fontWeight, strokeWidth } = textWeightStyle(block.fontWeight)
           return (

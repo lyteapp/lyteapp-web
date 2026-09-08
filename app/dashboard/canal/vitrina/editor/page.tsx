@@ -878,7 +878,7 @@ export default function EditorPage() {
       doc.head.appendChild(blocksEl)
     }
     blocksEl.textContent = [
-      ...contentBlocks.filter(b => !b.groupId).map(b => `#sf-cb-${b.id} { padding: ${b.spacing ?? 0}px 0 !important; }`),
+      ...contentBlocks.filter(b => !b.groupId).map(b => `#sf-cb-${b.id} { margin: ${b.spacing ?? 0}px 0 !important; }`),
       ...blockGroups.map(g => `#sf-bg-${g.id} { gap: ${g.gap ?? 12}px !important; padding: ${g.padding ?? 16}px !important; border-radius: ${g.borderRadius ?? 12}px !important; background: ${g.background || '#F8FAFC'} !important; flex-direction: ${g.direction === 'row' ? 'row' : 'column'} !important; }`),
     ].join('\n')
   }
@@ -1196,7 +1196,7 @@ export default function EditorPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
             <span style={{ fontSize: 10, color: '#94A3B8', flexShrink: 0 }}>Separacion</span>
             <input
-              type="range" min={0} max={60} step={2}
+              type="range" min={-60} max={60} step={2}
               value={b.spacing ?? 0}
               onChange={e => {
                 const val = Number(e.target.value)
@@ -2951,7 +2951,7 @@ export default function EditorPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 11, fontWeight: 600, color: '#64748B', flexShrink: 0 }}>Separacion</span>
                 <input
-                  type="range" min={0} max={60} step={2}
+                  type="range" min={-60} max={60} step={2}
                   value={newBlockSpacing}
                   onChange={e => setNewBlockSpacing(Number(e.target.value))}
                   style={{ flex: 1 }}

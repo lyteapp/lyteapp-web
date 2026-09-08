@@ -1577,6 +1577,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
       : barSide === 'top' && ad.topAnchor === 'catnav'
       ? { position: 'sticky', top: `${adBarCatNavBottom}px` }
       : {}
+    // Drop behind the product modal's dark/blur overlay (z-index 200) while
+    // it's open, instead of floating above it unaffected — same treatment
+    // the rest of the page gets.
+    if (modalProduct) barPositionVars.zIndex = 150
     // Marks a "debajo del encabezado" bar so its rendered height can be
     // measured and fed into the category nav's own sticky offset — without
     // that, the nav would stick right below the header too, landing on top

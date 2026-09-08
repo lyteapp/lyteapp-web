@@ -388,6 +388,11 @@ export default function EditorPage() {
   const blockImgRef = useRef<HTMLInputElement>(null)
   const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'price' | 'categories' | 'brand' | 'blocks' | 'product' | 'reorder' | 'ads' | null>(null)
   const [iframeKey, setIframeKey]   = useState(0)
+  // Combined with iframeKey for the preview URL's cache-busting param — a
+  // fresh page load also needs a new value, or a full refresh (which resets
+  // iframeKey back to 0) would request the exact same URL a previous
+  // session already loaded, and a CDN could still serve that stale response.
+  const [previewLoadId] = useState(() => Date.now())
   const [saving, setSaving]         = useState(false)
   const [toolSaved, setToolSaved]   = useState(false)
 
@@ -1245,7 +1250,11 @@ export default function EditorPage() {
                 <iframe
                   ref={iframeRef}
                   key={iframeKey}
-                  src={`/${storeSlug}?preview=1`}
+                  // iframeKey busts any HTTP/CDN cache for this exact URL —
+                  // without it, reloading the iframe (even via a full page
+                  // refresh) could keep serving a cached response from
+                  // before the latest save, showing stale content.
+                  src={`/${storeSlug}?preview=1&_r=${previewLoadId}-${iframeKey}`}
                   className="ed-preview-iframe"
                   title="Vista previa"
                   onLoad={() => applyPreview()}

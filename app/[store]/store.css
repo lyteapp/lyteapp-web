@@ -1632,6 +1632,11 @@ html, body { overflow-x: clip; }
   padding: 8px 16px; border-radius: 100px; font-size: 14px; font-weight: 500;
   border: 1.5px solid rgba(15,23,42,0.12); background: white; color: #475569;
   cursor: pointer; transition: all 0.15s; font-family: inherit;
+  /* iOS shows its copy/select callout on a press-and-hold by default —
+     these disable that so the long-press nutrition preview isn't fought
+     over by the system menu. */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none; user-select: none;
 }
 /* Marks a chip whose choice has its own nutrition values — press and hold
    to preview them (touch only, see chipPressStart). */

@@ -1682,6 +1682,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                       onPointerUp={chipPressEnd}
                       onPointerLeave={chipPressEnd}
                       onPointerCancel={chipPressEnd}
+                      onContextMenu={e => e.preventDefault()}
                     >
                       {c.value}
                       {modalNutritionEnabled && choiceHasNutrition(c) && <span className="sf-modal-chip-nutrition-dot" />}
@@ -1761,6 +1762,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                           onPointerUp={chipPressEnd}
                           onPointerLeave={chipPressEnd}
                           onPointerCancel={chipPressEnd}
+                          onContextMenu={e => e.preventDefault()}
                         >
                           {c.value}
                           {modalNutritionEnabled && choiceHasNutrition(c) && <span className="sf-modal-chip-nutrition-dot" />}

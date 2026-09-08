@@ -3,6 +3,12 @@
    it implicitly makes overflow-y: auto too, turning body into its own scroll
    container that sticky descendants (.sf-cat-nav, .sf-nav) can't stick against. */
 html, body { overflow-x: clip; }
+/* iOS's elastic overscroll bounce shifts the whole rendered surface — even
+   position:fixed layers — revealing the plain white canvas behind it for a
+   moment. That's what showed up as a white strip at the bottom of the
+   splash screen (and the "vibrating" on scroll): not a sizing bug, a bounce
+   artifact. This turns the bounce off everywhere in the storefront. */
+html, body { overscroll-behavior-y: none; }
 
 /* Installed PWA uses black-translucent (so the home page can blend with
    its own background), which forces white status bar icons everywhere —
@@ -683,6 +689,7 @@ html, body { overflow-x: clip; }
   font-family: var(--font-geist-sans), sans-serif;
   animation: sfFadeIn 0.5s ease both;
   z-index: 1;
+  overscroll-behavior: none;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
@@ -763,6 +770,7 @@ html, body { overflow-x: clip; }
 .sf-splash-content {
   max-width: 420px; max-height: 100%; width: 100%;
   overflow-y: auto; overflow-x: hidden;
+  overscroll-behavior: contain;
   scrollbar-width: none;
   position: relative; z-index: 1;
 }

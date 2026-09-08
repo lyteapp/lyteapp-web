@@ -28,6 +28,23 @@ html, body { overflow-x: clip; }
   -webkit-font-smoothing: antialiased;
   padding-bottom: 100px;
   max-width: 100%;
+  /* Store-wide: a press-and-hold anywhere in the storefront should never pop
+     iOS's copy/select callout, and on an image it should never offer to save
+     it — both fought with the app's own tap/long-press interactions (chips,
+     product cards, blocks). Inputs/textareas opt back into normal selection
+     below since customers still need to edit/select what they type there. */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.sf-page img {
+  -webkit-touch-callout: none;
+}
+.sf-page input,
+.sf-page textarea {
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 /* ── TOP BAR ── */
@@ -647,7 +664,11 @@ html, body { overflow-x: clip; }
   font-family: var(--font-geist-sans), sans-serif;
   animation: sfFadeIn 0.5s ease both;
   position: relative;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
+.sf-splash-screen img { -webkit-touch-callout: none; }
 .sf-splash-images-layer { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
 .sf-splash-photo {
   position: absolute; object-fit: cover; border-radius: 12px;

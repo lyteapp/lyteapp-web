@@ -1196,7 +1196,7 @@ export default function EditorPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
             <span style={{ fontSize: 10, color: '#94A3B8', flexShrink: 0 }}>Separacion</span>
             <input
-              type="range" min={-60} max={60} step={2}
+              type="range" min={-120} max={120} step={2}
               value={b.spacing ?? 0}
               onChange={e => {
                 const val = Number(e.target.value)
@@ -1204,7 +1204,7 @@ export default function EditorPage() {
               }}
               style={{ flex: 1 }}
             />
-            <span style={{ fontSize: 10, color: '#94A3B8', width: 28, flexShrink: 0, textAlign: 'right' }}>{b.spacing ?? 0}px</span>
+            <span style={{ fontSize: 10, color: '#94A3B8', width: 36, flexShrink: 0, textAlign: 'right' }}>{b.spacing ?? 0}px</span>
           </div>
         )}
       </div>
@@ -2951,12 +2951,12 @@ export default function EditorPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 11, fontWeight: 600, color: '#64748B', flexShrink: 0 }}>Separacion</span>
                 <input
-                  type="range" min={-60} max={60} step={2}
+                  type="range" min={-120} max={120} step={2}
                   value={newBlockSpacing}
                   onChange={e => setNewBlockSpacing(Number(e.target.value))}
                   style={{ flex: 1 }}
                 />
-                <span style={{ fontSize: 11, color: '#94A3B8', width: 32, flexShrink: 0, textAlign: 'right' }}>{newBlockSpacing}px</span>
+                <span style={{ fontSize: 11, color: '#94A3B8', width: 40, flexShrink: 0, textAlign: 'right' }}>{newBlockSpacing}px</span>
               </div>
 
               <div style={{ display: 'flex', gap: 8 }}>

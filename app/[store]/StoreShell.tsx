@@ -478,6 +478,25 @@ export default function StoreShell({ store, products, categories = [], initialBc
     return () => window.removeEventListener('resize', measure)
   }, [view])
 
+  // Installed on an iPhone home screen, 100dvh can come up short of the
+  // real screen height (a WebKit standalone-mode quirk), leaving a blank
+  // strip below the splash background. window.innerHeight doesn't have
+  // that problem, so it drives the height directly once measured.
+  useEffect(() => {
+    if (view !== 'splash') return
+    const applyHeight = () => {
+      const h = window.visualViewport?.height ?? window.innerHeight
+      splashScreenRef.current?.style.setProperty('--sf-splash-vh', `${h}px`)
+    }
+    applyHeight()
+    window.addEventListener('resize', applyHeight)
+    window.visualViewport?.addEventListener('resize', applyHeight)
+    return () => {
+      window.removeEventListener('resize', applyHeight)
+      window.visualViewport?.removeEventListener('resize', applyHeight)
+    }
+  }, [view])
+
   useEffect(() => {
     if (!logoMorphStart || view !== 'catalog' || logoMorphEnd) return
     const raf = requestAnimationFrame(() => {

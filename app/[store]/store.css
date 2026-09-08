@@ -656,7 +656,7 @@ html, body { overflow-x: clip; }
 
 /* ── HOME SPLASH ── */
 .sf-splash-screen {
-  height: 100vh; height: 100dvh;
+  height: 100vh; height: 100dvh; height: var(--sf-splash-vh, 100dvh);
   overflow: hidden;
   display: flex; align-items: center; justify-content: center;
   padding: calc(env(safe-area-inset-top) + 24px) 24px 24px;

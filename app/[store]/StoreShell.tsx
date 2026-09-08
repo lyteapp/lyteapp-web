@@ -467,30 +467,15 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // splash screen's real width and scales those pixel values to match it.
   const splashScreenRef = useRef<HTMLDivElement>(null)
   const [splashScale, setSplashScale] = useState(1)
-  // Installed on an iPhone home screen, the viewport height iOS reports
-  // right at launch can come up short of the real screen (a WebKit
-  // standalone-mode quirk that settles a moment later) — 100dvh alone then
-  // leaves a blank strip below the splash background. Measuring it and
-  // driving the height through React state (not a direct DOM mutation,
-  // which React's own re-renders would just overwrite back to 100dvh) fixes
-  // it for good once the corrected value comes in.
-  const [splashHeightPx, setSplashHeightPx] = useState<number | null>(null)
   useEffect(() => {
     if (view !== 'splash') return
     const measure = () => {
       const w = splashScreenRef.current?.getBoundingClientRect().width
       if (w) setSplashScale(w / 380)
-      setSplashHeightPx(window.visualViewport?.height ?? window.innerHeight)
     }
     measure()
-    const timers = [100, 300, 800].map(ms => setTimeout(measure, ms))
     window.addEventListener('resize', measure)
-    window.visualViewport?.addEventListener('resize', measure)
-    return () => {
-      timers.forEach(clearTimeout)
-      window.removeEventListener('resize', measure)
-      window.visualViewport?.removeEventListener('resize', measure)
-    }
+    return () => window.removeEventListener('resize', measure)
   }, [view])
 
   useEffect(() => {
@@ -2509,16 +2494,24 @@ export default function StoreShell({ store, products, categories = [], initialBc
     return (
       <>
       {renderLogoMorphOverlay()}
+      {/* A separate position:fixed layer for the background — the browser
+          sizes that against the true visible screen natively, sidestepping
+          the 100dvh-comes-up-short-on-load quirk that left a blank strip at
+          the bottom (measuring it via JS instead just made the page jitter
+          on scroll as iOS's own bars animated). Shares the same transition
+          classes as .sf-splash-screen so it animates out together with it. */}
       <div
-        ref={splashScreenRef}
-        className={`sf-splash-screen sf-trans-${transitionId}${splashLeaving ? ' sf-splash-leaving' : ''}`}
+        className={`sf-splash-bg-fixed sf-trans-${transitionId}${splashLeaving ? ' sf-splash-leaving' : ''}`}
         style={{
-          ...pageStyle,
-          ...(splashHeightPx ? { height: `${splashHeightPx}px` } : {}),
           background: hp.imageUrl
             ? `linear-gradient(rgba(15,23,42,0.25), rgba(15,23,42,0.55)), url(${hp.imageUrl}) center/cover no-repeat`
             : (hp.bgColor || '#0F172A'),
         }}
+      />
+      <div
+        ref={splashScreenRef}
+        className={`sf-splash-screen sf-trans-${transitionId}${splashLeaving ? ' sf-splash-leaving' : ''}`}
+        style={pageStyle}
       >
         {hp.images && hp.images.length > 0 && (
           <div className="sf-splash-images-layer">

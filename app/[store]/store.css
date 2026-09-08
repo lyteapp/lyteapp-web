@@ -655,6 +655,13 @@ html, body { overflow-x: clip; }
 .sf-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ── HOME SPLASH ── */
+/* Fixed so the browser sizes it against the real screen directly instead of
+   through 100dvh, which on some iOS builds comes up short right at launch
+   and leaves a blank strip below it. */
+.sf-splash-bg-fixed {
+  position: fixed; inset: 0; z-index: 0;
+  animation: sfFadeIn 0.5s ease both;
+}
 .sf-splash-screen {
   height: 100vh; height: 100dvh;
   overflow: hidden;
@@ -664,6 +671,7 @@ html, body { overflow-x: clip; }
   font-family: var(--font-geist-sans), sans-serif;
   animation: sfFadeIn 0.5s ease both;
   position: relative;
+  z-index: 1;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;

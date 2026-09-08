@@ -35,11 +35,21 @@ function compressBlockImage(file: File, maxDim = 1920, quality = 0.82): Promise<
     img.src = url
   })
 }
+const IMAGE_MIME_BY_EXT: Record<string, string> = {
+  gif: 'image/gif', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+  webp: 'image/webp', svg: 'image/svg+xml',
+}
 async function uploadBlockImage(file: File, storeId: string) {
   const compressed = await compressBlockImage(file)
-  const ext = compressed.name.split('.').pop()
+  const ext = compressed.name.split('.').pop()?.toLowerCase() ?? ''
   const path = `blocks/${storeId}-${Date.now()}.${ext}`
-  const { error } = await supabase.storage.from('store-assets').upload(path, compressed, { upsert: true, contentType: compressed.type })
+  // Some browsers report a blank or wrong File.type for a GIF (depends on how
+  // it was picked/dragged in), so Supabase ends up serving the asset with a
+  // generic content-type. Safari still renders it by sniffing the bytes, but
+  // Chrome refuses to paint an <img> whose response content-type isn't
+  // image/* and shows nothing. Deriving it from the extension avoids that.
+  const contentType = IMAGE_MIME_BY_EXT[ext] || compressed.type || 'application/octet-stream'
+  const { error } = await supabase.storage.from('store-assets').upload(path, compressed, { upsert: true, contentType })
   if (error) throw error
   return supabase.storage.from('store-assets').getPublicUrl(path).data.publicUrl
 }

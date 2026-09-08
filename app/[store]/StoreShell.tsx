@@ -496,8 +496,20 @@ export default function StoreShell({ store, products, categories = [], initialBc
     window.addEventListener('scroll', applyHeight)
     window.visualViewport?.addEventListener('resize', applyHeight)
     window.visualViewport?.addEventListener('scroll', applyHeight)
+
+    // Re-measuring on its own wasn't enough — the value itself only becomes
+    // correct once an actual scroll happens. Nudging the page by a pixel and
+    // back mimics that scroll programmatically, without the customer having
+    // to do it, then applyHeight (already listening for scroll) picks up
+    // the corrected value.
+    const nudge = requestAnimationFrame(() => {
+      window.scrollTo(0, 1)
+      requestAnimationFrame(() => window.scrollTo(0, 0))
+    })
+
     return () => {
       timers.forEach(clearTimeout)
+      cancelAnimationFrame(nudge)
       window.removeEventListener('resize', applyHeight)
       window.removeEventListener('scroll', applyHeight)
       window.visualViewport?.removeEventListener('resize', applyHeight)

@@ -2511,7 +2511,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       <div
         ref={splashScreenRef}
         className={`sf-splash-screen sf-trans-${transitionId}${splashLeaving ? ' sf-splash-leaving' : ''}`}
-        style={pageStyle}
+        style={{ ...pageStyle, background: 'transparent' }}
       >
         {hp.images && hp.images.length > 0 && (
           <div className="sf-splash-images-layer">

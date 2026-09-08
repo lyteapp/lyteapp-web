@@ -2494,20 +2494,21 @@ export default function StoreShell({ store, products, categories = [], initialBc
     return (
       <>
       {renderLogoMorphOverlay()}
-      {/* A separate position:fixed layer for the background — the browser
-          sizes that against the true visible screen natively, sidestepping
-          the 100dvh-comes-up-short-on-load quirk that left a blank strip at
-          the bottom (measuring it via JS instead just made the page jitter
-          on scroll as iOS's own bars animated). Shares the same transition
-          classes as .sf-splash-screen so it animates out together with it. */}
-      <div
-        className={`sf-splash-bg-fixed sf-trans-${transitionId}${splashLeaving ? ' sf-splash-leaving' : ''}`}
-        style={{
-          background: hp.imageUrl
-            ? `linear-gradient(rgba(15,23,42,0.25), rgba(15,23,42,0.55)), url(${hp.imageUrl}) center/cover no-repeat`
-            : (hp.bgColor || '#0F172A'),
-        }}
-      />
+      {/* A plain fixed <img> instead of a CSS background — the browser lays
+          it out with the same well-tested algorithm as any other image, and
+          position:fixed sizes it against the true screen directly rather
+          than through 100dvh (which came up short right after launch and
+          left the page looking shifted/blank at the bottom). Shares the
+          same transition classes as .sf-splash-screen so it animates out
+          together with it. */}
+      <div className={`sf-splash-bg-fixed sf-trans-${transitionId}${splashLeaving ? ' sf-splash-leaving' : ''}`}>
+        {hp.imageUrl ? (
+          <img src={hp.imageUrl} alt="" className="sf-splash-bg-img" />
+        ) : (
+          <div className="sf-splash-bg-img" style={{ background: hp.bgColor || '#0F172A' }} />
+        )}
+        {hp.imageUrl && <div className="sf-splash-bg-tint" />}
+      </div>
       <div
         ref={splashScreenRef}
         className={`sf-splash-screen sf-trans-${transitionId}${splashLeaving ? ' sf-splash-leaving' : ''}`}

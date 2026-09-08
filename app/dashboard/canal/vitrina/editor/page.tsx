@@ -347,6 +347,7 @@ export default function EditorPage() {
   const [headerSticky, setHeaderSticky] = useState(false)
   const [modalWizard, setModalWizard] = useState(false)
   const [enableReorder, setEnableReorder] = useState(false)
+  const [reorderHeaderButton, setReorderHeaderButton] = useState(false)
   const [reorderFloatSeconds, setReorderFloatSeconds] = useState(0)
   const [reorderPosition, setReorderPosition] = useState<'top' | 'bottom' | 'left' | 'right'>('right')
   const [reorderTitle, setReorderTitle] = useState('')
@@ -482,6 +483,7 @@ export default function EditorPage() {
       if (cfg.headerSticky !== undefined) setHeaderSticky(cfg.headerSticky as boolean)
       if (cfg.modalWizard !== undefined) setModalWizard(cfg.modalWizard as boolean)
       if (cfg.enableReorder !== undefined) setEnableReorder(cfg.enableReorder as boolean)
+      if (cfg.reorderHeaderButton !== undefined) setReorderHeaderButton(cfg.reorderHeaderButton as boolean)
       if (cfg.reorderFloatSeconds !== undefined) setReorderFloatSeconds(cfg.reorderFloatSeconds as number)
       if (cfg.reorderPosition !== undefined) setReorderPosition(cfg.reorderPosition as 'top' | 'bottom' | 'left' | 'right')
       if (cfg.reorderTitle !== undefined) setReorderTitle(cfg.reorderTitle as string)
@@ -966,7 +968,7 @@ export default function EditorPage() {
       priceColor, accentColor, priceFont: priceFont || pageFont, priceSize,
       catTitleFont: catTitleFont || undefined, productNameFont: productNameFont || undefined,
       categoryNavStyle, showCatNav, stickyCatNav, catNavOverBanner, categorySpacing,
-      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, showHeaderSearch, showHeaderCart, headerIconColor: headerIconColor || undefined, headerOverBanner, headerSticky, headerHeightPx, modalWizard, enableReorder, reorderFloatSeconds: reorderFloatSeconds > 0 ? reorderFloatSeconds : undefined,
+      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, showHeaderSearch, showHeaderCart, headerIconColor: headerIconColor || undefined, headerOverBanner, headerSticky, headerHeightPx, modalWizard, enableReorder, reorderHeaderButton: enableReorder ? reorderHeaderButton : undefined, reorderFloatSeconds: reorderFloatSeconds > 0 ? reorderFloatSeconds : undefined,
       reorderPosition: reorderPosition !== 'right' ? reorderPosition : undefined,
       reorderTitle: reorderTitle.trim() || undefined,
       reorderImageUrl: reorderImageUrl || undefined,
@@ -3113,6 +3115,34 @@ export default function EditorPage() {
                 </div>
               </div>
             </label>
+
+            {enableReorder && (
+              <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#F8FAFC', borderRadius: 10, cursor: 'pointer', gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', lineHeight: 1.2 }}>Tambien mostrar un boton en el encabezado</div>
+                  <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 3 }}>Un boton junto al menu, arriba. Al entrar a la tienda muestra un globo por 2 segundos si hay un pedido para repetir; si el cliente lo toca sin tener pedidos recientes, avisa que no hay ninguno</div>
+                </div>
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  <input
+                    type="checkbox"
+                    checked={reorderHeaderButton}
+                    onChange={e => setReorderHeaderButton(e.target.checked)}
+                    style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
+                  />
+                  <div style={{
+                    width: 38, height: 22, borderRadius: 100,
+                    background: reorderHeaderButton ? '#7C3AED' : '#D1D5DB',
+                    transition: 'background 0.2s', cursor: 'pointer', position: 'relative',
+                  }}>
+                    <div style={{
+                      position: 'absolute', top: 4, left: reorderHeaderButton ? 18 : 4,
+                      width: 14, height: 14, borderRadius: '50%', background: 'white',
+                      transition: 'left 0.2s',
+                    }} />
+                  </div>
+                </div>
+              </label>
+            )}
 
             {enableReorder && (
               <div style={{ padding: '12px 14px', background: '#F8FAFC', borderRadius: 10 }}>

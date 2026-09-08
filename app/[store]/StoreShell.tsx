@@ -261,6 +261,7 @@ type TemplateConfig = {
   headerHeightPx?: number
   modalWizard?: boolean
   enableReorder?: boolean
+  reorderHeaderButton?: boolean
   reorderFloatSeconds?: number
   reorderPosition?: 'top' | 'bottom' | 'left' | 'right'
   reorderTitle?: string
@@ -501,6 +502,31 @@ export default function StoreShell({ store, products, categories = [], initialBc
     const t = setTimeout(() => setShowReorder(false), seconds * 1000)
     return () => clearTimeout(t)
   }, [showReorder, store.template_config?.reorderFloatSeconds])
+
+  // Header "repeat order" button: a lighter-weight alternative to the
+  // floating card — a brief hint bubble nudges the customer toward it once,
+  // right when a recent order is found (same trigger as the card above).
+  const [showHeaderReorderHint, setShowHeaderReorderHint] = useState(false)
+  const [headerReorderEmpty, setHeaderReorderEmpty] = useState(false)
+  const headerReorderHintShownRef = useRef(false)
+
+  useEffect(() => {
+    if (!store.template_config?.reorderHeaderButton || !lastOrder || headerReorderHintShownRef.current) return
+    headerReorderHintShownRef.current = true
+    setShowHeaderReorderHint(true)
+    const t = setTimeout(() => setShowHeaderReorderHint(false), 2000)
+    return () => clearTimeout(t)
+  }, [store.template_config?.reorderHeaderButton, lastOrder])
+
+  function handleHeaderReorderClick() {
+    setShowHeaderReorderHint(false)
+    if (lastOrder) {
+      reorderLast()
+    } else {
+      setHeaderReorderEmpty(true)
+      setTimeout(() => setHeaderReorderEmpty(false), 2000)
+    }
+  }
 
   // Ads: each one schedules its own reveal (immediately, or after its
   // configured delay), skipping ones already dismissed this device when
@@ -3755,6 +3781,22 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
                   <path fillRule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
                 </svg>
+              </button>
+            )}
+            {cfg.reorderHeaderButton && cfg.enableReorder && (
+              <button className="sf-header-icon-btn" onClick={handleHeaderReorderClick} aria-label="Repetir pedido">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
+                  <path d="M3 12a9 9 0 0 1 15.3-6.4L21 8" />
+                  <path d="M21 3v5h-5" />
+                  <path d="M21 12a9 9 0 0 1-15.3 6.4L3 16" />
+                  <path d="M3 21v-5h5" />
+                </svg>
+                {showHeaderReorderHint && (
+                  <span className="sf-header-reorder-tip">Repetir tu ultimo pedido</span>
+                )}
+                {headerReorderEmpty && (
+                  <span className="sf-header-reorder-tip">No hay pedidos recientes</span>
+                )}
               </button>
             )}
             {cfgLogoPosition === 'left' && store.logo_url && (

@@ -261,6 +261,7 @@ type TemplateConfig = {
   headerHeightPx?: number
   modalWizard?: boolean
   enableReorder?: boolean
+  reorderBannerEnabled?: boolean
   reorderHeaderButton?: boolean
   reorderFloatSeconds?: number
   reorderPosition?: 'top' | 'bottom' | 'left' | 'right'
@@ -486,7 +487,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       .then(json => {
         if (json.found && Array.isArray(json.items) && json.items.length > 0) {
           setLastOrder({ orderId: json.orderId, items: json.items })
-          setShowReorder(true)
+          if (store.template_config?.reorderBannerEnabled !== false) setShowReorder(true)
         }
       })
       .catch(() => {})

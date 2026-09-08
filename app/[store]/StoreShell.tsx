@@ -784,6 +784,36 @@ export default function StoreShell({ store, products, categories = [], initialBc
     }
   }
 
+  // Press-and-hold a variable chip to preview that specific choice's own
+  // nutrition deltas before picking it — touch-only (mouse users just
+  // click), so a customer on their phone can compare options by calories
+  // without adding them all to the cart first. Held state lives in a ref,
+  // not React state, so a quick tap never triggers a spurious render.
+  const [chipNutritionPreview, setChipNutritionPreview] = useState<{ top: number; left: number; choice: VariableChoice } | null>(null)
+  const chipLongPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const chipDidLongPress   = useRef(false)
+  function choiceHasNutrition(c: VariableChoice) {
+    return c.calories !== undefined || c.fat !== undefined || c.protein !== undefined || c.carbs !== undefined
+  }
+  function chipPressStart(e: React.PointerEvent<HTMLButtonElement>, c: VariableChoice) {
+    if (e.pointerType !== 'touch' || !modalNutritionEnabled || !choiceHasNutrition(c)) return
+    const target = e.currentTarget
+    chipLongPressTimer.current = setTimeout(() => {
+      chipDidLongPress.current = true
+      const rect = target.getBoundingClientRect()
+      setChipNutritionPreview({ top: rect.top, left: rect.left + rect.width / 2, choice: c })
+      if (navigator.vibrate) navigator.vibrate(10)
+    }, 450)
+  }
+  function chipPressEnd() {
+    if (chipLongPressTimer.current) { clearTimeout(chipLongPressTimer.current); chipLongPressTimer.current = null }
+    setChipNutritionPreview(null)
+  }
+  function chipClick(onSelect: () => void) {
+    if (chipDidLongPress.current) { chipDidLongPress.current = false; return }
+    onSelect()
+  }
+
   const [lightbox, setLightbox] = useState<{ images: string[]; idx: number } | null>(null)
   const touchStartX             = useRef<number>(0)
   const swipedRef               = useRef<boolean>(false)
@@ -1549,6 +1579,17 @@ export default function StoreShell({ store, products, categories = [], initialBc
     if (!modalProduct) return null
     return (
       <div className="sf-modal-overlay" onClick={() => setModalProduct(null)}>
+        {chipNutritionPreview && (
+          <div
+            className="sf-chip-nutrition-tip"
+            style={{ top: chipNutritionPreview.top, left: chipNutritionPreview.left }}
+          >
+            <div className="sf-chip-nutrition-tip-item"><strong>{Math.round(chipNutritionPreview.choice.calories ?? 0)}</strong><span>kcal</span></div>
+            <div className="sf-chip-nutrition-tip-item"><strong>{Math.round(chipNutritionPreview.choice.fat ?? 0)}g</strong><span>grasa</span></div>
+            <div className="sf-chip-nutrition-tip-item"><strong>{Math.round(chipNutritionPreview.choice.protein ?? 0)}g</strong><span>prot</span></div>
+            <div className="sf-chip-nutrition-tip-item"><strong>{Math.round(chipNutritionPreview.choice.carbs ?? 0)}g</strong><span>carbs</span></div>
+          </div>
+        )}
         <div className="sf-modal-wrap">
           {modalNutritionEnabled && modalNutritionDisplay && (
             <div className="sf-modal-nutrition-badge sf-modal-nutrition-badge-float">
@@ -1633,12 +1674,17 @@ export default function StoreShell({ store, products, categories = [], initialBc
                     <button
                       key={c.value}
                       className={`sf-modal-chip${(modalVars[modalWizardStep.group.label] ?? []).includes(c.value) ? ' selected' : ''}`}
-                      onClick={() => {
+                      onClick={() => chipClick(() => {
                         toggleModalVar(modalWizardStep.group, c.value)
                         if (wizardVarMinMax.max <= 1) advanceModalWizard()
-                      }}
+                      })}
+                      onPointerDown={e => chipPressStart(e, c)}
+                      onPointerUp={chipPressEnd}
+                      onPointerLeave={chipPressEnd}
+                      onPointerCancel={chipPressEnd}
                     >
                       {c.value}
+                      {modalNutritionEnabled && choiceHasNutrition(c) && <span className="sf-modal-chip-nutrition-dot" />}
                       {c.price > 0 && <span className="sf-modal-chip-price">+{currencySymbol}{c.price.toFixed(2)}</span>}
                     </button>
                   ))}
@@ -1710,9 +1756,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
                         <button
                           key={c.value}
                           className={`sf-modal-chip${(modalVars[g.label] ?? []).includes(c.value) ? ' selected' : ''}`}
-                          onClick={() => toggleModalVar(g, c.value)}
+                          onClick={() => chipClick(() => toggleModalVar(g, c.value))}
+                          onPointerDown={e => chipPressStart(e, c)}
+                          onPointerUp={chipPressEnd}
+                          onPointerLeave={chipPressEnd}
+                          onPointerCancel={chipPressEnd}
                         >
                           {c.value}
+                          {modalNutritionEnabled && choiceHasNutrition(c) && <span className="sf-modal-chip-nutrition-dot" />}
                           {c.price > 0 && <span className="sf-modal-chip-price">+{currencySymbol}{c.price.toFixed(2)}</span>}
                         </button>
                       ))}

@@ -1487,6 +1487,31 @@ html, body { overflow-x: clip; }
   background: #1E293B; border-color: rgba(255, 255, 255, 0.1);
 }
 .sf-tpl-oscuro .sf-modal-nutrition-kcal strong { color: #F1F5F9; }
+
+/* Press-and-hold preview of one variable choice's own nutrition — a small
+   floating tooltip above the chip, touch-only (see chipPressStart). */
+.sf-chip-nutrition-tip {
+  position: fixed; z-index: 50;
+  transform: translate(-50%, calc(-100% - 10px));
+  display: flex; gap: 10px;
+  background: rgba(15, 23, 42, 0.94); color: white;
+  border-radius: 10px; padding: 8px 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  pointer-events: none; white-space: nowrap;
+  animation: sfChipTipIn 0.15s ease both;
+}
+.sf-chip-nutrition-tip::after {
+  content: ''; position: absolute; top: 100%; left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent; border-top-color: rgba(15, 23, 42, 0.94);
+}
+.sf-chip-nutrition-tip-item { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.sf-chip-nutrition-tip-item strong { font-size: 13px; font-weight: 700; }
+.sf-chip-nutrition-tip-item span { font-size: 9px; color: rgba(255, 255, 255, 0.65); text-transform: uppercase; letter-spacing: 0.02em; }
+@keyframes sfChipTipIn {
+  from { opacity: 0; transform: translate(-50%, calc(-100% - 4px)); }
+  to   { opacity: 1; transform: translate(-50%, calc(-100% - 10px)); }
+}
 .sf-tpl-oscuro .sf-modal-nutrition-legend { color: #94A3B8; }
 .sf-tpl-oscuro .sf-modal-nutrition-legend-item strong { color: #F1F5F9; }
 
@@ -1603,10 +1628,20 @@ html, body { overflow-x: clip; }
 /* Chips (variables / colors) */
 .sf-modal-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .sf-modal-chip {
+  position: relative;
   padding: 8px 16px; border-radius: 100px; font-size: 14px; font-weight: 500;
   border: 1.5px solid rgba(15,23,42,0.12); background: white; color: #475569;
   cursor: pointer; transition: all 0.15s; font-family: inherit;
 }
+/* Marks a chip whose choice has its own nutrition values — press and hold
+   to preview them (touch only, see chipPressStart). */
+.sf-modal-chip-nutrition-dot {
+  position: absolute; top: -3px; right: -3px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--sf-accent-color, #7C3AED);
+  border: 1.5px solid white;
+}
+.sf-modal-chip.selected .sf-modal-chip-nutrition-dot { background: white; border-color: var(--sf-accent-color, #7C3AED); }
 .sf-modal-chip:hover { border-color: color-mix(in srgb, var(--sf-accent-color, #7C3AED) 35%, transparent); color: var(--sf-accent-color, #7C3AED); }
 .sf-modal-chip.selected {
   background: var(--sf-accent-color, #7C3AED); border-color: var(--sf-accent-color, #7C3AED); color: white; font-weight: 600;

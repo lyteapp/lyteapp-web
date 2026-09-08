@@ -263,6 +263,7 @@ type TemplateConfig = {
   enableReorder?: boolean
   reorderBannerEnabled?: boolean
   reorderHeaderButton?: boolean
+  reorderHeaderHintSeconds?: number
   reorderFloatSeconds?: number
   reorderPosition?: 'top' | 'bottom' | 'left' | 'right'
   reorderTitle?: string
@@ -515,9 +516,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
     if (!store.template_config?.reorderHeaderButton || !lastOrder || headerReorderHintShownRef.current) return
     headerReorderHintShownRef.current = true
     setShowHeaderReorderHint(true)
-    const t = setTimeout(() => setShowHeaderReorderHint(false), 2000)
+    const seconds = store.template_config?.reorderHeaderHintSeconds ?? 2
+    const t = setTimeout(() => setShowHeaderReorderHint(false), seconds * 1000)
     return () => clearTimeout(t)
-  }, [store.template_config?.reorderHeaderButton, lastOrder])
+  }, [store.template_config?.reorderHeaderButton, store.template_config?.reorderHeaderHintSeconds, lastOrder])
 
   function handleHeaderReorderClick() {
     setShowHeaderReorderHint(false)
@@ -525,7 +527,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
       reorderLast()
     } else {
       setHeaderReorderEmpty(true)
-      setTimeout(() => setHeaderReorderEmpty(false), 2000)
+      const seconds = store.template_config?.reorderHeaderHintSeconds ?? 2
+      setTimeout(() => setHeaderReorderEmpty(false), seconds * 1000)
     }
   }
 

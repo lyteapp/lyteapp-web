@@ -349,6 +349,7 @@ export default function EditorPage() {
   const [enableReorder, setEnableReorder] = useState(false)
   const [reorderBannerEnabled, setReorderBannerEnabled] = useState(true)
   const [reorderHeaderButton, setReorderHeaderButton] = useState(false)
+  const [reorderHeaderHintSeconds, setReorderHeaderHintSeconds] = useState(2)
   const [reorderFloatSeconds, setReorderFloatSeconds] = useState(0)
   const [reorderPosition, setReorderPosition] = useState<'top' | 'bottom' | 'left' | 'right'>('right')
   const [reorderTitle, setReorderTitle] = useState('')
@@ -486,6 +487,7 @@ export default function EditorPage() {
       if (cfg.enableReorder !== undefined) setEnableReorder(cfg.enableReorder as boolean)
       if (cfg.reorderBannerEnabled !== undefined) setReorderBannerEnabled(cfg.reorderBannerEnabled as boolean)
       if (cfg.reorderHeaderButton !== undefined) setReorderHeaderButton(cfg.reorderHeaderButton as boolean)
+      if (cfg.reorderHeaderHintSeconds !== undefined) setReorderHeaderHintSeconds(cfg.reorderHeaderHintSeconds as number)
       if (cfg.reorderFloatSeconds !== undefined) setReorderFloatSeconds(cfg.reorderFloatSeconds as number)
       if (cfg.reorderPosition !== undefined) setReorderPosition(cfg.reorderPosition as 'top' | 'bottom' | 'left' | 'right')
       if (cfg.reorderTitle !== undefined) setReorderTitle(cfg.reorderTitle as string)
@@ -970,7 +972,7 @@ export default function EditorPage() {
       priceColor, accentColor, priceFont: priceFont || pageFont, priceSize,
       catTitleFont: catTitleFont || undefined, productNameFont: productNameFont || undefined,
       categoryNavStyle, showCatNav, stickyCatNav, catNavOverBanner, categorySpacing,
-      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, showHeaderSearch, showHeaderCart, headerIconColor: headerIconColor || undefined, headerOverBanner, headerSticky, headerHeightPx, modalWizard, enableReorder, reorderBannerEnabled: enableReorder ? reorderBannerEnabled : undefined, reorderHeaderButton: enableReorder ? reorderHeaderButton : undefined, reorderFloatSeconds: reorderFloatSeconds > 0 ? reorderFloatSeconds : undefined,
+      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, showHeaderSearch, showHeaderCart, headerIconColor: headerIconColor || undefined, headerOverBanner, headerSticky, headerHeightPx, modalWizard, enableReorder, reorderBannerEnabled: enableReorder ? reorderBannerEnabled : undefined, reorderHeaderButton: enableReorder ? reorderHeaderButton : undefined, reorderHeaderHintSeconds: (enableReorder && reorderHeaderButton) ? reorderHeaderHintSeconds : undefined, reorderFloatSeconds: reorderFloatSeconds > 0 ? reorderFloatSeconds : undefined,
       reorderPosition: reorderPosition !== 'right' ? reorderPosition : undefined,
       reorderTitle: reorderTitle.trim() || undefined,
       reorderImageUrl: reorderImageUrl || undefined,
@@ -3150,7 +3152,7 @@ export default function EditorPage() {
               <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#F8FAFC', borderRadius: 10, cursor: 'pointer', gap: 12 }}>
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', lineHeight: 1.2 }}>Tambien mostrar un boton en el encabezado</div>
-                  <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 3 }}>Un boton junto al menu, arriba. Al entrar a la tienda muestra un globo por 2 segundos si hay un pedido para repetir; si el cliente lo toca sin tener pedidos recientes, avisa que no hay ninguno</div>
+                  <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 3 }}>Un boton junto al menu, arriba. Al entrar a la tienda muestra un globo si hay un pedido para repetir; si el cliente lo toca sin tener pedidos recientes, avisa que no hay ninguno</div>
                 </div>
                 <div style={{ position: 'relative', flexShrink: 0 }}>
                   <input
@@ -3172,6 +3174,27 @@ export default function EditorPage() {
                   </div>
                 </div>
               </label>
+            )}
+
+            {enableReorder && reorderHeaderButton && (
+              <div style={{ padding: '12px 14px', background: '#F8FAFC', borderRadius: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#0F172A' }}>Segundos que dura el globo del boton</span>
+                  <span style={{ fontSize: 12, color: '#7C3AED', fontWeight: 600 }}>{reorderHeaderHintSeconds}s</span>
+                </div>
+                <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 8 }}>
+                  Cuanto tiempo se muestra el globo, tanto el que invita a repetir el pedido como el de “no hay pedidos recientes”.
+                </div>
+                <input
+                  type="range"
+                  min={1}
+                  max={10}
+                  step={1}
+                  value={reorderHeaderHintSeconds}
+                  onChange={e => setReorderHeaderHintSeconds(Number(e.target.value))}
+                  style={{ width: '100%' }}
+                />
+              </div>
             )}
 
             {enableReorder && reorderBannerEnabled && (

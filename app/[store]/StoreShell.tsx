@@ -159,6 +159,7 @@ type ContentBlock = {
   groupId?: string
   buttonStyle?: 'solid' | 'outline' | 'slide'
   buttonSize?: number | 'sm' | 'md' | 'lg'
+  buttonWidth?: number
   imageSize?: number
   linkUrl?: string
   linkTarget?: 'url' | 'category'
@@ -1296,7 +1297,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                       '--sf-slide-thumb': `${bm.thumb}px`,
                       '--sf-slide-pad': `${bm.pad}px`,
                       height: `${bm.height}px`,
-                      width: inRow ? `${bm.rowWidth}px` : undefined,
+                      width: block.buttonWidth ? `${block.buttonWidth}px` : (inRow ? `${bm.rowWidth}px` : undefined),
                     } as React.CSSProperties}
                     onPointerDown={e => blockSlidePointerDown(b.id, e)}
                     onPointerMove={e => blockSlidePointerMove(b.id, e)}
@@ -1318,7 +1319,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   key={b.id}
                   type="button"
                   className={`sf-block-btn${block.buttonStyle === 'outline' ? ' sf-block-btn-outline' : ''}`}
-                  style={{ fontSize: `${bm.fontSize}px`, padding: `${bm.padV}px ${bm.padH}px` }}
+                  style={{
+                    fontSize: `${bm.fontSize}px`,
+                    padding: `${bm.padV}px ${bm.padH}px`,
+                    ...(block.buttonWidth ? { width: `${block.buttonWidth}px`, overflow: 'hidden', textOverflow: 'ellipsis' } : {}),
+                  }}
                   onClick={() => activate(b)}
                 >
                   {b.label}

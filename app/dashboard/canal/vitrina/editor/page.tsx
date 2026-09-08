@@ -134,6 +134,7 @@ type ContentBlock = {
   spacing?: number; font?: string; groupId?: string
   buttonStyle?: 'solid' | 'outline' | 'slide'
   buttonSize?: number | 'sm' | 'md' | 'lg'
+  buttonWidth?: number
   imageSize?: number
   linkUrl?: string
   linkTarget?: 'url' | 'category'
@@ -371,6 +372,7 @@ export default function EditorPage() {
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null)
   const [newBlockButtonStyle, setNewBlockButtonStyle] = useState<'solid' | 'outline' | 'slide'>('solid')
   const [newBlockButtonSize, setNewBlockButtonSize] = useState(14)
+  const [newBlockButtonWidth, setNewBlockButtonWidth] = useState(0)
   const [blockImgUploading, setBlockImgUploading] = useState(false)
   const [newBlockImageSize, setNewBlockImageSize] = useState(100)
   const [newBlockLinkUrl, setNewBlockLinkUrl] = useState('')
@@ -675,13 +677,14 @@ export default function EditorPage() {
         draft.style.fontFamily = ''
         const label = (draftButtonsLabel ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
         const bm = buttonSizeMetrics(newBlockButtonSize)
+        const widthStyle = newBlockButtonWidth ? `width:${newBlockButtonWidth}px;` : 'width:100%;'
         draft.innerHTML = newBlockButtonStyle === 'slide'
-          ? `<div class="sf-block-slide-bar" style="pointer-events:none; height:${bm.height}px; --sf-slide-thumb:${bm.thumb}px; --sf-slide-pad:${bm.pad}px;">
+          ? `<div class="sf-block-slide-bar" style="pointer-events:none; height:${bm.height}px; ${widthStyle} --sf-slide-thumb:${bm.thumb}px; --sf-slide-pad:${bm.pad}px;">
                <div class="sf-block-slide-fill"></div>
                <span class="sf-block-slide-label" style="font-size:${Math.max(10, bm.fontSize - 2)}px;">${label}</span>
                <div class="sf-block-slide-thumb">&#8594;</div>
              </div>`
-          : `<button type="button" class="sf-block-btn${newBlockButtonStyle === 'outline' ? ' sf-block-btn-outline' : ''}" style="pointer-events:none; width:100%; font-size:${bm.fontSize}px; padding:${bm.padV}px ${bm.padH}px;">${label}</button>`
+          : `<button type="button" class="sf-block-btn${newBlockButtonStyle === 'outline' ? ' sf-block-btn-outline' : ''}" style="pointer-events:none; ${widthStyle} font-size:${bm.fontSize}px; padding:${bm.padV}px ${bm.padH}px; overflow:hidden; text-overflow:ellipsis;">${label}</button>`
       }
     } else if (draft) {
       draft.remove()
@@ -861,7 +864,7 @@ export default function EditorPage() {
   useEffect(() => {
     applyPreview()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign, newBlockFont, contentBlocks, blockGroups, newBlockButtons, newBlockButtonStyle, newBlockButtonSize, enableReorder, reorderPosition, reorderTitle, reorderImageUrl, reorderFontSize, reorderFontWeight, reorderColor, reorderFont, reorderButtonStyle, reorderButtonSize, reorderButtonColor, reorderScale, reorderInset, ads])
+  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign, newBlockFont, contentBlocks, blockGroups, newBlockButtons, newBlockButtonStyle, newBlockButtonSize, newBlockButtonWidth, enableReorder, reorderPosition, reorderTitle, reorderImageUrl, reorderFontSize, reorderFontWeight, reorderColor, reorderFont, reorderButtonStyle, reorderButtonSize, reorderButtonColor, reorderScale, reorderInset, ads])
 
   // ── Auto-save category shape (reloads iframe immediately) ─
   async function handleCategoryShape(catId: string, shape: string | null) {
@@ -1097,6 +1100,7 @@ export default function EditorPage() {
     setNewBlockFont(b.font ?? '')
     setNewBlockButtonStyle(b.buttonStyle ?? 'solid')
     setNewBlockButtonSize(buttonSizeMetrics(b.buttonSize).fontSize)
+    setNewBlockButtonWidth(b.buttonWidth ?? 0)
     setNewBlockImageSize(b.imageSize ?? 100)
     setNewBlockLinkUrl(b.linkUrl ?? '')
     setNewBlockLinkTarget(b.linkTarget ?? 'url')
@@ -1114,6 +1118,7 @@ export default function EditorPage() {
     setNewBlockFont('')
     setNewBlockButtonStyle('solid')
     setNewBlockButtonSize(14)
+    setNewBlockButtonWidth(0)
     setNewBlockImageSize(100)
     setNewBlockLinkUrl('')
     setNewBlockLinkTarget('url')
@@ -2678,6 +2683,21 @@ export default function EditorPage() {
                       Util para que varios botones quepan uno al lado del otro dentro de un grupo En fila
                     </div>
                   </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: '#64748B', flexShrink: 0 }}>Ancho del boton</span>
+                      <input
+                        type="range" min={0} max={320} step={10}
+                        value={newBlockButtonWidth}
+                        onChange={e => setNewBlockButtonWidth(Number(e.target.value))}
+                        style={{ flex: 1 }}
+                      />
+                      <span style={{ fontSize: 11, color: '#94A3B8', width: 44, flexShrink: 0, textAlign: 'right' }}>{newBlockButtonWidth ? `${newBlockButtonWidth}px` : 'Auto'}</span>
+                    </div>
+                    <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 4 }}>
+                      Hazlo mas angosto para dejarle espacio a una imagen al lado, dentro de un grupo En fila
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <>
@@ -2811,14 +2831,14 @@ export default function EditorPage() {
                       if (valid.length === 0) return
                       if (editingBlockId) {
                         setContentBlocks(prev => prev.map(x => x.id === editingBlockId
-                          ? { ...x, afterId: newBlockPos, type: 'buttons' as const, content: JSON.stringify(valid), spacing: newBlockSpacing, buttonStyle: newBlockButtonStyle, buttonSize: newBlockButtonSize }
+                          ? { ...x, afterId: newBlockPos, type: 'buttons' as const, content: JSON.stringify(valid), spacing: newBlockSpacing, buttonStyle: newBlockButtonStyle, buttonSize: newBlockButtonSize, buttonWidth: newBlockButtonWidth || undefined }
                           : x))
                         cancelEditBlock()
                         return
                       }
                       setContentBlocks(prev => [...prev, {
                         id: crypto.randomUUID(), afterId: newBlockPos, type: 'buttons', content: JSON.stringify(valid),
-                        spacing: newBlockSpacing, buttonStyle: newBlockButtonStyle, buttonSize: newBlockButtonSize,
+                        spacing: newBlockSpacing, buttonStyle: newBlockButtonStyle, buttonSize: newBlockButtonSize, buttonWidth: newBlockButtonWidth || undefined,
                       }])
                       setNewBlockButtons([])
                       return

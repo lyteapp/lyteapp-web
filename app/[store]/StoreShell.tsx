@@ -2494,26 +2494,24 @@ export default function StoreShell({ store, products, categories = [], initialBc
     return (
       <>
       {renderLogoMorphOverlay()}
-      {/* A plain fixed <img> instead of a CSS background — the browser lays
-          it out with the same well-tested algorithm as any other image, and
-          position:fixed sizes it against the true screen directly rather
-          than through 100dvh (which came up short right after launch and
-          left the page looking shifted/blank at the bottom). Shares the
-          same transition classes as .sf-splash-screen so it animates out
-          together with it. */}
-      <div className={`sf-splash-bg-fixed sf-trans-${transitionId}${splashLeaving ? ' sf-splash-leaving' : ''}`}>
+      <div
+        ref={splashScreenRef}
+        className={`sf-splash-screen sf-trans-${transitionId}${splashLeaving ? ' sf-splash-leaving' : ''}`}
+        style={{ ...pageStyle, background: 'transparent' }}
+      >
+        {/* A plain <img> instead of a CSS background, absolutely positioned
+            within .sf-splash-screen — same normal-document-flow sizing as
+            .sf-page (proven to reach the true screen edges on the real
+            device already), instead of position:fixed (which on this
+            device/iOS combo does NOT size against the true viewport the
+            same way normal flow does — that mismatch, not a height or
+            overscroll issue, was the actual cause of the blank strip). */}
         {hp.imageUrl ? (
           <img src={hp.imageUrl} alt="" className="sf-splash-bg-img" />
         ) : (
           <div className="sf-splash-bg-img" style={{ background: hp.bgColor || '#0F172A' }} />
         )}
         {hp.imageUrl && <div className="sf-splash-bg-tint" />}
-      </div>
-      <div
-        ref={splashScreenRef}
-        className={`sf-splash-screen sf-trans-${transitionId}${splashLeaving ? ' sf-splash-leaving' : ''}`}
-        style={{ ...pageStyle, background: 'transparent' }}
-      >
         {hp.images && hp.images.length > 0 && (
           <div className="sf-splash-images-layer">
             {hp.images.map(img => (

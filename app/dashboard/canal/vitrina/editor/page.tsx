@@ -885,16 +885,32 @@ export default function EditorPage() {
       blocksEl.id = 'ed-blocks-preview'
       doc.head.appendChild(blocksEl)
     }
+    // While editing an existing block, its own size sliders (Tamaño for
+    // images, Tamaño/Ancho del boton for buttons) reflect live too, instead
+    // of only the ones a brand-new block already gets via the draft above.
+    const editingBlock = contentBlocks.find(b => b.id === editingBlockId)
+    const editingSizeRules: string[] = []
+    if (editingBlock?.type === 'image') {
+      editingSizeRules.push(`#sf-cb-${editingBlock.id} .sf-block-img { max-width: ${newBlockImageSize}% !important; margin: ${newBlockImageSize < 100 ? '0 auto' : '0'} !important; }`)
+    }
+    if (editingBlock?.type === 'buttons') {
+      const bm = buttonSizeMetrics(newBlockButtonSize)
+      const widthRule = newBlockButtonWidth ? `width: ${newBlockButtonWidth}px !important;` : ''
+      editingSizeRules.push(`#sf-cb-${editingBlock.id} .sf-block-btn { font-size: ${bm.fontSize}px !important; padding: ${bm.padV}px ${bm.padH}px !important; ${widthRule} }`)
+      editingSizeRules.push(`#sf-cb-${editingBlock.id} .sf-block-slide-bar { height: ${bm.height}px !important; ${widthRule} }`)
+    }
+
     blocksEl.textContent = [
       ...contentBlocks.filter(b => !b.groupId).map(b => `#sf-cb-${b.id} { margin: ${b.spacing ?? 0}px 0 !important; }`),
       ...blockGroups.map(g => `#sf-bg-${g.id} { gap: ${g.gap ?? 12}px !important; padding: ${g.padding ?? 16}px !important; border-radius: ${g.borderRadius ?? 12}px !important; background: ${g.background || '#F8FAFC'} !important; flex-direction: ${g.direction === 'row' ? 'row' : 'column'} !important; }`),
+      ...editingSizeRules,
     ].join('\n')
   }
 
   useEffect(() => {
     applyPreview()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign, newBlockFont, contentBlocks, blockGroups, newBlockButtons, newBlockButtonStyle, newBlockButtonSize, newBlockButtonWidth, enableReorder, reorderBannerEnabled, reorderPosition, reorderTitle, reorderImageUrl, reorderFontSize, reorderFontWeight, reorderColor, reorderFont, reorderButtonStyle, reorderButtonSize, reorderButtonColor, reorderScale, reorderInset, ads])
+  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign, newBlockFont, contentBlocks, blockGroups, newBlockButtons, newBlockButtonStyle, newBlockButtonSize, newBlockButtonWidth, editingBlockId, newBlockImageSize, enableReorder, reorderBannerEnabled, reorderPosition, reorderTitle, reorderImageUrl, reorderFontSize, reorderFontWeight, reorderColor, reorderFont, reorderButtonStyle, reorderButtonSize, reorderButtonColor, reorderScale, reorderInset, ads])
 
   // ── Auto-save category shape (reloads iframe immediately) ─
   async function handleCategoryShape(catId: string, shape: string | null) {

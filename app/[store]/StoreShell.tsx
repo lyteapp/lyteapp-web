@@ -478,10 +478,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
     return () => window.removeEventListener('resize', measure)
   }, [view])
 
-  // Installed on an iPhone home screen, 100dvh can come up short of the
-  // real screen height (a WebKit standalone-mode quirk), leaving a blank
-  // strip below the splash background. window.innerHeight doesn't have
-  // that problem, so it drives the height directly once measured.
+  // Installed on an iPhone home screen, the viewport height iOS reports
+  // right at launch can come up short of the real screen (a WebKit
+  // standalone-mode quirk that settles a moment after load, or as soon as
+  // the page scrolls) — leaving a blank strip below the splash background
+  // until something re-triggers a measurement. Re-checking on a couple of
+  // delays plus scroll/resize covers both cases without waiting on the user.
   useEffect(() => {
     if (view !== 'splash') return
     const applyHeight = () => {
@@ -489,11 +491,17 @@ export default function StoreShell({ store, products, categories = [], initialBc
       splashScreenRef.current?.style.setProperty('--sf-splash-vh', `${h}px`)
     }
     applyHeight()
+    const timers = [100, 300, 800].map(ms => setTimeout(applyHeight, ms))
     window.addEventListener('resize', applyHeight)
+    window.addEventListener('scroll', applyHeight)
     window.visualViewport?.addEventListener('resize', applyHeight)
+    window.visualViewport?.addEventListener('scroll', applyHeight)
     return () => {
+      timers.forEach(clearTimeout)
       window.removeEventListener('resize', applyHeight)
+      window.removeEventListener('scroll', applyHeight)
       window.visualViewport?.removeEventListener('resize', applyHeight)
+      window.visualViewport?.removeEventListener('scroll', applyHeight)
     }
   }, [view])
 

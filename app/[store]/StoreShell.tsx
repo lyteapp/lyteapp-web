@@ -460,6 +460,24 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [logoMorphEnd, setLogoMorphEnd]       = useState<LogoRect | null>(null)
   const [logoMorphFlying, setLogoMorphFlying] = useState(false)
 
+  // The dashboard's home-screen photo editor places images by dragging them
+  // around a fixed 380px-wide phone mockup, storing x/y/width/height as raw
+  // pixels from that mockup. Rendered as-is on a real phone (which is rarely
+  // exactly 380px wide) they land in the wrong spot — this measures the
+  // splash screen's real width and scales those pixel values to match it.
+  const splashScreenRef = useRef<HTMLDivElement>(null)
+  const [splashScale, setSplashScale] = useState(1)
+  useEffect(() => {
+    if (view !== 'splash') return
+    const measure = () => {
+      const w = splashScreenRef.current?.getBoundingClientRect().width
+      if (w) setSplashScale(w / 380)
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [view])
+
   useEffect(() => {
     if (!logoMorphStart || view !== 'catalog' || logoMorphEnd) return
     const raf = requestAnimationFrame(() => {
@@ -2477,6 +2495,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       <>
       {renderLogoMorphOverlay()}
       <div
+        ref={splashScreenRef}
         className={`sf-splash-screen sf-trans-${transitionId}${splashLeaving ? ' sf-splash-leaving' : ''}`}
         style={{
           ...pageStyle,
@@ -2492,7 +2511,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 key={img.id} src={img.url} alt=""
                 className="sf-splash-photo"
                 style={{
-                  left: img.x, top: img.y, width: img.width, height: img.height,
+                  left: img.x * splashScale, top: img.y * splashScale,
+                  width: img.width * splashScale, height: img.height * splashScale,
                   transform: img.flipped ? 'scaleX(-1)' : undefined,
                 }}
               />
@@ -2504,11 +2524,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
             <img
               ref={splashLogoRef} src={store.logo_url} alt={store.name}
               className={`sf-splash-logo${logoMorphStart ? ' sf-splash-logo-hidden' : ''}`}
-              style={hp.elementSizes?.logo ? { width: hp.elementSizes.logo, height: hp.elementSizes.logo } : undefined}
+              style={hp.elementSizes?.logo ? { width: hp.elementSizes.logo * splashScale, height: hp.elementSizes.logo * splashScale } : undefined}
             />
           )}
-          <h1 className="sf-splash-title" style={hp.elementSizes?.title ? { fontSize: hp.elementSizes.title } : undefined}>{hp.title || store.name}</h1>
-          {hp.subtitle && <p className="sf-splash-sub" style={hp.elementSizes?.subtitle ? { fontSize: hp.elementSizes.subtitle } : undefined}>{hp.subtitle}</p>}
+          <h1 className="sf-splash-title" style={hp.elementSizes?.title ? { fontSize: hp.elementSizes.title * splashScale } : undefined}>{hp.title || store.name}</h1>
+          {hp.subtitle && <p className="sf-splash-sub" style={hp.elementSizes?.subtitle ? { fontSize: hp.elementSizes.subtitle * splashScale } : undefined}>{hp.subtitle}</p>}
 
           {collectCustomerData && (
             <div

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
-import { useAuth } from '../../lib/auth'
+import { useDashboardStore } from '../../lib/DashboardStoreProvider'
 import { useT } from '../../lib/LocaleProvider'
 import './productos.css'
 
@@ -42,12 +42,10 @@ type VariableGroupPreset   = { id: string; name: string; group: VariableGroup }
 type AdditionalGroupPreset = { id: string; name: string; items: Additional[] }
 
 type Category = { id: string; name: string; position: number }
-type Store = { id: string; slug: string }
 
 export default function ProductosPage() {
-  const { user } = useAuth()
+  const { storeId } = useDashboardStore()
   const t = useT()
-  const [store, setStore]       = useState<Store | null>(null)
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading]   = useState(true)
   const [mode, setMode]         = useState<'list' | 'form'>('list')
@@ -99,26 +97,22 @@ export default function ProductosPage() {
   const imgRef = useRef<HTMLInputElement>(null)
   const variantImgRef = useRef<HTMLInputElement>(null)
   useEffect(() => { setMounted(true) }, [])
-  useEffect(() => { if (user) loadData() }, [user])
+  useEffect(() => { if (storeId) loadData() }, [storeId])
 
   async function loadData() {
-    const { data: storeData } = await supabase
-      .from('stores').select('id, slug').eq('owner_id', user!.id).maybeSingle()
-    setStore(storeData)
-    if (storeData) {
-      const [{ data: prods }, { data: cats }, { data: storeCs }] = await Promise.all([
-        supabase.from('products').select('*').eq('store_id', storeData.id).order('created_at', { ascending: false }),
-        supabase.from('categories').select('*').eq('store_id', storeData.id).order('position'),
-        supabase.from('stores').select('checkout_settings').eq('id', storeData.id).maybeSingle(),
-      ])
-      setProducts(prods ?? [])
-      setCategories(cats ?? [])
-      const cs = (storeCs?.checkout_settings && typeof storeCs.checkout_settings === 'object') ? storeCs.checkout_settings as Record<string, unknown> : {}
-      setCheckoutSettings(cs)
-      const presets = (cs.optionPresets && typeof cs.optionPresets === 'object') ? cs.optionPresets as { variableGroups?: VariableGroupPreset[]; additionalGroups?: AdditionalGroupPreset[] } : {}
-      setVariableGroupPresets(presets.variableGroups ?? [])
-      setAdditionalGroupPresets(presets.additionalGroups ?? [])
-    }
+    if (!storeId) { setLoading(false); return }
+    const [{ data: prods }, { data: cats }, { data: storeCs }] = await Promise.all([
+      supabase.from('products').select('*').eq('store_id', storeId).order('created_at', { ascending: false }),
+      supabase.from('categories').select('*').eq('store_id', storeId).order('position'),
+      supabase.from('stores').select('checkout_settings').eq('id', storeId).maybeSingle(),
+    ])
+    setProducts(prods ?? [])
+    setCategories(cats ?? [])
+    const cs = (storeCs?.checkout_settings && typeof storeCs.checkout_settings === 'object') ? storeCs.checkout_settings as Record<string, unknown> : {}
+    setCheckoutSettings(cs)
+    const presets = (cs.optionPresets && typeof cs.optionPresets === 'object') ? cs.optionPresets as { variableGroups?: VariableGroupPreset[]; additionalGroups?: AdditionalGroupPreset[] } : {}
+    setVariableGroupPresets(presets.variableGroups ?? [])
+    setAdditionalGroupPresets(presets.additionalGroups ?? [])
     setLoading(false)
   }
 
@@ -222,9 +216,9 @@ export default function ProductosPage() {
 
   // --- option-group presets (store-level, reusable across products) ---
   async function persistOptionPresets(next: { variableGroups: VariableGroupPreset[]; additionalGroups: AdditionalGroupPreset[] }) {
-    if (!store) return
+    if (!storeId) return
     const newCs = { ...checkoutSettings, optionPresets: next }
-    await supabase.from('stores').update({ checkout_settings: newCs }).eq('id', store.id)
+    await supabase.from('stores').update({ checkout_settings: newCs }).eq('id', storeId)
     setCheckoutSettings(newCs)
   }
 
@@ -281,11 +275,11 @@ export default function ProductosPage() {
 
   async function handleImgUpload(e: { target: { files: FileList | null } }) {
     const file = e.target.files?.[0]
-    if (!file || !store) return
+    if (!file || !storeId) return
     setImgUploading(true)
     setIsDirty(true)
     const ext  = file.name.split('.').pop()
-    const path = `${store.id}-${Date.now()}.${ext}`
+    const path = `${storeId}-${Date.now()}.${ext}`
     const { error: uploadError } = await supabase.storage.from('product-images').upload(path, file, { upsert: true, contentType: file.type })
     if (!uploadError) {
       setImageUrl(supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl)
@@ -295,10 +289,10 @@ export default function ProductosPage() {
 
   async function handleVariantImgUpload(e: { target: { files: FileList | null } }) {
     const file = e.target.files?.[0]
-    if (!file || !store || variantImgUploadIdx === null) return
+    if (!file || !storeId || variantImgUploadIdx === null) return
     setVariantImgUploading(true)
     const ext  = file.name.split('.').pop()
-    const path = `${store.id}-var-${Date.now()}.${ext}`
+    const path = `${storeId}-var-${Date.now()}.${ext}`
     const { error } = await supabase.storage.from('product-images').upload(path, file, { upsert: true, contentType: file.type })
     if (!error) {
       const url = supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl
@@ -321,7 +315,7 @@ export default function ProductosPage() {
   }
 
   async function handleSave() {
-    if (!store || !name.trim()) { setError(t('prod.error.name')); return }
+    if (!storeId || !name.trim()) { setError(t('prod.error.name')); return }
     const priceNum = parseFloat(price)
     if (isNaN(priceNum) || priceNum < 0) { setError(t('prod.error.price')); return }
     setSaving(true); setError('')
@@ -345,7 +339,7 @@ export default function ProductosPage() {
       opts.additionals!.length > 0 || opts.allowNotes || !!opts.nutrition
 
     const payload = {
-      store_id: store.id, name: name.trim(),
+      store_id: storeId, name: name.trim(),
       description: description.trim() || null,
       price: priceNum, image_url: imageUrl || null, is_active: isActive,
       options: hasOpts ? opts : null,
@@ -380,7 +374,7 @@ export default function ProductosPage() {
 
   if (loading) return <div className="pr-spinner-wrap"><div className="pr-spinner" /></div>
 
-  if (!store) return (
+  if (!storeId) return (
     <div className="db-panel" style={{ maxWidth: 480 }}>
       <div className="db-empty">
         <div className="db-empty-icon">

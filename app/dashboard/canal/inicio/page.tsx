@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../../lib/auth'
+import { useDashboardStore } from '../../../lib/DashboardStoreProvider'
 import { REVEAL_FONTS, revealFontStack, loadRevealFont } from '../../../lib/revealFonts'
 import { isLightColor, poweredByColors } from '../../../lib/colorContrast'
 import '../canal.css'
@@ -593,6 +594,7 @@ function RevealPreview({ config, storeName, logoUrl }: { config: HomePageConfig;
 
 export default function InicioPage() {
   const { user } = useAuth()
+  const { storeId } = useDashboardStore()
   const [config, setConfig] = useState<HomePageConfig>(DEFAULTS)
   const [baseConfig, setBaseConfig] = useState<Record<string, unknown>>({})
   const [storeName, setStoreName] = useState('')
@@ -617,11 +619,11 @@ export default function InicioPage() {
   const [previewView, setPreviewView] = useState<'splash' | 'reveal'>('splash')
 
   useEffect(() => {
-    if (!user) return
+    if (!storeId) return
     supabase
       .from('stores')
       .select('name,logo_url,template_config')
-      .eq('owner_id', user.id)
+      .eq('id', storeId)
       .maybeSingle()
       .then(({ data }) => {
         if (!data) return
@@ -641,7 +643,7 @@ export default function InicioPage() {
           })
         }
       })
-  }, [user])
+  }, [storeId])
 
   function set<K extends keyof HomePageConfig>(key: K, value: HomePageConfig[K]) {
     setConfig(c => ({ ...c, [key]: value }))
@@ -710,13 +712,10 @@ export default function InicioPage() {
 
   async function save(e: { preventDefault(): void }) {
     e.preventDefault()
-    if (!user) return
+    if (!storeId) return
     setError(''); setSuccess(false); setSaving(true)
     const template_config = { ...baseConfig, homePage: config }
-    const { data: existing } = await supabase.from('stores').select('id').eq('owner_id', user.id).maybeSingle()
-    const { error: err } = existing
-      ? await supabase.from('stores').update({ template_config }).eq('id', existing.id)
-      : await supabase.from('stores').insert({ owner_id: user.id, template_config })
+    const { error: err } = await supabase.from('stores').update({ template_config }).eq('id', storeId)
     if (err) setError(err.message)
     else setSuccess(true)
     setSaving(false)

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
-import { useAuth } from '../../lib/auth'
+import { useDashboardStore } from '../../lib/DashboardStoreProvider'
 import '../home.css'
 import './analitics.css'
 
@@ -184,8 +184,7 @@ function haversineM(lat1: number, lng1: number, lat2: number, lng2: number) {
 
 // ── Page ──
 export default function AnaliticsPage() {
-  const { user } = useAuth()
-  const [storeId, setStoreId] = useState<string | null>(null)
+  const { storeId } = useDashboardStore()
 
   // Sales
   const [preset, setPreset]           = useState<Preset | null>('mes')
@@ -298,17 +297,6 @@ export default function AnaliticsPage() {
     setSalesFromStr(toStr(dates.from))
     setSalesToStr(toStr(dates.to))
   }
-
-  // Initial load
-  useEffect(() => {
-    if (!user) return
-    supabase.from('stores').select('id').eq('owner_id', user.id).maybeSingle().then(({ data }) => {
-      if (!data) return
-      setStoreId(data.id)
-      loadDeliveries(data.id, dateFrom, dateTo)
-    })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user])
 
   useEffect(() => {
     if (!storeId || !salesFromStr || !salesToStr) return

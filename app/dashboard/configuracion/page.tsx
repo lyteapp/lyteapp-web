@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
-import { useAuth } from '../../lib/auth'
+import { useDashboardStore } from '../../lib/DashboardStoreProvider'
 import PhoneInput from '../../components/PhoneInput'
 import './configuracion.css'
 
@@ -41,10 +41,9 @@ function SaveBtn({ saving, onClick }: { saving: boolean; onClick: () => void }) 
 
 // ── MAIN PAGE ──────────────────────────────────────────────────
 function ConfiguracionInner() {
-  const { user } = useAuth()
+  const { storeId } = useDashboardStore()
   const searchParams = useSearchParams()
   const [loading, setLoading] = useState(true)
-  const [storeId, setStoreId] = useState<string | null>(null)
   const [openSection, setOpenSection] = useState<string>(() => searchParams.get('section') ?? 'general')
 
   // General
@@ -82,16 +81,15 @@ function ConfiguracionInner() {
   }, [searchParams])
 
   useEffect(() => {
-    if (!user) return
+    if (!storeId) return
     async function load() {
       const { data: store, error: storeErr } = await supabase
         .from('stores').select('id,name,slug,city,email,map_url,whatsapp,whatsapp2,country,store_language,operating_hours,social_links,checkout_settings')
-        .eq('owner_id', user!.id).maybeSingle()
+        .eq('id', storeId!).maybeSingle()
 
       if (storeErr) { setError(storeErr.message); setLoading(false); return }
 
       if (store) {
-        setStoreId(store.id)
         setStoreName(store.name ?? '')
         setSlug(store.slug ?? '')
         setStoreEmail((store as any).email ?? '')
@@ -115,7 +113,7 @@ function ConfiguracionInner() {
       setLoading(false)
     }
     load()
-  }, [user])
+  }, [storeId])
 
   function flash(set: (v: boolean) => void) {
     set(true); setTimeout(() => set(false), 3000)

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
+import { useDashboardStore } from '../../../lib/DashboardStoreProvider'
 import './vitrina.css'
 
 type TemplateId = 'clasico' | 'escaparate' | 'vitrina' | 'catalogo'
@@ -182,23 +183,21 @@ function TemplateStore({ id }: { id: TemplateId }) {
 
 export default function PaginaPage() {
   const router = useRouter()
-  const [storeId, setStoreId] = useState<string | null>(null)
+  const { storeId } = useDashboardStore()
   const [selected, setSelected] = useState<TemplateId | null>(null)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
+    if (!storeId) return
     let cancelled = false
     async function load() {
       try {
-        const { data: authData } = await supabase.auth.getUser()
-        if (cancelled || !authData.user) return
         const { data } = await supabase
           .from('stores')
-          .select('id,template')
-          .eq('owner_id', authData.user.id)
+          .select('template')
+          .eq('id', storeId!)
           .maybeSingle()
         if (cancelled || !data) return
-        setStoreId(data.id)
         if ((data as any).template) {
           setSelected((data as any).template as TemplateId)
         }
@@ -208,7 +207,7 @@ export default function PaginaPage() {
     }
     load()
     return () => { cancelled = true }
-  }, [])
+  }, [storeId])
 
   async function handlePersonalizar() {
     if (selected !== 'clasico') return

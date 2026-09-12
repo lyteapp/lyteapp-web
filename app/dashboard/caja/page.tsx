@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { supabase } from '../../lib/supabase'
-import { useAuth } from '../../lib/auth'
+import { useDashboardStore } from '../../lib/DashboardStoreProvider'
 import './caja.css'
 
 type Order = {
@@ -130,11 +130,10 @@ function whatsappUrl(phone: string) {
 }
 
 export default function CajaPage() {
-  const { user } = useAuth()
+  const { storeId } = useDashboardStore()
 
   // Config state
   const [loading, setLoading]       = useState(true)
-  const [storeId, setStoreId]       = useState<string | null>(null)
   const [checkoutSettings, setCheckoutSettings] = useState<Record<string, unknown>>({})
   const [cajeras, setCajeras]       = useState<{ id: string; name: string; pin: string }[]>([])
   const [newName, setNewName]       = useState('')
@@ -174,18 +173,17 @@ export default function CajaPage() {
 
   // Initial load
   useEffect(() => {
-    if (!user) return
-    supabase.from('stores').select('id, checkout_settings').eq('owner_id', user.id).maybeSingle().then(({ data }) => {
+    if (!storeId) return
+    supabase.from('stores').select('checkout_settings').eq('id', storeId).maybeSingle().then(({ data }) => {
       if (data) {
-        setStoreId(data.id)
         const cs = (data.checkout_settings as Record<string, unknown>) ?? {}
         setCheckoutSettings(cs)
         setCajeras((cs.cajeros as { id: string; name: string; pin: string }[]) ?? [])
-        fetchOrders(data.id)
+        fetchOrders(storeId)
       }
       setLoading(false)
     })
-  }, [user, fetchOrders])
+  }, [storeId, fetchOrders])
 
   // Realtime orders
   useEffect(() => {

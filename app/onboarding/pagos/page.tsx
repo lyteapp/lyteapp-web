@@ -36,8 +36,11 @@ export default function PagosOnboardingPage() {
     setSaving(true)
     setError('')
     try {
-      const { data: store } = await supabase
-        .from('stores').select('id').eq('owner_id', user.id).maybeSingle()
+      let obSlug: string | null = null
+      try { obSlug = localStorage.getItem('ob_slug') } catch {}
+      const { data: store } = obSlug
+        ? await supabase.from('stores').select('id').eq('slug', obSlug).maybeSingle()
+        : await supabase.from('stores').select('id').eq('owner_id', user.id).order('created_at', { ascending: false }).limit(1).maybeSingle()
       if (store && selected.length > 0) {
         const pm: Record<string, { enabled: boolean; values: Record<string, string> }> = {}
         for (const id of selected) pm[id] = { enabled: true, values: {} }

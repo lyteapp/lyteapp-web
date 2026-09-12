@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
+import { useDashboardStore } from '../lib/DashboardStoreProvider'
 import { useT } from '../lib/LocaleProvider'
 import './home.css'
 
@@ -18,8 +19,8 @@ const BUCKETS = [
 export default function Dashboard() {
   const { user } = useAuth()
   const t = useT()
-  const [storeSlug, setStoreSlug] = useState('')
-  const [storeId, setStoreId] = useState<string | null>(null)
+  const { storeId, store } = useDashboardStore()
+  const storeSlug = store?.slug ?? ''
   const [period, setPeriod] = useState<'day' | 'week' | 'month'>('day')
   const [orderCount, setOrderCount] = useState(0)
   const [totalSales, setTotalSales] = useState(0)
@@ -80,24 +81,20 @@ export default function Dashboard() {
   }, [])
 
   useEffect(() => {
-    if (!user) return
-    supabase.from('stores').select('id,name,slug').eq('owner_id', user.id).maybeSingle().then(({ data }) => {
-      if (!data) return
-      setStoreSlug(data.slug ?? '')
-      setStoreId(data.id)
-      loadStats(data.id, 'day')
-      loadDeliveryTimes(data.id)
-      supabase.from('products').select('id', { count: 'exact' }).eq('store_id', data.id).then(({ count }) => setProductCount(count ?? 0))
-    })
-  }, [user, loadStats, loadDeliveryTimes])
+    if (!storeId) return
+    supabase.from('products').select('id', { count: 'exact' }).eq('store_id', storeId).then(({ count }) => setProductCount(count ?? 0))
+  }, [storeId])
 
   useEffect(() => {
+    // period defaults to 'day', so this also covers the initial load —
+    // no need for a separate first-load call.
     if (!storeId) return
     loadStats(storeId, period)
   }, [storeId, period, loadStats])
 
   useEffect(() => {
     if (!storeId) return
+    Promise.resolve().then(() => loadDeliveryTimes(storeId))
     const interval = setInterval(() => loadDeliveryTimes(storeId), 60000)
     return () => clearInterval(interval)
   }, [storeId, loadDeliveryTimes])

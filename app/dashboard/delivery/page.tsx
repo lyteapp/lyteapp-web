@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { supabase } from '../../lib/supabase'
-import { useAuth } from '../../lib/auth'
+import { useDashboardStore } from '../../lib/DashboardStoreProvider'
 import './delivery.css'
 
 const MapView = dynamic(() => import('./MapView'), {
@@ -94,10 +94,9 @@ function zoneForCoords(lat: number | null, lng: number | null, zones: Zone[]) {
 }
 
 export default function DeliveryPage() {
-  const { user } = useAuth()
+  const { storeId, store } = useDashboardStore()
   const [loading, setLoading]       = useState(true)
-  const [storeId, setStoreId]       = useState<string | null>(null)
-  const [storeName, setStoreName]   = useState<string>('')
+  const storeName = store?.name ?? ''
   const [tab, setTab]               = useState<Tab>('live')
   const [deliveries, setDeliveries]         = useState<Delivery[]>([])
   const [drivers, setDrivers]               = useState<Driver[]>([])
@@ -184,12 +183,9 @@ export default function DeliveryPage() {
   }, [])
 
   useEffect(() => {
-    if (!user) return
-    supabase.from('stores').select('id, name').eq('owner_id', user.id).maybeSingle().then(({ data }) => {
-      if (data) { setStoreId(data.id); setStoreName(data.name ?? ''); loadData(data.id) }
-      setLoading(false)
-    })
-  }, [user, loadData])
+    if (!storeId) return
+    Promise.resolve().then(() => loadData(storeId).then(() => setLoading(false)))
+  }, [storeId, loadData])
 
   useEffect(() => {
     if (!storeId) return

@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
-import { useAuth } from '../../lib/auth'
+import { useDashboardStore } from '../../lib/DashboardStoreProvider'
 import { useT } from '../../lib/LocaleProvider'
 import type { TranslationKey } from '../../lib/i18n'
 import './pedidos.css'
@@ -107,11 +107,10 @@ function elapsedLabel(createdAt: string, now: number, warnMins: number, alertMin
 }
 
 export default function PedidosPage() {
-  const { user } = useAuth()
+  const { storeId, store } = useDashboardStore()
   const t = useT()
   const [loading, setLoading] = useState(true)
-  const [storeId, setStoreId] = useState<string | null>(null)
-  const [storeName, setStoreName] = useState<string>('')
+  const storeName = store?.name ?? ''
   const [whatsapp, setWhatsapp] = useState<string>('')
   const [orders, setOrders] = useState<Order[]>([])
   const [filter, setFilter]     = useState<'all' | OrderStatus>('all')
@@ -142,23 +141,19 @@ export default function PedidosPage() {
   }, [])
 
   useEffect(() => {
-    if (!user) return
+    if (!storeId) return
     async function init() {
-      const { data: store } = await supabase
+      const { data: storeRow } = await supabase
         .from('stores')
-        .select('id, name, whatsapp')
-        .eq('owner_id', user!.id)
+        .select('whatsapp')
+        .eq('id', storeId!)
         .maybeSingle()
-      if (store) {
-        setStoreId(store.id)
-        setStoreName(store.name ?? '')
-        setWhatsapp(store.whatsapp ?? '')
-        await loadOrders(store.id)
-      }
+      setWhatsapp(storeRow?.whatsapp ?? '')
+      await loadOrders(storeId!)
       setLoading(false)
     }
     init()
-  }, [user, loadOrders])
+  }, [storeId, loadOrders])
 
   useEffect(() => { displayModeRef.current = displayMode }, [displayMode])
 

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
+import { useDashboardStore } from '../../lib/DashboardStoreProvider'
 import PhoneInput from '../../components/PhoneInput'
 import './tienda.css'
 
@@ -55,6 +56,7 @@ function toSlug(text: string) {
 
 export default function TiendaPage() {
   const { user } = useAuth()
+  const { storeId, refreshStores } = useDashboardStore()
   const [store, setStore] = useState<Store | null>(null)
   const [pageLoading, setPageLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -85,8 +87,8 @@ export default function TiendaPage() {
   const pwaIconRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (!user) return
-    supabase.from('stores').select('*').eq('owner_id', user.id).maybeSingle().then(({ data }) => {
+    if (!storeId) return
+    supabase.from('stores').select('*').eq('id', storeId).maybeSingle().then(({ data }) => {
       if (data) {
         setStore(data)
         setName(data.name ?? '')
@@ -106,7 +108,7 @@ export default function TiendaPage() {
       }
       setPageLoading(false)
     })
-  }, [user])
+  }, [storeId])
 
   function handleNameChange(val: string) {
     setName(val)
@@ -179,10 +181,9 @@ export default function TiendaPage() {
   }
 
   async function handleSave() {
-    if (!user || !name.trim() || !slug.trim()) { setError('El nombre y la URL son obligatorios.'); return }
+    if (!storeId || !name.trim() || !slug.trim()) { setError('El nombre y la URL son obligatorios.'); return }
     setSaving(true); setError('')
     const payload = {
-      owner_id: user.id,
       name: name.trim(),
       slug: slug.trim(),
       description: description.trim() || null,
@@ -200,9 +201,7 @@ export default function TiendaPage() {
         pwaIconUrl: pwaIconUrl || undefined,
       },
     }
-    const { error: err, data } = store
-      ? await supabase.from('stores').update(payload).eq('id', store.id).select().single()
-      : await supabase.from('stores').insert(payload).select().single()
+    const { error: err, data } = await supabase.from('stores').update(payload).eq('id', storeId).select().single()
 
     if (err) {
       setError(err.message.includes('slug') ? 'Esa URL ya está en uso, elige otra.' : err.message)
@@ -210,6 +209,7 @@ export default function TiendaPage() {
       setStore(data)
       setSlugLocked(true)
       setSaved(true)
+      await refreshStores()
       setTimeout(() => setSaved(false), 3000)
     }
     setSaving(false)

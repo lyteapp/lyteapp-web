@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../../../lib/supabase'
+import { useDashboardStore } from '../../../../lib/DashboardStoreProvider'
 import './editor.css'
 
 // Shrinks an uploaded content-block image client-side before it goes to
@@ -302,6 +303,7 @@ function FontSelect({
 
 export default function EditorPage() {
   const router = useRouter()
+  const { storeId: activeStoreId } = useDashboardStore()
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
   const [storeId, setStoreId]     = useState<string | null>(null)
@@ -422,12 +424,12 @@ export default function EditorPage() {
 
   // ── Load saved config ──────────────────────────────────
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) return
+    if (!activeStoreId) return
+    ;(async () => {
       const { data: store } = await supabase
         .from('stores')
         .select('id, slug, template, brand_color, template_config')
-        .eq('owner_id', data.user.id)
+        .eq('id', activeStoreId)
         .maybeSingle()
       if (!store) return
       setStoreId(store.id)
@@ -513,8 +515,8 @@ export default function EditorPage() {
         .from('products').select('id,name')
         .eq('store_id', store.id).order('name', { ascending: true })
       if (prods) setProductsLite(prods)
-    })
-  }, [])
+    })()
+  }, [activeStoreId])
 
   // ── Build live preview CSS ─────────────────────────────
   function buildPreviewCSS(): string {

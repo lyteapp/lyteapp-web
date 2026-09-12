@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import FinanzasShell from './FinanzasShell'
+import { DashboardStoreProvider } from '../lib/DashboardStoreProvider'
 import './finanzas.css'
 
 // Kept as a server component purely so the segment can export metadata —
@@ -10,5 +11,9 @@ export const metadata: Metadata = {
 }
 
 export default function FinanzasLayout({ children }: { children: React.ReactNode }) {
-  return <FinanzasShell>{children}</FinanzasShell>
+  return (
+    <DashboardStoreProvider>
+      <FinanzasShell>{children}</FinanzasShell>
+    </DashboardStoreProvider>
+  )
 }

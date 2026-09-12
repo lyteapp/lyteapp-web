@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
-import { useAuth } from '../../../lib/auth'
+import { useDashboardStore } from '../../../lib/DashboardStoreProvider'
 import '../canal.css'
 
 type Category = { id: string; name: string }
@@ -160,7 +160,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 }
 
 export default function Apariencia() {
-  const { user } = useAuth()
+  const { storeId } = useDashboardStore()
   const [template, setTemplate]             = useState('clasico')
   const [color, setColor]                   = useState('#7C3AED')
   const [baseConfig, setBaseConfig]         = useState<Record<string, unknown>>({})
@@ -189,11 +189,11 @@ export default function Apariencia() {
   }, [])
 
   useEffect(() => {
-    if (!user) return
+    if (!storeId) return
     supabase
       .from('stores')
       .select('id,slug,template,brand_color,template_config,logo_url')
-      .eq('owner_id', user.id)
+      .eq('id', storeId)
       .maybeSingle()
       .then(async ({ data }) => {
         if (!data) return
@@ -216,7 +216,7 @@ export default function Apariencia() {
           .eq('store_id', data.id).order('position', { ascending: true })
         if (cats) setCategories(cats)
       })
-  }, [user])
+  }, [storeId])
 
   useEffect(() => {
     const fontName = trConfig.fontFamily
@@ -241,7 +241,7 @@ export default function Apariencia() {
 
   async function save(e: { preventDefault(): void }) {
     e.preventDefault()
-    if (!user) return
+    if (!storeId) return
     setError(''); setSuccess(false); setSaving(true)
     const template_config = {
       ...baseConfig,
@@ -250,10 +250,7 @@ export default function Apariencia() {
       categoryPhotoShapes: Object.keys(categoryShapes).length > 0 ? categoryShapes : undefined,
       trackingConfig: trConfig,
     }
-    const { data: existing } = await supabase.from('stores').select('id').eq('owner_id', user.id).maybeSingle()
-    const { error: err } = existing
-      ? await supabase.from('stores').update({ template, brand_color: color, template_config }).eq('id', existing.id)
-      : await supabase.from('stores').insert({ owner_id: user.id, template, brand_color: color, template_config })
+    const { error: err } = await supabase.from('stores').update({ template, brand_color: color, template_config }).eq('id', storeId)
     if (err) setError(err.message)
     else setSuccess(true)
     setSaving(false)

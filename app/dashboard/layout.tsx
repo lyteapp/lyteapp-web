@@ -7,6 +7,7 @@ import { useAuth, signOut } from '../lib/auth'
 import { supabase } from '../lib/supabase'
 import { useT, useLocale } from '../lib/LocaleProvider'
 import { useLyteSound } from '../lib/useLyteSound'
+import { DashboardStoreProvider, useDashboardStore } from '../lib/DashboardStoreProvider'
 import './dashboard.css'
 
 import type { TranslationKey } from '../lib/i18n'
@@ -50,15 +51,24 @@ const settingsSubItems: { href: string; tKey: TranslationKey }[] = [
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <DashboardStoreProvider>
+      <DashboardShell>{children}</DashboardShell>
+    </DashboardStoreProvider>
+  )
+}
+
+function DashboardShell({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   const t = useT()
   const [locale, setLocale] = useLocale()
   const router = useRouter()
   const pathname = usePathname()
-  const [storeName, setStoreName] = useState('')
-  const [storeSlug, setStoreSlug] = useState('')
-  const [storeId, setStoreId] = useState<string | null>(null)
-  const [logoUrl, setLogoUrl] = useState<string | null>(null)
+  const { storeId, store, stores, setActiveStoreId, loading: storeLoading } = useDashboardStore()
+  const storeName = store?.name ?? ''
+  const storeSlug = store?.slug ?? ''
+  const logoUrl = store?.logo_url ?? null
+  const [storePopoverOpen, setStorePopoverOpen] = useState(false)
   const [orderNotif, setOrderNotif] = useState<{ name: string; total: number } | null>(null)
   const notifTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [canalOpen, setCanalOpen]         = useState(false)
@@ -66,6 +76,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [settingsOpen, setSettingsOpen]   = useState(false)
   const [mobileNav, setMobileNav] = useState(false)
   const { play, unlock } = useLyteSound()
+
+  useEffect(() => {
+    if (!loading && !storeLoading && user && stores.length === 0 && pathname !== '/dashboard/tienda/nueva') {
+      router.push('/dashboard/tienda/nueva')
+    }
+  }, [loading, storeLoading, user, stores.length, pathname, router])
 
   useEffect(() => {
     const once = () => { unlock(); window.removeEventListener('pointerdown', once) }
@@ -96,13 +112,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [user, loading, router])
 
   useEffect(() => {
-    if (!user) return
-    supabase.from('stores').select('id, name, slug, logo_url').eq('owner_id', user.id).maybeSingle().then(({ data }) => {
-      if (data) { setStoreId(data.id); setStoreName(data.name); setStoreSlug(data.slug); setLogoUrl(data.logo_url ?? null) }
-    })
-  }, [user])
-
-  useEffect(() => {
     if (!storeId) return
     const channel = supabase
       .channel(`orders-notif-${storeId}`)
@@ -126,9 +135,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (pathname.startsWith('/dashboard/productos')) setProductosOpen(true)
     if (pathname.startsWith('/dashboard/configuracion')) setSettingsOpen(true)
     setMobileNav(false)
+    setStorePopoverOpen(false)
   }, [pathname])
 
-  if (loading) {
+  if (loading || storeLoading) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F8F7F4' }}>
         <div style={{ width: 32, height: 32, border: '3px solid rgba(124,58,237,0.15)', borderTop: '3px solid #7C3AED', borderRadius: '50%', animation: 'dbSpin 0.8s linear infinite' }} />
@@ -150,6 +160,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     '/dashboard/chats': t('nav.chats'),
     '/dashboard/analitics': t('nav.analytics'),
     '/dashboard/tienda': t('nav.myStore'),
+    '/dashboard/tienda/nueva': 'Crear tienda',
+    '/dashboard/sucursales': 'Sucursales',
     '/dashboard/configuracion': t('nav.settings'),
     '/dashboard/canal/vitrina': t('nav.vitrina'),
     '/dashboard/canal/vitrina/editor': t('nav.vitrina'),
@@ -187,19 +199,72 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </button>
         </div>
 
-        {/* Store name */}
-        <Link href="/dashboard/tienda" className="db-store-block">
-          <div className="db-store-avatar" style={logoUrl ? { background: 'transparent', padding: 0, overflow: 'hidden' } : {}}>
-            {logoUrl
-              ? <img src={logoUrl} alt={storeName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : storeName.slice(0, 1).toUpperCase()
-            }
-          </div>
-          <div>
-            <div className="db-store-name">{storeName}</div>
-            {storeSlug && <div className="db-store-url">lyte-app.com/{storeSlug}</div>}
-          </div>
-        </Link>
+        {/* Store switcher */}
+        <div style={{ position: 'relative', margin: '10px 8px' }}>
+          <button
+            className="db-store-block"
+            style={{ width: '100%', margin: 0, cursor: 'pointer' }}
+            onClick={() => setStorePopoverOpen(o => !o)}
+          >
+            <div className="db-store-avatar" style={logoUrl ? { background: 'transparent', padding: 0, overflow: 'hidden' } : {}}>
+              {logoUrl
+                ? <img src={logoUrl} alt={storeName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : storeName.slice(0, 1).toUpperCase()
+              }
+            </div>
+            <div style={{ flex: 1, textAlign: 'left', minWidth: 0 }}>
+              <div className="db-store-name">{storeName}</div>
+              {storeSlug && <div className="db-store-url">lyte-app.com/{storeSlug}</div>}
+            </div>
+            <svg className="db-canal-chevron" viewBox="0 0 20 20" fill="currentColor" style={{ transform: storePopoverOpen ? 'rotate(180deg)' : undefined, flexShrink: 0 }}>
+              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
+
+          {storePopoverOpen && (
+            <>
+              <div className="db-store-popover-backdrop" onClick={() => setStorePopoverOpen(false)} />
+              <div className="db-store-popover">
+                {stores.filter(s => !s.parent_store_id).map(top => (
+                  <div key={top.id}>
+                    <button
+                      className={`db-store-popover-item${top.id === storeId ? ' active' : ''}`}
+                      onClick={() => { setActiveStoreId(top.id); setStorePopoverOpen(false) }}
+                    >
+                      <div className="db-store-popover-avatar">
+                        {top.logo_url
+                          ? <img src={top.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          : top.name.slice(0, 1).toUpperCase()}
+                      </div>
+                      {top.name}
+                    </button>
+                    {stores.filter(s => s.parent_store_id === top.id).map(branch => (
+                      <button
+                        key={branch.id}
+                        className={`db-store-popover-item branch${branch.id === storeId ? ' active' : ''}`}
+                        onClick={() => { setActiveStoreId(branch.id); setStorePopoverOpen(false) }}
+                      >
+                        <div className="db-store-popover-avatar">
+                          {branch.logo_url
+                            ? <img src={branch.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            : branch.name.slice(0, 1).toUpperCase()}
+                        </div>
+                        {branch.name}
+                      </button>
+                    ))}
+                  </div>
+                ))}
+                <div className="db-store-popover-divider" />
+                <Link href="/dashboard/tienda" className="db-store-popover-action" onClick={() => setStorePopoverOpen(false)}>
+                  Editar tienda
+                </Link>
+                <Link href="/dashboard/tienda/nueva" className="db-store-popover-action" onClick={() => setStorePopoverOpen(false)}>
+                  + Crear otra tienda
+                </Link>
+              </div>
+            </>
+          )}
+        </div>
 
         {/* Nav */}
         <nav className="db-nav">
@@ -288,6 +353,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
             </svg>
             Clientes
+          </Link>
+
+          {/* Sucursales */}
+          <Link
+            href="/dashboard/sucursales"
+            className={`db-nav-item${pathname.startsWith('/dashboard/sucursales') ? ' active' : ''}`}
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 20s6-5.686 6-10A6 6 0 004 10c0 4.314 6 10 6 10zm0-7a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+            </svg>
+            Sucursales
           </Link>
 
           {/* Diseño (web builder) */}

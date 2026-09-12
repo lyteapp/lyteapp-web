@@ -125,6 +125,35 @@ html, body {
 .db-store-name { font-size: 13px; font-weight: 600; color: #0F172A; }
 .db-store-url { font-size: 10px; color: #94A3B8; margin-top: 1px; font-family: var(--font-geist-mono), monospace; }
 
+.db-store-popover-backdrop { position: fixed; inset: 0; z-index: 40; }
+.db-store-popover {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 41;
+  background: white; border: 1px solid #EEEcE5; border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(15,23,42,0.14);
+  padding: 6px; max-height: 60vh; overflow-y: auto;
+}
+.db-store-popover-item {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 8px 10px; border-radius: 8px; border: none; background: transparent;
+  cursor: pointer; text-align: left; font-size: 13px; font-weight: 500; color: #0F172A;
+  transition: background 0.15s;
+}
+.db-store-popover-item:hover { background: #F5F3EF; }
+.db-store-popover-item.active { background: #F5F3FF; color: #7C3AED; font-weight: 600; }
+.db-store-popover-item.branch { padding-left: 30px; font-size: 12px; }
+.db-store-popover-avatar {
+  width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0; overflow: hidden;
+  background: linear-gradient(135deg, #7C3AED 0%, #4C1D95 100%); color: white;
+  display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600;
+}
+.db-store-popover-divider { height: 1px; background: #EEEcE5; margin: 6px 4px; }
+.db-store-popover-action {
+  display: block; padding: 8px 10px; border-radius: 8px;
+  font-size: 12.5px; font-weight: 600; color: #7C3AED; text-decoration: none;
+  transition: background 0.15s;
+}
+.db-store-popover-action:hover { background: #F5F3EF; }
+
 .db-nav-soon {
   margin-left: auto;
   font-size: 9px; font-weight: 600;

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase'
-import { useAuth } from '../../../lib/auth'
+import { useDashboardStore } from '../../../lib/DashboardStoreProvider'
 import '../canal.css'
 
 // ── PAYMENT METHODS ────────────────────────────────────────────
@@ -248,7 +248,7 @@ function CheckoutPreview({ settings }: { settings: CheckoutSettings }) {
 }
 
 export default function CheckoutPage() {
-  const { user } = useAuth()
+  const { storeId } = useDashboardStore()
   const [settings, setSettings] = useState<CheckoutSettings>(DEFAULTS)
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -262,20 +262,18 @@ export default function CheckoutPage() {
   const [savingPagos, setSavingPagos] = useState(false)
   const [successPagos, setSuccessPagos] = useState(false)
   const [pagosError, setPagosError] = useState('')
-  const [storeId, setStoreId] = useState<string | null>(null)
   const [storeWhatsapp, setStoreWhatsapp] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!user) return
+    if (!storeId) return
     async function load() {
       try {
         const { data: store } = await supabase
           .from('stores')
-          .select('id,checkout_settings,payment_methods,whatsapp')
-          .eq('owner_id', user!.id)
+          .select('checkout_settings,payment_methods,whatsapp')
+          .eq('id', storeId!)
           .maybeSingle()
         if (!store) return
-        setStoreId(store.id)
         setStoreWhatsapp((store as Record<string, unknown>).whatsapp as string | null ?? null)
         if (store.checkout_settings) setSettings({ ...DEFAULTS, ...store.checkout_settings })
         if (store.payment_methods) {
@@ -288,7 +286,7 @@ export default function CheckoutPage() {
       } catch { /* silently handle */ }
     }
     load()
-  }, [user])
+  }, [storeId])
 
   function setSetting<K extends keyof CheckoutSettings>(key: K, value: CheckoutSettings[K]) {
     setSettings(s => ({ ...s, [key]: value }))
@@ -296,12 +294,9 @@ export default function CheckoutPage() {
 
   async function saveSettings(e: { preventDefault(): void }) {
     e.preventDefault()
-    if (!user) return
+    if (!storeId) return
     setSettingsError(''); setSuccess(false); setSaving(true)
-    const { data: existing } = await supabase.from('stores').select('id').eq('owner_id', user.id).maybeSingle()
-    const { error: err } = existing
-      ? await supabase.from('stores').update({ checkout_settings: settings }).eq('id', existing.id)
-      : await supabase.from('stores').insert({ owner_id: user.id, checkout_settings: settings })
+    const { error: err } = await supabase.from('stores').update({ checkout_settings: settings }).eq('id', storeId)
     if (err) setSettingsError(err.message)
     else setSuccess(true)
     setSaving(false)

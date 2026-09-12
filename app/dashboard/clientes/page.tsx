@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
-import { useAuth } from '../../lib/auth'
+import { useDashboardStore } from '../../lib/DashboardStoreProvider'
 
 interface Customer {
   key: string
@@ -54,8 +54,7 @@ function timeAgo(iso: string) {
 }
 
 export default function ClientesPage() {
-  const { user } = useAuth()
-  const [storeId, setStoreId] = useState<string | null>(null)
+  const { storeId } = useDashboardStore()
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -65,17 +64,12 @@ export default function ClientesPage() {
   const [ordersLoading, setOrdersLoading] = useState(false)
 
   useEffect(() => {
-    if (!user) return
+    if (!storeId) return
     async function load() {
-      const { data: store } = await supabase
-        .from('stores').select('id').eq('owner_id', user!.id).maybeSingle()
-      if (!store) { setLoading(false); return }
-      setStoreId(store.id)
-
       const { data: rows } = await supabase
         .from('orders')
         .select('customer_name, customer_phone, total, created_at')
-        .eq('store_id', store.id)
+        .eq('store_id', storeId!)
         .neq('status', 'cancelled')
         .order('created_at', { ascending: false })
 
@@ -115,7 +109,7 @@ export default function ClientesPage() {
       setLoading(false)
     }
     load()
-  }, [user])
+  }, [storeId])
 
   async function openCustomer(c: Customer) {
     setSelected(c)

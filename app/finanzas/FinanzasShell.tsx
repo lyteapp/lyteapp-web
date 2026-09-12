@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '../lib/auth'
-import { supabase } from '../lib/supabase'
+import { useDashboardStore } from '../lib/DashboardStoreProvider'
 import BalanceProvider, { useBalance } from './BalanceProvider'
 import FlujoProvider from './FlujoProvider'
 import { SECCIONES, buscarPartida, money, montoPartida, tasasDe, totalSeccion, type Corte, type SeccionId } from './balance'
@@ -24,19 +24,13 @@ function Shell({ children }: { children: React.ReactNode }) {
   const { corte } = useBalance()
   const router = useRouter()
   const pathname = usePathname()
-  const [storeName, setStoreName] = useState('')
+  const { store } = useDashboardStore()
+  const storeName = store?.name ?? ''
   const [mobileNav, setMobileNav] = useState(false)
 
   useEffect(() => {
     if (!loading && !user) router.push('/login')
   }, [user, loading, router])
-
-  useEffect(() => {
-    if (!user) return
-    supabase.from('stores').select('name').eq('owner_id', user.id).maybeSingle().then(({ data }) => {
-      if (data) setStoreName(data.name)
-    })
-  }, [user])
 
   useEffect(() => { setMobileNav(false) }, [pathname])
 

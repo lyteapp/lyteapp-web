@@ -16,8 +16,8 @@ export default function Login() {
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) return
-      const { data: store } = await supabase.from('stores').select('id').eq('owner_id', session.user.id).maybeSingle()
-      router.replace(store ? '/dashboard' : '/onboarding/negocio')
+      const { data: stores } = await supabase.from('stores').select('id').eq('owner_id', session.user.id).limit(1)
+      router.replace(stores && stores.length > 0 ? '/dashboard' : '/onboarding/negocio')
     })
   }, [])
 
@@ -31,8 +31,8 @@ export default function Login() {
     } else {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        const { data: store } = await supabase.from('stores').select('id').eq('owner_id', user.id).maybeSingle()
-        router.push(store ? '/dashboard' : '/onboarding/negocio')
+        const { data: stores } = await supabase.from('stores').select('id').eq('owner_id', user.id).limit(1)
+        router.push(stores && stores.length > 0 ? '/dashboard' : '/onboarding/negocio')
       }
     }
     setLoading(false)

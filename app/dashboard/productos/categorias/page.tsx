@@ -2,14 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase'
-import { useAuth } from '../../../lib/auth'
+import { useDashboardStore } from '../../../lib/DashboardStoreProvider'
 import '../productos.css'
 
 type Category = { id: string; store_id: string; name: string; position: number }
 
 export default function CategoriasPage() {
-  const { user } = useAuth()
-  const [storeId, setStoreId]         = useState<string | null>(null)
+  const { storeId } = useDashboardStore()
   const [categories, setCategories]   = useState<Category[]>([])
   const [loading, setLoading]         = useState(true)
   const [showAddBar, setShowAddBar]   = useState(false)
@@ -18,15 +17,12 @@ export default function CategoriasPage() {
   const [editName, setEditName]       = useState('')
   const [saving, setSaving]           = useState(false)
 
-  useEffect(() => { if (user) loadData() }, [user])
+  useEffect(() => { if (storeId) loadData() }, [storeId])
 
   async function loadData() {
-    const { data: store } = await supabase
-      .from('stores').select('id').eq('owner_id', user!.id).maybeSingle()
-    if (!store) { setLoading(false); return }
-    setStoreId(store.id)
+    if (!storeId) { setLoading(false); return }
     const { data } = await supabase
-      .from('categories').select('*').eq('store_id', store.id).order('position')
+      .from('categories').select('*').eq('store_id', storeId).order('position')
     setCategories(data ?? [])
     setLoading(false)
   }

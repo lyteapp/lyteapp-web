@@ -55,7 +55,7 @@ export default function SucursalesPage() {
           <div style={{ fontSize: 14, color: '#334155' }}>
             <strong>{store.name}</strong> es una sucursal de <strong>{parent.name}</strong>.
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button
               onClick={() => { setActiveStoreId(parent.id); router.push('/dashboard/sucursales') }}
               style={{ padding: '9px 16px', borderRadius: 10, border: '1px solid #E2E8F0', background: 'white', color: '#0F172A', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
@@ -84,7 +84,7 @@ export default function SucursalesPage() {
 
   return (
     <div style={{ maxWidth: 680 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
         <div>
           <div style={{ fontSize: 20, fontWeight: 700, color: '#0F172A' }}>Sucursales</div>
           <div style={{ fontSize: 13, color: '#94A3B8', marginTop: 2 }}>
@@ -109,36 +109,40 @@ export default function SucursalesPage() {
             <div
               key={b.id}
               style={{
-                display: 'flex', alignItems: 'center', gap: 12,
+                display: 'flex', flexDirection: 'column', gap: 12,
                 background: 'white', border: '1px solid #E2E8F0', borderRadius: 12, padding: '14px 16px',
               }}
             >
-              <div style={{
-                width: 36, height: 36, borderRadius: 8, flexShrink: 0, overflow: 'hidden',
-                background: 'linear-gradient(135deg, #7C3AED 0%, #4C1D95 100%)', color: 'white',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 600,
-              }}>
-                {b.logo_url
-                  ? <img src={b.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : b.name.slice(0, 1).toUpperCase()}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 8, flexShrink: 0, overflow: 'hidden',
+                  background: 'linear-gradient(135deg, #7C3AED 0%, #4C1D95 100%)', color: 'white',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 600,
+                }}>
+                  {b.logo_url
+                    ? <img src={b.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : b.name.slice(0, 1).toUpperCase()}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: '#0F172A' }}>{b.name}</div>
+                  <div style={{ fontSize: 11, color: '#94A3B8', fontFamily: 'var(--font-geist-mono), monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>lyte-app.com/{b.slug}</div>
+                </div>
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: '#0F172A' }}>{b.name}</div>
-                <div style={{ fontSize: 11, color: '#94A3B8', fontFamily: 'var(--font-geist-mono), monospace' }}>lyte-app.com/{b.slug}</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => { setActiveStoreId(b.id); router.push('/dashboard') }}
+                  style={{ flex: 1, padding: '9px 14px', borderRadius: 8, border: '1px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Entrar
+                </button>
+                <button
+                  onClick={() => deleteBranch(b)}
+                  disabled={deletingId === b.id}
+                  style={{ flex: 1, padding: '9px 14px', borderRadius: 8, border: 'none', background: '#FEF2F2', color: '#DC2626', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  {deletingId === b.id ? 'Borrando...' : 'Eliminar'}
+                </button>
               </div>
-              <button
-                onClick={() => { setActiveStoreId(b.id); router.push('/dashboard') }}
-                style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
-              >
-                Entrar
-              </button>
-              <button
-                onClick={() => deleteBranch(b)}
-                disabled={deletingId === b.id}
-                style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: '#FEF2F2', color: '#DC2626', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
-              >
-                {deletingId === b.id ? 'Borrando...' : 'Eliminar'}
-              </button>
             </div>
           ))}
         </div>

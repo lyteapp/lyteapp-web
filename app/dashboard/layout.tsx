@@ -161,7 +161,6 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
     '/dashboard/analitics': t('nav.analytics'),
     '/dashboard/tienda': t('nav.myStore'),
     '/dashboard/tienda/nueva': 'Crear tienda',
-    '/dashboard/sucursales': 'Sucursales',
     '/dashboard/configuracion': t('nav.settings'),
     '/dashboard/canal/vitrina': t('nav.vitrina'),
     '/dashboard/canal/vitrina/editor': t('nav.vitrina'),
@@ -353,17 +352,6 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
               <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
             </svg>
             Clientes
-          </Link>
-
-          {/* Sucursales */}
-          <Link
-            href="/dashboard/sucursales"
-            className={`db-nav-item${pathname.startsWith('/dashboard/sucursales') ? ' active' : ''}`}
-          >
-            <svg viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 20s6-5.686 6-10A6 6 0 004 10c0 4.314 6 10 6 10zm0-7a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-            </svg>
-            Sucursales
           </Link>
 
           {/* Diseño (web builder) */}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
@@ -24,6 +25,7 @@ type Store = {
   store_lat: number | null
   store_lng: number | null
   template_config?: Record<string, unknown> | null
+  parent_store_id: string | null
 }
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''
@@ -56,12 +58,15 @@ function toSlug(text: string) {
 
 export default function TiendaPage() {
   const { user } = useAuth()
-  const { storeId, refreshStores } = useDashboardStore()
+  const router = useRouter()
+  const { storeId, stores, setActiveStoreId, refreshStores } = useDashboardStore()
   const [store, setStore] = useState<Store | null>(null)
   const [pageLoading, setPageLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
+  const [unlinking, setUnlinking] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
@@ -214,6 +219,37 @@ export default function TiendaPage() {
     }
     setSaving(false)
   }
+
+  async function unlinkFromParent() {
+    if (!storeId) return
+    if (!confirm(`¿Convertir "${store?.name}" en una tienda independiente? Ya no aparecerá agrupada bajo su tienda principal.`)) return
+    setUnlinking(true)
+    await supabase.from('stores').update({ parent_store_id: null }).eq('id', storeId)
+    await refreshStores()
+    setUnlinking(false)
+  }
+
+  async function deleteStore() {
+    if (!storeId || !store) return
+    const kind = store.parent_store_id ? 'sucursal' : 'tienda'
+    if (!confirm(`¿Estás seguro que quieres borrar la ${kind} "${store.name}"? Se eliminarán también sus productos, categorías y pedidos. Esta acción no se puede deshacer.`)) return
+    setDeleting(true)
+    const { error: err } = await supabase.from('stores').delete().eq('id', storeId)
+    if (err) {
+      setError(err.message)
+      setDeleting(false)
+      return
+    }
+    // Branches of a deleted principal are freed (parent_store_id set to
+    // null by the DB), so falling back to "no id" and letting the
+    // provider re-pick an active store on refresh is always safe here.
+    if (store.parent_store_id) setActiveStoreId(store.parent_store_id)
+    await refreshStores()
+    setDeleting(false)
+    router.push('/dashboard')
+  }
+
+  const parentStore = store?.parent_store_id ? stores.find(s => s.id === store.parent_store_id) : null
 
   if (pageLoading) return (
     <div className="ts-spinner-wrap"><div className="ts-spinner" /></div>
@@ -438,6 +474,51 @@ export default function TiendaPage() {
                 <input type="text" className="ts-input" placeholder="mi_tienda" value={instagram} onChange={e => setInstagram(e.target.value)} />
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* ── SUCURSAL ── */}
+        {parentStore && (
+          <div className="ts-section">
+            <div className="ts-section-title">Sucursal</div>
+            <div style={{
+              background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12,
+              padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10,
+            }}>
+              <div style={{ fontSize: 13, color: '#334155' }}>
+                Esta tienda es una sucursal de <strong>{parentStore.name}</strong>.
+              </div>
+              <button
+                type="button"
+                onClick={unlinkFromParent}
+                disabled={unlinking}
+                style={{ alignSelf: 'flex-start', padding: '8px 14px', borderRadius: 8, border: 'none', background: '#F1F5F9', color: '#475569', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}
+              >
+                {unlinking ? 'Desvinculando...' : 'Convertir en tienda independiente'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── ZONA DE PELIGRO ── */}
+        <div className="ts-section">
+          <div className="ts-section-title">Zona de peligro</div>
+          <div style={{
+            background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 12,
+            padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10,
+          }}>
+            <div style={{ fontSize: 12.5, color: '#7F1D1D' }}>
+              Esto borra {store?.parent_store_id ? 'esta sucursal' : 'esta tienda'} por completo, junto con sus productos, categorías y pedidos. No se puede deshacer.
+              {!store?.parent_store_id && ' Sus sucursales, si tiene, quedan como tiendas independientes.'}
+            </div>
+            <button
+              type="button"
+              onClick={deleteStore}
+              disabled={deleting}
+              style={{ alignSelf: 'flex-start', padding: '8px 14px', borderRadius: 8, border: 'none', background: '#DC2626', color: 'white', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}
+            >
+              {deleting ? 'Borrando...' : store?.parent_store_id ? 'Borrar sucursal' : 'Borrar tienda'}
+            </button>
           </div>
         </div>
 

@@ -28,6 +28,16 @@ type Store = {
   parent_store_id: string | null
 }
 
+type DesignPreset = {
+  id: string
+  name: string
+  template: string | null
+  template_config: Record<string, unknown> | null
+  checkout_settings: Record<string, unknown> | null
+  payment_methods: Record<string, unknown> | null
+  created_at: string
+}
+
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''
 
 async function geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
@@ -67,6 +77,13 @@ export default function TiendaPage() {
   const [error, setError] = useState('')
   const [unlinking, setUnlinking] = useState(false)
   const [deleting, setDeleting] = useState(false)
+
+  const [presets, setPresets] = useState<DesignPreset[]>([])
+  const [presetName, setPresetName] = useState('')
+  const [savingPreset, setSavingPreset] = useState(false)
+  const [applyingPresetId, setApplyingPresetId] = useState<string | null>(null)
+  const [deletingPresetId, setDeletingPresetId] = useState<string | null>(null)
+  const [presetError, setPresetError] = useState('')
 
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
@@ -250,6 +267,72 @@ export default function TiendaPage() {
   }
 
   const parentStore = store?.parent_store_id ? stores.find(s => s.id === store.parent_store_id) : null
+
+  // Presets are per-owner, reusable across every one of their stores — a
+  // separate table, not another store's row, so saving one never touches
+  // any other store.
+  async function loadPresets() {
+    if (!user) return
+    const { data } = await supabase
+      .from('design_presets')
+      .select('id, name, template, template_config, checkout_settings, payment_methods, created_at')
+      .eq('owner_id', user.id)
+      .order('created_at', { ascending: false })
+    setPresets(data ?? [])
+  }
+
+  useEffect(() => {
+    if (!user) return
+    supabase.from('design_presets').select('id, name, template, template_config, checkout_settings, payment_methods, created_at')
+      .eq('owner_id', user.id).order('created_at', { ascending: false })
+      .then(({ data }) => setPresets(data ?? []))
+  }, [user])
+
+  async function savePreset() {
+    if (!user || !store || !presetName.trim()) return
+    setSavingPreset(true); setPresetError('')
+    const { error: err } = await supabase.from('design_presets').insert({
+      owner_id: user.id,
+      name: presetName.trim(),
+      template: (store as unknown as { template?: string }).template ?? null,
+      template_config: store.template_config ?? null,
+      checkout_settings: (store as unknown as { checkout_settings?: Record<string, unknown> }).checkout_settings ?? null,
+      payment_methods: (store as unknown as { payment_methods?: Record<string, unknown> }).payment_methods ?? null,
+    })
+    if (err) setPresetError(err.message)
+    else { setPresetName(''); await loadPresets() }
+    setSavingPreset(false)
+  }
+
+  async function applyPreset(preset: DesignPreset) {
+    if (!storeId) return
+    if (!confirm(`¿Aplicar la plantilla "${preset.name}" a "${store?.name}"? Esto reemplaza el diseño, checkout y métodos de pago actuales de esta tienda.`)) return
+    setApplyingPresetId(preset.id)
+    const { error: err } = await supabase.from('stores').update({
+      template: preset.template,
+      template_config: preset.template_config,
+      checkout_settings: preset.checkout_settings,
+      payment_methods: preset.payment_methods,
+    }).eq('id', storeId)
+    if (err) setPresetError(err.message)
+    else {
+      // Reload this page's own fields so the form reflects what just landed.
+      const { data } = await supabase.from('stores').select('*').eq('id', storeId).maybeSingle()
+      if (data) {
+        setStore(data)
+        setLogoUrl(data.logo_url ?? '')
+      }
+    }
+    setApplyingPresetId(null)
+  }
+
+  async function deletePreset(id: string) {
+    if (!confirm('¿Borrar esta plantilla guardada?')) return
+    setDeletingPresetId(id)
+    await supabase.from('design_presets').delete().eq('id', id)
+    await loadPresets()
+    setDeletingPresetId(null)
+  }
 
   if (pageLoading) return (
     <div className="ts-spinner-wrap"><div className="ts-spinner" /></div>
@@ -474,6 +557,70 @@ export default function TiendaPage() {
                 <input type="text" className="ts-input" placeholder="mi_tienda" value={instagram} onChange={e => setInstagram(e.target.value)} />
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* ── PLANTILLAS DE DISEÑO ── */}
+        <div className="ts-section">
+          <div className="ts-section-title">Plantillas de diseño</div>
+          <div style={{
+            background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12,
+            padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12,
+          }}>
+            <div style={{ fontSize: 12.5, color: '#64748B' }}>
+              Guarda el diseño, checkout y métodos de pago actuales de esta tienda como plantilla, y aplícala luego a cualquier otra de tus tiendas o sucursales.
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <input
+                type="text"
+                value={presetName}
+                onChange={e => setPresetName(e.target.value)}
+                placeholder="Nombre de la plantilla"
+                style={{ flex: '1 1 180px', padding: '8px 10px', borderRadius: 8, border: '1px solid #CBD5E1', fontSize: 12.5 }}
+              />
+              <button
+                type="button"
+                onClick={savePreset}
+                disabled={savingPreset || !presetName.trim()}
+                style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: '#0F172A', color: 'white', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}
+              >
+                {savingPreset ? 'Guardando...' : 'Guardar valores actuales'}
+              </button>
+            </div>
+
+            {presetError && <div className="ts-error">{presetError}</div>}
+
+            {presets.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
+                {presets.map(p => (
+                  <div key={p.id} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap',
+                    background: 'white', border: '1px solid #E2E8F0', borderRadius: 8, padding: '8px 12px',
+                  }}>
+                    <div style={{ fontSize: 12.5, color: '#334155', fontWeight: 600 }}>{p.name}</div>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={() => applyPreset(p)}
+                        disabled={applyingPresetId === p.id}
+                        style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: '#EEF2FF', color: '#4338CA', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        {applyingPresetId === p.id ? 'Aplicando...' : 'Aplicar a esta tienda'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deletePreset(p.id)}
+                        disabled={deletingPresetId === p.id}
+                        style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: '#F1F5F9', color: '#475569', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        {deletingPresetId === p.id ? 'Borrando...' : 'Eliminar'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

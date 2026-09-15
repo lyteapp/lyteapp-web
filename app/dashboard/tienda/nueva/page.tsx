@@ -61,7 +61,10 @@ export default function NuevaTiendaPage() {
   const [storeLng, setStoreLng] = useState<number | null>(null)
   const [locLoading, setLocLoading] = useState(false)
   const [parentStoreId, setParentStoreId] = useState('')
-  const [copyContents, setCopyContents] = useState(true)
+  // Temporarily disabled: copying a parent's settings into a new sucursal
+  // was somehow also wiping the parent's own settings — turned off store-
+  // wide until the root cause is found, not just for this one session.
+  const copyContents = false
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -264,19 +267,9 @@ export default function NuevaTiendaPage() {
             </div>
 
             {parentStoreId && (
-              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginTop: 12, cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={copyContents}
-                  onChange={e => setCopyContents(e.target.checked)}
-                  style={{ marginTop: 2 }}
-                />
-                <span style={{ fontSize: 12.5, color: '#334155' }}>
-                  Copiar el catálogo (productos y categorías), diseño y checkout de{' '}
-                  <strong>{parentCandidates.find(s => s.id === parentStoreId)?.name}</strong> como punto de partida.
-                  Después de crearla, los cambios solo afectan a esta sucursal.
-                </span>
-              </label>
+              <div style={{ fontSize: 11.5, color: '#94A3B8', marginTop: 10 }}>
+                (La opción de copiar catálogo/diseño está desactivada temporalmente mientras se revisa un problema — la sucursal se crea en blanco por ahora.)
+              </div>
             )}
           </div>
         )}

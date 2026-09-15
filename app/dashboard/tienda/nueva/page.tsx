@@ -61,6 +61,7 @@ export default function NuevaTiendaPage() {
   const [storeLng, setStoreLng] = useState<number | null>(null)
   const [locLoading, setLocLoading] = useState(false)
   const [parentStoreId, setParentStoreId] = useState('')
+  const [copyContents, setCopyContents] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -118,6 +119,50 @@ export default function NuevaTiendaPage() {
     if (address) setStoreAddress(address)
   }
 
+  // Best-effort clone of a parent store's catalog + look into a brand-new
+  // sucursal row. Runs after the sucursal already exists, so any partial
+  // failure here just leaves it starting blank rather than blocking creation.
+  async function copyStoreContents(fromId: string, toId: string) {
+    const { data: fromStore } = await supabase
+      .from('stores')
+      .select('template, template_config, checkout_settings, payment_methods')
+      .eq('id', fromId).maybeSingle()
+    if (fromStore) {
+      await supabase.from('stores').update({
+        template: fromStore.template,
+        template_config: fromStore.template_config,
+        checkout_settings: fromStore.checkout_settings,
+        payment_methods: fromStore.payment_methods,
+      }).eq('id', toId)
+    }
+
+    const { data: cats } = await supabase.from('categories').select('id, name, position').eq('store_id', fromId)
+    const catIdMap = new Map<string, string>()
+    if (cats && cats.length > 0) {
+      const { data: insertedCats } = await supabase
+        .from('categories')
+        .insert(cats.map(c => ({ store_id: toId, name: c.name, position: c.position })))
+        .select('id')
+      insertedCats?.forEach((row, i) => catIdMap.set(cats[i].id, row.id))
+    }
+
+    const { data: prods } = await supabase
+      .from('products').select('name, description, price, image_url, is_active, options, category_id')
+      .eq('store_id', fromId)
+    if (prods && prods.length > 0) {
+      await supabase.from('products').insert(prods.map(p => ({
+        store_id: toId,
+        name: p.name,
+        description: p.description,
+        price: p.price,
+        image_url: p.image_url,
+        is_active: p.is_active,
+        options: p.options,
+        category_id: p.category_id ? catIdMap.get(p.category_id) ?? null : null,
+      })))
+    }
+  }
+
   async function handleSave() {
     if (!user || !name.trim() || !slug.trim()) { setError('El nombre y la URL son obligatorios.'); return }
     setSaving(true); setError('')
@@ -144,6 +189,11 @@ export default function NuevaTiendaPage() {
       setError(err.message.includes('slug') ? 'Esa URL ya está en uso, elige otra.' : err.message)
       setSaving(false)
       return
+    }
+
+    if (parent && copyContents) {
+      try { await copyStoreContents(parent.id, data.id) }
+      catch { /* the sucursal already exists — just starts blank if this fails */ }
     }
 
     await refreshStores()
@@ -212,6 +262,22 @@ export default function NuevaTiendaPage() {
                 Una sucursal tiene su propio catálogo, diseño y checkout — solo queda agrupada bajo la tienda principal en tu panel.
               </div>
             </div>
+
+            {parentStoreId && (
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginTop: 12, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={copyContents}
+                  onChange={e => setCopyContents(e.target.checked)}
+                  style={{ marginTop: 2 }}
+                />
+                <span style={{ fontSize: 12.5, color: '#334155' }}>
+                  Copiar el catálogo (productos y categorías), diseño y checkout de{' '}
+                  <strong>{parentCandidates.find(s => s.id === parentStoreId)?.name}</strong> como punto de partida.
+                  Después de crearla, los cambios solo afectan a esta sucursal.
+                </span>
+              </label>
+            )}
           </div>
         )}
 
@@ -298,7 +364,7 @@ export default function NuevaTiendaPage() {
 
         <div className="ts-actions">
           <button className="ts-save-btn" onClick={handleSave} disabled={saving || logoUploading}>
-            {saving ? 'Creando...' : 'Crear tienda'}
+            {saving ? (parentStoreId && copyContents ? 'Creando y copiando...' : 'Creando...') : 'Crear tienda'}
           </button>
         </div>
       </div>

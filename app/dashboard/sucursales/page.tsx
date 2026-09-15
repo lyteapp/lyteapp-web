@@ -9,6 +9,7 @@ export default function SucursalesPage() {
   const router = useRouter()
   const { storeId, store, stores, setActiveStoreId, refreshStores } = useDashboardStore()
   const [unlinking, setUnlinking] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   if (!store) return null
 
@@ -22,6 +23,25 @@ export default function SucursalesPage() {
     await supabase.from('stores').update({ parent_store_id: null }).eq('id', storeId)
     await refreshStores()
     setUnlinking(false)
+  }
+
+  async function deleteBranch(b: { id: string; name: string }) {
+    if (!confirm(`¿Estás seguro que quieres borrar la sucursal "${b.name}"? Se eliminarán también sus productos, categorías y pedidos. Esta acción no se puede deshacer. Las demás sucursales no se ven afectadas.`)) return
+    setDeletingId(b.id)
+    await supabase.from('stores').delete().eq('id', b.id)
+    await refreshStores()
+    setDeletingId(null)
+  }
+
+  async function deleteSelf() {
+    if (!storeId || !store) return
+    if (!confirm(`¿Estás seguro que quieres borrar la sucursal "${store.name}"? Se eliminarán también sus productos, categorías y pedidos. Esta acción no se puede deshacer.`)) return
+    setDeletingId(storeId)
+    await supabase.from('stores').delete().eq('id', storeId)
+    if (parent) setActiveStoreId(parent.id)
+    await refreshStores()
+    setDeletingId(null)
+    router.push('/dashboard/sucursales')
   }
 
   if (parent) {
@@ -45,9 +65,16 @@ export default function SucursalesPage() {
             <button
               onClick={unlink}
               disabled={unlinking}
-              style={{ padding: '9px 16px', borderRadius: 10, border: 'none', background: '#FEF2F2', color: '#DC2626', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+              style={{ padding: '9px 16px', borderRadius: 10, border: 'none', background: '#F1F5F9', color: '#475569', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
             >
               {unlinking ? 'Desvinculando...' : 'Desvincular'}
+            </button>
+            <button
+              onClick={deleteSelf}
+              disabled={deletingId === storeId}
+              style={{ padding: '9px 16px', borderRadius: 10, border: 'none', background: '#FEF2F2', color: '#DC2626', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+            >
+              {deletingId === storeId ? 'Borrando...' : 'Borrar sucursal'}
             </button>
           </div>
         </div>
@@ -104,6 +131,13 @@ export default function SucursalesPage() {
                 style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #E2E8F0', background: '#F8FAFC', color: '#0F172A', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
               >
                 Entrar
+              </button>
+              <button
+                onClick={() => deleteBranch(b)}
+                disabled={deletingId === b.id}
+                style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: '#FEF2F2', color: '#DC2626', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
+              >
+                {deletingId === b.id ? 'Borrando...' : 'Eliminar'}
               </button>
             </div>
           ))}

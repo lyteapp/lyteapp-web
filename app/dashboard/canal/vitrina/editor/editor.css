@@ -1924,9 +1924,16 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
     max-height: 60dvh;
     overflow-y: auto;
     animation: edPanelInMobile 0.16s ease;
+    transition: max-height 0.22s cubic-bezier(0.32, 0.72, 0, 1);
   }
-  /* Grabbed to swipe the sheet closed and reveal the preview underneath —
-     hidden on desktop, where the panel is a side popover, not a sheet. */
+  /* Dragged the handle up past the threshold — see renderPanelDragHandle. */
+  .ed-tool-panel.ed-tool-panel-expanded {
+    max-height: 88vh;
+    max-height: 88dvh;
+  }
+  /* Grabbed to swipe the sheet closed (or up to expand it) and reveal the
+     preview underneath — hidden on desktop, where the panel is a side
+     popover, not a sheet. */
   .ed-tp-drag-handle {
     display: flex;
     justify-content: center;

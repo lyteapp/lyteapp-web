@@ -1249,10 +1249,13 @@ export default function EditorPage() {
   }
 
   // Mobile-only: the panel is a bottom sheet there, so its top edge carries
-  // a drag handle — dragging it down far enough closes the panel, same as
-  // the X button, so the preview underneath is reachable without a tap.
-  // Only one tool panel is ever mounted at a time, so a single ref/set of
-  // handlers (rather than one per panel) is enough.
+  // a drag handle — drag up to expand it taller (via the .ed-tool-panel-
+  // expanded class, toggled directly on the DOM node), drag down to shrink
+  // it back, and drag down further from the collapsed size to close it
+  // entirely, same as the X button. Only one tool panel is ever mounted at
+  // a time, so a single ref/set of handlers (rather than one per panel) is
+  // enough, and switching tools always remounts back to collapsed since
+  // each panel is a fresh element.
   function panelDragPointerDown(e: React.PointerEvent) {
     panelDragStartY.current = e.clientY
     panelDragging.current = true
@@ -1261,18 +1264,23 @@ export default function EditorPage() {
   }
   function panelDragPointerMove(e: React.PointerEvent) {
     if (!panelDragging.current || !toolPanelRef.current) return
-    const dy = Math.max(0, e.clientY - panelDragStartY.current)
-    toolPanelRef.current.style.transform = `translateY(${dy}px)`
+    const dy = e.clientY - panelDragStartY.current
+    // Follows the finger going down, but only a little going up — the real
+    // "grow taller" happens on release via the CSS class, not by stretching
+    // the box mid-drag.
+    toolPanelRef.current.style.transform = `translateY(${Math.max(-40, dy)}px)`
   }
   function panelDragPointerUp(e: React.PointerEvent) {
-    if (!panelDragging.current) return
+    if (!panelDragging.current || !toolPanelRef.current) return
     panelDragging.current = false
     const dy = e.clientY - panelDragStartY.current
-    if (toolPanelRef.current) {
-      toolPanelRef.current.style.transition = ''
-      toolPanelRef.current.style.transform = ''
-    }
-    if (dy > 70) setActiveTool(null)
+    const panel = toolPanelRef.current
+    panel.style.transition = ''
+    panel.style.transform = ''
+    const expanded = panel.classList.contains('ed-tool-panel-expanded')
+    if (dy > 90 && !expanded) { setActiveTool(null); return }
+    if (dy > 50 && expanded) { panel.classList.remove('ed-tool-panel-expanded'); return }
+    if (dy < -50 && !expanded) { panel.classList.add('ed-tool-panel-expanded') }
   }
 
   function renderPanelDragHandle() {

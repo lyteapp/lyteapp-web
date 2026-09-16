@@ -49,42 +49,15 @@
   border: 1.5px solid var(--vt-line);
   border-radius: 24px;
   padding: 28px 18px 20px;
-  cursor: pointer;
   position: relative;
   overflow: hidden;
-  transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s cubic-bezier(0.2,0.8,0.2,1);
   animation: vt-cardIn 0.6s cubic-bezier(0.2,0.8,0.2,1) both;
 }
-.vt-card:nth-child(1) { animation-delay: 0.05s; }
 
 @keyframes vt-cardIn {
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-
-.vt-card:hover {
-  border-color: var(--vt-violet-soft);
-  transform: translateY(-4px);
-  box-shadow: 0 24px 48px -18px rgba(76,29,149,0.18);
-}
-.vt-card.selected {
-  border-color: var(--vt-violet);
-  box-shadow: 0 0 0 4px rgba(124,58,237,0.12), 0 24px 48px -18px rgba(76,29,149,0.2);
-}
-
-/* ── CHECK BADGE ── */
-.vt-check-badge {
-  position: absolute; top: 12px; right: 12px;
-  width: 26px; height: 26px; border-radius: 50%;
-  background: var(--vt-violet);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 10;
-  box-shadow: 0 4px 12px rgba(124,58,237,0.4);
-  opacity: 0; transform: scale(0.5);
-  transition: opacity 0.25s, transform 0.25s cubic-bezier(0.2,0.8,0.2,1);
-}
-.vt-card.selected .vt-check-badge { opacity: 1; transform: scale(1); }
-.vt-check-badge svg { width: 12px; height: 12px; }
 
 /* ── PHONE MOCKUP ── */
 .vt-phone {
@@ -113,67 +86,11 @@
   position: relative;
 }
 
-/* ── WIREFRAME (reposo) ── */
-.vt-wf {
-  position: absolute; inset: 0;
-  padding: 14px 8px 8px;
-  display: flex; flex-direction: column; gap: 5px;
-  background: var(--vt-white);
-  overflow: hidden;
-  transition: opacity 0.4s ease, transform 0.5s cubic-bezier(0.2,0.8,0.2,1);
-  z-index: 2;
-}
-.vt-card.selected .vt-wf {
-  opacity: 0; transform: scale(0.96); pointer-events: none;
-}
-
-.vt-wf-head {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 0 2px; flex-shrink: 0;
-}
-.vt-wf-logo { width: 20px; height: 4px; background: var(--vt-ink); border-radius: 2px; }
-.vt-wf-cart {
-  width: 10px; height: 10px; border-radius: 50%;
-  border: 1.5px solid var(--vt-violet); position: relative;
-}
-.vt-wf-cart::after {
-  content: ''; position: absolute; top: -2px; right: -2px;
-  width: 4px; height: 4px; background: var(--vt-violet); border-radius: 50%;
-}
-
-/* Wf A */
-.vt-wf-a .vt-wf-hero {
-  height: 22%; background: var(--vt-ink); border-radius: 4px; flex-shrink: 0;
-}
-.vt-wf-a .vt-wf-tabs { display: flex; gap: 3px; padding: 0 2px; flex-shrink: 0; }
-.vt-wf-a .vt-wf-tab { flex: 1; height: 9px; background: var(--vt-wire-bg); border: 1px solid var(--vt-wire-soft); border-radius: 100px; }
-.vt-wf-a .vt-wf-tab.active { background: var(--vt-ink); border-color: var(--vt-ink); }
-.vt-wf-a .vt-wf-grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 0 2px; min-height: 0; }
-.vt-wf-a .vt-wf-card { background: var(--vt-wire-bg); border: 1px solid var(--vt-wire-soft); border-radius: 4px; padding: 3px; display: flex; flex-direction: column; gap: 2px; }
-.vt-wf-a .vt-wf-card .img { flex: 1; background: var(--vt-violet-mist); border-radius: 2px; min-height: 0; }
-.vt-wf-a .vt-wf-card:nth-child(2) .img { background: #FED7AA; }
-.vt-wf-a .vt-wf-card:nth-child(3) .img { background: var(--vt-cream); }
-.vt-wf-a .vt-wf-card .p { height: 3px; width: 60%; background: var(--vt-ink); border-radius: 2px; }
-
-/* ── STORE PREVIEW (hover) ── */
+/* ── STORE PREVIEW ── */
 .vt-store {
   position: absolute; inset: 0;
-  opacity: 0; transform: scale(1.04);
-  transition: opacity 0.4s ease 0.05s, transform 0.5s cubic-bezier(0.2,0.8,0.2,1);
-  z-index: 3; pointer-events: none;
   display: flex; flex-direction: column; overflow: hidden;
 }
-.vt-card.selected .vt-store { opacity: 1; transform: scale(1); }
-
-.vt-store > * {
-  opacity: 0; transform: translateY(6px);
-  transition: opacity 0.3s ease, transform 0.35s cubic-bezier(0.2,0.8,0.2,1);
-}
-.vt-card.selected .vt-store > *:nth-child(1) { opacity: 1; transform: none; transition-delay: 0.16s; }
-.vt-card.selected .vt-store > *:nth-child(2) { opacity: 1; transform: none; transition-delay: 0.22s; }
-.vt-card.selected .vt-store > *:nth-child(3) { opacity: 1; transform: none; transition-delay: 0.28s; }
-.vt-card.selected .vt-store > *:nth-child(4) { opacity: 1; transform: none; transition-delay: 0.34s; }
-.vt-card.selected .vt-store > *:nth-child(5) { opacity: 1; transform: none; transition-delay: 0.40s; }
 
 /* shared store header */
 .vt-store .sh {
@@ -211,18 +128,6 @@
 .vt-store-pizza .s-item .info { padding: 3px 4px 4px; line-height: 1.1; }
 .vt-store-pizza .nm { font-family: var(--font-fraunces), serif; font-weight: 500; font-size: 6px; color: #7C2D12; }
 .vt-store-pizza .pr { font-size: 5.5px; color: #DC2626; font-weight: 600; margin-top: 1px; }
-
-/* ── CARD LABEL ── */
-.vt-card-label { text-align: center; }
-.vt-card-name {
-  font-weight: 500; font-size: 15px; color: var(--vt-ink);
-  letter-spacing: -0.01em; line-height: 1;
-}
-.vt-card-name em {
-  font-family: var(--font-fraunces), serif;
-  font-style: italic; font-weight: 400; color: var(--vt-violet);
-}
-.vt-card-desc { font-size: 10px; color: var(--vt-ink-muted); margin-top: 4px; line-height: 1.3; }
 
 /* ── PERSONALIZAR ── */
 .vt-personalizar {

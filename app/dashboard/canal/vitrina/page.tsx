@@ -1,32 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
 import { useDashboardStore } from '../../../lib/DashboardStoreProvider'
 import './vitrina.css'
 
-/* ── WIREFRAME (reposo) ──────────────────────────────── */
-
-function WfA() {
-  return (
-    <div className="vt-wf vt-wf-a">
-      <div className="vt-wf-head"><div className="vt-wf-logo"/><div className="vt-wf-cart"/></div>
-      <div className="vt-wf-hero"/>
-      <div className="vt-wf-tabs">
-        <span className="vt-wf-tab active"/><span className="vt-wf-tab"/><span className="vt-wf-tab"/><span className="vt-wf-tab"/>
-      </div>
-      <div className="vt-wf-grid">
-        <div className="vt-wf-card"><span className="img"/><span className="p"/></div>
-        <div className="vt-wf-card"><span className="img"/><span className="p"/></div>
-        <div className="vt-wf-card"><span className="img"/><span className="p"/></div>
-        <div className="vt-wf-card"><span className="img"/><span className="p"/></div>
-      </div>
-    </div>
-  )
-}
-
-/* ── STORE PREVIEW (hover) ────────────────────────────── */
+/* ── STORE PREVIEW ─────────────────────────────────────── */
 
 function StorePizza() {
   return (
@@ -55,35 +35,13 @@ function StorePizza() {
 export default function PaginaPage() {
   const router = useRouter()
   const { storeId } = useDashboardStore()
-  const [selected, setSelected] = useState<'clasico' | null>(null)
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    if (!storeId) return
-    let cancelled = false
-    async function load() {
-      try {
-        const { data } = await supabase
-          .from('stores')
-          .select('template')
-          .eq('id', storeId!)
-          .maybeSingle()
-        if (cancelled || !data) return
-        if (data.template === 'clasico') setSelected('clasico')
-      } catch {
-        // silently handle network or auth errors
-      }
-    }
-    load()
-    return () => { cancelled = true }
-  }, [storeId])
-
   async function handlePersonalizar() {
-    if (selected !== 'clasico') return
     setSaving(true)
     try {
       if (storeId) {
-        await supabase.from('stores').update({ template: selected }).eq('id', storeId)
+        await supabase.from('stores').update({ template: 'clasico' }).eq('id', storeId)
       }
     } catch {
       // silently handle save errors
@@ -93,47 +51,30 @@ export default function PaginaPage() {
     router.push('/dashboard/canal/vitrina/editor')
   }
 
-  const isSelected = selected === 'clasico'
-
   return (
     <div className="vt-wrap">
 
       <div className="vt-header">
         <div className="vt-eyebrow">Diseño · Página</div>
         <h1 className="vt-title">Tu tienda,<br />tu <em>estilo</em>.</h1>
-        <p className="vt-sub">Elige un template.</p>
+        <p className="vt-sub">Personaliza el diseño de tu tienda.</p>
       </div>
 
       <div className="vt-grid">
-        <article
-          className={`vt-card${isSelected ? ' selected' : ''}`}
-          onClick={() => setSelected(isSelected ? null : 'clasico')}
-        >
-          {isSelected && (
-            <div className="vt-check-badge">
-              <svg viewBox="0 0 16 16" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 8.5l3 3L13 4.5" />
-              </svg>
-            </div>
-          )}
+        <article className="vt-card">
           <div className="vt-phone">
             <div className="vt-phone-notch"/>
             <div className="vt-phone-screen">
-              <WfA />
               <StorePizza />
             </div>
-          </div>
-          <div className="vt-card-label">
-            <div className="vt-card-name">El <em>clásico</em></div>
-            <div className="vt-card-desc">Hero + grid de productos</div>
           </div>
         </article>
       </div>
 
       <button
-        className={`vt-personalizar${isSelected ? ' active' : ''}`}
+        className="vt-personalizar active"
         onClick={handlePersonalizar}
-        disabled={saving || !isSelected}
+        disabled={saving}
       >
         {saving ? 'Guardando…' : 'Personalizar'}
         <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">

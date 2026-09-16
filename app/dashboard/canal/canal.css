@@ -15,6 +15,10 @@
      get squeezed and cut off. */
   .cn-checkout-split { flex-direction: column; }
   .cn-checkout-preview-frame { width: 100%; max-width: 300px; margin: 0 auto; }
+  /* Preview first, form below — and drop the sticky-while-scrolling
+     behavior from the side-by-side layout, since pinned at the top of a
+     stacked column it would just eat space while the form scrolls under it. */
+  .cn-checkout-preview-col { order: -1; position: static !important; }
 }
 
 /* ── SECTIONS ── */

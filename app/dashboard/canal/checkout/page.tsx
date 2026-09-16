@@ -582,7 +582,7 @@ export default function CheckoutPage() {
         </div>
 
         {/* ── Live preview ── */}
-        <div style={{ position: 'sticky', top: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+        <div className="cn-checkout-preview-col" style={{ position: 'sticky', top: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Vista previa</div>
           <CheckoutPreview settings={settings} />
         </div>

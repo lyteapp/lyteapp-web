@@ -6,16 +6,7 @@ import { supabase } from '../../../lib/supabase'
 import { useDashboardStore } from '../../../lib/DashboardStoreProvider'
 import './vitrina.css'
 
-type TemplateId = 'clasico' | 'escaparate' | 'vitrina' | 'catalogo'
-
-const TEMPLATES = [
-  { id: 'clasico'   as TemplateId, namePrefix: 'El ', nameAccent: 'clásico',  tag: 'Hero + grid de productos'     },
-  { id: 'escaparate'as TemplateId, namePrefix: 'El ', nameAccent: 'ligero',   tag: 'Destacado + lista compacta'   },
-  { id: 'vitrina'   as TemplateId, namePrefix: 'El ', nameAccent: 'rápido',   tag: 'Producto estrella + grid'     },
-  { id: 'catalogo'  as TemplateId, namePrefix: 'El ', nameAccent: 'catálogo', tag: 'Búsqueda + filtros + cards'   },
-]
-
-/* ── WIREFRAMES (reposo) ──────────────────────────────── */
+/* ── WIREFRAME (reposo) ──────────────────────────────── */
 
 function WfA() {
   return (
@@ -35,51 +26,7 @@ function WfA() {
   )
 }
 
-function WfB() {
-  return (
-    <div className="vt-wf vt-wf-b">
-      <div className="vt-wf-head"><div className="vt-wf-logo"/><div className="vt-wf-cart"/></div>
-      <div className="vt-wf-feat"><div className="vt-wf-feat-text"/></div>
-      <div className="vt-wf-pair"><div className="vt-wf-mini"/><div className="vt-wf-mini"/></div>
-      <div className="vt-wf-list">
-        {[0,1,2].map(i => (
-          <div key={i} className="vt-wf-row"><span className="i"/><div className="b"><span/><span/></div></div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function WfC() {
-  return (
-    <div className="vt-wf vt-wf-c">
-      <div className="vt-wf-head"><div className="vt-wf-logo"/><div className="vt-wf-cart"/></div>
-      <div className="vt-wf-spot">
-        <div className="vt-wf-spot-info"><span className="t"/><span className="b"/></div>
-      </div>
-      <div className="vt-wf-asym"><div className="big"/><div className="sm"/><div className="sm"/></div>
-    </div>
-  )
-}
-
-function WfD() {
-  return (
-    <div className="vt-wf vt-wf-d">
-      <div className="vt-wf-head"><div className="vt-wf-logo"/><div className="vt-wf-cart"/></div>
-      <div className="vt-wf-search"/>
-      <div className="vt-wf-chips">
-        <span className="vt-wf-chip"/><span className="vt-wf-chip"/><span className="vt-wf-chip"/><span className="vt-wf-chip"/>
-      </div>
-      <div className="vt-wf-cards">
-        {[0,1,2].map(i => (
-          <div key={i} className="vt-wf-cc"><span className="i"/><div className="b"><span className="t"/><span className="d"/><span className="p"/></div></div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-/* ── STORE PREVIEWS (hover) ───────────────────────────── */
+/* ── STORE PREVIEW (hover) ────────────────────────────── */
 
 function StorePizza() {
   return (
@@ -103,88 +50,12 @@ function StorePizza() {
   )
 }
 
-function StoreSushi() {
-  return (
-    <div className="vt-store vt-store-sushi">
-      <div className="sh"><div className="sh-logo">Niwa<span className="acc">.</span></div><div className="sh-cart">1</div></div>
-      <div className="s-feat">
-        <div className="feat-text">
-          <div className="eb">Especial del chef</div>
-          <div className="ft">Omakase<br/>de temporada</div>
-        </div>
-        <div className="fp">$32</div>
-      </div>
-      <div className="s-pair">
-        <div className="s-mini m1"><div className="lbl">Nigiri</div></div>
-        <div className="s-mini m2"><div className="lbl">Ramen</div></div>
-      </div>
-      <div className="s-list">
-        <div className="s-row r1"><div className="i"/><div className="b"><div className="nm">Sashimi Salmón</div><div className="dc">8 piezas</div></div><div className="pr">$14</div></div>
-        <div className="s-row r2"><div className="i"/><div className="b"><div className="nm">Roll Cangrejo</div><div className="dc">Aguacate, pepino</div></div><div className="pr">$12</div></div>
-        <div className="s-row r3"><div className="i"/><div className="b"><div className="nm">Gyoza vapor</div><div className="dc">6 unidades</div></div><div className="pr">$9</div></div>
-      </div>
-    </div>
-  )
-}
-
-function StoreFashion() {
-  return (
-    <div className="vt-store vt-store-fashion">
-      <div className="sh"><div className="sh-logo">Cuarta Capa</div><div className="sh-cart">3</div></div>
-      <div className="s-spot">
-        <div className="tag">Drop 04</div>
-        <div className="spot-info">
-          <div className="ft">Cápsula<br/>otoño</div>
-          <div className="pr">desde $89</div>
-        </div>
-        <div className="btn">Comprar →</div>
-      </div>
-      <div className="s-sec"><div className="l">Nuevos drops</div><div className="m">Ver todo</div></div>
-      <div className="s-asym">
-        <div className="big"/><div className="sm1"/><div className="sm2"/>
-      </div>
-    </div>
-  )
-}
-
-function StoreMarket() {
-  return (
-    <div className="vt-store vt-store-market">
-      <div className="sh"><div className="sh-logo">Vereda Fresca</div><div className="sh-cart">5</div></div>
-      <div className="s-search"><div className="ph">Buscar productos...</div></div>
-      <div className="s-chips">
-        <span className="s-chip active">Todo</span><span className="s-chip">Frutas</span>
-        <span className="s-chip">Panadería</span><span className="s-chip">Lácteos</span>
-      </div>
-      <div className="s-cards">
-        <div className="s-cc c1"><div className="ph"/><div className="b"><div className="nm">Aguacate Hass</div><div className="dc">Maduro · unidad</div><div className="pr">$1,20</div></div><div className="add">+</div></div>
-        <div className="s-cc c2"><div className="ph"/><div className="b"><div className="nm">Pan campesino</div><div className="dc">Recién horneado</div><div className="pr">$2,50</div></div><div className="add">+</div></div>
-        <div className="s-cc c3"><div className="ph"/><div className="b"><div className="nm">Frutos rojos</div><div className="dc">Premium · 250g</div><div className="pr">$4,80</div></div><div className="add">+</div></div>
-      </div>
-    </div>
-  )
-}
-
-function TemplateWireframe({ id }: { id: TemplateId }) {
-  if (id === 'clasico')    return <WfA />
-  if (id === 'escaparate') return <WfB />
-  if (id === 'vitrina')    return <WfC />
-  return <WfD />
-}
-
-function TemplateStore({ id }: { id: TemplateId }) {
-  if (id === 'clasico')    return <StorePizza />
-  if (id === 'escaparate') return <StoreSushi />
-  if (id === 'vitrina')    return <StoreFashion />
-  return <StoreMarket />
-}
-
 /* ── PAGE ─────────────────────────────────────────────── */
 
 export default function PaginaPage() {
   const router = useRouter()
   const { storeId } = useDashboardStore()
-  const [selected, setSelected] = useState<TemplateId | null>(null)
+  const [selected, setSelected] = useState<'clasico' | null>(null)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -198,9 +69,7 @@ export default function PaginaPage() {
           .eq('id', storeId!)
           .maybeSingle()
         if (cancelled || !data) return
-        if ((data as any).template) {
-          setSelected((data as any).template as TemplateId)
-        }
+        if (data.template === 'clasico') setSelected('clasico')
       } catch {
         // silently handle network or auth errors
       }
@@ -224,10 +93,9 @@ export default function PaginaPage() {
     router.push('/dashboard/canal/vitrina/editor')
   }
 
-  const canPersonalizar = selected === 'clasico'
+  const isSelected = selected === 'clasico'
 
   return (
-    <>
     <div className="vt-wrap">
 
       <div className="vt-header">
@@ -237,41 +105,35 @@ export default function PaginaPage() {
       </div>
 
       <div className="vt-grid">
-        {TEMPLATES.map(tpl => {
-          const isSelected = selected === tpl.id
-          return (
-            <article
-              key={tpl.id}
-              className={`vt-card${isSelected ? ' selected' : ''}`}
-              onClick={() => setSelected(isSelected ? null : tpl.id)}
-            >
-              {isSelected && (
-                <div className="vt-check-badge">
-                  <svg viewBox="0 0 16 16" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M3 8.5l3 3L13 4.5" />
-                  </svg>
-                </div>
-              )}
-              <div className="vt-phone">
-                <div className="vt-phone-notch"/>
-                <div className="vt-phone-screen">
-                  <TemplateWireframe id={tpl.id} />
-                  <TemplateStore id={tpl.id} />
-                </div>
-              </div>
-              <div className="vt-card-label">
-                <div className="vt-card-name">{tpl.namePrefix}<em>{tpl.nameAccent}</em></div>
-                <div className="vt-card-desc">{tpl.tag}</div>
-              </div>
-            </article>
-          )
-        })}
+        <article
+          className={`vt-card${isSelected ? ' selected' : ''}`}
+          onClick={() => setSelected(isSelected ? null : 'clasico')}
+        >
+          {isSelected && (
+            <div className="vt-check-badge">
+              <svg viewBox="0 0 16 16" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 8.5l3 3L13 4.5" />
+              </svg>
+            </div>
+          )}
+          <div className="vt-phone">
+            <div className="vt-phone-notch"/>
+            <div className="vt-phone-screen">
+              <WfA />
+              <StorePizza />
+            </div>
+          </div>
+          <div className="vt-card-label">
+            <div className="vt-card-name">El <em>clásico</em></div>
+            <div className="vt-card-desc">Hero + grid de productos</div>
+          </div>
+        </article>
       </div>
 
       <button
-        className={`vt-personalizar${canPersonalizar ? ' active' : ''}`}
+        className={`vt-personalizar${isSelected ? ' active' : ''}`}
         onClick={handlePersonalizar}
-        disabled={saving || !canPersonalizar}
+        disabled={saving || !isSelected}
       >
         {saving ? 'Guardando…' : 'Personalizar'}
         <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
@@ -280,6 +142,5 @@ export default function PaginaPage() {
       </button>
 
     </div>
-    </>
   )
 }

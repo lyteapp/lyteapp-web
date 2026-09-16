@@ -48,6 +48,7 @@ interface CheckoutSettings {
   deliveryTypes: { delivery: boolean; pickup: boolean }
   requirePaymentMethod: boolean; requirePaymentProof: boolean
   whatsappFloating: boolean
+  showBcvInSummary: boolean
 }
 
 const DEFAULTS: CheckoutSettings = {
@@ -56,6 +57,7 @@ const DEFAULTS: CheckoutSettings = {
   deliveryTypes: { delivery: true, pickup: false },
   requirePaymentMethod: false, requirePaymentProof: false,
   whatsappFloating: false,
+  showBcvInSummary: true,
 }
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
@@ -527,6 +529,13 @@ export default function CheckoutPage() {
                     </div>
                   </div>
                 )}
+                <div className="cn-toggle-row" style={{ marginTop: 16 }}>
+                  <div className="cn-toggle-info">
+                    <div className="cn-toggle-label">Mostrar conversion a Bs</div>
+                    <div className="cn-toggle-hint">Agrega una linea con el total en bolivares (tasa BCV) debajo del total en el resumen del pedido</div>
+                  </div>
+                  <Toggle checked={settings.showBcvInSummary} onChange={v => setSetting('showBcvInSummary', v)} />
+                </div>
               </div>
             </div>
 

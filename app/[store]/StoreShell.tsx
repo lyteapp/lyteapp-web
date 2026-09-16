@@ -329,6 +329,7 @@ type Store = {
     deliveryTypes?: { delivery?: boolean; pickup?: boolean }
     requirePaymentMethod?: boolean; requirePaymentProof?: boolean
     whatsappFloating?: boolean
+    showBcvInSummary?: boolean
   } | null
 }
 
@@ -2950,7 +2951,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
             <span>{t('store.total')}</span>
             <span className="sf-co-total-amt">{currencySymbol}{orderTotal.toFixed(2)}</span>
           </div>
-          {bcvRate && (
+          {bcvRate && cs.showBcvInSummary !== false && (
             <div className="sf-co-total" style={{ borderTop: 'none', paddingTop: 0, fontSize: 13, color: '#64748B', fontWeight: 400 }}>
               <span>Total Bs (BCV)</span>
               <span>Bs {(orderTotal * bcvRate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>

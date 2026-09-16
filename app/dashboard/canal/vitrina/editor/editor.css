@@ -18,11 +18,15 @@
 /* ── FULL-SCREEN OVERLAY ──────────────────────────────── */
 .ed-app {
   position: fixed;
+  /* inset:0 alone sizes this to the real visual viewport as mobile browser
+     chrome shows/hides. An explicit height:100vh here used to fight that —
+     on phones 100vh is the viewport with the address bar collapsed, so it
+     could stand taller than what's actually visible, pushing the device
+     preview (and its header) out of sync with the page as you scrolled. */
   inset: 0;
   z-index: 100;
   display: grid;
   grid-template-columns: 1fr 56px;
-  height: 100vh;
   background: var(--ed-bg);
   font-family: 'Geist', -apple-system, sans-serif;
   color: var(--ed-ink);
@@ -259,6 +263,7 @@
   display: flex;
   flex-direction: column;
   height: calc(100vh - 76px);
+  height: calc(100dvh - 76px);
   max-height: 820px;
 }
 .ed-device-chrome {
@@ -1868,6 +1873,7 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
   .ed-device {
     max-width: calc(100vw - 56px - 16px);
     height: calc(100vh - 60px);
+    height: calc(100dvh - 60px);
     border-radius: 32px;
   }
   .ed-device-content {

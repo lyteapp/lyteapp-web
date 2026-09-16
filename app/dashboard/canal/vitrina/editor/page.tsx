@@ -1485,12 +1485,15 @@ export default function EditorPage() {
                   </svg>
                 )}
               </button>
+              {/* 1x1 rather than 0x0 — iOS Safari needs the input to have
+                  real (if invisible) dimensions to anchor its native color
+                  sheet to, or the programmatic .click() below opens nothing. */}
               <input
                 ref={bgPickerRef}
                 type="color"
                 value={isCustomBg ? pageBg : '#FFFFFF'}
                 onChange={e => setPageBg(e.target.value)}
-                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
+                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
               />
             </div>
 
@@ -1536,7 +1539,7 @@ export default function EditorPage() {
                 type="color"
                 value={isCustomCard ? cardBg : '#FFFFFF'}
                 onChange={e => setCardBg(e.target.value)}
-                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
+                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
               />
             </div>
 
@@ -1575,7 +1578,7 @@ export default function EditorPage() {
                 type="color"
                 value={isCustomCatTitle ? catTitleColor : '#0F172A'}
                 onChange={e => setCatTitleColor(e.target.value)}
-                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
+                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
               />
             </div>
 
@@ -1606,7 +1609,7 @@ export default function EditorPage() {
                 type="color"
                 value={isCustomPrice ? priceColor : '#7C3AED'}
                 onChange={e => setPriceColor(e.target.value)}
-                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
+                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
               />
             </div>
 
@@ -1637,7 +1640,7 @@ export default function EditorPage() {
                 type="color"
                 value={isCustomAc ? accentColor : '#7C3AED'}
                 onChange={e => setAccentColor(e.target.value)}
-                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
+                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
               />
             </div>
 
@@ -1745,7 +1748,7 @@ export default function EditorPage() {
                 type="color"
                 value={isCustomAc ? accentColor : '#7C3AED'}
                 onChange={e => setAccentColor(e.target.value)}
-                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
+                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
               />
             </div>
 
@@ -1868,7 +1871,7 @@ export default function EditorPage() {
                 type="color"
                 value={isCustomPrice ? priceColor : '#7C3AED'}
                 onChange={e => setPriceColor(e.target.value)}
-                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
+                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
               />
             </div>
 
@@ -2338,7 +2341,7 @@ export default function EditorPage() {
                 type="color"
                 value={isCustomHeaderIcon ? headerIconColor : '#475569'}
                 onChange={e => setHeaderIconColor(e.target.value)}
-                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
+                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
               />
             </div>
 

@@ -210,7 +210,10 @@
   transition: border-color 0.15s;
 }
 .cn-color-custom:hover { border-color: #7C3AED; }
-.cn-color-custom input { opacity: 0; position: absolute; width: 0; height: 0; }
+/* 1x1 rather than 0x0 — iOS Safari needs the input to have real (if
+   invisible) dimensions to anchor its native color sheet to, or the click
+   that bubbles up from this swatch opens nothing. */
+.cn-color-custom input { opacity: 0; position: absolute; width: 1px; height: 1px; }
 
 /* ── PILL SELECTOR ── */
 .cn-pill-row { display: flex; gap: 6px; flex-wrap: wrap; }

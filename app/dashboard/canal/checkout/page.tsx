@@ -69,187 +69,39 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
   )
 }
 
-const MOCK_ITEMS = [
-  { name: 'Hamburguesa clasica', price: 8.50, qty: 1, image: null },
-  { name: 'Papas fritas',        price: 3.00, qty: 2, image: null },
-]
-
-const MOCK_PAYMENTS = ['Pago Movil', 'Zelle']
-
-function PvField({ label, width = '65%' }: { label: string; width?: string }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8 }}>
-      <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(15,23,42,0.4)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
-      <div style={{ background: '#F8F7F4', border: '1px solid rgba(15,23,42,0.1)', borderRadius: 8, padding: '9px 10px' }}>
-        <div style={{ height: 8, width, background: '#E2E8F0', borderRadius: 3 }} />
-      </div>
-    </div>
-  )
-}
-
-function CheckoutPreview({ settings }: { settings: CheckoutSettings }) {
-  const bothTypes  = settings.deliveryTypes.delivery && settings.deliveryTypes.pickup
-  const onlyPickup = !settings.deliveryTypes.delivery && settings.deliveryTypes.pickup
-  const [previewType, setPreviewType] = useState<'delivery' | 'pickup'>(onlyPickup ? 'pickup' : 'delivery')
-  const [selPayment, setSelPayment]   = useState(MOCK_PAYMENTS[0])
-  const subtotal = MOCK_ITEMS.reduce((s, i) => s + i.price * i.qty, 0)
-  const fee      = previewType === 'delivery' && settings.deliveryEnabled && settings.deliveryFee ? Number(settings.deliveryFee) : 0
-  const total    = subtotal + fee
-
-  const sec: React.CSSProperties = {
-    background: 'white', border: '1px solid rgba(15,23,42,0.08)',
-    borderRadius: 14, padding: '13px 14px',
-  }
-  const secTitle: React.CSSProperties = {
-    fontSize: 11, fontWeight: 700, color: '#0F172A',
-    letterSpacing: '-0.02em', marginBottom: 10,
-  }
-
+// Shows the real storefront's checkout, not a redrawn mockup — the iframe
+// opens straight into /{slug}?previewCheckout=1, which seeds a sample cart
+// and jumps to the checkout view (see StoreShell's isCheckoutPreview). It
+// only reflects the last *saved* settings, so it reloads (via previewKey)
+// after a successful save rather than redrawing on every keystroke.
+function CheckoutPreview({ storeSlug, previewKey }: { storeSlug: string | null; previewKey: number }) {
+  const [loadId] = useState(() => Date.now())
   return (
     <div className="cn-checkout-preview-frame" style={{
       border: '10px solid #1E1E2E', borderRadius: 36,
       boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
       overflow: 'hidden', background: '#F8F7F4',
-      maxHeight: 640, display: 'flex', flexDirection: 'column',
+      height: 640, maxHeight: 640, display: 'flex', flexDirection: 'column',
     }}>
-      {/* Status bar */}
-      <div style={{ background: 'white', padding: '10px 20px 6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 11, fontWeight: 600, color: '#0F172A' }}>9:41</span>
-        <div style={{ width: 80, height: 10, borderRadius: 10, background: '#1E1E2E' }} />
-        <span style={{ fontSize: 10, color: '#0F172A' }}>●●●</span>
-      </div>
-
-      {/* Nav */}
-      <div style={{ background: 'white', padding: '9px 16px', borderBottom: '1px solid rgba(15,23,42,0.08)', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <svg viewBox="0 0 20 20" fill="#64748B" width="14" height="14"><path fillRule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clipRule="evenodd"/></svg>
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#0F172A', flex: 1, textAlign: 'center', marginRight: 14 }}>Tu pedido</span>
-      </div>
-
-      {/* Content */}
-      <div style={{ overflowY: 'auto', flex: 1, padding: '12px 12px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-
-        {/* ── Resumen ── */}
-        <div style={sec}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <span style={secTitle}>Resumen</span>
-            <span style={{ fontSize: 9, color: '#EF4444', fontWeight: 600, background: 'rgba(239,68,68,0.08)', borderRadius: 6, padding: '3px 7px' }}>Vaciar</span>
-          </div>
-          {MOCK_ITEMS.map((item, idx) => (
-            <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: 9, paddingBottom: idx < MOCK_ITEMS.length - 1 ? 8 : 0, borderBottom: idx < MOCK_ITEMS.length - 1 ? '1px solid rgba(15,23,42,0.06)' : 'none', marginBottom: idx < MOCK_ITEMS.length - 1 ? 8 : 0 }}>
-              <div style={{ width: 38, height: 38, borderRadius: 8, background: '#F1F5F9', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" strokeWidth="1.5" width="14" height="14"><path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/></svg>
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 10, fontWeight: 600, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#7C3AED', marginTop: 2 }}>${(item.price * item.qty).toFixed(2)}</div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#F8FAFC', borderRadius: 8, padding: '4px 8px' }}>
-                <span style={{ fontSize: 10, color: '#64748B', fontWeight: 700 }}>−</span>
-                <span style={{ fontSize: 10, fontWeight: 700, color: '#0F172A', minWidth: 10, textAlign: 'center' }}>{item.qty}</span>
-                <span style={{ fontSize: 10, color: '#64748B', fontWeight: 700 }}>+</span>
-              </div>
-            </div>
-          ))}
-          {fee > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#64748B', marginTop: 8 }}>
-              <span>Envio</span><span>${fee.toFixed(2)}</span>
-            </div>
-          )}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, marginTop: 6, borderTop: '2px solid #F1F5F9' }}>
-            <span style={{ fontSize: 10, fontWeight: 600, color: '#475569' }}>Total</span>
-            <span style={{ fontSize: 15, fontWeight: 700, color: '#0F172A' }}>${total.toFixed(2)}</span>
-          </div>
+      {storeSlug ? (
+        <iframe
+          key={previewKey}
+          src={`/${storeSlug}?previewCheckout=1&_r=${loadId}-${previewKey}`}
+          style={{ width: '100%', height: '100%', border: 'none', display: 'block', background: 'white' }}
+          title="Vista previa del checkout"
+        />
+      ) : (
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8', fontSize: 12, textAlign: 'center', padding: 20 }}>
+          Cargando vista previa...
         </div>
-
-        {/* ── Tipo de entrega ── */}
-        {bothTypes && (
-          <div style={sec}>
-            <div style={secTitle}>Tipo de entrega</div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {(['delivery', 'pickup'] as const).map(t => (
-                <button key={t} type="button" onClick={() => setPreviewType(t)} style={{
-                  flex: 1, padding: '9px 6px', borderRadius: 10, border: 'none', cursor: 'pointer',
-                  background: previewType === t ? '#EDE9FE' : '#F8FAFC',
-                  outline: `2px solid ${previewType === t ? '#7C3AED' : '#E2E8F0'}`,
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, transition: 'all 0.15s',
-                }}>
-                  {t === 'delivery'
-                    ? <svg viewBox="0 0 20 20" fill={previewType === t ? '#7C3AED' : '#94A3B8'} width="16" height="16"><path fillRule="evenodd" clipRule="evenodd" d="M5 10.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5zm0 1a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm10-1a2.5 2.5 0 100 5 2.5 2.5 0 000-5zm0 1a1.5 1.5 0 110 3 1.5 1.5 0 010-3z"/><path d="M5.5 10.5L8 7h1.5L10 5.5h2.5L13 7.5l1.5-1.5h2v2L14.5 10.5H5.5z"/></svg>
-                    : <svg viewBox="0 0 20 20" fill={previewType === t ? '#7C3AED' : '#94A3B8'} width="16" height="16"><path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zm14 4H2v7a2 2 0 002 2h12a2 2 0 002-2V8zm-8 3a1 1 0 011 1v2a1 1 0 01-2 0v-2a1 1 0 011-1z" clipRule="evenodd"/></svg>
-                  }
-                  <span style={{ fontSize: 9, fontWeight: previewType === t ? 700 : 500, color: previewType === t ? '#7C3AED' : '#64748B' }}>
-                    {t === 'delivery' ? 'Domicilio' : 'Retiro en tienda'}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── Ubicacion de entrega ── */}
-        {previewType === 'delivery' && (
-          <div style={sec}>
-            <div style={secTitle}>Ubicacion de entrega <span style={{ color: '#EF4444' }}>*</span></div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, background: '#7C3AED', color: 'white', borderRadius: 8, padding: '9px 12px', marginBottom: 8, fontSize: 10, fontWeight: 600 }}>
-              <svg viewBox="0 0 20 20" fill="currentColor" width="11" height="11"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/></svg>
-              Compartir mi ubicacion GPS
-            </div>
-            <PvField label="Direccion de entrega" width="70%" />
-          </div>
-        )}
-
-        {/* ── Tus datos ── */}
-        <div style={sec}>
-          <div style={secTitle}>Tus datos</div>
-          {settings.requireName && <PvField label="Nombre completo" width="60%" />}
-          {settings.requirePhone && <PvField label="Telefono" width="45%" />}
-          {settings.allowNotes && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 0 }}>
-              <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(15,23,42,0.4)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Notas <span style={{ fontWeight: 500, textTransform: 'none', color: '#94A3B8' }}>· Opcional</span></div>
-              <div style={{ background: '#F8F7F4', border: '1px solid rgba(15,23,42,0.1)', borderRadius: 8, padding: '9px 10px' }}>
-                <div style={{ height: 8, width: '80%', background: '#E2E8F0', borderRadius: 3, marginBottom: 5 }} />
-                <div style={{ height: 8, width: '50%', background: '#E2E8F0', borderRadius: 3 }} />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ── Metodo de pago ── */}
-        <div style={sec}>
-          <div style={secTitle}>Metodo de pago</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-            {MOCK_PAYMENTS.map(pm => (
-              <div key={pm} onClick={() => setSelPayment(pm)} style={{
-                border: `1.5px solid ${selPayment === pm ? '#7C3AED' : 'rgba(15,23,42,0.1)'}`,
-                borderRadius: 11, padding: '10px 12px', cursor: 'pointer',
-                background: selPayment === pm ? 'rgba(124,58,237,0.06)' : 'white',
-                display: 'flex', alignItems: 'center', gap: 8, transition: 'all 0.15s',
-              }}>
-                <div style={{
-                  width: 13, height: 13, borderRadius: '50%', flexShrink: 0, position: 'relative',
-                  border: `2px solid ${selPayment === pm ? '#7C3AED' : '#CBD5E1'}`,
-                  background: selPayment === pm ? '#7C3AED' : 'white',
-                }}>
-                  {selPayment === pm && <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 5, height: 5, borderRadius: '50%', background: 'white' }} />}
-                </div>
-                <span style={{ fontSize: 10, fontWeight: 600, color: '#0F172A' }}>{pm}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── Confirmar ── */}
-        <div style={{ background: '#7C3AED', borderRadius: 11, padding: '13px 14px', textAlign: 'center', cursor: 'pointer' }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: 'white' }}>Confirmar pedido · ${total.toFixed(2)}</span>
-        </div>
-
-      </div>
+      )}
     </div>
   )
 }
 
 export default function CheckoutPage() {
-  const { storeId } = useDashboardStore()
+  const { storeId, store } = useDashboardStore()
+  const storeSlug = store?.slug ?? null
   const [settings, setSettings] = useState<CheckoutSettings>(DEFAULTS)
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -264,6 +116,7 @@ export default function CheckoutPage() {
   const [successPagos, setSuccessPagos] = useState(false)
   const [pagosError, setPagosError] = useState('')
   const [storeWhatsapp, setStoreWhatsapp] = useState<string | null>(null)
+  const [previewKey, setPreviewKey] = useState(0)
 
   useEffect(() => {
     if (!storeId) return
@@ -299,7 +152,7 @@ export default function CheckoutPage() {
     setSettingsError(''); setSuccess(false); setSaving(true)
     const { error: err } = await supabase.from('stores').update({ checkout_settings: settings }).eq('id', storeId)
     if (err) setSettingsError(err.message)
-    else setSuccess(true)
+    else { setSuccess(true); setPreviewKey(k => k + 1) }
     setSaving(false)
   }
 
@@ -312,6 +165,7 @@ export default function CheckoutPage() {
     setSavingPagos(false)
     if (err) { setPagosError(err.message); return }
     setSuccessPagos(true)
+    setPreviewKey(k => k + 1)
     setTimeout(() => setSuccessPagos(false), 3000)
   }
 
@@ -583,8 +437,20 @@ export default function CheckoutPage() {
 
         {/* ── Live preview ── */}
         <div className="cn-checkout-preview-col" style={{ position: 'sticky', top: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Vista previa</div>
-          <CheckoutPreview settings={settings} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Vista previa</div>
+            <button
+              type="button"
+              onClick={() => setPreviewKey(k => k + 1)}
+              title="Actualizar vista previa"
+              style={{ border: 'none', background: 'transparent', color: '#94A3B8', cursor: 'pointer', padding: 2, display: 'flex' }}
+            >
+              <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13">
+                <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 002.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0112.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </div>
+          <CheckoutPreview storeSlug={storeSlug} previewKey={previewKey} />
         </div>
 
       </div>

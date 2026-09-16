@@ -408,9 +408,20 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // opens straight on the catalog, skipping the home splash screen — that
   // preview is for editing the storefront's own appearance, not the splash.
   const isDashboardPreview = searchParams.get('preview') === '1'
-  const [cart, setCart]                   = useState<Record<string, CartItem>>({})
+  // The checkout editor links here with ?previewCheckout=1 to show the real
+  // checkout rendering (design, required fields, payment methods) instead of
+  // a hand-built mockup — it opens straight into checkout with a sample cart
+  // already in it, and handleSubmit refuses to actually place that order.
+  const isCheckoutPreview = searchParams.get('previewCheckout') === '1'
+  const [cart, setCart]                   = useState<Record<string, CartItem>>(() => {
+    if (!isCheckoutPreview) return {}
+    return Object.fromEntries(products.slice(0, 2).map(p => [p.id, {
+      id: p.id, productId: p.id, name: p.name, price: p.price, extraPrice: 0,
+      image_url: p.image_url, quantity: 1,
+    }]))
+  })
   const [view, setView]                   = useState<'catalog' | 'checkout' | 'confirmed' | 'splash' | 'reveal'>(() =>
-    (!isDashboardPreview && store.template_config?.homePage?.enabled) ? 'splash' : 'catalog'
+    isCheckoutPreview ? 'checkout' : (!isDashboardPreview && store.template_config?.homePage?.enabled) ? 'splash' : 'catalog'
   )
   const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [splashLeaving, setSplashLeaving] = useState(false)
@@ -887,11 +898,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
     // `display-mode` reflects the TOP-level browsing context per spec, so inside the
     // dashboard's preview iframe this can report "standalone" just because the dashboard
     // itself is installed/standalone — not because this storefront is. Skip it there.
-    if (!isDashboardPreview && window.matchMedia('(display-mode: standalone)').matches) { setInstalled(true); return }
+    if (!isDashboardPreview && !isCheckoutPreview && window.matchMedia('(display-mode: standalone)').matches) { setInstalled(true); return }
     const handler = (e: Event) => { e.preventDefault(); setInstallPrompt(e as Event & { prompt(): void }) }
     window.addEventListener('beforeinstallprompt', handler)
     return () => window.removeEventListener('beforeinstallprompt', handler)
-  }, [isDashboardPreview])
+  }, [isDashboardPreview, isCheckoutPreview])
 
   async function handleInstall() {
     if (isIos) { setShowIosHint(h => !h); return }
@@ -2060,6 +2071,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
   // ── Order submit ──
   async function handleSubmit() {
+    // The dashboard's checkout preview lands here with a pre-filled cart so
+    // the owner can see their real checkout rendering — but it must never
+    // actually place an order.
+    if (isCheckoutPreview) { setError('Esto es una vista previa — los pedidos no se envian aqui.'); return }
     if (!customerName.trim() || !customerPhone.trim()) { setError(t('store.error.required')); return }
     if (deliveryType === 'delivery' && !customerLat && !customerAddress.trim()) {
       setError('Ingresa tu direccion o comparte tu ubicacion GPS para continuar')

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useDashboardStore } from '../../../lib/DashboardStoreProvider'
 import '../canal.css'
@@ -178,8 +178,6 @@ export default function Apariencia() {
   const [isMobile, setIsMobile]             = useState(false)
   const [mobileTab, setMobileTab]           = useState<'preview' | 'config'>('preview')
   const [copiedUrl, setCopiedUrl]           = useState(false)
-  const trAccentRef = useRef<HTMLInputElement>(null)
-  const trDotRef    = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768)
@@ -792,19 +790,17 @@ export default function Apariencia() {
                 onClick={() => setTrConfig(p => ({ ...p, accentColor: c }))}
               />
             ))}
-            <div
+            <label
               className="cn-color-custom"
               style={{ background: TR_ACCENT_PRESETS.includes(trConfig.accentColor) ? undefined : trConfig.accentColor }}
-              onClick={() => trAccentRef.current?.click()}
             >
               {TR_ACCENT_PRESETS.includes(trConfig.accentColor) ? '+' : null}
               <input
-                ref={trAccentRef}
                 type="color"
                 value={trConfig.accentColor}
                 onChange={e => setTrConfig(p => ({ ...p, accentColor: e.target.value }))}
               />
-            </div>
+            </label>
           </div>
         </div>
 
@@ -857,19 +853,17 @@ export default function Apariencia() {
                 onClick={() => setTrConfig(p => ({ ...p, dotColor: c }))}
               />
             ))}
-            <div
+            <label
               className="cn-color-custom"
               style={{ background: DOT_COLOR_PRESETS.includes(trConfig.dotColor) ? undefined : trConfig.dotColor }}
-              onClick={() => trDotRef.current?.click()}
             >
               {DOT_COLOR_PRESETS.includes(trConfig.dotColor) ? '+' : null}
               <input
-                ref={trDotRef}
                 type="color"
                 value={trConfig.dotColor}
                 onChange={e => setTrConfig(p => ({ ...p, dotColor: e.target.value }))}
               />
-            </div>
+            </label>
           </div>
         </div>
 

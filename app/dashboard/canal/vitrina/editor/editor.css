@@ -858,9 +858,14 @@
   background: var(--ed-bg);
   border: 1.5px dashed var(--ed-line-strong) !important;
   color: var(--ed-ink-muted);
+  position: relative;
 }
 .ed-tp-custom:hover { border-color: var(--ed-violet) !important; color: var(--ed-violet); background: var(--ed-violet-bg); }
 .ed-tp-custom svg { width: 12px; height: 12px; }
+/* Covers the whole label so the tap lands on the real input — a label
+   natively delegates activation to it, unlike a synthetic .click() from a
+   separate button, which iOS Safari won't honor for a color input. */
+.ed-tp-custom-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; margin: 0; padding: 0; border: none; }
 
 /* Font options */
 .ed-font-opts { display: flex; flex-direction: column; gap: 6px; }

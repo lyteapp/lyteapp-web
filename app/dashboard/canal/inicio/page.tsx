@@ -606,13 +606,6 @@ export default function InicioPage() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const photoFileRef = useRef<HTMLInputElement>(null)
-  const bgColorRef = useRef<HTMLInputElement>(null)
-  const buttonColorRef = useRef<HTMLInputElement>(null)
-  const inputTextColorRef = useRef<HTMLInputElement>(null)
-  const inputBgColorRef = useRef<HTMLInputElement>(null)
-  const revealBgColorRef = useRef<HTMLInputElement>(null)
-  const revealNameColorRef = useRef<HTMLInputElement>(null)
-  const revealAccentColorRef = useRef<HTMLInputElement>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [selectedEl, setSelectedEl] = useState<SelectableId | null>(null)
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
@@ -823,14 +816,13 @@ export default function InicioPage() {
                         <div key={c} className={`cn-color-swatch${config.inputTextColor === c ? ' selected' : ''}`}
                           style={{ background: c, border: '1px solid rgba(15,23,42,0.12)' }} onClick={() => set('inputTextColor', c)} />
                       ))}
-                      <div
+                      <label
                         className="cn-color-custom"
                         style={{ background: TEXT_COLOR_PRESETS.includes(config.inputTextColor) ? undefined : config.inputTextColor }}
-                        onClick={() => inputTextColorRef.current?.click()}
                       >
                         {TEXT_COLOR_PRESETS.includes(config.inputTextColor) ? '+' : null}
-                        <input ref={inputTextColorRef} type="color" value={config.inputTextColor} onChange={e => set('inputTextColor', e.target.value)} />
-                      </div>
+                        <input type="color" value={config.inputTextColor} onChange={e => set('inputTextColor', e.target.value)} />
+                      </label>
                     </div>
 
                     <div className="cn-label" style={{ marginTop: 18, marginBottom: 8 }}>Color del fondo de los campos</div>
@@ -839,14 +831,13 @@ export default function InicioPage() {
                         <div key={c} className={`cn-color-swatch${config.inputBgColor === c ? ' selected' : ''}`}
                           style={{ background: c, border: '1px solid rgba(15,23,42,0.12)' }} onClick={() => set('inputBgColor', c)} />
                       ))}
-                      <div
+                      <label
                         className="cn-color-custom"
                         style={{ background: TEXT_COLOR_PRESETS.includes(config.inputBgColor) ? undefined : config.inputBgColor }}
-                        onClick={() => inputBgColorRef.current?.click()}
                       >
                         {TEXT_COLOR_PRESETS.includes(config.inputBgColor) ? '+' : null}
-                        <input ref={inputBgColorRef} type="color" value={config.inputBgColor} onChange={e => set('inputBgColor', e.target.value)} />
-                      </div>
+                        <input type="color" value={config.inputBgColor} onChange={e => set('inputBgColor', e.target.value)} />
+                      </label>
                     </div>
 
                     <div className="cn-label" style={{ marginTop: 18, marginBottom: 8 }}>Forma de los campos</div>
@@ -928,14 +919,13 @@ export default function InicioPage() {
                       <div key={c} className={`cn-color-swatch${config.buttonColor === c ? ' selected' : ''}`}
                         style={{ background: c }} onClick={() => set('buttonColor', c)} />
                     ))}
-                    <div
+                    <label
                       className="cn-color-custom"
                       style={{ background: PILL_COLOR_PRESETS.includes(config.buttonColor) ? undefined : config.buttonColor }}
-                      onClick={() => buttonColorRef.current?.click()}
                     >
                       {PILL_COLOR_PRESETS.includes(config.buttonColor) ? '+' : null}
-                      <input ref={buttonColorRef} type="color" value={config.buttonColor} onChange={e => set('buttonColor', e.target.value)} />
-                    </div>
+                      <input type="color" value={config.buttonColor} onChange={e => set('buttonColor', e.target.value)} />
+                    </label>
                   </div>
                 </div>
               </div>
@@ -1030,14 +1020,13 @@ export default function InicioPage() {
                       <div key={c} className={`cn-color-swatch${config.bgColor === c ? ' selected' : ''}`}
                         style={{ background: c }} onClick={() => set('bgColor', c)} />
                     ))}
-                    <div
+                    <label
                       className="cn-color-custom"
                       style={{ background: BG_PRESETS.includes(config.bgColor) ? undefined : config.bgColor }}
-                      onClick={() => bgColorRef.current?.click()}
                     >
                       {BG_PRESETS.includes(config.bgColor) ? '+' : null}
-                      <input ref={bgColorRef} type="color" value={config.bgColor} onChange={e => set('bgColor', e.target.value)} />
-                    </div>
+                      <input type="color" value={config.bgColor} onChange={e => set('bgColor', e.target.value)} />
+                    </label>
                   </div>
                 </div>
               </div>
@@ -1194,14 +1183,13 @@ export default function InicioPage() {
                       <div key={c} className={`cn-color-swatch${config.reveal.bgColor === c ? ' selected' : ''}`}
                         style={{ background: c }} onClick={() => setReveal('bgColor', c)} />
                     ))}
-                    <div
+                    <label
                       className="cn-color-custom"
                       style={{ background: BG_PRESETS.includes(config.reveal.bgColor) ? undefined : config.reveal.bgColor }}
-                      onClick={() => revealBgColorRef.current?.click()}
                     >
                       {BG_PRESETS.includes(config.reveal.bgColor) ? '+' : null}
-                      <input ref={revealBgColorRef} type="color" value={config.reveal.bgColor} onChange={e => setReveal('bgColor', e.target.value)} />
-                    </div>
+                      <input type="color" value={config.reveal.bgColor} onChange={e => setReveal('bgColor', e.target.value)} />
+                    </label>
                   </div>
 
                   <div className="cn-label" style={{ marginBottom: 8 }}>Color del nombre</div>
@@ -1210,14 +1198,13 @@ export default function InicioPage() {
                       <div key={c} className={`cn-color-swatch${config.reveal.nameColor === c ? ' selected' : ''}`}
                         style={{ background: c, border: '1px solid rgba(15,23,42,0.12)' }} onClick={() => setReveal('nameColor', c)} />
                     ))}
-                    <div
+                    <label
                       className="cn-color-custom"
                       style={{ background: TEXT_COLOR_PRESETS.includes(config.reveal.nameColor) ? undefined : config.reveal.nameColor }}
-                      onClick={() => revealNameColorRef.current?.click()}
                     >
                       {TEXT_COLOR_PRESETS.includes(config.reveal.nameColor) ? '+' : null}
-                      <input ref={revealNameColorRef} type="color" value={config.reveal.nameColor} onChange={e => setReveal('nameColor', e.target.value)} />
-                    </div>
+                      <input type="color" value={config.reveal.nameColor} onChange={e => setReveal('nameColor', e.target.value)} />
+                    </label>
                   </div>
 
                   <div className="cn-label" style={{ marginBottom: 8 }}>Color de acento (saludo, linea y subtitulo)</div>
@@ -1226,14 +1213,13 @@ export default function InicioPage() {
                       <div key={c} className={`cn-color-swatch${config.reveal.accentColor === c ? ' selected' : ''}`}
                         style={{ background: c, border: '1px solid rgba(15,23,42,0.12)' }} onClick={() => setReveal('accentColor', c)} />
                     ))}
-                    <div
+                    <label
                       className="cn-color-custom"
                       style={{ background: TEXT_COLOR_PRESETS.includes(config.reveal.accentColor) ? undefined : config.reveal.accentColor }}
-                      onClick={() => revealAccentColorRef.current?.click()}
                     >
                       {TEXT_COLOR_PRESETS.includes(config.reveal.accentColor) ? '+' : null}
-                      <input ref={revealAccentColorRef} type="color" value={config.reveal.accentColor} onChange={e => setReveal('accentColor', e.target.value)} />
-                    </div>
+                      <input type="color" value={config.reveal.accentColor} onChange={e => setReveal('accentColor', e.target.value)} />
+                    </label>
                   </div>
 
                   <div className="cn-field" style={{ marginTop: 18, marginBottom: 0 }}>

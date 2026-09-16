@@ -413,15 +413,6 @@ export default function EditorPage() {
   const [saving, setSaving]         = useState(false)
   const [toolSaved, setToolSaved]   = useState(false)
 
-  const bgPickerRef       = useRef<HTMLInputElement>(null)
-  const cardPickerRef     = useRef<HTMLInputElement>(null)
-  const acPickerRef       = useRef<HTMLInputElement>(null)
-  const acPickerColorsRef    = useRef<HTMLInputElement>(null)
-  const pricePickerRef       = useRef<HTMLInputElement>(null)
-  const pricePickerColorsRef = useRef<HTMLInputElement>(null)
-  const catTitlePickerRef    = useRef<HTMLInputElement>(null)
-  const headerIconPickerRef  = useRef<HTMLInputElement>(null)
-
   // ── Load saved config ──────────────────────────────────
   useEffect(() => {
     if (!activeStoreId) return
@@ -1473,28 +1464,27 @@ export default function EditorPage() {
                   onClick={() => setPageBg(c.value)}
                 />
               ))}
-              <button
+              {/* A <label> wrapping the real input, not a button that fires a
+                  ref'd .click() on a sibling — iOS Safari won't open the
+                  native color sheet for a synthetic click, only a real tap
+                  landing on (or a label activating) the input itself. */}
+              <label
                 className={`ed-tp-swatch ed-tp-custom${isCustomBg ? ' ed-tp-active' : ''}`}
                 style={isCustomBg ? { background: pageBg } : undefined}
                 title="Personalizado"
-                onClick={() => bgPickerRef.current?.click()}
               >
                 {!isCustomBg && (
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                     <path d="M12 5v14M5 12h14" />
                   </svg>
                 )}
-              </button>
-              {/* 1x1 rather than 0x0 — iOS Safari needs the input to have
-                  real (if invisible) dimensions to anchor its native color
-                  sheet to, or the programmatic .click() below opens nothing. */}
-              <input
-                ref={bgPickerRef}
-                type="color"
-                value={isCustomBg ? pageBg : '#FFFFFF'}
-                onChange={e => setPageBg(e.target.value)}
-                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
-              />
+                <input
+                  type="color"
+                  value={isCustomBg ? pageBg : '#FFFFFF'}
+                  onChange={e => setPageBg(e.target.value)}
+                  className="ed-tp-custom-input"
+                />
+              </label>
             </div>
 
             <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Cuadros de productos</div>
@@ -1522,25 +1512,23 @@ export default function EditorPage() {
                   onClick={() => setCardBg(c.value)}
                 />
               ))}
-              <button
+              <label
                 className={`ed-tp-swatch ed-tp-custom${isCustomCard ? ' ed-tp-active' : ''}`}
                 style={isCustomCard ? { background: cardBg } : undefined}
                 title="Personalizado"
-                onClick={() => cardPickerRef.current?.click()}
               >
                 {!isCustomCard && (
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                     <path d="M12 5v14M5 12h14" />
                   </svg>
                 )}
-              </button>
-              <input
-                ref={cardPickerRef}
-                type="color"
-                value={isCustomCard ? cardBg : '#FFFFFF'}
-                onChange={e => setCardBg(e.target.value)}
-                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
-              />
+                <input
+                  type="color"
+                  value={isCustomCard ? cardBg : '#FFFFFF'}
+                  onChange={e => setCardBg(e.target.value)}
+                  className="ed-tp-custom-input"
+                />
+              </label>
             </div>
 
             <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Titulo de categoria</div>
@@ -1561,25 +1549,23 @@ export default function EditorPage() {
                   onClick={() => setCatTitleColor(c)}
                 />
               ))}
-              <button
+              <label
                 className={`ed-tp-swatch ed-tp-custom${isCustomCatTitle ? ' ed-tp-active' : ''}`}
                 style={isCustomCatTitle ? { background: catTitleColor } : undefined}
                 title="Personalizado"
-                onClick={() => catTitlePickerRef.current?.click()}
               >
                 {!isCustomCatTitle && (
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                     <path d="M12 5v14M5 12h14" />
                   </svg>
                 )}
-              </button>
-              <input
-                ref={catTitlePickerRef}
-                type="color"
-                value={isCustomCatTitle ? catTitleColor : '#0F172A'}
-                onChange={e => setCatTitleColor(e.target.value)}
-                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
-              />
+                <input
+                  type="color"
+                  value={isCustomCatTitle ? catTitleColor : '#0F172A'}
+                  onChange={e => setCatTitleColor(e.target.value)}
+                  className="ed-tp-custom-input"
+                />
+              </label>
             </div>
 
             <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Precios</div>
@@ -1592,25 +1578,23 @@ export default function EditorPage() {
                   onClick={() => setPriceColor(c)}
                 />
               ))}
-              <button
+              <label
                 className={`ed-tp-swatch ed-tp-custom${isCustomPrice ? ' ed-tp-active' : ''}`}
                 style={isCustomPrice ? { background: priceColor } : undefined}
                 title="Personalizado"
-                onClick={() => pricePickerColorsRef.current?.click()}
               >
                 {!isCustomPrice && (
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                     <path d="M12 5v14M5 12h14" />
                   </svg>
                 )}
-              </button>
-              <input
-                ref={pricePickerColorsRef}
-                type="color"
-                value={isCustomPrice ? priceColor : '#7C3AED'}
-                onChange={e => setPriceColor(e.target.value)}
-                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
-              />
+                <input
+                  type="color"
+                  value={isCustomPrice ? priceColor : '#7C3AED'}
+                  onChange={e => setPriceColor(e.target.value)}
+                  className="ed-tp-custom-input"
+                />
+              </label>
             </div>
 
             <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Acentos (botones)</div>
@@ -1623,25 +1607,23 @@ export default function EditorPage() {
                   onClick={() => setAccentColor(c)}
                 />
               ))}
-              <button
+              <label
                 className={`ed-tp-swatch ed-tp-custom${isCustomAc ? ' ed-tp-active' : ''}`}
                 style={isCustomAc ? { background: accentColor } : undefined}
                 title="Personalizado"
-                onClick={() => acPickerColorsRef.current?.click()}
               >
                 {!isCustomAc && (
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                     <path d="M12 5v14M5 12h14" />
                   </svg>
                 )}
-              </button>
-              <input
-                ref={acPickerColorsRef}
-                type="color"
-                value={isCustomAc ? accentColor : '#7C3AED'}
-                onChange={e => setAccentColor(e.target.value)}
-                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
-              />
+                <input
+                  type="color"
+                  value={isCustomAc ? accentColor : '#7C3AED'}
+                  onChange={e => setAccentColor(e.target.value)}
+                  className="ed-tp-custom-input"
+                />
+              </label>
             </div>
 
             <PanelSave />
@@ -1731,25 +1713,23 @@ export default function EditorPage() {
                   onClick={() => setAccentColor(c)}
                 />
               ))}
-              <button
+              <label
                 className={`ed-tp-swatch ed-tp-custom${isCustomAc ? ' ed-tp-active' : ''}`}
                 style={isCustomAc ? { background: accentColor } : undefined}
                 title="Personalizado"
-                onClick={() => acPickerRef.current?.click()}
               >
                 {!isCustomAc && (
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                     <path d="M12 5v14M5 12h14" />
                   </svg>
                 )}
-              </button>
-              <input
-                ref={acPickerRef}
-                type="color"
-                value={isCustomAc ? accentColor : '#7C3AED'}
-                onChange={e => setAccentColor(e.target.value)}
-                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
-              />
+                <input
+                  type="color"
+                  value={isCustomAc ? accentColor : '#7C3AED'}
+                  onChange={e => setAccentColor(e.target.value)}
+                  className="ed-tp-custom-input"
+                />
+              </label>
             </div>
 
             <PanelSave />
@@ -1854,25 +1834,23 @@ export default function EditorPage() {
                   onClick={() => setPriceColor(c)}
                 />
               ))}
-              <button
+              <label
                 className={`ed-tp-swatch ed-tp-custom${isCustomPrice ? ' ed-tp-active' : ''}`}
                 style={isCustomPrice ? { background: priceColor } : undefined}
                 title="Personalizado"
-                onClick={() => pricePickerRef.current?.click()}
               >
                 {!isCustomPrice && (
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                     <path d="M12 5v14M5 12h14" />
                   </svg>
                 )}
-              </button>
-              <input
-                ref={pricePickerRef}
-                type="color"
-                value={isCustomPrice ? priceColor : '#7C3AED'}
-                onChange={e => setPriceColor(e.target.value)}
-                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
-              />
+                <input
+                  type="color"
+                  value={isCustomPrice ? priceColor : '#7C3AED'}
+                  onChange={e => setPriceColor(e.target.value)}
+                  className="ed-tp-custom-input"
+                />
+              </label>
             </div>
 
             <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Tamano</div>
@@ -2324,25 +2302,23 @@ export default function EditorPage() {
                   onClick={() => setHeaderIconColor(c)}
                 />
               ))}
-              <button
+              <label
                 className={`ed-tp-swatch ed-tp-custom${isCustomHeaderIcon ? ' ed-tp-active' : ''}`}
                 style={isCustomHeaderIcon ? { background: headerIconColor } : undefined}
                 title="Personalizado"
-                onClick={() => headerIconPickerRef.current?.click()}
               >
                 {!isCustomHeaderIcon && (
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                     <path d="M12 5v14M5 12h14" />
                   </svg>
                 )}
-              </button>
-              <input
-                ref={headerIconPickerRef}
-                type="color"
-                value={isCustomHeaderIcon ? headerIconColor : '#475569'}
-                onChange={e => setHeaderIconColor(e.target.value)}
-                style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
-              />
+                <input
+                  type="color"
+                  value={isCustomHeaderIcon ? headerIconColor : '#475569'}
+                  onChange={e => setHeaderIconColor(e.target.value)}
+                  className="ed-tp-custom-input"
+                />
+              </label>
             </div>
 
             <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Encabezado sobre el banner</div>

@@ -1873,13 +1873,34 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
 
 /* ── RESPONSIVE ───────────────────────────────────────── */
 @media (max-width: 800px) {
+  /* The icon rail moves from a side column to a bottom tab bar, so the
+     preview gets the phone's full width instead of sharing it with a
+     56px-wide column down the side. */
+  .ed-app {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 60px;
+  }
+  .ed-side-bar {
+    width: 100%;
+    height: 60px;
+    flex-direction: row;
+    align-items: center;
+    border-left: none;
+    border-top: 1px solid var(--ed-line);
+    padding: 0 6px;
+    gap: 2px;
+    overflow-x: auto;
+  }
+  .ed-side-bar .ed-tool-btn { width: 38px; height: 38px; flex-shrink: 0; }
+  .ed-tool-exit { margin-top: 0; margin-left: auto; }
+
   .ed-canvas-scroll {
     padding: 6px 8px;
   }
   .ed-device {
-    max-width: calc(100vw - 56px - 16px);
-    height: calc(100vh - 60px);
-    height: calc(100dvh - 60px);
+    max-width: calc(100vw - 16px);
+    height: calc(100vh - 96px);
+    height: calc(100dvh - 96px);
     border-radius: 32px;
   }
   .ed-device-content {
@@ -1890,20 +1911,39 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
      contenido" got squeezed to 172px and ran out of vertical space with
      no way to reach what scrolled past the bottom. Below this width it
      becomes a full-width bottom sheet instead, with its own height cap
-     (not .ed-tool-panel-lg's, sized for the *side* popover) and scroll. */
+     (not .ed-tool-panel-lg's, sized for the *side* popover) and scroll —
+     anchored above the bottom tab bar rather than the screen edge. */
   .ed-tool-panel {
     left: 12px;
     right: 12px;
     top: auto;
-    bottom: 12px;
+    bottom: 68px;
     transform: none;
     width: auto;
-    max-height: 70vh;
-    max-height: 70dvh;
+    max-height: 60vh;
+    max-height: 60dvh;
     overflow-y: auto;
     animation: edPanelInMobile 0.16s ease;
   }
+  /* Grabbed to swipe the sheet closed and reveal the preview underneath —
+     hidden on desktop, where the panel is a side popover, not a sheet. */
+  .ed-tp-drag-handle {
+    display: flex;
+    justify-content: center;
+    padding: 2px 0 12px;
+    margin: -4px 0 4px;
+    cursor: grab;
+    touch-action: none;
+  }
+  .ed-tp-drag-bar {
+    width: 36px;
+    height: 4px;
+    border-radius: 100px;
+    background: var(--ed-line-strong);
+  }
 }
+
+.ed-tp-drag-handle { display: none; }
 
 @keyframes edPanelInMobile {
   from { opacity: 0; transform: translateY(16px); }

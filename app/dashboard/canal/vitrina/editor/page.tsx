@@ -412,6 +412,9 @@ export default function EditorPage() {
   const [previewLoadId] = useState(() => Date.now())
   const [saving, setSaving]         = useState(false)
   const [toolSaved, setToolSaved]   = useState(false)
+  const toolPanelRef = useRef<HTMLDivElement>(null)
+  const panelDragStartY = useRef(0)
+  const panelDragging = useRef(false)
 
   // ── Load saved config ──────────────────────────────────
   useEffect(() => {
@@ -1245,6 +1248,46 @@ export default function EditorPage() {
     )
   }
 
+  // Mobile-only: the panel is a bottom sheet there, so its top edge carries
+  // a drag handle — dragging it down far enough closes the panel, same as
+  // the X button, so the preview underneath is reachable without a tap.
+  // Only one tool panel is ever mounted at a time, so a single ref/set of
+  // handlers (rather than one per panel) is enough.
+  function panelDragPointerDown(e: React.PointerEvent) {
+    panelDragStartY.current = e.clientY
+    panelDragging.current = true
+    e.currentTarget.setPointerCapture(e.pointerId)
+    if (toolPanelRef.current) toolPanelRef.current.style.transition = 'none'
+  }
+  function panelDragPointerMove(e: React.PointerEvent) {
+    if (!panelDragging.current || !toolPanelRef.current) return
+    const dy = Math.max(0, e.clientY - panelDragStartY.current)
+    toolPanelRef.current.style.transform = `translateY(${dy}px)`
+  }
+  function panelDragPointerUp(e: React.PointerEvent) {
+    if (!panelDragging.current) return
+    panelDragging.current = false
+    const dy = e.clientY - panelDragStartY.current
+    if (toolPanelRef.current) {
+      toolPanelRef.current.style.transition = ''
+      toolPanelRef.current.style.transform = ''
+    }
+    if (dy > 70) setActiveTool(null)
+  }
+
+  function renderPanelDragHandle() {
+    return (
+      <div
+        className="ed-tp-drag-handle"
+        onPointerDown={panelDragPointerDown}
+        onPointerMove={panelDragPointerMove}
+        onPointerUp={panelDragPointerUp}
+      >
+        <div className="ed-tp-drag-bar" />
+      </div>
+    )
+  }
+
   // Precomputed once per render: which index each display unit sits at
   // within its own position (afterId), and how many units share that
   // position — drives the reorder arrows' enabled/disabled state.
@@ -1450,7 +1493,8 @@ export default function EditorPage() {
 
         {/* Panel — Color de fondo */}
         {activeTool === 'colors' && (
-          <div className="ed-tool-panel">
+          <div className="ed-tool-panel" ref={toolPanelRef}>
+            {renderPanelDragHandle()}
             <div className="ed-tp-title">Colores</div>
 
             <div className="ed-tp-subtitle">Fondo de la pagina</div>
@@ -1632,7 +1676,8 @@ export default function EditorPage() {
 
         {/* Panel — Letras */}
         {activeTool === 'text' && (
-          <div className="ed-tool-panel ed-tool-panel-lg ed-tool-panel-type">
+          <div className="ed-tool-panel ed-tool-panel-lg ed-tool-panel-type" ref={toolPanelRef}>
+            {renderPanelDragHandle()}
             <div className="ed-tp-title">Letras</div>
 
             <div className="ed-tp-subtitle">Fuente general</div>
@@ -1738,7 +1783,8 @@ export default function EditorPage() {
 
         {/* Panel — Fotos */}
         {activeTool === 'shape' && (
-          <div className="ed-tool-panel ed-tool-panel-lg">
+          <div className="ed-tool-panel ed-tool-panel-lg" ref={toolPanelRef}>
+            {renderPanelDragHandle()}
             <div className="ed-tp-title">Fotos</div>
             <div className="ed-tp-subtitle">Forma global</div>
             <div className="ed-shape-opts">
@@ -1821,7 +1867,8 @@ export default function EditorPage() {
 
         {/* Panel — Precios */}
         {activeTool === 'price' && (
-          <div className="ed-tool-panel ed-tool-panel-lg ed-tool-panel-type">
+          <div className="ed-tool-panel ed-tool-panel-lg ed-tool-panel-type" ref={toolPanelRef}>
+            {renderPanelDragHandle()}
             <div className="ed-tp-title">Estilo de precios</div>
 
             <div className="ed-tp-subtitle">Color</div>
@@ -1889,7 +1936,8 @@ export default function EditorPage() {
 
         {/* Panel — Categorias */}
         {activeTool === 'categories' && (
-          <div className="ed-tool-panel ed-tool-panel-lg">
+          <div className="ed-tool-panel ed-tool-panel-lg" ref={toolPanelRef}>
+            {renderPanelDragHandle()}
             <div className="ed-tp-title">Categorias</div>
             <div className="ed-tp-subtitle">Estilo de los botones</div>
             <div className="ed-cat-style-grid">
@@ -2098,7 +2146,8 @@ export default function EditorPage() {
 
         {/* Panel — Encabezado */}
         {activeTool === 'brand' && (
-          <div className="ed-tool-panel ed-tool-panel-lg">
+          <div className="ed-tool-panel ed-tool-panel-lg" ref={toolPanelRef}>
+            {renderPanelDragHandle()}
             <div className="ed-tp-title">Encabezado</div>
 
             <div className="ed-tp-subtitle">Posicion del logo</div>
@@ -2381,7 +2430,8 @@ export default function EditorPage() {
 
         {/* Panel — Bloques de contenido */}
         {activeTool === 'blocks' && (
-          <div className="ed-tool-panel ed-tool-panel-lg">
+          <div className="ed-tool-panel ed-tool-panel-lg" ref={toolPanelRef}>
+            {renderPanelDragHandle()}
             <div className="ed-tp-title">Bloques de contenido</div>
 
             {contentBlocks.length > 0 && (
@@ -3053,7 +3103,8 @@ export default function EditorPage() {
 
         {/* Panel — Producto */}
         {activeTool === 'product' && (
-          <div className="ed-tool-panel ed-tool-panel-lg">
+          <div className="ed-tool-panel ed-tool-panel-lg" ref={toolPanelRef}>
+            {renderPanelDragHandle()}
             <div className="ed-tp-title">Producto</div>
 
             <div className="ed-tp-subtitle">Modal de producto</div>
@@ -3088,7 +3139,8 @@ export default function EditorPage() {
         )}
 
         {activeTool === 'reorder' && (
-          <div className="ed-tool-panel ed-tool-panel-lg">
+          <div className="ed-tool-panel ed-tool-panel-lg" ref={toolPanelRef}>
+            {renderPanelDragHandle()}
             <div className="ed-tp-title">Repetir pedido</div>
 
             <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#F8FAFC', borderRadius: 10, cursor: 'pointer', gap: 12 }}>
@@ -3419,7 +3471,8 @@ export default function EditorPage() {
         )}
 
         {activeTool === 'ads' && (
-          <div className="ed-tool-panel ed-tool-panel-lg">
+          <div className="ed-tool-panel ed-tool-panel-lg" ref={toolPanelRef}>
+            {renderPanelDragHandle()}
             <div className="ed-tp-title">Anuncios</div>
             <div style={{ fontSize: 11, color: '#94A3B8', marginTop: -8 }}>
               Crea uno o varios anuncios y elige como aparecen en la tienda: tarjeta flotante, ventana emergente o barra fija arriba/abajo.

@@ -106,8 +106,7 @@ function CheckoutPreview({ settings }: { settings: CheckoutSettings }) {
   }
 
   return (
-    <div style={{
-      width: 300, flexShrink: 0,
+    <div className="cn-checkout-preview-frame" style={{
       border: '10px solid #1E1E2E', borderRadius: 36,
       boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
       overflow: 'hidden', background: '#F8F7F4',
@@ -323,7 +322,7 @@ export default function CheckoutPage() {
         <div className="cn-desc">Configura el proceso de compra de tu tienda.</div>
       </div>
 
-      <div style={{ display: 'flex', gap: 40, alignItems: 'flex-start' }}>
+      <div className="cn-checkout-split">
 
         {/* ── Settings form ── */}
         <div style={{ flex: 1, minWidth: 0 }}>

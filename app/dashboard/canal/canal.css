@@ -5,6 +5,18 @@
 .cn-title { font-size: 22px; font-weight: 700; color: #0F172A; letter-spacing: -0.04em; margin-bottom: 6px; }
 .cn-desc { font-size: 14px; color: #64748B; line-height: 1.5; }
 
+/* ── CHECKOUT: settings form + phone preview, side by side ── */
+.cn-checkout-split { display: flex; gap: 40px; align-items: flex-start; }
+.cn-checkout-preview-frame { width: 300px; flex-shrink: 0; }
+
+@media (max-width: 900px) {
+  /* Below this, the fixed 300px preview no longer fits next to a usable
+     form width — stack it above the form instead of letting both sides
+     get squeezed and cut off. */
+  .cn-checkout-split { flex-direction: column; }
+  .cn-checkout-preview-frame { width: 100%; max-width: 300px; margin: 0 auto; }
+}
+
 /* ── SECTIONS ── */
 .cn-section {
   background: white;

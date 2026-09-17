@@ -3487,6 +3487,17 @@ export default function StoreShell({ store, products, categories = [], initialBc
     .filter(g => g.items.length > 0)
   const uncategorized = products.filter(p => !p.category_id || !categories.find(c => c.id === p.category_id))
   const hasCats = catGroups.length > 0
+  // The flat (no-categories) layouts below list every product directly
+  // instead of going through catGroups, so they need their own exclusion —
+  // otherwise a store with just one category, once it's hidden, falls into
+  // "no categories" and shows that category's products anyway.
+  const visibleProducts = products.filter(p => !p.category_id || !cfgHiddenCategoryIds.has(p.category_id))
+  // Content blocks anchored to a hidden category (e.g. the button meant to
+  // link people to it) only render inside the catGroups loop today, which
+  // skips hidden categories entirely — so the block meant to advertise the
+  // hidden category disappeared along with it. Rendered once, up front in
+  // the normal flow, for every template that supports content blocks.
+  const hiddenCategoryBlocks = categories.filter(cat => cfgHiddenCategoryIds.has(cat.id))
   const catNavEl = hasCats && tpl !== 'catalogo' && cfg.showCatNav !== false ? (
     <nav className={`sf-cat-nav sf-cat-nav-${cfgCatNavStyle}${cfgStickyCatNav ? '' : ' sf-cat-nav-nosticky'}${cfgCatNavOverBanner ? ' sf-cat-nav-glass' : ''}`}>
       {catGroups.map(({ cat }) => (
@@ -3514,16 +3525,16 @@ export default function StoreShell({ store, products, categories = [], initialBc
       )}
     </nav>
   ) : null
-  const escFeatured = products.slice(0, 2)
-  const escRest     = products.slice(2)
-  const vitHero     = products.length > 0 ? products[0] : null
-  const vitRest     = products.slice(1)
+  const escFeatured = visibleProducts.slice(0, 2)
+  const escRest     = visibleProducts.slice(2)
+  const vitHero     = visibleProducts.length > 0 ? visibleProducts[0] : null
+  const vitRest     = visibleProducts.slice(1)
   // Filtering keys off having a search query at all, not the template — the
   // catalogo template's own bar and the header search icon (any template)
   // both just write into the same searchQuery state.
   const catFiltered = searchQuery.trim()
-    ? products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.description ?? '').toLowerCase().includes(searchQuery.toLowerCase()))
-    : products
+    ? visibleProducts.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.description ?? '').toLowerCase().includes(searchQuery.toLowerCase()))
+    : visibleProducts
   const catGroupsFiltered = catGroups.map(({ cat, items }) => ({
     cat,
     items: searchQuery.trim()
@@ -4062,6 +4073,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                     <div className="sf-grid">{uncategorized.map(renderCard)}</div>
                   </div>
                 )}
+                {hiddenCategoryBlocks.map(cat => <Fragment key={`hb-${cat.id}`}>{renderContentBlocks(cat.id)}</Fragment>)}
                 {renderContentBlocks('bottom')}
               </>
             ) : vitHero ? (
@@ -4109,6 +4121,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                     <div className="sf-esc-list">{uncategorized.map(renderEscRow)}</div>
                   </div>
                 )}
+                {hiddenCategoryBlocks.map(cat => <Fragment key={`hb-${cat.id}`}>{renderContentBlocks(cat.id)}</Fragment>)}
                 {renderContentBlocks('bottom')}
               </>
             ) : (
@@ -4168,12 +4181,13 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   {renderProductGrid(uncategorized, '__other')}
                 </div>
               )}
+              {hiddenCategoryBlocks.map(cat => <Fragment key={`hb-${cat.id}`}>{renderContentBlocks(cat.id)}</Fragment>)}
               {renderContentBlocks('bottom')}
             </>
           ) : (
             <>
               <h2 className="sf-section-title">{t('store.ourProducts')}</h2>
-              <div className="sf-grid">{products.map(renderCard)}</div>
+              <div className="sf-grid">{visibleProducts.map(renderCard)}</div>
             </>
           )}
         </div>

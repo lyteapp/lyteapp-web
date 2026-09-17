@@ -1192,14 +1192,19 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const headerPxNow = headerHeightMeasured ?? cfg.headerHeightPx ?? 56
   const showHeaderAboveModal = cfgModalFull && view === 'catalog' && !!modalProduct
 
-  // Show a brief demo of the drag-to-magnify photo interaction every time
-  // the full-page product modal opens, so customers discover it.
+  // Show a brief demo of the drag-to-magnify photo interaction, but only
+  // for the first product a customer opens per visit (sessionStorage).
   const modalProductId = modalProduct?.id
   useEffect(() => {
     if (cfgModalFull && modalProductId) {
-      setMagnifierHint(true)
-      const t = setTimeout(() => setMagnifierHint(false), 2200)
-      return () => clearTimeout(t)
+      let alreadySeen = true
+      try { alreadySeen = sessionStorage.getItem('sf-magnifier-hint-seen') === '1' } catch {}
+      if (!alreadySeen) {
+        setMagnifierHint(true)
+        try { sessionStorage.setItem('sf-magnifier-hint-seen', '1') } catch {}
+        const t = setTimeout(() => setMagnifierHint(false), 2200)
+        return () => clearTimeout(t)
+      }
     }
     setMagnifierHint(false)
   }, [modalProductId, cfgModalFull])

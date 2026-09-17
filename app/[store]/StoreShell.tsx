@@ -2576,7 +2576,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
               style={hp.elementSizes?.logo ? { width: hp.elementSizes.logo * splashScale, height: hp.elementSizes.logo * splashScale } : undefined}
             />
           )}
-          <h1 className="sf-splash-title" style={hp.elementSizes?.title ? { fontSize: hp.elementSizes.title * splashScale } : undefined}>{hp.title || store.name}</h1>
+          {hp.title && <h1 className="sf-splash-title" style={hp.elementSizes?.title ? { fontSize: hp.elementSizes.title * splashScale } : undefined}>{hp.title}</h1>}
           {hp.subtitle && <p className="sf-splash-sub" style={hp.elementSizes?.subtitle ? { fontSize: hp.elementSizes.subtitle * splashScale } : undefined}>{hp.subtitle}</p>}
 
           {collectCustomerData && (

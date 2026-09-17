@@ -1461,6 +1461,15 @@ html, body { overflow-x: clip; }
   max-height: 60vh;
   max-height: 60dvh;
 }
+/* "Pagina completa" — a real full-screen takeover, edge to edge, instead
+   of the unset/legacy default's rounded ~90vh sheet with a visible gap. */
+.sf-modal-fullpage {
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
+  border-radius: 0;
+}
 @keyframes sfModalUp {
   from { transform: translateY(100%); }
   to   { transform: translateY(0); }
@@ -1843,6 +1852,15 @@ html, body { overflow-x: clip; }
   }
   .sf-modal {
     border-radius: 24px;
+  }
+  /* "Pagina completa" stays edge to edge even on desktop, instead of
+     shrinking into the centered dialog other sizes use there. */
+  .sf-modal-wrap-fullpage {
+    max-width: 100%;
+    width: 100%;
+  }
+  .sf-modal-fullpage {
+    border-radius: 0;
   }
 }
 

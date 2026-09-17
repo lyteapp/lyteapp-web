@@ -1158,6 +1158,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const adBarCatNavBottom = cfgStickyOffsetPx + catNavOwnHeight
   const cfgModalWizard = !!cfg.modalWizard
   const cfgModalHalf = cfg.modalSize === 'half'
+  // Explicit "full" is a real full-screen takeover — distinct from the
+  // unset/legacy default, which keeps today's ~90vh sheet look unchanged.
+  const cfgModalFull = cfg.modalSize === 'full'
 
   // ── iOS Safari reveals <body>'s own background during the rubber-band
   // overscroll bounce past the top/bottom of the page. The app shell's
@@ -1709,7 +1712,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
             <div className="sf-chip-nutrition-tip-item"><strong>{Math.round(chipNutritionPreview.choice.carbs ?? 0)}g</strong><span>carbs</span></div>
           </div>
         )}
-        <div className="sf-modal-wrap">
+        <div className={`sf-modal-wrap${cfgModalFull ? ' sf-modal-wrap-fullpage' : ''}`}>
           {modalNutritionEnabled && modalNutritionDisplay && (
             <div className="sf-modal-nutrition-badge sf-modal-nutrition-badge-float">
               <div className="sf-modal-nutrition-chart">
@@ -1747,7 +1750,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
               </div>
             </div>
           )}
-        <div className={`sf-modal${cfgModalHalf ? ' sf-modal-half' : ''}`} onClick={e => e.stopPropagation()}>
+        <div className={`sf-modal${cfgModalHalf ? ' sf-modal-half' : ''}${cfgModalFull ? ' sf-modal-fullpage' : ''}`} onClick={e => e.stopPropagation()}>
           <button className="sf-modal-close" onClick={() => setModalProduct(null)}>×</button>
 
           <div className="sf-modal-product-head">

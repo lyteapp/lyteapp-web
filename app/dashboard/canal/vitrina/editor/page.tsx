@@ -348,6 +348,7 @@ export default function EditorPage() {
   const [headerOverBanner, setHeaderOverBanner] = useState(false)
   const [headerSticky, setHeaderSticky] = useState(false)
   const [modalWizard, setModalWizard] = useState(false)
+  const [modalSize, setModalSize] = useState<'full' | 'half'>('full')
   const [enableReorder, setEnableReorder] = useState(false)
   const [reorderBannerEnabled, setReorderBannerEnabled] = useState(true)
   const [reorderHeaderButton, setReorderHeaderButton] = useState(false)
@@ -480,6 +481,7 @@ export default function EditorPage() {
       if (cfg.headerOverBanner !== undefined) setHeaderOverBanner(cfg.headerOverBanner as boolean)
       if (cfg.headerSticky !== undefined) setHeaderSticky(cfg.headerSticky as boolean)
       if (cfg.modalWizard !== undefined) setModalWizard(cfg.modalWizard as boolean)
+      if (cfg.modalSize) setModalSize(cfg.modalSize as 'full' | 'half')
       if (cfg.enableReorder !== undefined) setEnableReorder(cfg.enableReorder as boolean)
       if (cfg.reorderBannerEnabled !== undefined) setReorderBannerEnabled(cfg.reorderBannerEnabled as boolean)
       if (cfg.reorderHeaderButton !== undefined) setReorderHeaderButton(cfg.reorderHeaderButton as boolean)
@@ -984,7 +986,7 @@ export default function EditorPage() {
       priceColor, accentColor, priceFont: priceFont || pageFont, priceSize,
       catTitleFont: catTitleFont || undefined, productNameFont: productNameFont || undefined,
       categoryNavStyle, showCatNav, stickyCatNav, catNavOverBanner, categorySpacing,
-      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, showHeaderSearch, showHeaderCart, headerIconColor: headerIconColor || undefined, headerOverBanner, headerSticky, headerHeightPx, modalWizard, enableReorder, reorderBannerEnabled: enableReorder ? reorderBannerEnabled : undefined, reorderHeaderButton: enableReorder ? reorderHeaderButton : undefined, reorderHeaderHintSeconds: (enableReorder && reorderHeaderButton) ? reorderHeaderHintSeconds : undefined, reorderFloatSeconds: reorderFloatSeconds > 0 ? reorderFloatSeconds : undefined,
+      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, showHeaderSearch, showHeaderCart, headerIconColor: headerIconColor || undefined, headerOverBanner, headerSticky, headerHeightPx, modalWizard, modalSize, enableReorder, reorderBannerEnabled: enableReorder ? reorderBannerEnabled : undefined, reorderHeaderButton: enableReorder ? reorderHeaderButton : undefined, reorderHeaderHintSeconds: (enableReorder && reorderHeaderButton) ? reorderHeaderHintSeconds : undefined, reorderFloatSeconds: reorderFloatSeconds > 0 ? reorderFloatSeconds : undefined,
       reorderPosition: reorderPosition !== 'right' ? reorderPosition : undefined,
       reorderTitle: reorderTitle.trim() || undefined,
       reorderImageUrl: reorderImageUrl || undefined,
@@ -3141,6 +3143,29 @@ export default function EditorPage() {
                 </div>
               </div>
             </label>
+
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Tamano al abrir</div>
+            <div className="ed-align-opts">
+              <button
+                className={`ed-align-opt${modalSize === 'full' ? ' ed-align-opt-active' : ''}`}
+                onClick={() => setModalSize('full')}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="4" y="3" width="16" height="18" rx="2" />
+                </svg>
+                Pagina completa
+              </button>
+              <button
+                className={`ed-align-opt${modalSize === 'half' ? ' ed-align-opt-active' : ''}`}
+                onClick={() => setModalSize('half')}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="4" y="3" width="16" height="18" rx="2" />
+                  <line x1="4" y1="13" x2="20" y2="13" />
+                </svg>
+                Media pagina
+              </button>
+            </div>
 
             <PanelSave />
           </div>

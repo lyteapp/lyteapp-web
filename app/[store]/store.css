@@ -1455,6 +1455,12 @@ html, body { overflow-x: clip; }
   position: relative;
   touch-action: auto;
 }
+/* "Media pagina" — a shorter sheet that leaves the store visible behind it,
+   instead of the near-full-height default. */
+.sf-modal-half {
+  max-height: 60vh;
+  max-height: 60dvh;
+}
 @keyframes sfModalUp {
   from { transform: translateY(100%); }
   to   { transform: translateY(0); }

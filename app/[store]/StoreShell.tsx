@@ -267,6 +267,7 @@ type TemplateConfig = {
   headerSticky?: boolean
   headerHeightPx?: number
   modalWizard?: boolean
+  modalSize?: 'full' | 'half'
   enableReorder?: boolean
   reorderBannerEnabled?: boolean
   reorderHeaderButton?: boolean
@@ -1156,6 +1157,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // regardless of current scroll position.
   const adBarCatNavBottom = cfgStickyOffsetPx + catNavOwnHeight
   const cfgModalWizard = !!cfg.modalWizard
+  const cfgModalHalf = cfg.modalSize === 'half'
 
   // ── iOS Safari reveals <body>'s own background during the rubber-band
   // overscroll bounce past the top/bottom of the page. The app shell's
@@ -1745,7 +1747,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
               </div>
             </div>
           )}
-        <div className="sf-modal" onClick={e => e.stopPropagation()}>
+        <div className={`sf-modal${cfgModalHalf ? ' sf-modal-half' : ''}`} onClick={e => e.stopPropagation()}>
           <button className="sf-modal-close" onClick={() => setModalProduct(null)}>×</button>
 
           <div className="sf-modal-product-head">

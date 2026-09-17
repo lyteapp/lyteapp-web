@@ -1826,7 +1826,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                     <div
                       className="sf-modal-magnifier"
                       style={{
-                        left: magnifier.px, top: magnifier.py,
+                        left: magnifier.px + 90, top: magnifier.py,
                         backgroundImage: `url(${modalDisplayImage})`,
                         backgroundPosition: `${magnifier.bgX}% ${magnifier.bgY}%`,
                       }}

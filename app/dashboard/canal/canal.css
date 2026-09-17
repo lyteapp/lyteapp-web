@@ -7,14 +7,18 @@
 
 /* ── CHECKOUT: settings form + phone preview, side by side ── */
 .cn-checkout-split { display: flex; gap: 40px; align-items: flex-start; }
-.cn-checkout-preview-frame { width: 300px; flex-shrink: 0; }
+/* Sized to a real iPhone's CSS viewport (390x844), not an arbitrary
+   smaller box — otherwise the checkout renders at a width/height nothing
+   actually visits it at, and layout that looks fine here can be cramped
+   or cut off on a real phone. */
+.cn-checkout-preview-frame { width: 390px; flex-shrink: 0; }
 
 @media (max-width: 900px) {
-  /* Below this, the fixed 300px preview no longer fits next to a usable
+  /* Below this, the fixed-width preview no longer fits next to a usable
      form width — stack it above the form instead of letting both sides
      get squeezed and cut off. */
   .cn-checkout-split { flex-direction: column; }
-  .cn-checkout-preview-frame { width: 100%; max-width: 300px; margin: 0 auto; }
+  .cn-checkout-preview-frame { width: 100%; max-width: 390px; margin: 0 auto; }
   /* Preview first, form below — and drop the sticky-while-scrolling
      behavior from the side-by-side layout, since pinned at the top of a
      stacked column it would just eat space while the form scrolls under it. */

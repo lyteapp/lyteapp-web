@@ -86,7 +86,7 @@ function CheckoutPreview({ storeSlug, previewKey }: { storeSlug: string | null; 
       border: '10px solid #1E1E2E', borderRadius: 36,
       boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
       overflow: 'hidden', background: '#F8F7F4',
-      height: 640, maxHeight: 640, display: 'flex', flexDirection: 'column',
+      height: 844, maxHeight: 844, display: 'flex', flexDirection: 'column',
     }}>
       {storeSlug ? (
         <iframe

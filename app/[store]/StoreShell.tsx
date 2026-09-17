@@ -897,8 +897,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const lightboxStripRef        = useRef<HTMLDivElement | null>(null)
   const lightboxDragStartIdxRef = useRef<number>(0)
   const [magnifier, setMagnifier] = useState<{ px: number; py: number; bgX: number; bgY: number } | null>(null)
+  const [magnifierHint, setMagnifierHint] = useState(false)
   const modalImgWrapRef         = useRef<HTMLDivElement | null>(null)
   const updateMagnifier = (clientX: number, clientY: number) => {
+    setMagnifierHint(false)
     const el = modalImgWrapRef.current
     if (!el) return
     const rect = el.getBoundingClientRect()
@@ -1189,6 +1191,18 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // visible. Only makes sense over the catalog (checkout has no header).
   const headerPxNow = headerHeightMeasured ?? cfg.headerHeightPx ?? 56
   const showHeaderAboveModal = cfgModalFull && view === 'catalog' && !!modalProduct
+
+  // Show a brief demo of the drag-to-magnify photo interaction every time
+  // the full-page product modal opens, so customers discover it.
+  const modalProductId = modalProduct?.id
+  useEffect(() => {
+    if (cfgModalFull && modalProductId) {
+      setMagnifierHint(true)
+      const t = setTimeout(() => setMagnifierHint(false), 2200)
+      return () => clearTimeout(t)
+    }
+    setMagnifierHint(false)
+  }, [modalProductId, cfgModalFull])
 
   // ── iOS Safari reveals <body>'s own background during the rubber-band
   // overscroll bounce past the top/bottom of the page. The app shell's
@@ -1830,6 +1844,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
                         backgroundImage: `url(${modalDisplayImage})`,
                         backgroundPosition: `${magnifier.bgX}% ${magnifier.bgY}%`,
                       }}
+                    />
+                  )}
+                  {magnify && magnifierHint && !magnifier && (
+                    <div
+                      className="sf-modal-magnifier sf-modal-magnifier-hint"
+                      style={{ backgroundImage: `url(${modalDisplayImage})` }}
                     />
                   )}
                 </div>

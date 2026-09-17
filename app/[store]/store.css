@@ -1234,8 +1234,8 @@ html, body { overflow-x: clip; }
 .sf-empty-sub { font-size: 0.93em; color: #94A3B8; line-height: 1.6; }
 
 /* ── FOOTER ── */
-.sf-footer { background: white; border-top: 1px solid rgba(15,23,42,0.07); padding: 20px 24px; text-align: center; }
-.sf-footer-link { font-size: 13px; color: #94A3B8; text-decoration: none; transition: color 0.15s; }
+.sf-footer { background: white; border-top: 1px solid rgba(15,23,42,0.07); padding: 16px 24px; text-align: center; }
+.sf-footer-link { font-size: 10.5px; color: #94A3B8; text-decoration: none; transition: color 0.15s; }
 .sf-footer-link:hover { color: var(--sf-accent-color, #7C3AED); }
 .sf-footer-link strong { color: var(--sf-accent-color, #7C3AED); font-weight: 700; }
 

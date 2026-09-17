@@ -1751,9 +1751,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
             </div>
           )}
         <div className={`sf-modal${cfgModalHalf ? ' sf-modal-half' : ''}${cfgModalFull ? ' sf-modal-fullpage' : ''}`} onClick={e => e.stopPropagation()}>
-          <button className="sf-modal-close" onClick={() => setModalProduct(null)}>×</button>
+          <button className={`sf-modal-close${cfgModalFull ? ' sf-modal-close-hero' : ''}`} onClick={() => setModalProduct(null)}>×</button>
 
-          <div className="sf-modal-product-head">
+          <div className={`sf-modal-product-head${cfgModalFull ? ' sf-modal-product-head-hero' : ''}`}>
             {modalDisplayImage && (() => {
               // Gallery for whatever is currently shown: the selected
               // color's own photos, or the product's own photos when no

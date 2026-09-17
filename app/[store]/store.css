@@ -1634,7 +1634,7 @@ html, body { overflow-x: clip; }
 .sf-modal-name { font-size: 1.13em; font-weight: 700; color: #0F172A; letter-spacing: -0.02em; }
 .sf-modal-desc { font-size: 0.87em; color: #64748B; margin-top: 4px; line-height: 1.4; }
 .sf-modal-base-price {
-  font-size: 18px; font-weight: 800; color: var(--sf-accent-color, #7C3AED);
+  font-size: 18px; font-weight: 800; color: var(--sf-price-color, #7C3AED);
   margin-top: 6px; letter-spacing: -0.03em;
   display: flex; align-items: baseline; gap: 8px;
   transition: color 0.15s;
@@ -1771,7 +1771,7 @@ html, body { overflow-x: clip; }
   border-left: none; border-top: none; transform: rotate(45deg);
 }
 .sf-modal-extra-name { flex: 1; font-size: 14px; color: #0F172A; }
-.sf-modal-extra-price { font-size: 13px; font-weight: 600; color: var(--sf-accent-color, #7C3AED); flex-shrink: 0; }
+.sf-modal-extra-price { font-size: 13px; font-weight: 600; color: var(--sf-price-color, #7C3AED); flex-shrink: 0; }
 
 /* Variant chip shape overrides (default = pill, 100px) */
 .sf-vshape-rounded .sf-modal-chip { border-radius: 10px; }
@@ -1970,7 +1970,7 @@ html, body { overflow-x: clip; }
 .sf-esc-price,
 .sf-cat-price,
 .sf-vit-hero-price {
-  color: var(--sf-accent-color, #7C3AED);
+  color: var(--sf-price-color, #7C3AED);
   font-family: var(--sf-price-font, var(--font-geist-mono), monospace);
 }
 

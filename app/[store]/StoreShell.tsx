@@ -338,6 +338,9 @@ type Store = {
     requirePaymentMethod?: boolean; requirePaymentProof?: boolean
     whatsappFloating?: boolean
     showBcvInSummary?: boolean
+    // Falls back to the store's general accent (cfg.accentColor) via CSS
+    // when unset — see --sf-checkout-accent-color in pageStyle.
+    accentColor?: string
   } | null
 }
 
@@ -1059,6 +1062,13 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
   // ── Checkout settings ──
   const cs                   = store.checkout_settings ?? {}
+  // Checkout's own accent, falling back to the store's general accent (and
+  // finally the hardcoded default) when the merchant hasn't set one here —
+  // used for the checkout-only inline styles below that can't reach the
+  // --sf-checkout-accent-color custom property via a CSS class.
+  const coAccent     = 'var(--sf-checkout-accent-color, var(--sf-accent-color, #7C3AED))'
+  const coAccentTint = 'color-mix(in srgb, var(--sf-checkout-accent-color, var(--sf-accent-color, #7C3AED)) 12%, white)'
+  const coAccentFaint = 'color-mix(in srgb, var(--sf-checkout-accent-color, var(--sf-accent-color, #7C3AED)) 20%, transparent)'
   const requirePaymentMethod = cs.requirePaymentMethod ?? false
   const requirePaymentProof  = cs.requirePaymentProof  ?? false
   const dtOn            = cs.deliveryTypes?.delivery !== false  // domicilio habilitado (default true)
@@ -1218,6 +1228,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     ...(cfgPriceFontFamily ? { '--sf-price-font': cfgPriceFontFamily } : {}),
     ...(cfg.cardBg      ? { '--sf-card-bg':     cfg.cardBg      } : {}),
     ...(cfg.accentColor ? { '--sf-accent-color': cfg.accentColor } : {}),
+    ...(cs.accentColor ? { '--sf-checkout-accent-color': cs.accentColor } : {}),
     ...(cfg.pageBg      ? { '--sf-page-bg':      cfg.pageBg      } : {}),
     ...(cfg.catTitleColor ? { '--sf-cat-title-color': cfg.catTitleColor } : {}),
     ...(cfg.categorySpacing !== undefined ? { '--sf-cat-spacing': `${cfg.categorySpacing}px` } : {}),
@@ -3007,33 +3018,33 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 onClick={() => setDeliveryType('delivery')}
                 style={{
                   flex: 1, padding: '12px 8px', borderRadius: 12, border: 'none', cursor: 'pointer',
-                  background: deliveryType === 'delivery' ? '#EDE9FE' : '#F8FAFC',
-                  outline: `2px solid ${deliveryType === 'delivery' ? '#7C3AED' : '#E2E8F0'}`,
+                  background: deliveryType === 'delivery' ? coAccentTint : '#F8FAFC',
+                  outline: `2px solid ${deliveryType === 'delivery' ? coAccent : '#E2E8F0'}`,
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
                   transition: 'all 0.15s',
                 }}
               >
-                <svg viewBox="0 0 24 24" fill={deliveryType === 'delivery' ? '#7C3AED' : '#94A3B8'} width="20" height="20">
+                <svg viewBox="0 0 24 24" fill={deliveryType === 'delivery' ? coAccent : '#94A3B8'} width="20" height="20">
                   <path fillRule="evenodd" d="M5 12a3 3 0 100 6 3 3 0 000-6zm0 1.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zM17 12a3 3 0 100 6 3 3 0 000-6zm0 1.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3z"/>
                   <path d="M8 15l3.5-6h4l1.5-2.5H20V9l-1.5 3H9.5z"/>
                 </svg>
-                <span style={{ fontSize: 13, fontWeight: deliveryType === 'delivery' ? 700 : 500, color: deliveryType === 'delivery' ? '#7C3AED' : '#64748B' }}>Domicilio</span>
+                <span style={{ fontSize: 13, fontWeight: deliveryType === 'delivery' ? 700 : 500, color: deliveryType === 'delivery' ? coAccent : '#64748B' }}>Domicilio</span>
               </button>
               <button
                 type="button"
                 onClick={() => setDeliveryType('pickup')}
                 style={{
                   flex: 1, padding: '12px 8px', borderRadius: 12, border: 'none', cursor: 'pointer',
-                  background: deliveryType === 'pickup' ? '#EDE9FE' : '#F8FAFC',
-                  outline: `2px solid ${deliveryType === 'pickup' ? '#7C3AED' : '#E2E8F0'}`,
+                  background: deliveryType === 'pickup' ? coAccentTint : '#F8FAFC',
+                  outline: `2px solid ${deliveryType === 'pickup' ? coAccent : '#E2E8F0'}`,
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
                   transition: 'all 0.15s',
                 }}
               >
-                <svg viewBox="0 0 20 20" fill={deliveryType === 'pickup' ? '#7C3AED' : '#94A3B8'} width="20" height="20">
+                <svg viewBox="0 0 20 20" fill={deliveryType === 'pickup' ? coAccent : '#94A3B8'} width="20" height="20">
                   <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zm14 4H2v7a2 2 0 002 2h12a2 2 0 002-2V8zm-8 3a1 1 0 011 1v2a1 1 0 01-2 0v-2a1 1 0 011-1z" clipRule="evenodd"/>
                 </svg>
-                <span style={{ fontSize: 13, fontWeight: deliveryType === 'pickup' ? 700 : 500, color: deliveryType === 'pickup' ? '#7C3AED' : '#64748B' }}>Retiro en tienda</span>
+                <span style={{ fontSize: 13, fontWeight: deliveryType === 'pickup' ? 700 : 500, color: deliveryType === 'pickup' ? coAccent : '#64748B' }}>Retiro en tienda</span>
               </button>
             </div>
           </div>
@@ -3066,20 +3077,20 @@ export default function StoreShell({ store, products, categories = [], initialBc
                         flex: 1, display: 'flex', alignItems: 'center', gap: 10,
                         padding: '11px 14px', borderRadius: 12, border: 'none',
                         cursor: 'pointer', textAlign: 'left' as const,
-                        background: selectedLocId === loc.id ? '#EDE9FE' : '#F8FAFC',
-                        outline: `2px solid ${selectedLocId === loc.id ? '#7C3AED' : '#E2E8F0'}`,
+                        background: selectedLocId === loc.id ? coAccentTint : '#F8FAFC',
+                        outline: `2px solid ${selectedLocId === loc.id ? coAccent : '#E2E8F0'}`,
                         transition: 'all 0.15s',
                       }}
                     >
-                      <svg viewBox="0 0 20 20" fill={selectedLocId === loc.id ? '#7C3AED' : '#94A3B8'} width="14" height="14" style={{ flexShrink: 0 }}>
+                      <svg viewBox="0 0 20 20" fill={selectedLocId === loc.id ? coAccent : '#94A3B8'} width="14" height="14" style={{ flexShrink: 0 }}>
                         <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                       </svg>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: selectedLocId === loc.id ? '#7C3AED' : '#0F172A', lineHeight: 1.2 }}>{loc.label}</div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: selectedLocId === loc.id ? coAccent : '#0F172A', lineHeight: 1.2 }}>{loc.label}</div>
                         {loc.address && <div style={{ fontSize: 11, color: '#64748B', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{loc.address}</div>}
                       </div>
                       {selectedLocId === loc.id && (
-                        <svg viewBox="0 0 20 20" fill="#7C3AED" width="14" height="14" style={{ flexShrink: 0 }}>
+                        <svg viewBox="0 0 20 20" fill={coAccent} width="14" height="14" style={{ flexShrink: 0 }}>
                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
                         </svg>
                       )}
@@ -3137,7 +3148,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {locationState === 'idle' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <button type="button" onClick={requestLocation} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#7C3AED', color: 'white', border: 'none', borderRadius: 10, padding: '11px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, width: '100%' }}>
+                    <button type="button" onClick={requestLocation} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: coAccent, color: 'white', border: 'none', borderRadius: 10, padding: '11px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, width: '100%' }}>
                       <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15">
                         <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                       </svg>
@@ -3155,7 +3166,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 )}
                 {locationState === 'requesting' && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 14px', background: '#F8FAFC', borderRadius: 10, fontSize: 13, color: '#64748B' }}>
-                    <div style={{ width: 14, height: 14, border: '2px solid rgba(124,58,237,0.2)', borderTopColor: '#7C3AED', borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+                    <div style={{ width: 14, height: 14, border: `2px solid ${coAccentFaint}`, borderTopColor: coAccent, borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
                     Obteniendo ubicacion...
                   </div>
                 )}
@@ -3174,8 +3185,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 )}
                 {locationState === 'granted' && deliveryZones.length > 0 && (
                   matchedZone ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#EDE9FE', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#5B21B6', fontWeight: 500 }}>
-                      <svg viewBox="0 0 20 20" fill="#7C3AED" width="14" height="14" style={{ flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: coAccentTint, borderRadius: 10, padding: '10px 14px', fontSize: 13, color: coAccent, fontWeight: 500 }}>
+                      <svg viewBox="0 0 20 20" fill={coAccent} width="14" height="14" style={{ flexShrink: 0 }}>
                         <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                       </svg>
                       <span>Zona: <strong>{matchedZone.name ?? 'Sin nombre'}</strong> · Envio {currencySymbol}{(matchedZone.fee ?? 0).toFixed(2)}</span>
@@ -3216,7 +3227,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 </div>
 
                 {!showSavePrompt && ((collectCustomerData && customerCedula.trim()) || customerPhone.replace(/\D/g, '')) && (customerLat || customerAddress.trim()) && (
-                  <button type="button" onClick={() => setShowSavePrompt(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#7C3AED', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, padding: 0, alignSelf: 'flex-start' }}>
+                  <button type="button" onClick={() => setShowSavePrompt(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: coAccent, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, padding: 0, alignSelf: 'flex-start' }}>
                     <svg viewBox="0 0 20 20" fill="currentColor" width="12" height="12">
                       <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
                     </svg>
@@ -3252,7 +3263,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                         setShowSavePrompt(false)
                         setNewLocLabel('')
                       }}
-                      style={{ background: '#7C3AED', color: 'white', border: 'none', borderRadius: 8, padding: '9px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' as const, flexShrink: 0 }}
+                      style={{ background: coAccent, color: 'white', border: 'none', borderRadius: 8, padding: '9px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' as const, flexShrink: 0 }}
                     >
                       Guardar
                     </button>

@@ -5,6 +5,8 @@ import { supabase } from '../../../lib/supabase'
 import { useDashboardStore } from '../../../lib/DashboardStoreProvider'
 import '../canal.css'
 
+const ACCENT_PRESETS = ['#7C3AED', '#2563EB', '#DC2626', '#D97706', '#059669', '#DB2777', '#0F172A', '#64748B']
+
 // ── PAYMENT METHODS ────────────────────────────────────────────
 interface PaymentMethod {
   id: string; name: string; icon: string; enabled: boolean
@@ -49,6 +51,8 @@ interface CheckoutSettings {
   requirePaymentMethod: boolean; requirePaymentProof: boolean
   whatsappFloating: boolean
   showBcvInSummary: boolean
+  // Empty = matches the store's general accent color automatically.
+  accentColor: string
 }
 
 const DEFAULTS: CheckoutSettings = {
@@ -57,6 +61,7 @@ const DEFAULTS: CheckoutSettings = {
   deliveryTypes: { delivery: true, pickup: false },
   requirePaymentMethod: false, requirePaymentProof: false,
   whatsappFloating: false,
+  accentColor: '',
   showBcvInSummary: true,
 }
 
@@ -388,6 +393,51 @@ export default function CheckoutPage() {
                     <div className="cn-toggle-hint">Agrega una linea con el total en bolivares (tasa BCV) debajo del total en el resumen del pedido</div>
                   </div>
                   <Toggle checked={settings.showBcvInSummary} onChange={v => setSetting('showBcvInSummary', v)} />
+                </div>
+              </div>
+            </div>
+
+            <div className="cn-section">
+              <div className="cn-section-head">
+                <div className="cn-section-icon">
+                  <svg viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 2a8 8 0 105.29 14.006c.19-.17.281-.42.244-.669a.75.75 0 00-.652-.652 2.5 2.5 0 01-2.13-2.607 2.5 2.5 0 012.5-2.328h1.038a2.25 2.25 0 002.209-1.836A8.008 8.008 0 0010 2zM4.5 10a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm2-4.5a1 1 0 102 0 1 1 0 00-2 0zm5 0a1 1 0 102 0 1 1 0 00-2 0zM13 10a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd"/>
+                  </svg>
+                </div>
+                <div>
+                  <div className="cn-section-title">Color de acentos</div>
+                  <div className="cn-section-sub">Botones, metodo de pago seleccionado y demas, solo dentro del checkout</div>
+                </div>
+              </div>
+              <div className="cn-section-body">
+                <button
+                  type="button"
+                  className={`cn-pill-btn${!settings.accentColor ? ' selected' : ''}`}
+                  onClick={() => setSetting('accentColor', '')}
+                  style={{ marginBottom: 12 }}
+                >
+                  Igual que la tienda
+                </button>
+                <div className="cn-colors">
+                  {ACCENT_PRESETS.map(c => (
+                    <div
+                      key={c}
+                      className={`cn-color-swatch${settings.accentColor === c ? ' selected' : ''}`}
+                      style={{ background: c }}
+                      onClick={() => setSetting('accentColor', c)}
+                    />
+                  ))}
+                  <label
+                    className="cn-color-custom"
+                    style={{ background: settings.accentColor && !ACCENT_PRESETS.includes(settings.accentColor) ? settings.accentColor : undefined }}
+                  >
+                    {!settings.accentColor || ACCENT_PRESETS.includes(settings.accentColor) ? '+' : null}
+                    <input
+                      type="color"
+                      value={settings.accentColor || '#7C3AED'}
+                      onChange={e => setSetting('accentColor', e.target.value)}
+                    />
+                  </label>
                 </div>
               </div>
             </div>

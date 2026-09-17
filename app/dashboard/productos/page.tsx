@@ -43,6 +43,7 @@ type Product = {
   // Full category membership (a product can be in more than one), loaded
   // separately from product_categories — falls back to [category_id].
   category_ids?: string[]
+  position?: number | null
 }
 
 type VariableGroupPreset   = { id: string; name: string; group: VariableGroup }
@@ -56,6 +57,7 @@ export default function ProductosPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading]   = useState(true)
   const [mode, setMode]         = useState<'list' | 'form'>('list')
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [editing, setEditing]   = useState<Product | null>(null)
 
   // basic fields
@@ -117,7 +119,7 @@ export default function ProductosPage() {
   async function loadData() {
     if (!storeId) { setLoading(false); return }
     const [{ data: prods }, { data: cats }, { data: storeCs }] = await Promise.all([
-      supabase.from('products').select('*').eq('store_id', storeId).order('created_at', { ascending: false }),
+      supabase.from('products').select('*').eq('store_id', storeId).order('position', { ascending: true, nullsFirst: false }),
       supabase.from('categories').select('*').eq('store_id', storeId).order('position'),
       supabase.from('stores').select('checkout_settings').eq('id', storeId).maybeSingle(),
     ])
@@ -425,6 +427,9 @@ export default function ProductosPage() {
       // Kept as the product's primary category for any code that still only
       // understands a single one — the full set lives in product_categories.
       category_id: categoryIds[0] || null,
+      // New products go to the end of the display order; editing an
+      // existing one leaves its position untouched (reordered separately).
+      ...(editing ? {} : { position: products.length > 0 ? Math.max(...products.map(p => p.position ?? 0)) + 1 : 0 }),
     }
     const { data: saved, error: err } = editing
       ? await supabase.from('products').update(payload).eq('id', editing.id).select('id').single()
@@ -460,6 +465,21 @@ export default function ProductosPage() {
     await supabase.from('products').update({ is_active: newVal }).eq('id', p.id)
     setProducts(prev => prev.map(x => x.id === p.id ? { ...x, is_active: newVal } : x))
     setPendingToggles(prev => { const n = { ...prev }; delete n[p.id]; return n })
+  }
+
+  // Swaps two products' display order — a and b are whatever's currently
+  // adjacent in the (possibly category-filtered) list on screen, not
+  // necessarily adjacent in the full unfiltered products array.
+  async function swapProductPosition(a: Product, b: Product) {
+    const posA = a.position ?? 0
+    const posB = b.position ?? 0
+    setProducts(prev => prev
+      .map(p => p.id === a.id ? { ...p, position: posB } : p.id === b.id ? { ...p, position: posA } : p)
+      .sort((x, y) => (x.position ?? 0) - (y.position ?? 0)))
+    await Promise.all([
+      supabase.from('products').update({ position: posB }).eq('id', a.id),
+      supabase.from('products').update({ position: posA }).eq('id', b.id),
+    ])
   }
 
   if (loading) return <div className="pr-spinner-wrap"><div className="pr-spinner" /></div>
@@ -1016,45 +1036,69 @@ export default function ProductosPage() {
           </div>
         </div>
       ) : (
-        <div className="pr-list">
-          {products.map(p => {
-            const hasOpts = !!(p.options?.variables?.length || p.options?.colors?.length || p.options?.additionals?.length || p.options?.allowNotes || p.options?.nutrition?.enabled)
-            const hasPending = p.id in pendingToggles
-            const displayActive = hasPending ? pendingToggles[p.id] : p.is_active
+        <>
+          {categories.length > 0 && (
+            <div className="pr-cat-toggles" style={{ marginBottom: 16 }}>
+              <button type="button" className={`pr-cat-toggle${categoryFilter === 'all' ? ' active' : ''}`} onClick={() => setCategoryFilter('all')}>Todos</button>
+              {categories.map(cat => (
+                <button key={cat.id} type="button" className={`pr-cat-toggle${categoryFilter === cat.id ? ' active' : ''}`} onClick={() => setCategoryFilter(cat.id)}>{cat.name}</button>
+              ))}
+              <button type="button" className={`pr-cat-toggle${categoryFilter === 'none' ? ' active' : ''}`} onClick={() => setCategoryFilter('none')}>Sin categoria</button>
+            </div>
+          )}
+          {(() => {
+            const filtered = products.filter(p => {
+              if (categoryFilter === 'all') return true
+              if (categoryFilter === 'none') return (p.category_ids ?? []).length === 0
+              return (p.category_ids ?? []).includes(categoryFilter)
+            })
             return (
-              <div key={p.id} className={`pr-card${hasPending ? ' pr-card-pending' : ''}`} onClick={() => openEdit(p)}>
-                <div className="pr-card-img-wrap">
-                  {p.image_url
-                    ? <img src={p.image_url} alt={p.name} className="pr-card-img" />
-                    : <div className="pr-card-img-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 22, height: 22 }}><path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" /></svg></div>
-                  }
-                </div>
-                <div className="pr-card-info">
-                  <div className="pr-card-name">{p.name}</div>
-                  {p.description && <div className="pr-card-desc">{p.description}</div>}
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <div className="pr-card-price">${Number(p.price).toFixed(2)}</div>
-                    {hasOpts && <div className="pr-card-opts-badge">Con opciones</div>}
-                    {(p.category_ids ?? []).map(id => categories.find(c => c.id === id)).filter((c): c is Category => !!c).map(cat => (
-                      <div key={cat.id} className="pr-card-cat">{cat.name}</div>
-                    ))}
-                  </div>
-                </div>
-                <div className="pr-card-right" onClick={e => e.stopPropagation()}>
-                  {hasPending && (
-                    <button className="pr-card-save-btn" onClick={() => savePendingToggle(p)}>
-                      Guardar
-                    </button>
-                  )}
-                  <div className={`pr-pill ${displayActive ? 'active' : 'inactive'}`} onClick={() => toggleActive(p)}>
-                    {displayActive ? t('prod.status.active') : t('prod.status.inactive')}
-                  </div>
-                  <button className="pr-del-btn" onClick={() => handleDelete(p.id)}>✕</button>
-                </div>
+              <div className="pr-list">
+                {filtered.map((p, i) => {
+                  const hasOpts = !!(p.options?.variables?.length || p.options?.colors?.length || p.options?.additionals?.length || p.options?.allowNotes || p.options?.nutrition?.enabled)
+                  const hasPending = p.id in pendingToggles
+                  const displayActive = hasPending ? pendingToggles[p.id] : p.is_active
+                  return (
+                    <div key={p.id} className={`pr-card${hasPending ? ' pr-card-pending' : ''}`} onClick={() => openEdit(p)}>
+                      <div className="cat-order-btns" onClick={e => e.stopPropagation()}>
+                        <button className="cat-order-btn" onClick={() => swapProductPosition(p, filtered[i - 1])} disabled={i === 0}>▲</button>
+                        <button className="cat-order-btn" onClick={() => swapProductPosition(p, filtered[i + 1])} disabled={i === filtered.length - 1}>▼</button>
+                      </div>
+                      <div className="pr-card-img-wrap">
+                        {p.image_url
+                          ? <img src={p.image_url} alt={p.name} className="pr-card-img" />
+                          : <div className="pr-card-img-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 22, height: 22 }}><path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" /></svg></div>
+                        }
+                      </div>
+                      <div className="pr-card-info">
+                        <div className="pr-card-name">{p.name}</div>
+                        {p.description && <div className="pr-card-desc">{p.description}</div>}
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                          <div className="pr-card-price">${Number(p.price).toFixed(2)}</div>
+                          {hasOpts && <div className="pr-card-opts-badge">Con opciones</div>}
+                          {(p.category_ids ?? []).map(id => categories.find(c => c.id === id)).filter((c): c is Category => !!c).map(cat => (
+                            <div key={cat.id} className="pr-card-cat">{cat.name}</div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="pr-card-right" onClick={e => e.stopPropagation()}>
+                        {hasPending && (
+                          <button className="pr-card-save-btn" onClick={() => savePendingToggle(p)}>
+                            Guardar
+                          </button>
+                        )}
+                        <div className={`pr-pill ${displayActive ? 'active' : 'inactive'}`} onClick={() => toggleActive(p)}>
+                          {displayActive ? t('prod.status.active') : t('prod.status.inactive')}
+                        </div>
+                        <button className="pr-del-btn" onClick={() => handleDelete(p.id)}>✕</button>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             )
-          })}
-        </div>
+          })()}
+        </>
       )}
     </div>
   )

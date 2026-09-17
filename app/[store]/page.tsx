@@ -59,7 +59,7 @@ export default async function StorePage({ params }: { params: Promise<{ store: s
   const [{ data: products }, { data: categories }, { data: rateRow }, { data: zones }] = await Promise.all([
     supabase.from('products').select('*')
       .eq('store_id', store.id).eq('is_active', true)
-      .order('created_at', { ascending: false }),
+      .order('position', { ascending: true, nullsFirst: false }),
     supabase.from('categories').select('*')
       .eq('store_id', store.id).order('position', { ascending: true }),
     supabaseService.from('exchange_rates').select('rate').eq('currency', currency).maybeSingle(),

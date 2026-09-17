@@ -349,6 +349,8 @@ export default function EditorPage() {
   const [headerSticky, setHeaderSticky] = useState(false)
   const [modalWizard, setModalWizard] = useState(false)
   const [modalSize, setModalSize] = useState<'full' | 'half'>('full')
+  const [variantShape, setVariantShape] = useState<'pill' | 'rounded' | 'square'>('pill')
+  const [variantSize, setVariantSize] = useState<'small' | 'medium' | 'large'>('medium')
   const [enableReorder, setEnableReorder] = useState(false)
   const [reorderBannerEnabled, setReorderBannerEnabled] = useState(true)
   const [reorderHeaderButton, setReorderHeaderButton] = useState(false)
@@ -482,6 +484,8 @@ export default function EditorPage() {
       if (cfg.headerSticky !== undefined) setHeaderSticky(cfg.headerSticky as boolean)
       if (cfg.modalWizard !== undefined) setModalWizard(cfg.modalWizard as boolean)
       if (cfg.modalSize) setModalSize(cfg.modalSize as 'full' | 'half')
+      if (cfg.variantShape) setVariantShape(cfg.variantShape as 'pill' | 'rounded' | 'square')
+      if (cfg.variantSize) setVariantSize(cfg.variantSize as 'small' | 'medium' | 'large')
       if (cfg.enableReorder !== undefined) setEnableReorder(cfg.enableReorder as boolean)
       if (cfg.reorderBannerEnabled !== undefined) setReorderBannerEnabled(cfg.reorderBannerEnabled as boolean)
       if (cfg.reorderHeaderButton !== undefined) setReorderHeaderButton(cfg.reorderHeaderButton as boolean)
@@ -571,6 +575,18 @@ export default function EditorPage() {
       .sf-vit-hero-img-wrap { aspect-ratio: 2/3 !important; }
     ` : ''
 
+    const variantShapeCSS = variantShape === 'rounded' ? `
+      .sf-modal-chip { border-radius: 10px !important; }
+    ` : variantShape === 'square' ? `
+      .sf-modal-chip { border-radius: 4px !important; }
+    ` : ''
+
+    const variantSizeCSS = variantSize === 'small' ? `
+      .sf-modal-chip { padding: 6px 12px !important; font-size: 12px !important; }
+    ` : variantSize === 'large' ? `
+      .sf-modal-chip { padding: 10px 20px !important; font-size: 16px !important; }
+    ` : ''
+
     const alignCSS = textAlign === 'center' ? `
       .sf-section-title    { text-align: center !important; }
       .sf-card-body        { text-align: center !important; }
@@ -641,6 +657,8 @@ export default function EditorPage() {
       .sf-co-edit-btn { color: ${accentColor} !important; }
       ${shapeCSS}
       ${imgSizeCSS}
+      ${variantShapeCSS}
+      ${variantSizeCSS}
       ${alignCSS}
       .sf-nav-logo-wrap {
         border-radius: ${logoShape === 'circle' ? '50%' : logoShape === 'square' ? '0' : '8px'} !important;
@@ -908,7 +926,7 @@ export default function EditorPage() {
   useEffect(() => {
     applyPreview()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign, newBlockFont, contentBlocks, blockGroups, newBlockButtons, newBlockButtonStyle, newBlockButtonSize, newBlockButtonWidth, editingBlockId, newBlockImageSize, enableReorder, reorderBannerEnabled, reorderPosition, reorderTitle, reorderImageUrl, reorderFontSize, reorderFontWeight, reorderColor, reorderFont, reorderButtonStyle, reorderButtonSize, reorderButtonColor, reorderScale, reorderInset, ads])
+  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, variantShape, variantSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign, newBlockFont, contentBlocks, blockGroups, newBlockButtons, newBlockButtonStyle, newBlockButtonSize, newBlockButtonWidth, editingBlockId, newBlockImageSize, enableReorder, reorderBannerEnabled, reorderPosition, reorderTitle, reorderImageUrl, reorderFontSize, reorderFontWeight, reorderColor, reorderFont, reorderButtonStyle, reorderButtonSize, reorderButtonColor, reorderScale, reorderInset, ads])
 
   // ── Auto-save category shape (reloads iframe immediately) ─
   async function handleCategoryShape(catId: string, shape: string | null) {
@@ -986,7 +1004,7 @@ export default function EditorPage() {
       priceColor, accentColor, priceFont: priceFont || pageFont, priceSize,
       catTitleFont: catTitleFont || undefined, productNameFont: productNameFont || undefined,
       categoryNavStyle, showCatNav, stickyCatNav, catNavOverBanner, categorySpacing,
-      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, showHeaderSearch, showHeaderCart, headerIconColor: headerIconColor || undefined, headerOverBanner, headerSticky, headerHeightPx, modalWizard, modalSize, enableReorder, reorderBannerEnabled: enableReorder ? reorderBannerEnabled : undefined, reorderHeaderButton: enableReorder ? reorderHeaderButton : undefined, reorderHeaderHintSeconds: (enableReorder && reorderHeaderButton) ? reorderHeaderHintSeconds : undefined, reorderFloatSeconds: reorderFloatSeconds > 0 ? reorderFloatSeconds : undefined,
+      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, showHeaderSearch, showHeaderCart, headerIconColor: headerIconColor || undefined, headerOverBanner, headerSticky, headerHeightPx, modalWizard, modalSize, variantShape, variantSize, enableReorder, reorderBannerEnabled: enableReorder ? reorderBannerEnabled : undefined, reorderHeaderButton: enableReorder ? reorderHeaderButton : undefined, reorderHeaderHintSeconds: (enableReorder && reorderHeaderButton) ? reorderHeaderHintSeconds : undefined, reorderFloatSeconds: reorderFloatSeconds > 0 ? reorderFloatSeconds : undefined,
       reorderPosition: reorderPosition !== 'right' ? reorderPosition : undefined,
       reorderTitle: reorderTitle.trim() || undefined,
       reorderImageUrl: reorderImageUrl || undefined,
@@ -3165,6 +3183,46 @@ export default function EditorPage() {
                 </svg>
                 Media pagina
               </button>
+            </div>
+
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Look de las variables</div>
+            <div className="ed-shape-opts">
+              {([
+                { id: 'pill',    label: 'Redonda',   icon: <rect x="3" y="8" width="18" height="8" rx="4" /> },
+                { id: 'rounded', label: 'Suave',      icon: <rect x="3" y="8" width="18" height="8" rx="2" /> },
+                { id: 'square',  label: 'Cuadrada',   icon: <rect x="3" y="8" width="18" height="8" rx="0.5" /> },
+              ] as const).map(s => (
+                <button
+                  key={s.id}
+                  className={`ed-shape-opt${variantShape === s.id ? ' ed-shape-opt-active' : ''}`}
+                  onClick={() => setVariantShape(s.id)}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">{s.icon}</svg>
+                  <span>{s.label}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Tamano de las variables</div>
+            <div className="ed-size-opts">
+              {([
+                { id: 'small',  label: 'Compacto' },
+                { id: 'medium', label: 'Normal'   },
+                { id: 'large',  label: 'Grande'   },
+              ] as const).map(s => (
+                <button
+                  key={s.id}
+                  className={`ed-size-opt${variantSize === s.id ? ' ed-size-opt-active' : ''}`}
+                  onClick={() => setVariantSize(s.id)}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="ed-size-preview" style={{ width: 24, height: 24 }}>
+                    {s.id === 'small'  && <rect x="4"  y="9"  width="16" height="6" rx="3" />}
+                    {s.id === 'medium' && <rect x="3"  y="7"  width="18" height="10" rx="5" />}
+                    {s.id === 'large'  && <rect x="2"  y="5"  width="20" height="14" rx="7" />}
+                  </svg>
+                  <span className="ed-size-label">{s.label}</span>
+                </button>
+              ))}
             </div>
 
             <PanelSave />

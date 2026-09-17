@@ -1820,6 +1820,10 @@ html, body { overflow-x: clip; }
 .sf-vshape-rounded .sf-modal-chip { border-radius: 10px; }
 .sf-vshape-square  .sf-modal-chip { border-radius: 4px; }
 
+/* Variant chip size overrides (default = medium, 8px 16px / 14px) */
+.sf-vsize-small .sf-modal-chip { padding: 6px 12px; font-size: 12px; }
+.sf-vsize-large .sf-modal-chip { padding: 10px 20px; font-size: 16px; }
+
 /* Extra shape overrides (default = rounded, 12px) */
 .sf-eshape-pill   .sf-modal-extra        { border-radius: 100px; }
 .sf-eshape-pill   .sf-modal-extra-check  { border-radius: 50%; }

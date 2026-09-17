@@ -242,6 +242,7 @@ type TemplateConfig = {
   categorySpacing?: number
   categoryNavStyle?: string
   variantShape?: 'pill' | 'rounded' | 'square'
+  variantSize?: 'small' | 'medium' | 'large'
   extraShape?: 'rounded' | 'pill' | 'square'
   showCatNav?: boolean
   stickyCatNav?: boolean
@@ -1135,6 +1136,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const cfgCatNavStyle     = cfg.categoryNavStyle ?? 'pills'
   const cfgStickyCatNav    = cfg.stickyCatNav !== false
   const cfgVariantShape    = cfg.variantShape ?? 'pill'
+  const cfgVariantSize     = cfg.variantSize ?? 'medium'
   const cfgExtraShape      = cfg.extraShape ?? 'rounded'
   const cfgLogoShape   = cfg.logoShape ?? 'rounded'
   const cfgLogoSizePx  = cfg.logoSizePx ?? (cfg.logoSize === 'small' ? 26 : cfg.logoSize === 'large' ? 46 : 34)
@@ -2932,7 +2934,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   if (view === 'checkout') return (
     <>
     {installed && <div className="sf-statusbar-strip" />}
-    <div className={`sf-page sf-tpl-${store.template ?? 'clasico'} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize} sf-vshape-${cfgVariantShape} sf-eshape-${cfgExtraShape}`} style={pageStyle}>
+    <div className={`sf-page sf-tpl-${store.template ?? 'clasico'} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize} sf-vshape-${cfgVariantShape} sf-vsize-${cfgVariantSize} sf-eshape-${cfgExtraShape}`} style={pageStyle}>
       {showMapPicker && mapboxToken && (
         <LocationMapPicker
           initialLat={customerLat ?? 10.4806}
@@ -3891,7 +3893,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     <>
     {renderLogoMorphOverlay()}
     {installed && <div className="sf-statusbar-strip" />}
-    <div className={`sf-page sf-tpl-${tpl} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize} sf-vshape-${cfgVariantShape} sf-eshape-${cfgExtraShape}${catalogEnter ? ` sf-catalog-enter sf-trans-${store.template_config?.homePage?.transition || 'slide'}` : ''}`} style={catalogPageStyle}>
+    <div className={`sf-page sf-tpl-${tpl} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize} sf-vshape-${cfgVariantShape} sf-vsize-${cfgVariantSize} sf-eshape-${cfgExtraShape}${catalogEnter ? ` sf-catalog-enter sf-trans-${store.template_config?.homePage?.transition || 'slide'}` : ''}`} style={catalogPageStyle}>
       <div className={`sf-topbar${cfgHeaderOverBanner ? ' sf-topbar-glass' : ''}${cfgHeaderSticky && !cfgHeaderOverBanner ? ' sf-topbar-sticky' : ''}${cfgHeaderSticky && cfgHeaderOverBanner ? ' sf-topbar-pinned' : ''}${showHeaderAboveModal ? ' sf-topbar-above-modal' : ''}`}>
         <div className="sf-topbar-inner sf-topbar-3col">
           <div className="sf-topbar-slot-left">

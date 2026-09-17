@@ -25,7 +25,7 @@ type DeliveryRow = {
 type ZoneRow = { id: string; name: string | null; center_lat: number; center_lng: number; radius_m: number }
 type AllOrder = { id: string; created_at: string; status: string; customer_lat: number | null; customer_lng: number | null }
 type OrderItem = { product_id: string | null; product_name: string; quantity: number; unit_price: number; modifiers: unknown }
-type ProductMeta = { id: string; name: string; is_active: boolean; category_id: string | null }
+type ProductMeta = { id: string; name: string; is_active: boolean; category_id: string | null; category_ids?: string[] }
 type CategoryMeta = { id: string; name: string }
 
 // ── Status constants ──
@@ -262,8 +262,20 @@ export default function AnaliticsPage() {
     const orders = (ordersRes.data ?? []) as AllOrder[]
     setAllOrders(orders)
     setZonesData((zonesRes.data ?? []) as ZoneRow[])
-    setAllProducts((productsRes.data ?? []) as ProductMeta[])
+    const products = (productsRes.data ?? []) as ProductMeta[]
     setAllCategories((categoriesRes.data ?? []) as CategoryMeta[])
+
+    // Full category membership per product — falls back to just category_id
+    // if product_categories isn't there yet.
+    const productIds = products.map(p => p.id)
+    const catIdsByProduct: Record<string, string[]> = {}
+    if (productIds.length > 0) {
+      const { data: pcRows } = await supabase.from('product_categories').select('product_id, category_id').in('product_id', productIds)
+      for (const row of pcRows ?? []) {
+        (catIdsByProduct[row.product_id] ??= []).push(row.category_id)
+      }
+    }
+    setAllProducts(products.map(p => ({ ...p, category_ids: catIdsByProduct[p.id] ?? (p.category_id ? [p.category_id] : []) })))
 
     const activeOrderIds = orders.filter(o => o.status !== 'cancelled').map(o => o.id)
     if (activeOrderIds.length > 0) {
@@ -478,12 +490,21 @@ export default function AnaliticsPage() {
   const topModMax = Math.max(...topModifiers.map(m => m.count), 1)
 
   const revenueByCategory = useMemo(() => {
-    const productCatMap: Record<string, string | null> = {}
-    allProducts.forEach(p => { productCatMap[p.id] = p.category_id })
+    // A product can be in several categories — its full revenue counts once
+    // per category it belongs to (so the totals here can add up to more than
+    // the grand total; that's the standard convention for this kind of
+    // breakdown, not a bug).
+    const productCatMap: Record<string, string[]> = {}
+    allProducts.forEach(p => { productCatMap[p.id] = p.category_ids ?? (p.category_id ? [p.category_id] : []) })
     const catRevenue: Record<string, number> = {}
     orderItems.forEach(item => {
-      const catId = item.product_id ? (productCatMap[item.product_id] ?? '__none__') : '__none__'
-      catRevenue[catId] = (catRevenue[catId] ?? 0) + Number(item.unit_price) * item.quantity
+      const catIds = item.product_id ? productCatMap[item.product_id] : undefined
+      const amount = Number(item.unit_price) * item.quantity
+      if (!catIds || catIds.length === 0) {
+        catRevenue['__none__'] = (catRevenue['__none__'] ?? 0) + amount
+      } else {
+        catIds.forEach(catId => { catRevenue[catId] = (catRevenue[catId] ?? 0) + amount })
+      }
     })
     const catMap: Record<string, string> = {}
     allCategories.forEach(c => { catMap[c.id] = c.name })

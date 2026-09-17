@@ -36,6 +36,9 @@ type Product = {
   image_url: string | null; is_active: boolean
   options?: ProductOptions | null
   category_id?: string | null
+  // Full category membership (a product can be in more than one), loaded
+  // separately from product_categories — falls back to [category_id].
+  category_ids?: string[]
 }
 
 type VariableGroupPreset   = { id: string; name: string; group: VariableGroup }
@@ -61,7 +64,7 @@ export default function ProductosPage() {
   const [saving, setSaving]         = useState(false)
   const [error, setError]           = useState('')
   const [categories, setCategories] = useState<Category[]>([])
-  const [categoryId, setCategoryId] = useState<string>('')
+  const [categoryIds, setCategoryIds] = useState<string[]>([])
   const [isDirty, setIsDirty]       = useState(false)
   const [pendingToggles, setPendingToggles] = useState<Record<string, boolean>>({})
 
@@ -106,7 +109,17 @@ export default function ProductosPage() {
       supabase.from('categories').select('*').eq('store_id', storeId).order('position'),
       supabase.from('stores').select('checkout_settings').eq('id', storeId).maybeSingle(),
     ])
-    setProducts(prods ?? [])
+    // Full category membership per product — falls back to just category_id
+    // (already on each row) if product_categories isn't there yet.
+    const productIds = (prods ?? []).map(p => p.id)
+    const catIdsByProduct: Record<string, string[]> = {}
+    if (productIds.length > 0) {
+      const { data: pcRows } = await supabase.from('product_categories').select('product_id, category_id').in('product_id', productIds)
+      for (const row of pcRows ?? []) {
+        (catIdsByProduct[row.product_id] ??= []).push(row.category_id)
+      }
+    }
+    setProducts((prods ?? []).map(p => ({ ...p, category_ids: catIdsByProduct[p.id] ?? (p.category_id ? [p.category_id] : []) })))
     setCategories(cats ?? [])
     const cs = (storeCs?.checkout_settings && typeof storeCs.checkout_settings === 'object') ? storeCs.checkout_settings as Record<string, unknown> : {}
     setCheckoutSettings(cs)
@@ -129,7 +142,7 @@ export default function ProductosPage() {
     setEditing(null)
     setName(''); setDescription(''); setPrice('')
     setIsActive(true); setImageUrl(''); setError('')
-    setCategoryId(''); setIsDirty(false)
+    setCategoryIds([]); setIsDirty(false)
     resetOpts(); setMode('form')
   }
 
@@ -138,7 +151,7 @@ export default function ProductosPage() {
     setName(p.name); setDescription(p.description ?? '')
     setPrice(String(p.price)); setIsActive(p.is_active)
     setImageUrl(p.image_url ?? ''); setError('')
-    setCategoryId(p.category_id ?? ''); setIsDirty(false)
+    setCategoryIds(p.category_ids ?? (p.category_id ? [p.category_id] : [])); setIsDirty(false)
     const opts = p.options ?? {}
     setOptVariables((opts.variables ?? []).map(g => ({ ...g, choices: (g.choices ?? []).map(normalizeChoice) })))
     setOptColors(opts.colors ?? [])
@@ -152,6 +165,11 @@ export default function ProductosPage() {
     setOptCarbs(opts.nutrition?.carbs !== undefined ? String(opts.nutrition.carbs) : '')
     setChoiceInputs({}); setColorInput('')
     setMode('form')
+  }
+
+  function toggleCategory(id: string) {
+    setCategoryIds(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id])
+    setIsDirty(true)
   }
 
   // --- variable helpers ---
@@ -343,14 +361,23 @@ export default function ProductosPage() {
       description: description.trim() || null,
       price: priceNum, image_url: imageUrl || null, is_active: isActive,
       options: hasOpts ? opts : null,
-      category_id: categoryId || null,
+      // Kept as the product's primary category for any code that still only
+      // understands a single one — the full set lives in product_categories.
+      category_id: categoryIds[0] || null,
     }
-    const { error: err } = editing
-      ? await supabase.from('products').update(payload).eq('id', editing.id)
-      : await supabase.from('products').insert(payload)
+    const { data: saved, error: err } = editing
+      ? await supabase.from('products').update(payload).eq('id', editing.id).select('id').single()
+      : await supabase.from('products').insert(payload).select('id').single()
 
-    if (err) setError(err.message)
-    else { await loadData(); setMode('list'); setIsDirty(false) }
+    if (err) { setError(err.message); setSaving(false); return }
+
+    const productId = saved.id
+    await supabase.from('product_categories').delete().eq('product_id', productId)
+    if (categoryIds.length > 0) {
+      await supabase.from('product_categories').insert(categoryIds.map(category_id => ({ product_id: productId, category_id })))
+    }
+
+    await loadData(); setMode('list'); setIsDirty(false)
     setSaving(false)
   }
 
@@ -432,17 +459,19 @@ export default function ProductosPage() {
           </div>
           {categories.length > 0 && (
             <div className="pr-field">
-              <label className="pr-label">Categoria</label>
-              <select
-                className="pr-select"
-                value={categoryId}
-                onChange={e => { setCategoryId(e.target.value); setIsDirty(true) }}
-              >
-                <option value="">Sin categoria</option>
+              <label className="pr-label">Categorias</label>
+              <div className="pr-cat-toggles">
                 {categories.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  <button
+                    key={cat.id}
+                    type="button"
+                    className={`pr-cat-toggle${categoryIds.includes(cat.id) ? ' active' : ''}`}
+                    onClick={() => toggleCategory(cat.id)}
+                  >
+                    {cat.name}
+                  </button>
                 ))}
-              </select>
+              </div>
             </div>
           )}
 
@@ -908,9 +937,9 @@ export default function ProductosPage() {
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                     <div className="pr-card-price">${Number(p.price).toFixed(2)}</div>
                     {hasOpts && <div className="pr-card-opts-badge">Con opciones</div>}
-                    {p.category_id && categories.find(c => c.id === p.category_id) && (
-                      <div className="pr-card-cat">{categories.find(c => c.id === p.category_id)!.name}</div>
-                    )}
+                    {(p.category_ids ?? []).map(id => categories.find(c => c.id === id)).filter((c): c is Category => !!c).map(cat => (
+                      <div key={cat.id} className="pr-card-cat">{cat.name}</div>
+                    ))}
                   </div>
                 </div>
                 <div className="pr-card-right" onClick={e => e.stopPropagation()}>

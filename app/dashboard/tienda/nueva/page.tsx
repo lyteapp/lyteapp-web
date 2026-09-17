@@ -150,10 +150,10 @@ export default function NuevaTiendaPage() {
     }
 
     const { data: prods } = await supabase
-      .from('products').select('name, description, price, image_url, is_active, options, category_id')
+      .from('products').select('id, name, description, price, image_url, is_active, options, category_id')
       .eq('store_id', fromId)
     if (prods && prods.length > 0) {
-      await supabase.from('products').insert(prods.map(p => ({
+      const { data: insertedProds } = await supabase.from('products').insert(prods.map(p => ({
         store_id: toId,
         name: p.name,
         description: p.description,
@@ -162,7 +162,18 @@ export default function NuevaTiendaPage() {
         is_active: p.is_active,
         options: p.options,
         category_id: p.category_id ? catIdMap.get(p.category_id) ?? null : null,
-      })))
+      }))).select('id')
+
+      const prodIdMap = new Map<string, string>()
+      insertedProds?.forEach((row, i) => prodIdMap.set(prods[i].id, row.id))
+
+      // Full category membership (a product can be in more than one),
+      // remapped through both the category and product id maps above.
+      const { data: pcRows } = await supabase.from('product_categories').select('product_id, category_id').in('product_id', prods.map(p => p.id))
+      const newPcRows = (pcRows ?? [])
+        .map(r => ({ product_id: prodIdMap.get(r.product_id), category_id: catIdMap.get(r.category_id) }))
+        .filter((r): r is { product_id: string; category_id: string } => !!r.product_id && !!r.category_id)
+      if (newPcRows.length > 0) await supabase.from('product_categories').insert(newPcRows)
     }
   }
 

@@ -99,6 +99,9 @@ type Product = {
   id: string; name: string; description: string | null
   price: number; image_url: string | null; options?: ProductOptions | null
   category_id?: string | null
+  // Full category membership (a product can be in more than one) — falls
+  // back to [category_id] server-side if product_categories isn't populated.
+  category_ids?: string[]
 }
 type PaymentMethod = { type: string; label: string; enabled: boolean; details: Record<string, string> }
 type SavedLocation = { id: string; label: string; address: string; lat: number | null; lng: number | null }
@@ -3473,25 +3476,36 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // ── CATALOG ──
   const tpl = store.template ?? 'clasico'
 
+  // A product can belong to more than one category — category_ids is the
+  // full membership set (server-populated, falling back to [category_id]).
+  const productCatIds = (p: Product) => p.category_ids ?? (p.category_id ? [p.category_id] : [])
+
   // Category grouping — a category can be marked "hidden" (only reachable via
   // a direct link from the menu or an image/button block), so it drops out of
   // the normal nav/scroll but keeps its own catGroups-shaped list for those.
   const cfgHiddenCategoryIds = new Set(cfg.hiddenCategoryIds ?? [])
   const catGroups = categories
     .filter(cat => !cfgHiddenCategoryIds.has(cat.id))
-    .map(cat => ({ cat, items: products.filter(p => p.category_id === cat.id) }))
+    .map(cat => ({ cat, items: products.filter(p => productCatIds(p).includes(cat.id)) }))
     .filter(g => g.items.length > 0)
   const hiddenCatGroups = categories
     .filter(cat => cfgHiddenCategoryIds.has(cat.id))
-    .map(cat => ({ cat, items: products.filter(p => p.category_id === cat.id) }))
+    .map(cat => ({ cat, items: products.filter(p => productCatIds(p).includes(cat.id)) }))
     .filter(g => g.items.length > 0)
-  const uncategorized = products.filter(p => !p.category_id || !categories.find(c => c.id === p.category_id))
+  const uncategorized = products.filter(p => {
+    const ids = productCatIds(p)
+    return ids.length === 0 || !ids.some(id => categories.find(c => c.id === id))
+  })
   const hasCats = catGroups.length > 0
   // The flat (no-categories) layouts below list every product directly
   // instead of going through catGroups, so they need their own exclusion —
   // otherwise a store with just one category, once it's hidden, falls into
-  // "no categories" and shows that category's products anyway.
-  const visibleProducts = products.filter(p => !p.category_id || !cfgHiddenCategoryIds.has(p.category_id))
+  // "no categories" and shows that category's products anyway. A product
+  // with several categories only drops out once every one of them is hidden.
+  const visibleProducts = products.filter(p => {
+    const ids = productCatIds(p)
+    return ids.length === 0 || ids.some(id => !cfgHiddenCategoryIds.has(id))
+  })
   // Content blocks anchored to a hidden category (e.g. the button meant to
   // link people to it) only render inside the catGroups loop today, which
   // skips hidden categories entirely — so the block meant to advertise the
@@ -4005,7 +4019,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           </button>
           <h2 className="sf-section-title">{focusCategory.name}</h2>
           <div className="sf-grid">
-            {products.filter(p => p.category_id === focusCategory.id).map(renderCard)}
+            {products.filter(p => productCatIds(p).includes(focusCategory.id)).map(renderCard)}
           </div>
           {renderContentBlocks(focusCategory.id)}
         </div>

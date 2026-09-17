@@ -48,7 +48,7 @@ export default function CategoriasPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Eliminar esta categoria? Los productos que la tienen quedaran sin categoria.')) return
+    if (!confirm('Eliminar esta categoria? Se quitara de los productos que la tienen (si tenian otras categorias, las conservan).')) return
     await supabase.from('categories').delete().eq('id', id)
     setCategories(c => c.filter(x => x.id !== id))
   }

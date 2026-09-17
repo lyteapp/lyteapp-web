@@ -70,5 +70,25 @@ export default async function StorePage({ params }: { params: Promise<{ store: s
   const initialDeliveryZones = zones ?? []
   const mapboxToken          = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''
 
-  return <StoreShell store={store} products={products ?? []} categories={categories ?? []} initialBcvRate={initialBcvRate} initialDeliveryZones={initialDeliveryZones} mapboxToken={mapboxToken} />
+  // A product can belong to more than one category via product_categories;
+  // category_id stays as a fallback (and as the primary category for older
+  // readers) so this degrades to the old single-category behavior if that
+  // table's migration hasn't landed yet, instead of breaking the storefront.
+  const productIds = (products ?? []).map(p => p.id)
+  const categoryIdsByProduct: Record<string, string[]> = {}
+  if (productIds.length > 0) {
+    const { data: pcRows } = await supabase
+      .from('product_categories')
+      .select('product_id, category_id')
+      .in('product_id', productIds)
+    for (const row of pcRows ?? []) {
+      (categoryIdsByProduct[row.product_id] ??= []).push(row.category_id)
+    }
+  }
+  const productsWithCategories = (products ?? []).map(p => ({
+    ...p,
+    category_ids: categoryIdsByProduct[p.id] ?? (p.category_id ? [p.category_id] : []),
+  }))
+
+  return <StoreShell store={store} products={productsWithCategories} categories={categories ?? []} initialBcvRate={initialBcvRate} initialDeliveryZones={initialDeliveryZones} mapboxToken={mapboxToken} />
 }

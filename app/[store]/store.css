@@ -1520,6 +1520,19 @@ html, body { overflow-x: clip; }
   pointer-events: none;
 }
 
+/* "Pagina completa" — dragging a finger over the hero photo shows a
+   round magnifier lens instead of opening the fullscreen lightbox. */
+.sf-modal-img-wrap-magnify { touch-action: none; cursor: zoom-in; }
+.sf-modal-img-wrap-magnify .sf-modal-img { cursor: default; }
+.sf-modal-magnifier {
+  position: absolute; width: 130px; height: 130px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%; border: 3px solid white;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.35);
+  background-repeat: no-repeat; background-size: 250% 250%;
+  pointer-events: none; z-index: 5;
+}
+
 /* "Pagina completa" — a large hero photo up top instead of a small
    thumbnail beside the name, with everything else stacked below it. */
 .sf-modal-product-head-hero {

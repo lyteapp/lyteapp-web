@@ -896,6 +896,16 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const stripRefs               = useRef<Map<string, HTMLDivElement>>(new Map())
   const lightboxStripRef        = useRef<HTMLDivElement | null>(null)
   const lightboxDragStartIdxRef = useRef<number>(0)
+  const [magnifier, setMagnifier] = useState<{ px: number; py: number; bgX: number; bgY: number } | null>(null)
+  const modalImgWrapRef         = useRef<HTMLDivElement | null>(null)
+  const updateMagnifier = (clientX: number, clientY: number) => {
+    const el = modalImgWrapRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const x = Math.max(0, Math.min(rect.width, clientX - rect.left))
+    const y = Math.max(0, Math.min(rect.height, clientY - rect.top))
+    setMagnifier({ px: x, py: y, bgX: (x / rect.width) * 100, bgY: (y / rect.height) * 100 })
+  }
 
   const storeCurrency = (store.store_currency ?? 'USD') as 'USD' | 'EUR'
   const currencySymbol = storeCurrency === 'EUR' ? '€' : '$'
@@ -1795,12 +1805,33 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 : [modalProduct.image_url, ...(modalProduct.options?.images ?? [])]
               ).filter(Boolean) as string[]
               const openLightbox = () => setLightbox({ images: imgs.length > 0 ? imgs : [modalDisplayImage!], idx: 0 })
+              const magnify = cfgModalFull && !isVideoUrl(modalDisplayImage)
               return (
-                <div className="sf-modal-img-wrap">
+                <div
+                  className={`sf-modal-img-wrap${magnify ? ' sf-modal-img-wrap-magnify' : ''}`}
+                  ref={modalImgWrapRef}
+                  onTouchStart={magnify ? e => updateMagnifier(e.touches[0].clientX, e.touches[0].clientY) : undefined}
+                  onTouchMove={magnify ? e => updateMagnifier(e.touches[0].clientX, e.touches[0].clientY) : undefined}
+                  onTouchEnd={magnify ? () => setMagnifier(null) : undefined}
+                  onMouseDown={magnify ? e => updateMagnifier(e.clientX, e.clientY) : undefined}
+                  onMouseMove={magnify ? e => { if (magnifier) updateMagnifier(e.clientX, e.clientY) } : undefined}
+                  onMouseUp={magnify ? () => setMagnifier(null) : undefined}
+                  onMouseLeave={magnify ? () => setMagnifier(null) : undefined}
+                >
                   {isVideoUrl(modalDisplayImage)
                     ? <video src={modalDisplayImage} autoPlay muted loop playsInline className="sf-modal-img sf-modal-img-zoom" onClick={openLightbox} />
-                    : <img src={modalDisplayImage} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" onClick={openLightbox} />}
+                    : <img src={modalDisplayImage} alt={modalProduct.name} className={`sf-modal-img${magnify ? '' : ' sf-modal-img-zoom'}`} onClick={magnify ? undefined : openLightbox} />}
                   {imgs.length > 1 && <div className="sf-modal-img-count">1/{imgs.length}</div>}
+                  {magnify && magnifier && (
+                    <div
+                      className="sf-modal-magnifier"
+                      style={{
+                        left: magnifier.px, top: magnifier.py,
+                        backgroundImage: `url(${modalDisplayImage})`,
+                        backgroundPosition: `${magnifier.bgX}% ${magnifier.bgY}%`,
+                      }}
+                    />
+                  )}
                 </div>
               )
             })()}

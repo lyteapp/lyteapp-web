@@ -78,6 +78,14 @@ html, body { overflow-x: clip; }
    Border dropped so it doesn't draw a seam where the category bar joins
    it underneath — together they're meant to read as one glass block. */
 .sf-topbar-glass.sf-topbar-pinned { position: fixed; z-index: 25; border-bottom: none; }
+/* While a full-page product modal is open, force-pin the header above the
+   modal overlay (z-index 200) instead of letting it hide behind it —
+   overriding whatever sticky/glass positioning it normally has. */
+.sf-topbar-above-modal {
+  position: fixed !important;
+  top: 0 !important; left: 0 !important; right: 0 !important;
+  z-index: 201 !important;
+}
 .sf-topbar-inner {
   max-width: 1100px; margin: 0 auto;
   padding: 0 20px; min-height: var(--sf-header-height, 56px); height: auto;

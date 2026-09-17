@@ -1171,6 +1171,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // Explicit "full" is a real full-screen takeover — distinct from the
   // unset/legacy default, which keeps today's ~90vh sheet look unchanged.
   const cfgModalFull = cfg.modalSize === 'full'
+  // A full-page product modal is otherwise a fixed inset:0 overlay, which
+  // hides the store's own header behind it — pin the header above the
+  // overlay and start the overlay right below it instead, so it stays
+  // visible. Only makes sense over the catalog (checkout has no header).
+  const headerPxNow = headerHeightMeasured ?? cfg.headerHeightPx ?? 56
+  const showHeaderAboveModal = cfgModalFull && view === 'catalog' && !!modalProduct
 
   // ── iOS Safari reveals <body>'s own background during the rubber-band
   // overscroll bounce past the top/bottom of the page. The app shell's
@@ -1711,7 +1717,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   function renderProductModal() {
     if (!modalProduct) return null
     return (
-      <div className="sf-modal-overlay" onClick={() => setModalProduct(null)}>
+      <div className="sf-modal-overlay" style={showHeaderAboveModal ? { top: headerPxNow } : undefined} onClick={() => setModalProduct(null)}>
         {chipNutritionPreview && (
           <div
             className="sf-chip-nutrition-tip"
@@ -1761,7 +1767,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
               </div>
             </div>
           )}
-        <div className={`sf-modal${cfgModalHalf ? ' sf-modal-half' : ''}${cfgModalFull ? ' sf-modal-fullpage' : ''}`} onClick={e => e.stopPropagation()}>
+        <div
+          className={`sf-modal${cfgModalHalf ? ' sf-modal-half' : ''}${cfgModalFull ? ' sf-modal-fullpage' : ''}`}
+          style={showHeaderAboveModal ? { height: `calc(100dvh - ${headerPxNow}px)`, maxHeight: `calc(100dvh - ${headerPxNow}px)` } : undefined}
+          onClick={e => e.stopPropagation()}
+        >
           <button className={`sf-modal-close${cfgModalFull ? ' sf-modal-close-hero' : ''}`} onClick={() => setModalProduct(null)}>×</button>
 
           <div className={`sf-modal-product-head${cfgModalFull ? ' sf-modal-product-head-hero' : ''}`}>
@@ -3882,7 +3892,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     {renderLogoMorphOverlay()}
     {installed && <div className="sf-statusbar-strip" />}
     <div className={`sf-page sf-tpl-${tpl} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize} sf-vshape-${cfgVariantShape} sf-eshape-${cfgExtraShape}${catalogEnter ? ` sf-catalog-enter sf-trans-${store.template_config?.homePage?.transition || 'slide'}` : ''}`} style={catalogPageStyle}>
-      <div className={`sf-topbar${cfgHeaderOverBanner ? ' sf-topbar-glass' : ''}${cfgHeaderSticky && !cfgHeaderOverBanner ? ' sf-topbar-sticky' : ''}${cfgHeaderSticky && cfgHeaderOverBanner ? ' sf-topbar-pinned' : ''}`}>
+      <div className={`sf-topbar${cfgHeaderOverBanner ? ' sf-topbar-glass' : ''}${cfgHeaderSticky && !cfgHeaderOverBanner ? ' sf-topbar-sticky' : ''}${cfgHeaderSticky && cfgHeaderOverBanner ? ' sf-topbar-pinned' : ''}${showHeaderAboveModal ? ' sf-topbar-above-modal' : ''}`}>
         <div className="sf-topbar-inner sf-topbar-3col">
           <div className="sf-topbar-slot-left">
             {cfg.showMenuButton && (

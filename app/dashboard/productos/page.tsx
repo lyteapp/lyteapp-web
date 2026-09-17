@@ -19,7 +19,9 @@ function isVideoUrl(url?: string | null): boolean {
   return !!url && PRODUCT_VIDEO_EXT_RE.test(url)
 }
 type Additional    = { name: string; price: number; calories?: number; fat?: number; protein?: number; carbs?: number }
-type ColorVariant  = { label: string; color: string; imageUrl: string }
+// imageUrl stays the cover photo for this color (used anywhere only one
+// image per variant is shown); imageUrls holds any extra gallery photos.
+type ColorVariant  = { label: string; color: string; imageUrl: string; imageUrls?: string[] }
 type NutritionInfo = { enabled?: boolean; calories?: number; fat?: number; protein?: number; carbs?: number }
 type ProductOptions = {
   variables?:     VariableGroup[]
@@ -28,6 +30,8 @@ type ProductOptions = {
   additionals?:   Additional[]
   allowNotes?:    boolean
   nutrition?:     NutritionInfo
+  // Extra gallery photos for the product itself, beyond its cover image_url.
+  images?:        string[]
 }
 
 type Product = {
@@ -86,6 +90,12 @@ export default function ProductosPage() {
   const [variantImgUploadIdx, setVariantImgUploadIdx] = useState<number | null>(null)
   const [variantImgUploading, setVariantImgUploading] = useState(false)
 
+  // extra gallery photos — product-level and per color variant
+  const [optImages, setOptImages]               = useState<string[]>([])
+  const [galleryUploading, setGalleryUploading]  = useState(false)
+  const [variantGalleryUploadIdx, setVariantGalleryUploadIdx] = useState<number | null>(null)
+  const [variantGalleryUploading, setVariantGalleryUploading] = useState(false)
+
   // reusable option-group presets (saved on the store, applied across products)
   const [checkoutSettings, setCheckoutSettings]           = useState<Record<string, unknown>>({})
   const [variableGroupPresets, setVariableGroupPresets]     = useState<VariableGroupPreset[]>([])
@@ -99,6 +109,8 @@ export default function ProductosPage() {
   const [mounted, setMounted] = useState(false)
   const imgRef = useRef<HTMLInputElement>(null)
   const variantImgRef = useRef<HTMLInputElement>(null)
+  const galleryImgRef = useRef<HTMLInputElement>(null)
+  const variantGalleryImgRef = useRef<HTMLInputElement>(null)
   useEffect(() => { setMounted(true) }, [])
   useEffect(() => { if (storeId) loadData() }, [storeId])
 
@@ -136,6 +148,7 @@ export default function ProductosPage() {
     setOptAdditionals([]); setOptAllowNotes(false)
     setOptNutritionEnabled(false)
     setOptCalories(''); setOptFat(''); setOptProtein(''); setOptCarbs('')
+    setOptImages([])
   }
 
   function openAdd() {
@@ -156,6 +169,7 @@ export default function ProductosPage() {
     setOptVariables((opts.variables ?? []).map(g => ({ ...g, choices: (g.choices ?? []).map(normalizeChoice) })))
     setOptColors(opts.colors ?? [])
     setOptColorVariants(opts.colorVariants ?? [])
+    setOptImages(opts.images ?? [])
     setOptAdditionals(opts.additionals ?? [])
     setOptAllowNotes(opts.allowNotes ?? false)
     setOptNutritionEnabled(opts.nutrition?.enabled ?? false)
@@ -321,6 +335,51 @@ export default function ProductosPage() {
     setVariantImgUploadIdx(null)
   }
 
+  async function handleGalleryImgUpload(e: { target: { files: FileList | null } }) {
+    const files = e.target.files
+    if (!files || files.length === 0 || !storeId) return
+    setGalleryUploading(true)
+    setIsDirty(true)
+    const uploaded: string[] = []
+    for (const file of Array.from(files)) {
+      const ext  = file.name.split('.').pop()
+      const path = `${storeId}-gal-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`
+      const { error } = await supabase.storage.from('product-images').upload(path, file, { upsert: true, contentType: file.type })
+      if (!error) uploaded.push(supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl)
+    }
+    setOptImages(prev => [...prev, ...uploaded])
+    setGalleryUploading(false)
+  }
+
+  function removeGalleryImg(idx: number) {
+    setOptImages(prev => prev.filter((_, i) => i !== idx))
+    setIsDirty(true)
+  }
+
+  async function handleVariantGalleryImgUpload(e: { target: { files: FileList | null } }) {
+    const files = e.target.files
+    if (!files || files.length === 0 || !storeId || variantGalleryUploadIdx === null) return
+    setVariantGalleryUploading(true)
+    const idx = variantGalleryUploadIdx
+    const uploaded: string[] = []
+    for (const file of Array.from(files)) {
+      const ext  = file.name.split('.').pop()
+      const path = `${storeId}-vargal-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`
+      const { error } = await supabase.storage.from('product-images').upload(path, file, { upsert: true, contentType: file.type })
+      if (!error) uploaded.push(supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl)
+    }
+    setOptColorVariants(prev => prev.map((v, i) => i === idx ? { ...v, imageUrls: [...(v.imageUrls ?? []), ...uploaded] } : v))
+    setIsDirty(true)
+    setVariantGalleryUploading(false)
+    setVariantGalleryUploadIdx(null)
+  }
+
+  function removeVariantGalleryImg(variantIdx: number, photoIdx: number) {
+    setOptColorVariants(prev => prev.map((v, i) => i === variantIdx
+      ? { ...v, imageUrls: (v.imageUrls ?? []).filter((_, j) => j !== photoIdx) } : v))
+    setIsDirty(true)
+  }
+
   function moveVariant(i: number, dir: -1 | 1) {
     const j = i + dir
     setOptColorVariants(arr => {
@@ -351,10 +410,12 @@ export default function ProductosPage() {
         protein:  parseFloat(optProtein) || 0,
         carbs:    parseFloat(optCarbs) || 0,
       } : undefined,
+      images: optImages,
     }
     const hasOpts = opts.variables!.length > 0 || opts.colors!.length > 0 ||
       (opts.colorVariants?.length ?? 0) > 0 ||
-      opts.additionals!.length > 0 || opts.allowNotes || !!opts.nutrition
+      opts.additionals!.length > 0 || opts.allowNotes || !!opts.nutrition ||
+      opts.images!.length > 0
 
     const payload = {
       store_id: storeId, name: name.trim(),
@@ -443,7 +504,24 @@ export default function ProductosPage() {
           </div>
           <input ref={imgRef} type="file" accept="image/*,video/mp4,video/webm,video/quicktime" style={{ display: 'none' }} onChange={handleImgUpload} />
           <input ref={variantImgRef} type="file" accept="image/*,video/mp4,video/webm,video/quicktime" style={{ display: 'none' }} onChange={handleVariantImgUpload} />
+          <input ref={variantGalleryImgRef} type="file" accept="image/*,video/mp4,video/webm,video/quicktime" multiple style={{ display: 'none' }} onChange={handleVariantGalleryImgUpload} />
           <p className="pr-img-tip">{t('prod.img.tip')}</p>
+
+          {/* Extra photos — a gallery beyond the cover image above */}
+          <div className="pr-gallery">
+            {optImages.map((url, i) => (
+              <div key={url + i} className="pr-gallery-thumb">
+                {isVideoUrl(url)
+                  ? <video src={url} autoPlay muted loop playsInline className="pr-gallery-thumb-img" />
+                  : <img src={url} alt="" className="pr-gallery-thumb-img" />}
+                <button type="button" className="pr-gallery-thumb-del" onClick={() => removeGalleryImg(i)}>×</button>
+              </div>
+            ))}
+            <button type="button" className="pr-gallery-add" onClick={() => galleryImgRef.current?.click()} disabled={galleryUploading}>
+              {galleryUploading ? '...' : '+'}
+            </button>
+          </div>
+          <input ref={galleryImgRef} type="file" accept="image/*,video/mp4,video/webm,video/quicktime" multiple style={{ display: 'none' }} onChange={handleGalleryImgUpload} />
         </div>
 
         <div className="pr-fields-col">
@@ -709,6 +787,24 @@ export default function ProductosPage() {
                             <span>{variantImgUploading && variantImgUploadIdx === i ? 'Subiendo...' : 'Agregar foto'}</span>
                           </>
                       }
+                    </div>
+                    <div className="pr-gallery pr-gallery-sm">
+                      {(v.imageUrls ?? []).map((url, pi) => (
+                        <div key={url + pi} className="pr-gallery-thumb">
+                          {isVideoUrl(url)
+                            ? <video src={url} autoPlay muted loop playsInline className="pr-gallery-thumb-img" />
+                            : <img src={url} alt="" className="pr-gallery-thumb-img" />}
+                          <button type="button" className="pr-gallery-thumb-del" onClick={() => removeVariantGalleryImg(i, pi)}>×</button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        className="pr-gallery-add"
+                        onClick={() => { setVariantGalleryUploadIdx(i); variantGalleryImgRef.current?.click() }}
+                        disabled={variantGalleryUploading && variantGalleryUploadIdx === i}
+                      >
+                        {variantGalleryUploading && variantGalleryUploadIdx === i ? '...' : '+'}
+                      </button>
                     </div>
                   </div>
                   <button className="pr-opt-del" onClick={() => {

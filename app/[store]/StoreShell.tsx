@@ -74,7 +74,9 @@ function textWeightStyle(sliderValue: number | undefined): { fontWeight?: number
   return { fontWeight, strokeWidth }
 }
 type Additional     = { name: string; price: number; calories?: number; fat?: number; protein?: number; carbs?: number }
-type ColorVariant   = { label: string; color: string; imageUrl: string }
+// imageUrl is the cover photo for this color (used anywhere only one image
+// per variant is shown); imageUrls holds any extra gallery photos.
+type ColorVariant   = { label: string; color: string; imageUrl: string; imageUrls?: string[] }
 type NutritionInfo  = { enabled?: boolean; calories?: number; fat?: number; protein?: number; carbs?: number }
 type ProductOptions = {
   variables?:     VariableGroup[]
@@ -83,6 +85,8 @@ type ProductOptions = {
   additionals?:   Additional[]
   allowNotes?:    boolean
   nutrition?:     NutritionInfo
+  // Extra gallery photos for the product itself, beyond its cover image_url.
+  images?:        string[]
 }
 type SelectedOptions = {
   variables?:   Record<string, string[] | string>
@@ -1746,14 +1750,25 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
           <div className="sf-modal-product-head">
             {modalDisplayImage && (() => {
-              const openLightbox = () => {
-                const cvs = modalProduct.options?.colorVariants
-                const imgs = cvs?.length ? cvs.map(v => v.imageUrl).filter(Boolean) as string[] : [modalDisplayImage!]
-                setLightbox({ images: imgs, idx: cvs?.length ? Math.max(0, cvs.findIndex(v => v.label === modalColor)) : 0 })
-              }
-              return isVideoUrl(modalDisplayImage)
-                ? <video src={modalDisplayImage} autoPlay muted loop playsInline className="sf-modal-img sf-modal-img-zoom" onClick={openLightbox} />
-                : <img src={modalDisplayImage} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" onClick={openLightbox} />
+              // Gallery for whatever is currently shown: the selected
+              // color's own photos, or the product's own photos when no
+              // color is picked (colors are switched via the swatches
+              // below, not by swiping here).
+              const cvs = modalProduct.options?.colorVariants
+              const selectedVariant = modalColor && cvs?.length ? cvs.find(v => v.label === modalColor) : null
+              const imgs = (selectedVariant
+                ? [selectedVariant.imageUrl, ...(selectedVariant.imageUrls ?? [])]
+                : [modalProduct.image_url, ...(modalProduct.options?.images ?? [])]
+              ).filter(Boolean) as string[]
+              const openLightbox = () => setLightbox({ images: imgs.length > 0 ? imgs : [modalDisplayImage!], idx: 0 })
+              return (
+                <div className="sf-modal-img-wrap">
+                  {isVideoUrl(modalDisplayImage)
+                    ? <video src={modalDisplayImage} autoPlay muted loop playsInline className="sf-modal-img sf-modal-img-zoom" onClick={openLightbox} />
+                    : <img src={modalDisplayImage} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" onClick={openLightbox} />}
+                  {imgs.length > 1 && <div className="sf-modal-img-count">1/{imgs.length}</div>}
+                </div>
+              )
             })()}
             <div className="sf-modal-product-info">
               <div className="sf-modal-name">{modalProduct.name}</div>

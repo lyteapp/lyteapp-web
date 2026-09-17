@@ -4076,32 +4076,37 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 {hiddenCategoryBlocks.map(cat => <Fragment key={`hb-${cat.id}`}>{renderContentBlocks(cat.id)}</Fragment>)}
                 {renderContentBlocks('bottom')}
               </>
-            ) : vitHero ? (
+            ) : (
               <>
-                <div className="sf-vit-hero" onClick={() => openProductModal(vitHero)}>
-                  <div className="sf-vit-hero-img-wrap">
-                    {vitHero.image_url
-                      ? (isVideoUrl(vitHero.image_url)
-                          ? <video src={vitHero.image_url} autoPlay muted loop playsInline className="sf-vit-hero-img" />
-                          : <img src={vitHero.image_url} alt={vitHero.name} className="sf-vit-hero-img" />)
-                      : <div className="sf-vit-hero-img-empty">{PLACEHOLDER}</div>
-                    }
-                    {getProdQty(vitHero.id) > 0 && <div className="sf-card-badge sf-vit-badge">{getProdQty(vitHero.id)}</div>}
-                  </div>
-                  <div className="sf-vit-hero-body">
-                    <div className="sf-vit-hero-name">{vitHero.name}</div>
-                    {vitHero.description && <div className="sf-vit-hero-desc">{vitHero.description}</div>}
-                    <div className="sf-vit-hero-footer">
-                      <div className="sf-vit-hero-price">{currencySymbol}{Number(vitHero.price).toFixed(2)}</div>
+                {renderContentBlocks('top')}
+                {vitHero && (
+                  <div className="sf-vit-hero" onClick={() => openProductModal(vitHero)}>
+                    <div className="sf-vit-hero-img-wrap">
+                      {vitHero.image_url
+                        ? (isVideoUrl(vitHero.image_url)
+                            ? <video src={vitHero.image_url} autoPlay muted loop playsInline className="sf-vit-hero-img" />
+                            : <img src={vitHero.image_url} alt={vitHero.name} className="sf-vit-hero-img" />)
+                        : <div className="sf-vit-hero-img-empty">{PLACEHOLDER}</div>
+                      }
+                      {getProdQty(vitHero.id) > 0 && <div className="sf-card-badge sf-vit-badge">{getProdQty(vitHero.id)}</div>}
+                    </div>
+                    <div className="sf-vit-hero-body">
+                      <div className="sf-vit-hero-name">{vitHero.name}</div>
+                      {vitHero.description && <div className="sf-vit-hero-desc">{vitHero.description}</div>}
+                      <div className="sf-vit-hero-footer">
+                        <div className="sf-vit-hero-price">{currencySymbol}{Number(vitHero.price).toFixed(2)}</div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
                 {vitRest.length > 0 && (
                   <><h2 className="sf-section-title sf-vit-more-title">{t('store.ourProducts')}</h2>
                   <div className="sf-grid">{vitRest.map(renderCard)}</div></>
                 )}
+                {hiddenCategoryBlocks.map(cat => <Fragment key={`hb-${cat.id}`}>{renderContentBlocks(cat.id)}</Fragment>)}
+                {renderContentBlocks('bottom')}
               </>
-            ) : null
+            )
           ) : tpl === 'escaparate' ? (
             hasCats ? (
               <>
@@ -4126,10 +4131,15 @@ export default function StoreShell({ store, products, categories = [], initialBc
               </>
             ) : (
               <>
-                <div className="sf-esc-featured">{escFeatured.map(renderCard)}</div>
+                {renderContentBlocks('top')}
+                {escFeatured.length > 0 && (
+                  <div className="sf-esc-featured">{escFeatured.map(renderCard)}</div>
+                )}
                 {escRest.length > 0 && (
                   <div className="sf-esc-list">{escRest.map(renderEscRow)}</div>
                 )}
+                {hiddenCategoryBlocks.map(cat => <Fragment key={`hb-${cat.id}`}>{renderContentBlocks(cat.id)}</Fragment>)}
+                {renderContentBlocks('bottom')}
               </>
             )
           ) : tpl === 'catalogo' ? (
@@ -4186,8 +4196,15 @@ export default function StoreShell({ store, products, categories = [], initialBc
             </>
           ) : (
             <>
-              <h2 className="sf-section-title">{t('store.ourProducts')}</h2>
-              <div className="sf-grid">{visibleProducts.map(renderCard)}</div>
+              {renderContentBlocks('top')}
+              {visibleProducts.length > 0 && (
+                <>
+                  <h2 className="sf-section-title">{t('store.ourProducts')}</h2>
+                  <div className="sf-grid">{visibleProducts.map(renderCard)}</div>
+                </>
+              )}
+              {hiddenCategoryBlocks.map(cat => <Fragment key={`hb-${cat.id}`}>{renderContentBlocks(cat.id)}</Fragment>)}
+              {renderContentBlocks('bottom')}
             </>
           )}
         </div>

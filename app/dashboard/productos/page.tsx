@@ -433,9 +433,11 @@ export default function ProductosPage() {
     if (err) { setError(err.message); setSaving(false); return }
 
     const productId = saved.id
-    await supabase.from('product_categories').delete().eq('product_id', productId)
+    const { error: delCatErr } = await supabase.from('product_categories').delete().eq('product_id', productId)
+    if (delCatErr) { setError(`Categorias: ${delCatErr.message}`); setSaving(false); return }
     if (categoryIds.length > 0) {
-      await supabase.from('product_categories').insert(categoryIds.map(category_id => ({ product_id: productId, category_id })))
+      const { error: insCatErr } = await supabase.from('product_categories').insert(categoryIds.map(category_id => ({ product_id: productId, category_id })))
+      if (insCatErr) { setError(`Categorias: ${insCatErr.message}`); setSaving(false); return }
     }
 
     await loadData(); setMode('list'); setIsDirty(false)

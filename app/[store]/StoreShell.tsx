@@ -1774,7 +1774,13 @@ export default function StoreShell({ store, products, categories = [], initialBc
           style={showHeaderAboveModal ? { height: `calc(100dvh - ${headerPxNow}px)`, maxHeight: `calc(100dvh - ${headerPxNow}px)` } : undefined}
           onClick={e => e.stopPropagation()}
         >
-          <button className={`sf-modal-close${cfgModalFull ? ' sf-modal-close-hero' : ''}`} onClick={() => setModalProduct(null)}>×</button>
+          <button className={`sf-modal-close${cfgModalFull ? ' sf-modal-close-hero' : ''}`} onClick={() => setModalProduct(null)}>
+            {cfgModalFull ? (
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 5l-7 7 7 7" />
+              </svg>
+            ) : '×'}
+          </button>
 
           <div className={`sf-modal-product-head${cfgModalFull ? ' sf-modal-product-head-hero' : ''}`}>
             {modalDisplayImage && (() => {

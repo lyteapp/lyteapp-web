@@ -1495,6 +1495,7 @@ html, body { overflow-x: clip; }
    against a photo instead of the plain white header background. */
 .sf-modal-close-hero {
   top: calc(16px + env(safe-area-inset-top, 0px));
+  left: 16px; right: auto;
   background: rgba(15,23,42,0.45); color: white;
   backdrop-filter: blur(4px);
 }

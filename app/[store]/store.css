@@ -1520,32 +1520,6 @@ html, body { overflow-x: clip; }
   pointer-events: none;
 }
 
-/* "Pagina completa" — dragging a finger over the hero photo shows a
-   round magnifier lens instead of opening the fullscreen lightbox. */
-.sf-modal-img-wrap-magnify { touch-action: none; cursor: zoom-in; }
-.sf-modal-img-wrap-magnify .sf-modal-img { cursor: default; }
-.sf-modal-magnifier {
-  position: absolute; width: 130px; height: 130px;
-  transform: translate(-50%, -50%);
-  border-radius: 50%; border: 3px solid white;
-  box-shadow: 0 4px 18px rgba(0,0,0,0.35);
-  background-repeat: no-repeat; background-size: 700% 700%;
-  pointer-events: none; z-index: 5;
-}
-/* One-time demo on open: the lens slides across the photo on its own so
-   customers discover they can drag a finger over it. */
-.sf-modal-magnifier-hint {
-  z-index: 6;
-  animation: sf-magnifier-hint-move 2.1s ease-in-out;
-}
-@keyframes sf-magnifier-hint-move {
-  0%   { left: 32%; top: 40%; background-position: 32% 40%; opacity: 0; }
-  12%  { opacity: 1; }
-  50%  { left: 62%; top: 46%; background-position: 62% 46%; }
-  88%  { opacity: 1; }
-  100% { left: 62%; top: 46%; background-position: 62% 46%; opacity: 0; }
-}
-
 /* "Pagina completa" — a large hero photo up top instead of a small
    thumbnail beside the name, with everything else stacked below it. */
 .sf-modal-product-head-hero {

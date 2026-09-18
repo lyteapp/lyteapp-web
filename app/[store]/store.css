@@ -1507,7 +1507,11 @@ html, body { overflow-x: clip; }
   flex-shrink: 0;
   position: relative;
 }
-.sf-modal-img-wrap { position: relative; flex-shrink: 0; }
+.sf-modal-img-wrap {
+  position: relative; flex-shrink: 0;
+  width: 80px; height: 80px; overflow: hidden; border-radius: 14px;
+  cursor: zoom-in;
+}
 .sf-modal-img {
   width: 80px; height: 80px; border-radius: 14px;
   object-fit: cover; flex-shrink: 0; background: #F1F5F9;
@@ -1519,6 +1523,17 @@ html, body { overflow-x: clip; }
   font-size: 9px; font-weight: 600; padding: 2px 5px; border-radius: 100px;
   pointer-events: none;
 }
+/* More than one photo — the head image is a horizontal strip the
+   customer can drag between, same mechanics as the color-swatch swipe
+   on catalog cards. */
+.sf-modal-img-strip {
+  display: flex;
+  transition: transform 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  will-change: transform;
+}
+.sf-modal-img-strip.dragging { transition: none; }
+.sf-modal-img-frame { flex-shrink: 0; }
+.sf-modal-img-frame .sf-modal-img { width: 100%; }
 
 /* "Pagina completa" — a large hero photo up top instead of a small
    thumbnail beside the name, with everything else stacked below it. */

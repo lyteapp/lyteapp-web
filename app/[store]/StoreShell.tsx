@@ -896,6 +896,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const stripRefs               = useRef<Map<string, HTMLDivElement>>(new Map())
   const lightboxStripRef        = useRef<HTMLDivElement | null>(null)
   const lightboxDragStartIdxRef = useRef<number>(0)
+  const [modalImgIdx, setModalImgIdx] = useState(0)
+  const modalImgStripRef        = useRef<HTMLDivElement | null>(null)
+  useEffect(() => { setModalImgIdx(0) }, [modalProduct?.id, modalColor])
 
   const storeCurrency = (store.store_currency ?? 'USD') as 'USD' | 'EUR'
   const currencySymbol = storeCurrency === 'EUR' ? '€' : '$'
@@ -1787,20 +1790,74 @@ export default function StoreShell({ store, products, categories = [], initialBc
               // Gallery for whatever is currently shown: the selected
               // color's own photos, or the product's own photos when no
               // color is picked (colors are switched via the swatches
-              // below, not by swiping here).
+              // below). When there's more than one photo, dragging a
+              // finger over the image itself swipes between them.
               const cvs = modalProduct.options?.colorVariants
               const selectedVariant = modalColor && cvs?.length ? cvs.find(v => v.label === modalColor) : null
               const imgs = (selectedVariant
                 ? [selectedVariant.imageUrl, ...(selectedVariant.imageUrls ?? [])]
                 : [modalProduct.image_url, ...(modalProduct.options?.images ?? [])]
               ).filter(Boolean) as string[]
-              const openLightbox = () => setLightbox({ images: imgs.length > 0 ? imgs : [modalDisplayImage!], idx: 0 })
+              const swipeable = imgs.length > 1
+              const curIdx = Math.min(modalImgIdx, imgs.length - 1)
+              const openLightbox = () => setLightbox({ images: imgs.length > 0 ? imgs : [modalDisplayImage!], idx: curIdx })
               return (
-                <div className="sf-modal-img-wrap">
-                  {isVideoUrl(modalDisplayImage)
-                    ? <video src={modalDisplayImage} autoPlay muted loop playsInline className="sf-modal-img sf-modal-img-zoom" onClick={openLightbox} />
-                    : <img src={modalDisplayImage} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" onClick={openLightbox} />}
-                  {imgs.length > 1 && <div className="sf-modal-img-count">1/{imgs.length}</div>}
+                <div
+                  className="sf-modal-img-wrap"
+                  style={swipeable ? { touchAction: 'pan-y' } : undefined}
+                  onTouchStart={swipeable ? e => {
+                    touchStartX.current = e.touches[0].clientX
+                    swipedRef.current = false
+                    dragStartIdxRef.current = curIdx
+                    if (modalImgStripRef.current) modalImgStripRef.current.classList.add('dragging')
+                  } : undefined}
+                  onTouchMove={swipeable ? e => {
+                    const dx = e.touches[0].clientX - touchStartX.current
+                    if (Math.abs(dx) > 5) {
+                      e.stopPropagation()
+                      const strip = modalImgStripRef.current
+                      if (strip) {
+                        const n = imgs.length
+                        const fw = strip.offsetWidth / n
+                        const pct = (Math.max(0, Math.min((n - 1) * fw, dragStartIdxRef.current * fw - dx)) / (n * fw)) * 100
+                        strip.style.transform = `translateX(-${pct}%)`
+                      }
+                    }
+                  } : undefined}
+                  onTouchEnd={swipeable ? e => {
+                    const dx = (e.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current
+                    const strip = modalImgStripRef.current
+                    if (strip) strip.classList.remove('dragging')
+                    if (Math.abs(dx) > 40) {
+                      swipedRef.current = true
+                      const next = dx < 0 ? Math.min(imgs.length - 1, dragStartIdxRef.current + 1) : Math.max(0, dragStartIdxRef.current - 1)
+                      setModalImgIdx(next)
+                    } else {
+                      setModalImgIdx(dragStartIdxRef.current)
+                    }
+                  } : undefined}
+                  onClick={() => { if (swipedRef.current) { swipedRef.current = false } else { openLightbox() } }}
+                >
+                  {swipeable ? (
+                    <div
+                      className="sf-modal-img-strip"
+                      ref={modalImgStripRef}
+                      style={{ width: `${imgs.length * 100}%`, transform: `translateX(-${curIdx * (100 / imgs.length)}%)` }}
+                    >
+                      {imgs.map((img, i) => (
+                        <div key={i} className="sf-modal-img-frame" style={{ width: `${100 / imgs.length}%` }}>
+                          {isVideoUrl(img)
+                            ? <video src={img} autoPlay muted loop playsInline className="sf-modal-img sf-modal-img-zoom" />
+                            : <img src={img} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" />}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    isVideoUrl(modalDisplayImage)
+                      ? <video src={modalDisplayImage} autoPlay muted loop playsInline className="sf-modal-img sf-modal-img-zoom" />
+                      : <img src={modalDisplayImage} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" />
+                  )}
+                  {imgs.length > 1 && <div className="sf-modal-img-count">{curIdx + 1}/{imgs.length}</div>}
                 </div>
               )
             })()}

@@ -1554,7 +1554,7 @@ html, body { overflow-x: clip; }
 .sf-modal-product-head-hero .sf-modal-img-wrap { width: 100%; }
 .sf-modal-product-head-hero .sf-modal-img {
   width: 100%; height: 42vh; height: 42dvh;
-  border-radius: 0;
+  border-radius: 0; object-fit: contain;
 }
 .sf-modal-product-head-hero .sf-modal-product-info { padding: 16px 20px 0; }
 

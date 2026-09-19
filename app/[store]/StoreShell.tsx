@@ -2382,6 +2382,15 @@ export default function StoreShell({ store, products, categories = [], initialBc
     setView(hp.enabled ? 'splash' : 'catalog')
   }
 
+  // Clicking the header logo takes the customer back to the home page (or
+  // the catalog, if this store doesn't use one) — unlike resetToHome, it
+  // keeps their cart and any in-progress checkout info intact.
+  function goHome() {
+    setModalProduct(null)
+    setMenuOpen(false)
+    setView(hp.enabled ? 'splash' : 'catalog')
+  }
+
   // Reset after N minutes of no interaction (tap/click/scroll/key), so the
   // screen frees up for the next customer if someone walks away mid-browse.
   useEffect(() => {
@@ -3986,7 +3995,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
               </button>
             )}
             {cfgLogoPosition === 'left' && store.logo_url && (
-              <div ref={catalogLogoRef} className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape}${logoMorphStart ? ' sf-nav-logo-hidden' : ''}`} style={{ height: cfgLogoSizePx }}>
+              <div ref={catalogLogoRef} className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape}${logoMorphStart ? ' sf-nav-logo-hidden' : ''}`} style={{ height: cfgLogoSizePx, cursor: 'pointer' }} onClick={goHome}>
                 <img src={store.logo_url} alt={store.name} className="sf-nav-logo-img" />
               </div>
             )}
@@ -3996,7 +4005,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           </div>
           <div className="sf-topbar-slot-center">
             {cfgLogoPosition === 'center' && store.logo_url && (
-              <div ref={catalogLogoRef} className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape}${logoMorphStart ? ' sf-nav-logo-hidden' : ''}`} style={{ height: cfgLogoSizePx }}>
+              <div ref={catalogLogoRef} className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape}${logoMorphStart ? ' sf-nav-logo-hidden' : ''}`} style={{ height: cfgLogoSizePx, cursor: 'pointer' }} onClick={goHome}>
                 <img src={store.logo_url} alt={store.name} className="sf-nav-logo-img" />
               </div>
             )}
@@ -4006,7 +4015,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           </div>
           <div className="sf-topbar-slot-right">
             {cfgLogoPosition === 'right' && store.logo_url && (
-              <div ref={catalogLogoRef} className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape}${logoMorphStart ? ' sf-nav-logo-hidden' : ''}`} style={{ height: cfgLogoSizePx }}>
+              <div ref={catalogLogoRef} className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape}${logoMorphStart ? ' sf-nav-logo-hidden' : ''}`} style={{ height: cfgLogoSizePx, cursor: 'pointer' }} onClick={goHome}>
                 <img src={store.logo_url} alt={store.name} className="sf-nav-logo-img" />
               </div>
             )}

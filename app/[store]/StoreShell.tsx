@@ -337,6 +337,7 @@ type Store = {
     deliveryEnabled?: boolean; deliveryFee?: string
     deliveryTypes?: { delivery?: boolean; pickup?: boolean; national?: boolean }
     shippingAgencies?: { id: string; name: string; logoUrl: string }[]
+    pickupLocations?: { id: string; name: string; address: string }[]
     requirePaymentMethod?: boolean; requirePaymentProof?: boolean
     whatsappFloating?: boolean
     showBcvInSummary?: boolean
@@ -763,6 +764,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [shippingCedula, setShippingCedula] = useState('')
   const [shippingPhone, setShippingPhone] = useState('')
   const [selectedAgencyId, setSelectedAgencyId] = useState<string | null>(null)
+  const [selectedPickupLocationId, setSelectedPickupLocationId] = useState<string | null>(null)
   const [agencyAddress, setAgencyAddress] = useState('')
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([])
   const [selectedLocId, setSelectedLocId]   = useState<string | null>(null)
@@ -1090,6 +1092,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const puOn            = cs.deliveryTypes?.pickup === true     // retiro habilitado (default false)
   const natOn           = cs.deliveryTypes?.national === true   // envio nacional habilitado (default false)
   const shippingAgencies = cs.shippingAgencies ?? []
+  const pickupLocations = cs.pickupLocations ?? []
   const enabledTypesCount = [dtOn, puOn, natOn].filter(Boolean).length
   const multiTypes      = enabledTypesCount > 1
   const zoneBasedFee   = deliveryZones.length > 0 && customerLat !== null ? (matchedZone?.fee ?? 0) : null
@@ -2219,6 +2222,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
       setError('Ingresa la direccion de la agencia')
       return
     }
+    if (deliveryType === 'pickup' && pickupLocations.length > 0 && !selectedPickupLocationId) {
+      setError('Selecciona la tienda donde vas a retirar tu pedido')
+      return
+    }
     if (requirePaymentMethod && !selectedPayment && !paymentFreeText.trim()) {
       setError('Debes seleccionar un metodo de pago para continuar')
       return
@@ -2305,6 +2312,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
         '', `*Nombre:* ${customerName}`, `*Telefono:* ${customerPhone}`,
         ...(multiTypes ? [`*Tipo:* ${isPickup ? 'Retiro en tienda' : isNational ? 'Envio nacional' : 'Domicilio'}`] : []),
         ...(deliveryType === 'delivery' && customerAddress.trim() ? [`*Direccion:* ${customerAddress.trim()}`] : []),
+        ...(isPickup && selectedPickupLocationId ? (() => {
+          const loc = pickupLocations.find(p => p.id === selectedPickupLocationId)
+          return loc ? [`*Tienda de retiro:* ${loc.name}${loc.address ? ` — ${loc.address}` : ''}`] : []
+        })() : []),
         ...(isNational && shippingName.trim() ? [`*Nombre de quien recibe:* ${shippingName.trim()}`] : []),
         ...(isNational && shippingCedula.trim() ? [`*Cedula:* ${shippingCedula.trim()}`] : []),
         ...(isNational && shippingPhone.trim() ? [`*Telefono de quien recibe:* ${shippingPhone.trim()}`] : []),
@@ -2413,6 +2424,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     setCustomerCity(''); setCustomerState('')
     setShippingName(''); setShippingCedula(''); setShippingPhone('')
     setSelectedAgencyId(null); setAgencyAddress('')
+    setSelectedPickupLocationId(null)
     setCustomerCedula(''); setCedulaStatus('idle')
     setSelectedPayment(''); setPaymentFreeText('')
     setDeliveryTrackId(''); setPickupTrackId('')
@@ -2523,6 +2535,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     setCustomerCity(''); setCustomerState('')
     setShippingName(''); setShippingCedula(''); setShippingPhone('')
     setSelectedAgencyId(null); setAgencyAddress('')
+    setSelectedPickupLocationId(null)
     setLocationState('idle'); setCustomerLat(null); setCustomerLng(null); setLocationLabel('')
   }
   function pressCedulaDigit(d: string) {
@@ -3423,6 +3436,34 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Tienda de retiro — solo para retiro en tienda, cuando la tienda configuro mas de una ubicacion */}
+        {deliveryType === 'pickup' && pickupLocations.length > 0 && (
+          <div className="sf-co-section">
+            <h3 className="sf-co-section-title">
+              Tienda de retiro <span style={{ color: '#EF4444' }}>*</span>
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {pickupLocations.map(p => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setSelectedPickupLocationId(p.id)}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2,
+                    padding: '11px 14px', borderRadius: 12, border: 'none', cursor: 'pointer', textAlign: 'left' as const,
+                    background: selectedPickupLocationId === p.id ? coAccentTint : '#F8FAFC',
+                    outline: `2px solid ${selectedPickupLocationId === p.id ? coAccent : '#E2E8F0'}`,
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <span style={{ fontSize: 13, fontWeight: selectedPickupLocationId === p.id ? 700 : 600, color: selectedPickupLocationId === p.id ? coAccent : '#0F172A' }}>{p.name}</span>
+                  {p.address && <span style={{ fontSize: 12, color: '#64748B' }}>{p.address}</span>}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 

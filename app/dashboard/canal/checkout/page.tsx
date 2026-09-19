@@ -49,6 +49,7 @@ interface CheckoutSettings {
   allowNotes: boolean; minOrder: string; deliveryEnabled: boolean; deliveryFee: string
   deliveryTypes: { delivery: boolean; pickup: boolean; national: boolean }
   shippingAgencies: { id: string; name: string; logoUrl: string }[]
+  pickupLocations: { id: string; name: string; address: string }[]
   requirePaymentMethod: boolean; requirePaymentProof: boolean
   whatsappFloating: boolean
   showBcvInSummary: boolean
@@ -61,6 +62,7 @@ const DEFAULTS: CheckoutSettings = {
   allowNotes: true, minOrder: '', deliveryEnabled: false, deliveryFee: '',
   deliveryTypes: { delivery: true, pickup: false, national: false },
   shippingAgencies: [],
+  pickupLocations: [],
   requirePaymentMethod: false, requirePaymentProof: false,
   whatsappFloating: false,
   accentColor: '',
@@ -145,6 +147,23 @@ export default function CheckoutPage() {
 
   function removeAgency(id: string) {
     setSettings(s => ({ ...s, shippingAgencies: s.shippingAgencies.filter(a => a.id !== id) }))
+  }
+
+  // Ubicaciones de retiro en tienda
+  const [newPickupName, setNewPickupName] = useState('')
+  const [newPickupAddress, setNewPickupAddress] = useState('')
+
+  function addPickupLocation() {
+    if (!newPickupName.trim()) return
+    setSettings(s => ({
+      ...s,
+      pickupLocations: [...s.pickupLocations, { id: crypto.randomUUID(), name: newPickupName.trim(), address: newPickupAddress.trim() }],
+    }))
+    setNewPickupName(''); setNewPickupAddress('')
+  }
+
+  function removePickupLocation(id: string) {
+    setSettings(s => ({ ...s, pickupLocations: s.pickupLocations.filter(p => p.id !== id) }))
   }
 
   // Pagos
@@ -378,6 +397,61 @@ export default function CheckoutPage() {
                     onChange={v => setSettings(s => ({ ...s, deliveryTypes: { ...s.deliveryTypes, pickup: v } }))}
                   />
                 </div>
+                {settings.deliveryTypes.pickup && (
+                  <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #F1F5F9' }}>
+                    <div className="cn-label" style={{ marginBottom: 10 }}>Ubicaciones de retiro</div>
+                    <div className="cn-toggle-hint" style={{ marginBottom: 10 }}>Si agregas mas de una, el cliente elige en cual va a retirar su pedido</div>
+                    {settings.pickupLocations.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+                        {settings.pickupLocations.map(p => (
+                          <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', background: '#F8FAFC', borderRadius: 10 }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A' }}>{p.name}</div>
+                              {p.address && <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{p.address}</div>}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removePickupLocation(p.id)}
+                              style={{ width: 26, height: 26, borderRadius: '50%', border: 'none', background: '#FEE2E2', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                            >
+                              <svg viewBox="0 0 20 20" fill="#EF4444" width="11" height="11">
+                                <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.519.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input
+                        type="text"
+                        placeholder="Nombre (ej: Sede Centro)"
+                        value={newPickupName}
+                        onChange={e => setNewPickupName(e.target.value)}
+                        style={{ flex: 1, border: '1.5px solid #E2E8F0', borderRadius: 10, padding: '10px 12px', fontSize: 13 }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Direccion (opcional)"
+                        value={newPickupAddress}
+                        onChange={e => setNewPickupAddress(e.target.value)}
+                        style={{ flex: 1, border: '1.5px solid #E2E8F0', borderRadius: 10, padding: '10px 12px', fontSize: 13 }}
+                      />
+                      <button
+                        type="button"
+                        onClick={addPickupLocation}
+                        disabled={!newPickupName.trim()}
+                        style={{
+                          padding: '10px 16px', borderRadius: 10, border: 'none', cursor: newPickupName.trim() ? 'pointer' : 'not-allowed',
+                          background: newPickupName.trim() ? '#0F172A' : '#E2E8F0', color: newPickupName.trim() ? 'white' : '#94A3B8',
+                          fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap',
+                        }}
+                      >
+                        Agregar
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <div className="cn-toggle-row">
                   <div className="cn-toggle-info">
                     <div className="cn-toggle-label">Envio nacional</div>

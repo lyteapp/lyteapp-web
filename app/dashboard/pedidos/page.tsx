@@ -27,6 +27,7 @@ interface OrderItem {
 
 interface Order {
   id: string
+  order_number?: number | null
   customer_name: string
   customer_phone: string
   customer_notes: string | null
@@ -41,6 +42,7 @@ interface Order {
 
 interface DisplayOrder {
   id: string
+  order_number?: number | null
   created_at: string
   ready_at?: string | null
   delivery_type?: string | null
@@ -112,6 +114,7 @@ export default function PedidosPage() {
   const [loading, setLoading] = useState(true)
   const storeName = store?.name ?? ''
   const [whatsapp, setWhatsapp] = useState<string>('')
+  const [orderTitle, setOrderTitle] = useState<string>('Comanda')
   const [orders, setOrders] = useState<Order[]>([])
   const [filter, setFilter]     = useState<'all' | OrderStatus>('all')
   const [dateFrom, setDateFrom] = useState('')
@@ -145,10 +148,12 @@ export default function PedidosPage() {
     async function init() {
       const { data: storeRow } = await supabase
         .from('stores')
-        .select('whatsapp')
+        .select('whatsapp,checkout_settings')
         .eq('id', storeId!)
         .maybeSingle()
       setWhatsapp(storeRow?.whatsapp ?? '')
+      const savedOrderTitle = (storeRow?.checkout_settings as Record<string, unknown> | null)?.orderTitle
+      if (typeof savedOrderTitle === 'string' && savedOrderTitle.trim()) setOrderTitle(savedOrderTitle.trim())
       await loadOrders(storeId!)
       setLoading(false)
     }
@@ -365,7 +370,7 @@ export default function PedidosPage() {
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
     const { data } = await supabase
       .from('orders')
-      .select('id, created_at, ready_at, delivery_type, customer_name, customer_phone, customer_notes, payment_method, total, status, order_items(product_name, quantity, subtotal, selected_options)')
+      .select('id, order_number, created_at, ready_at, delivery_type, customer_name, customer_phone, customer_notes, payment_method, total, status, order_items(product_name, quantity, subtotal, selected_options)')
       .eq('store_id', storeId)
       .not('status', 'in', '(delivered,cancelled,completed)')
       .gte('created_at', todayStart.toISOString())
@@ -405,7 +410,7 @@ export default function PedidosPage() {
     const dateStr = date.toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' })
     const timeStr = date.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })
     const lines = [
-      `*Comanda #${order.id.slice(0, 8).toUpperCase()}*`,
+      `*${orderTitle} #${order.order_number ?? order.id.slice(0, 8).toUpperCase()}*`,
       `${dateStr}, ${timeStr}`, '',
       `*Nombre:* ${order.customer_name}`,
       `*Telefono:* ${order.customer_phone}`,
@@ -427,7 +432,7 @@ export default function PedidosPage() {
     const items = order.items?.map(i => `  • ${i.quantity}x ${i.product_name} — ${fmt(i.subtotal)}`).join('\n') ?? ''
     const msg = [
       `Hola ${order.customer_name},`,
-      `Te escribimos sobre tu pedido *#${order.id.slice(0, 8).toUpperCase()}*`,
+      `Te escribimos sobre tu pedido *#${order.order_number ?? order.id.slice(0, 8).toUpperCase()}*`,
       '',
       items,
       '',
@@ -600,7 +605,7 @@ export default function PedidosPage() {
               return (
                 <div key={order.id} className={`pd-comanda pd-cs-${order.status} pd-comanda-${level}`}>
                   <div className="pd-comanda-head">
-                    <div className="pd-comanda-id">#{order.id.slice(0, 8).toUpperCase()}</div>
+                    <div className="pd-comanda-id">#{order.order_number ?? order.id.slice(0, 8).toUpperCase()}</div>
                     <div className="pd-comanda-time">{timeStr}</div>
                     {kitchenMins !== null
                       ? <span className="pd-comanda-elapsed pd-elapsed-ok pd-kitchen-time">Cocina: {kitchenMins} min</span>
@@ -752,7 +757,7 @@ export default function PedidosPage() {
                     role="checkbox"
                     aria-checked={selectedOrders.has(order.id)}
                   />
-                  <div className="pd-order-id">#{order.id.slice(0, 8).toUpperCase()}</div>
+                  <div className="pd-order-id">#{order.order_number ?? order.id.slice(0, 8).toUpperCase()}</div>
                   <div className="pd-customer">
                     <div className="pd-customer-name">{order.customer_name}</div>
                     <div className="pd-customer-phone">{order.customer_phone}</div>

@@ -43,6 +43,7 @@ export default function OrderTrackPage({ params }: { params: Promise<{ orderId: 
 
   const [status, setStatus]         = useState<OrderStatus | null>(null)
   const [customerName, setCustomerName] = useState('')
+  const [orderNumber, setOrderNumber] = useState<number | null>(null)
   const [store, setStore]           = useState<StoreInfo | null>(null)
   const [error, setError]           = useState(false)
 
@@ -50,7 +51,7 @@ export default function OrderTrackPage({ params }: { params: Promise<{ orderId: 
     async function load() {
       const { data: order, error: oErr } = await supabase
         .from('orders')
-        .select('customer_name, status, store_id, delivery_type')
+        .select('customer_name, status, store_id, delivery_type, order_number')
         .eq('id', orderId)
         .maybeSingle()
 
@@ -58,6 +59,7 @@ export default function OrderTrackPage({ params }: { params: Promise<{ orderId: 
 
       setCustomerName(order.customer_name)
       setStatus(order.status as OrderStatus)
+      setOrderNumber(order.order_number ?? null)
 
       const { data: st } = await supabase
         .from('stores')
@@ -118,7 +120,7 @@ export default function OrderTrackPage({ params }: { params: Promise<{ orderId: 
           <div className="ot-store-name">{store.name}</div>
         </div>
 
-        <div className="ot-order-id">#{orderId.slice(0, 8).toUpperCase()}</div>
+        <div className="ot-order-id">#{orderNumber ?? orderId.slice(0, 8).toUpperCase()}</div>
         <div className="ot-customer">{customerName}</div>
 
         {isCancelled ? (

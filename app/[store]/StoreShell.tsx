@@ -342,6 +342,7 @@ type Store = {
     whatsappFloating?: boolean
     showBcvInSummary?: boolean
     showLocationLink?: boolean
+    orderTitle?: string
     // Set from app/dashboard/configuracion, not this file's own settings page.
     showTrackBtn?: boolean
     // Falls back to the store's general accent (cfg.accentColor) via CSS
@@ -2287,6 +2288,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
         const { error: orderErrMsg } = await orderRes.json().catch(() => ({ error: 'No se pudo crear el pedido' }))
         throw new Error(orderErrMsg)
       }
+      const { order_number: orderNumber } = await orderRes.json().catch(() => ({ order_number: null })) as { order_number: number | null }
 
       if (!collectCustomerData) {
         try { localStorage.setItem('lyte-customer', JSON.stringify({ name: customerName.trim(), phone: customerPhone.trim() })) } catch {}
@@ -2310,7 +2312,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       if (newDeliveryId) setDeliveryTrackId(newDeliveryId)
 
       const lines: string[] = [
-        `*Comanda #${newOrderId.slice(0, 8).toUpperCase()}*`,
+        `*${cs.orderTitle?.trim() || 'Comanda'} #${orderNumber ?? newOrderId.slice(0, 8).toUpperCase()}*`,
         new Date().toLocaleString('es-VE', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
         '', `*Nombre:* ${customerName}`, `*Telefono:* ${customerPhone}`,
         ...(multiTypes ? [`*Tipo:* ${isPickup ? 'Retiro en tienda' : isNational ? 'Envio nacional' : 'Domicilio'}`] : []),

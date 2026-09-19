@@ -23,6 +23,12 @@ export async function POST(req: NextRequest) {
       { auth: { persistSession: false } }
     )
 
+    // Claims the next sequential number for this store atomically (via a
+    // security-definer function) — two orders landing at the same instant
+    // never get the same number. Falls back to no number rather than
+    // failing the order if the RPC has any trouble.
+    const { data: orderNumber } = await supabase.rpc('get_next_order_number', { p_store_id: store_id })
+
     const { error: orderError } = await supabase.from('orders').insert({
       id, store_id,
       customer_name, customer_phone,
@@ -30,6 +36,7 @@ export async function POST(req: NextRequest) {
       payment_method: payment_method || null,
       total, status: 'pending',
       delivery_type,
+      order_number: orderNumber ?? null,
       payment_proof_url: payment_proof_url || null,
       payment_status: payment_proof_url ? 'pending' : null,
     })
@@ -52,7 +59,7 @@ export async function POST(req: NextRequest) {
       if (itemsError) console.error('order_items insert failed', itemsError)
     }
 
-    return NextResponse.json({ id })
+    return NextResponse.json({ id, order_number: orderNumber ?? null })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }

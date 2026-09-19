@@ -15,6 +15,7 @@ interface Customer {
 
 interface Order {
   id: string
+  order_number?: number | null
   created_at: string
   status: string
   total: number
@@ -120,7 +121,7 @@ export default function ClientesPage() {
     const normalized = normalizePhone(c.phone)
     let query = supabase
       .from('orders')
-      .select('id, created_at, status, total, customer_notes, payment_method, order_items(product_name, quantity, subtotal)')
+      .select('id, order_number, created_at, status, total, customer_notes, payment_method, order_items(product_name, quantity, subtotal)')
       .eq('store_id', storeId)
       .order('created_at', { ascending: false })
 
@@ -334,7 +335,7 @@ export default function ClientesPage() {
               <div key={o.id} style={{ padding: '12px 20px', borderBottom: i < orders.length - 1 ? '1px solid #F8FAFC' : 'none' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
                   <div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: '#0F172A' }}>#{o.id.slice(0, 8).toUpperCase()}</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#0F172A' }}>#{o.order_number ?? o.id.slice(0, 8).toUpperCase()}</div>
                     <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 1 }}>{fmtDate(o.created_at)}</div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>

@@ -58,6 +58,8 @@ interface CheckoutSettings {
   whatsappFloating: boolean
   showBcvInSummary: boolean
   showLocationLink: boolean
+  // Title line of the WhatsApp order message, e.g. "*Comanda #12*".
+  orderTitle: string
   // Empty = matches the store's general accent color automatically.
   accentColor: string
 }
@@ -73,6 +75,7 @@ const DEFAULTS: CheckoutSettings = {
   accentColor: '',
   showBcvInSummary: true,
   showLocationLink: false,
+  orderTitle: 'Comanda',
 }
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
@@ -121,6 +124,9 @@ export default function CheckoutPage() {
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
   const [settingsError, setSettingsError] = useState('')
+  // Lives on stores.order_number_next (not inside checkout_settings) so the
+  // sequential-numbering RPC can claim/increment it atomically per order.
+  const [orderNumberNext, setOrderNumberNext] = useState('1')
 
   // Agencias de envio nacional
   const [newAgencyName, setNewAgencyName] = useState('')
@@ -189,12 +195,14 @@ export default function CheckoutPage() {
       try {
         const { data: store } = await supabase
           .from('stores')
-          .select('checkout_settings,payment_methods,whatsapp')
+          .select('checkout_settings,payment_methods,whatsapp,order_number_next')
           .eq('id', storeId!)
           .maybeSingle()
         if (!store) return
         setStoreWhatsapp((store as Record<string, unknown>).whatsapp as string | null ?? null)
         if (store.checkout_settings) setSettings({ ...DEFAULTS, ...store.checkout_settings })
+        const nextNum = (store as Record<string, unknown>).order_number_next
+        if (typeof nextNum === 'number') setOrderNumberNext(String(nextNum))
         if (store.payment_methods) {
           const pm = store.payment_methods as Record<string, { enabled: boolean; values: Record<string, string> }>
           setMethods(prev => prev.map(m => {
@@ -215,7 +223,11 @@ export default function CheckoutPage() {
     e.preventDefault()
     if (!storeId) return
     setSettingsError(''); setSuccess(false); setSaving(true)
-    const { error: err } = await supabase.from('stores').update({ checkout_settings: settings }).eq('id', storeId)
+    const nextNum = parseInt(orderNumberNext, 10)
+    const { error: err } = await supabase.from('stores').update({
+      checkout_settings: settings,
+      ...(Number.isFinite(nextNum) && nextNum > 0 ? { order_number_next: nextNum } : {}),
+    }).eq('id', storeId)
     if (err) setSettingsError(err.message)
     else { setSuccess(true); setPreviewKey(k => k + 1) }
     setSaving(false)
@@ -590,6 +602,42 @@ export default function CheckoutPage() {
                     <div className="cn-toggle-hint">Agrega una linea con el total en bolivares (tasa BCV) debajo del total en el resumen del pedido</div>
                   </div>
                   <Toggle checked={settings.showBcvInSummary} onChange={v => setSetting('showBcvInSummary', v)} />
+                </div>
+              </div>
+            </div>
+
+            <div className="cn-section">
+              <div className="cn-section-head">
+                <div className="cn-section-icon">
+                  <svg viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 5.25a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 10zm0 5.25a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75a.75.75 0 01-.75-.75z" clipRule="evenodd"/>
+                  </svg>
+                </div>
+                <div>
+                  <div className="cn-section-title">Numeracion de pedidos</div>
+                  <div className="cn-section-sub">Titulo y numero del pedido en el mensaje de WhatsApp</div>
+                </div>
+              </div>
+              <div className="cn-section-body">
+                <div className="cn-field">
+                  <div className="cn-label">Titulo del mensaje</div>
+                  <input
+                    type="text"
+                    value={settings.orderTitle}
+                    onChange={e => setSetting('orderTitle', e.target.value)}
+                    placeholder="Comanda"
+                    style={{ border: '1.5px solid #E2E8F0', borderRadius: 10, padding: '10px 12px', width: '100%' }}
+                  />
+                </div>
+                <div className="cn-field" style={{ marginTop: 12 }}>
+                  <div className="cn-label">Proximo numero de pedido</div>
+                  <input
+                    type="number" min="1"
+                    value={orderNumberNext}
+                    onChange={e => setOrderNumberNext(e.target.value)}
+                    style={{ border: '1.5px solid #E2E8F0', borderRadius: 10, padding: '10px 12px', width: '100%' }}
+                  />
+                  <div className="cn-toggle-hint" style={{ marginTop: 6 }}>El siguiente pedido usara este numero, y va subiendo de uno en uno desde ahi</div>
                 </div>
               </div>
             </div>

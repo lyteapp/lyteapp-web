@@ -1107,7 +1107,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
   const VES_METHODS = new Set(['pago_movil', 'efectivo_bs', 'transferencia', 'punto_venta'])
   const selectedMethodIsVES = VES_METHODS.has(selectedPayment)
-  const vesAmount = selectedMethodIsVES && bcvRate ? orderTotal * bcvRate : null
+  const vesAmount = selectedMethodIsVES && bcvRate && cs.showBcvInSummary !== false ? orderTotal * bcvRate : null
 
   // ── Template config ──
   const FONT_MAP: Record<string, string> = {

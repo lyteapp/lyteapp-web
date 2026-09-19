@@ -3625,6 +3625,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           key={cat.id}
           className={`sf-cat-btn${activeCatId === cat.id ? ' sf-cat-active' : ''}`}
           onClick={() => {
+            setModalProduct(null)
             setActiveCatId(cat.id)
             document.getElementById(`cat-${cat.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
           }}
@@ -3636,6 +3637,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
         <button
           className={`sf-cat-btn${activeCatId === '__other' ? ' sf-cat-active' : ''}`}
           onClick={() => {
+            setModalProduct(null)
             setActiveCatId('__other')
             document.getElementById('cat-other')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
           }}
@@ -4446,6 +4448,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                     className="sf-drawer-link"
                     onClick={() => {
                       setMenuOpen(false)
+                      setModalProduct(null)
                       setActiveCatId(cat.id)
                       setTimeout(() => document.getElementById(`cat-${cat.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
                     }}
@@ -4458,6 +4461,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                     className="sf-drawer-link"
                     onClick={() => {
                       setMenuOpen(false)
+                      setModalProduct(null)
                       setActiveCatId('__other')
                       setTimeout(() => document.getElementById('cat-other')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
                     }}
@@ -4471,6 +4475,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                     className="sf-drawer-link"
                     onClick={() => {
                       setMenuOpen(false)
+                      setModalProduct(null)
                       setFocusCategory(cat)
                       window.scrollTo({ top: 0 })
                     }}

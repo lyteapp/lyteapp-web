@@ -4440,7 +4440,6 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   <img src={store.logo_url} alt={store.name} />
                 </div>
               )}
-                <span className="sf-drawer-name">{store.name}</span>
               </div>
               <button className="sf-drawer-close" onClick={() => setMenuOpen(false)} aria-label="Cerrar">
                 <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">

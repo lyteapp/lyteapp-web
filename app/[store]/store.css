@@ -1990,11 +1990,6 @@ html, body { overflow-x: clip; }
   display: flex; align-items: center; justify-content: center;
 }
 .sf-drawer-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
-.sf-drawer-name {
-  font-size: 15px; font-weight: 700; color: #0F172A;
-  letter-spacing: -0.02em; white-space: nowrap;
-  overflow: hidden; text-overflow: ellipsis;
-}
 .sf-drawer-close {
   width: 30px; height: 30px; border-radius: 8px; border: none;
   background: #F1F5F9; cursor: pointer; color: #64748B;

@@ -57,6 +57,7 @@ interface CheckoutSettings {
   requirePaymentMethod: boolean; requirePaymentProof: boolean
   whatsappFloating: boolean
   showBcvInSummary: boolean
+  showLocationLink: boolean
   // Empty = matches the store's general accent color automatically.
   accentColor: string
 }
@@ -71,6 +72,7 @@ const DEFAULTS: CheckoutSettings = {
   whatsappFloating: false,
   accentColor: '',
   showBcvInSummary: true,
+  showLocationLink: false,
 }
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
@@ -391,6 +393,15 @@ export default function CheckoutPage() {
                     onChange={v => setSettings(s => ({ ...s, deliveryTypes: { ...s.deliveryTypes, delivery: v } }))}
                   />
                 </div>
+                {settings.deliveryTypes.delivery && (
+                  <div className="cn-toggle-row" style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #F1F5F9' }}>
+                    <div className="cn-toggle-info">
+                      <div className="cn-toggle-label">Link de ubicacion en WhatsApp</div>
+                      <div className="cn-toggle-hint">Si el cliente comparte su GPS, incluye un link a Google Maps con su ubicacion en el mensaje del pedido</div>
+                    </div>
+                    <Toggle checked={settings.showLocationLink} onChange={v => setSetting('showLocationLink', v)} />
+                  </div>
+                )}
                 <div className="cn-toggle-row">
                   <div className="cn-toggle-info">
                     <div className="cn-toggle-label">Retiro en tienda</div>

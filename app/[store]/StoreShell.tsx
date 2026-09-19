@@ -341,6 +341,7 @@ type Store = {
     requirePaymentMethod?: boolean; requirePaymentProof?: boolean
     whatsappFloating?: boolean
     showBcvInSummary?: boolean
+    showLocationLink?: boolean
     // Set from app/dashboard/configuracion, not this file's own settings page.
     showTrackBtn?: boolean
     // Falls back to the store's general accent (cfg.accentColor) via CSS
@@ -2314,6 +2315,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
         '', `*Nombre:* ${customerName}`, `*Telefono:* ${customerPhone}`,
         ...(multiTypes ? [`*Tipo:* ${isPickup ? 'Retiro en tienda' : isNational ? 'Envio nacional' : 'Domicilio'}`] : []),
         ...(deliveryType === 'delivery' && customerAddress.trim() ? [`*Direccion:* ${customerAddress.trim()}`] : []),
+        ...(deliveryType === 'delivery' && cs.showLocationLink && customerLat !== null && customerLng !== null
+          ? [`*Ubicacion GPS:* https://www.google.com/maps?q=${customerLat},${customerLng}`] : []),
         ...(isPickup && selectedPickupLocationId ? (() => {
           const loc = pickupLocations.find(p => p.id === selectedPickupLocationId)
           return loc ? [`*Tienda de retiro:* ${loc.name}${loc.address ? ` — ${loc.address}` : ''}`] : []

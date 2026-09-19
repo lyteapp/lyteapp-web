@@ -300,7 +300,7 @@ export default function PedidosPage() {
     }
     if (status === 'ready') {
       const order = orders.find(o => o.id === orderId)
-      if (order?.delivery_type !== 'pickup') await notifyDrivers(order?.customer_name)
+      if (order?.delivery_type === 'delivery') await notifyDrivers(order?.customer_name)
     }
     setUpdating(null)
   }
@@ -392,8 +392,8 @@ export default function PedidosPage() {
       if (status === 'ready') {
         const order = orders.find(o => o.id === orderId)
         const displayOrder = displayOrders.find(o => o.id === orderId)
-        const isPickup = (displayOrder?.delivery_type ?? order?.delivery_type) === 'pickup'
-        if (!isPickup) await notifyDrivers(displayOrder?.customer_name ?? order?.customer_name)
+        const isDeliveryOrder = (displayOrder?.delivery_type ?? order?.delivery_type) === 'delivery'
+        if (isDeliveryOrder) await notifyDrivers(displayOrder?.customer_name ?? order?.customer_name)
       }
     } finally {
       setDisplayUpdating(null)

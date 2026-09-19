@@ -47,7 +47,7 @@ const METHODS: Omit<PaymentMethod, 'enabled' | 'values'>[] = [
 interface CheckoutSettings {
   requireName: boolean; requirePhone: boolean; requireAddress: boolean
   allowNotes: boolean; minOrder: string; deliveryEnabled: boolean; deliveryFee: string
-  deliveryTypes: { delivery: boolean; pickup: boolean }
+  deliveryTypes: { delivery: boolean; pickup: boolean; national: boolean }
   requirePaymentMethod: boolean; requirePaymentProof: boolean
   whatsappFloating: boolean
   showBcvInSummary: boolean
@@ -58,7 +58,7 @@ interface CheckoutSettings {
 const DEFAULTS: CheckoutSettings = {
   requireName: true, requirePhone: true, requireAddress: false,
   allowNotes: true, minOrder: '', deliveryEnabled: false, deliveryFee: '',
-  deliveryTypes: { delivery: true, pickup: false },
+  deliveryTypes: { delivery: true, pickup: false, national: false },
   requirePaymentMethod: false, requirePaymentProof: false,
   whatsappFloating: false,
   accentColor: '',
@@ -341,6 +341,16 @@ export default function CheckoutPage() {
                   <Toggle
                     checked={settings.deliveryTypes.pickup}
                     onChange={v => setSettings(s => ({ ...s, deliveryTypes: { ...s.deliveryTypes, pickup: v } }))}
+                  />
+                </div>
+                <div className="cn-toggle-row">
+                  <div className="cn-toggle-info">
+                    <div className="cn-toggle-label">Envio nacional</div>
+                    <div className="cn-toggle-hint">El pedido se envia a otra ciudad o estado por encomienda</div>
+                  </div>
+                  <Toggle
+                    checked={settings.deliveryTypes.national}
+                    onChange={v => setSettings(s => ({ ...s, deliveryTypes: { ...s.deliveryTypes, national: v } }))}
                   />
                 </div>
               </div>

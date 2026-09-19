@@ -335,7 +335,7 @@ type Store = {
     requireName?: boolean; requirePhone?: boolean; requireAddress?: boolean
     allowNotes?: boolean; minOrder?: string
     deliveryEnabled?: boolean; deliveryFee?: string
-    deliveryTypes?: { delivery?: boolean; pickup?: boolean }
+    deliveryTypes?: { delivery?: boolean; pickup?: boolean; national?: boolean }
     requirePaymentMethod?: boolean; requirePaymentProof?: boolean
     whatsappFloating?: boolean
     showBcvInSummary?: boolean
@@ -756,14 +756,19 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [deliveryZones] = useState<DeliveryZone[]>(initialDeliveryZones)
   const [matchedZone, setMatchedZone] = useState<DeliveryZone | null>(null)
   const [customerAddress, setCustomerAddress] = useState('')
+  const [customerCity, setCustomerCity] = useState('')
+  const [customerState, setCustomerState] = useState('')
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([])
   const [selectedLocId, setSelectedLocId]   = useState<string | null>(null)
   const [showNewLoc, setShowNewLoc]         = useState(false)
   const [newLocLabel, setNewLocLabel]       = useState('')
   const [showSavePrompt, setShowSavePrompt] = useState(false)
-  const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>(() => {
+  const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup' | 'national'>(() => {
     const dt = store.checkout_settings?.deliveryTypes
-    return (dt?.delivery === false && dt?.pickup) ? 'pickup' : 'delivery'
+    if (dt?.delivery !== false) return 'delivery'
+    if (dt?.pickup) return 'pickup'
+    if (dt?.national) return 'national'
+    return 'delivery'
   })
   const [installPrompt, setInstallPrompt] = useState<Event & { prompt(): void } | null>(null)
   const [showIosHint, setShowIosHint] = useState(false)
@@ -1077,7 +1082,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const requirePaymentProof  = cs.requirePaymentProof  ?? false
   const dtOn            = cs.deliveryTypes?.delivery !== false  // domicilio habilitado (default true)
   const puOn            = cs.deliveryTypes?.pickup === true     // retiro habilitado (default false)
-  const bothTypes       = dtOn && puOn
+  const natOn           = cs.deliveryTypes?.national === true   // envio nacional habilitado (default false)
+  const enabledTypesCount = [dtOn, puOn, natOn].filter(Boolean).length
+  const multiTypes      = enabledTypesCount > 1
   const zoneBasedFee   = deliveryZones.length > 0 && customerLat !== null ? (matchedZone?.fee ?? 0) : null
   const deliveryFeeAmt = dtOn && deliveryType === 'delivery' && cs.deliveryEnabled
     ? (zoneBasedFee !== null ? zoneBasedFee : cs.deliveryFee ? Number(cs.deliveryFee) : 0)
@@ -2193,6 +2200,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
       setError('Ubicacion desconocida, por favor contactenos para coordinar tu entrega')
       return
     }
+    if (deliveryType === 'national' && (!customerAddress.trim() || !customerCity.trim() || !customerState.trim())) {
+      setError('Ingresa direccion, ciudad y estado para el envio nacional')
+      return
+    }
     if (requirePaymentMethod && !selectedPayment && !paymentFreeText.trim()) {
       setError('Debes seleccionar un metodo de pago para continuar')
       return
@@ -2206,6 +2217,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       ? (enabledMethods.find(m => m.type === selectedPayment)?.label ?? selectedPayment)
       : paymentFreeText
     const isPickup = deliveryType === 'pickup'
+    const isNational = deliveryType === 'national'
 
     try {
       const newOrderId = crypto.randomUUID()
@@ -2235,7 +2247,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           customer_name: customerName.trim(), customer_phone: customerPhone.trim(),
           customer_notes: customerNotes.trim() || null,
           payment_method: paymentLabel || null, total: orderTotal,
-          delivery_type: isPickup ? 'pickup' : 'delivery',
+          delivery_type: isPickup ? 'pickup' : isNational ? 'national' : 'delivery',
           payment_proof_url: proofUrl,
           items: cartItems.map(i => ({
             product_id: i.productId ?? i.id,
@@ -2269,15 +2281,17 @@ export default function StoreShell({ store, products, categories = [], initialBc
       }
 
       // Comanda lines
-      const newDeliveryId = isPickup ? null : crypto.randomUUID()
+      const newDeliveryId = deliveryType === 'delivery' ? crypto.randomUUID() : null
       if (newDeliveryId) setDeliveryTrackId(newDeliveryId)
 
       const lines: string[] = [
         `*Comanda #${newOrderId.slice(0, 8).toUpperCase()}*`,
         new Date().toLocaleString('es-VE', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
         '', `*Nombre:* ${customerName}`, `*Telefono:* ${customerPhone}`,
-        ...(bothTypes ? [`*Tipo:* ${isPickup ? 'Retiro en tienda' : 'Domicilio'}`] : []),
+        ...(multiTypes ? [`*Tipo:* ${isPickup ? 'Retiro en tienda' : isNational ? 'Envio nacional' : 'Domicilio'}`] : []),
         ...(!isPickup && customerAddress.trim() ? [`*Direccion:* ${customerAddress.trim()}`] : []),
+        ...(isNational && customerCity.trim() ? [`*Ciudad:* ${customerCity.trim()}`] : []),
+        ...(isNational && customerState.trim() ? [`*Estado:* ${customerState.trim()}`] : []),
         ...(paymentLabel ? [`*Pago:* ${paymentLabel}`] : []),
         '', '*Productos:*',
         ...cartItems.flatMap(i => {
@@ -2296,14 +2310,15 @@ export default function StoreShell({ store, products, categories = [], initialBc
         ...(vesAmount ? [`*Total Bs: ${vesAmount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (BCV ${bcvRate!.toFixed(4)})*`] : []),
         ...(proofUrl ? ['', `*Comprobante:* ${proofUrl}`] : []),
         ...(customerNotes ? ['', `*Notas:* ${customerNotes}`] : []),
-        ...(!isPickup && newDeliveryId ? ['', 'Rastrea tu pedido en tiempo real:', `https://lyte-app.com/delivery/${newDeliveryId}`] : []),
+        ...(newDeliveryId ? ['', 'Rastrea tu pedido en tiempo real:', `https://lyte-app.com/delivery/${newDeliveryId}`] : []),
         ...(isPickup ? ['', 'Sigue el estado de tu pedido:', `https://lyte-app.com/order/${newOrderId}`] : []),
       ]
 
-      // Create delivery record only for domicilio — not awaited, same reasoning
-      // as order_items above: the tracking link works as soon as this lands,
-      // which is well before the customer would tap it.
-      if (!isPickup && newDeliveryId) {
+      // Create delivery record only for domicilio (local courier) — not
+      // awaited, same reasoning as order_items above: the tracking link
+      // works as soon as this lands, well before the customer would tap it.
+      // Pickup and national shipments have no courier record to make.
+      if (newDeliveryId) {
         fetch('/api/delivery', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -2327,9 +2342,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
       if (store.whatsapp) {
         const num = store.whatsapp.replace(/\D/g, '')
+        // National shipments have no live tracking (no local courier, and the
+        // pickup status page doesn't apply) — leave both params out so the
+        // confirmation page's "track" button stays hidden for them.
         const trackParam = isPickup
           ? `pickup=${newOrderId}`
-          : `delivery=${newDeliveryId}`
+          : newDeliveryId ? `delivery=${newDeliveryId}` : ''
         // Pass already-loaded settings along so the confirmation page can render
         // instantly instead of re-fetching the store row it just came from.
         const csAny = (store.checkout_settings ?? {}) as Record<string, unknown>
@@ -2346,7 +2364,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           `&mu=${encodeURIComponent(mapUrlAny)}` +
           `&qb=${queueBoardEnabled ? 1 : 0}` +
           (returnTimeout?.enabled && returnTimeout.seconds ? `&ret=${returnTimeout.seconds}` : '')
-        router.push(`/${store.slug}/pedido?id=${shortId}&${trackParam}&wa=${encodeURIComponent(`https://wa.me/${num}?text=${encodeURIComponent(lines.join('\n'))}`)}${settingsParams}`)
+        router.push(`/${store.slug}/pedido?id=${shortId}${trackParam ? `&${trackParam}` : ''}&wa=${encodeURIComponent(`https://wa.me/${num}?text=${encodeURIComponent(lines.join('\n'))}`)}${settingsParams}`)
       } else {
         setView('confirmed')
       }
@@ -2372,6 +2390,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   function resetToHome() {
     setCart({}); clearSavedCart()
     setCustomerName(''); setCustomerPhone(''); setCustomerAddress(''); setCustomerNotes('')
+    setCustomerCity(''); setCustomerState('')
     setCustomerCedula(''); setCedulaStatus('idle')
     setSelectedPayment(''); setPaymentFreeText('')
     setDeliveryTrackId(''); setPickupTrackId('')
@@ -2479,6 +2498,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   function resetCedulaDependents() {
     setCedulaStatus('idle')
     setCustomerName(''); setCustomerPhone(''); setCustomerAddress('')
+    setCustomerCity(''); setCustomerState('')
     setLocationState('idle'); setCustomerLat(null); setCustomerLng(null); setLocationLabel('')
   }
   function pressCedulaDigit(d: string) {
@@ -3093,10 +3113,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
         </div>
 
         {/* Delivery type selector */}
-        {bothTypes && (
+        {multiTypes && (
           <div className="sf-co-section">
             <h3 className="sf-co-section-title">Tipo de entrega</h3>
             <div style={{ display: 'flex', gap: 10 }}>
+              {dtOn && (
               <button
                 type="button"
                 onClick={() => setDeliveryType('delivery')}
@@ -3114,6 +3135,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 </svg>
                 <span style={{ fontSize: 13, fontWeight: deliveryType === 'delivery' ? 700 : 500, color: deliveryType === 'delivery' ? coAccent : '#64748B' }}>Domicilio</span>
               </button>
+              )}
+              {puOn && (
               <button
                 type="button"
                 onClick={() => setDeliveryType('pickup')}
@@ -3130,6 +3153,27 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 </svg>
                 <span style={{ fontSize: 13, fontWeight: deliveryType === 'pickup' ? 700 : 500, color: deliveryType === 'pickup' ? coAccent : '#64748B' }}>Retiro en tienda</span>
               </button>
+              )}
+              {natOn && (
+              <button
+                type="button"
+                onClick={() => setDeliveryType('national')}
+                style={{
+                  flex: 1, padding: '12px 8px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                  background: deliveryType === 'national' ? coAccentTint : '#F8FAFC',
+                  outline: `2px solid ${deliveryType === 'national' ? coAccent : '#E2E8F0'}`,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                  transition: 'all 0.15s',
+                }}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke={deliveryType === 'national' ? coAccent : '#94A3B8'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="20" height="20">
+                  <path d="M3 8l9-5 9 5-9 5-9-5z" />
+                  <path d="M3 8v8l9 5 9-5V8" />
+                  <path d="M12 13v8" />
+                </svg>
+                <span style={{ fontSize: 13, fontWeight: deliveryType === 'national' ? 700 : 500, color: deliveryType === 'national' ? coAccent : '#64748B' }}>Envio nacional</span>
+              </button>
+              )}
             </div>
           </div>
         )}
@@ -3355,6 +3399,27 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Direccion de envio — solo para envio nacional */}
+        {deliveryType === 'national' && (
+          <div className="sf-co-section">
+            <h3 className="sf-co-section-title">
+              Direccion de envio <span style={{ color: '#EF4444' }}>*</span>
+            </h3>
+            <div className="sf-co-field">
+              <label>Direccion completa</label>
+              <input type="text" placeholder="Calle, numero, sector, referencia" value={customerAddress} onChange={e => setCustomerAddress(e.target.value)} />
+            </div>
+            <div className="sf-co-field">
+              <label>Ciudad</label>
+              <input type="text" placeholder="Ciudad" value={customerCity} onChange={e => setCustomerCity(e.target.value)} />
+            </div>
+            <div className="sf-co-field">
+              <label>Estado</label>
+              <input type="text" placeholder="Estado" value={customerState} onChange={e => setCustomerState(e.target.value)} />
+            </div>
           </div>
         )}
 

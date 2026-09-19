@@ -341,6 +341,8 @@ type Store = {
     requirePaymentMethod?: boolean; requirePaymentProof?: boolean
     whatsappFloating?: boolean
     showBcvInSummary?: boolean
+    // Set from app/dashboard/configuracion, not this file's own settings page.
+    showTrackBtn?: boolean
     // Falls back to the store's general accent (cfg.accentColor) via CSS
     // when unset — see --sf-checkout-accent-color in pageStyle.
     accentColor?: string
@@ -2341,8 +2343,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
         ...(vesAmount ? [`*Total Bs: ${vesAmount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (BCV ${bcvRate!.toFixed(4)})*`] : []),
         ...(proofUrl ? ['', `*Comprobante:* ${proofUrl}`] : []),
         ...(customerNotes ? ['', `*Notas:* ${customerNotes}`] : []),
-        ...(newDeliveryId ? ['', 'Rastrea tu pedido en tiempo real:', `https://lyte-app.com/delivery/${newDeliveryId}`] : []),
-        ...(isPickup ? ['', 'Sigue el estado de tu pedido:', `https://lyte-app.com/order/${newOrderId}`] : []),
+        ...(cs.showTrackBtn !== false && newDeliveryId ? ['', 'Rastrea tu pedido en tiempo real:', `https://lyte-app.com/delivery/${newDeliveryId}`] : []),
+        ...(cs.showTrackBtn !== false && isPickup ? ['', 'Sigue el estado de tu pedido:', `https://lyte-app.com/order/${newOrderId}`] : []),
       ]
 
       // Create delivery record only for domicilio (local courier) — not

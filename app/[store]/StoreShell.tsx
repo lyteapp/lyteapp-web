@@ -759,6 +759,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [customerAddress, setCustomerAddress] = useState('')
   const [customerCity, setCustomerCity] = useState('')
   const [customerState, setCustomerState] = useState('')
+  const [shippingName, setShippingName] = useState('')
+  const [shippingCedula, setShippingCedula] = useState('')
+  const [shippingPhone, setShippingPhone] = useState('')
   const [selectedAgencyId, setSelectedAgencyId] = useState<string | null>(null)
   const [agencyAddress, setAgencyAddress] = useState('')
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([])
@@ -2204,8 +2207,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
       setError('Ubicacion desconocida, por favor contactenos para coordinar tu entrega')
       return
     }
-    if (deliveryType === 'national' && (!customerAddress.trim() || !customerCity.trim() || !customerState.trim())) {
-      setError('Ingresa direccion, ciudad y estado para el envio nacional')
+    if (deliveryType === 'national' && (!shippingName.trim() || !shippingCedula.trim() || !shippingPhone.trim() || !customerCity.trim() || !customerState.trim())) {
+      setError('Completa los datos del envio para continuar')
       return
     }
     if (deliveryType === 'national' && shippingAgencies.length > 0 && !selectedAgencyId) {
@@ -2301,7 +2304,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
         new Date().toLocaleString('es-VE', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
         '', `*Nombre:* ${customerName}`, `*Telefono:* ${customerPhone}`,
         ...(multiTypes ? [`*Tipo:* ${isPickup ? 'Retiro en tienda' : isNational ? 'Envio nacional' : 'Domicilio'}`] : []),
-        ...(!isPickup && customerAddress.trim() ? [`*Direccion:* ${customerAddress.trim()}`] : []),
+        ...(deliveryType === 'delivery' && customerAddress.trim() ? [`*Direccion:* ${customerAddress.trim()}`] : []),
+        ...(isNational && shippingName.trim() ? [`*Nombre de quien recibe:* ${shippingName.trim()}`] : []),
+        ...(isNational && shippingCedula.trim() ? [`*Cedula:* ${shippingCedula.trim()}`] : []),
+        ...(isNational && shippingPhone.trim() ? [`*Telefono de quien recibe:* ${shippingPhone.trim()}`] : []),
         ...(isNational && customerCity.trim() ? [`*Ciudad:* ${customerCity.trim()}`] : []),
         ...(isNational && customerState.trim() ? [`*Estado:* ${customerState.trim()}`] : []),
         ...(isNational && selectedAgencyId ? [`*Agencia:* ${shippingAgencies.find(a => a.id === selectedAgencyId)?.name ?? ''}`] : []),
@@ -2405,6 +2411,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     setCart({}); clearSavedCart()
     setCustomerName(''); setCustomerPhone(''); setCustomerAddress(''); setCustomerNotes('')
     setCustomerCity(''); setCustomerState('')
+    setShippingName(''); setShippingCedula(''); setShippingPhone('')
     setSelectedAgencyId(null); setAgencyAddress('')
     setCustomerCedula(''); setCedulaStatus('idle')
     setSelectedPayment(''); setPaymentFreeText('')
@@ -2514,6 +2521,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     setCedulaStatus('idle')
     setCustomerName(''); setCustomerPhone(''); setCustomerAddress('')
     setCustomerCity(''); setCustomerState('')
+    setShippingName(''); setShippingCedula(''); setShippingPhone('')
     setSelectedAgencyId(null); setAgencyAddress('')
     setLocationState('idle'); setCustomerLat(null); setCustomerLng(null); setLocationLabel('')
   }
@@ -3456,15 +3464,23 @@ export default function StoreShell({ store, products, categories = [], initialBc
           </div>
         )}
 
-        {/* Direccion de envio — solo para envio nacional */}
+        {/* Datos del envio — solo para envio nacional */}
         {deliveryType === 'national' && (
           <div className="sf-co-section">
             <h3 className="sf-co-section-title">
-              Direccion de envio <span style={{ color: '#EF4444' }}>*</span>
+              Datos del envio <span style={{ color: '#EF4444' }}>*</span>
             </h3>
             <div className="sf-co-field">
-              <label>Direccion completa</label>
-              <input type="text" placeholder="Calle, numero, sector, referencia" value={customerAddress} onChange={e => setCustomerAddress(e.target.value)} />
+              <label>Nombre y apellido</label>
+              <input type="text" placeholder="Nombre y apellido de quien recibe" value={shippingName} onChange={e => setShippingName(e.target.value)} />
+            </div>
+            <div className="sf-co-field">
+              <label>Cedula</label>
+              <input type="text" placeholder="V-12345678" value={shippingCedula} onChange={e => setShippingCedula(e.target.value)} />
+            </div>
+            <div className="sf-co-field">
+              <label>Numero de telefono</label>
+              <input type="tel" placeholder="0414-1234567" value={shippingPhone} onChange={e => setShippingPhone(e.target.value)} />
             </div>
             <div className="sf-co-field">
               <label>Ciudad</label>

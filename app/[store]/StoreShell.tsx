@@ -3529,7 +3529,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                         ))}
                       </div>
                     )}
-                    {isSelected && (
+                    {isSelected && requirePaymentProof && (
                       <div className="sf-proof-upload" onClick={e => e.stopPropagation()}>
                         <div className="sf-proof-total">
                           <span>Total a pagar</span>
@@ -3550,7 +3550,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                           )}
                         </div>
                         <label className="sf-proof-label" htmlFor="sf-proof-input">
-                          Comprobante de pago{requirePaymentProof ? <span className="sf-required"> *</span> : <span className="sf-optional"> (opcional)</span>}
+                          Comprobante de pago<span className="sf-required"> *</span>
                         </label>
                         <input
                           id="sf-proof-input"
@@ -3595,14 +3595,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
             </div>
           )}
 
-          {paymentFreeText && (
+          {paymentFreeText && requirePaymentProof && (
             <div className="sf-proof-upload">
               <div className="sf-proof-total">
                 <span>Total a pagar</span>
                 <div><strong>{currencySymbol}{orderTotal.toFixed(2)}</strong></div>
               </div>
               <label className="sf-proof-label" htmlFor="sf-proof-input">
-                Comprobante de pago{requirePaymentProof ? <span className="sf-required"> *</span> : <span className="sf-optional"> (opcional)</span>}
+                Comprobante de pago<span className="sf-required"> *</span>
               </label>
               <input
                 id="sf-proof-input"

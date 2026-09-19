@@ -3424,23 +3424,24 @@ export default function StoreShell({ store, products, categories = [], initialBc
             <h3 className="sf-co-section-title">
               Agencia de envio <span style={{ color: '#EF4444' }}>*</span>
             </h3>
-            <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 8 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 10 }}>
               {shippingAgencies.map(a => (
                 <button
                   key={a.id}
                   type="button"
                   onClick={() => setSelectedAgencyId(a.id)}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                    width: 100, padding: '14px 8px', borderRadius: 14, border: 'none', cursor: 'pointer',
                     background: selectedAgencyId === a.id ? coAccentTint : '#F8FAFC',
                     outline: `2px solid ${selectedAgencyId === a.id ? coAccent : '#E2E8F0'}`,
                     transition: 'all 0.15s',
                   }}
                 >
                   {a.logoUrl
-                    ? <img src={a.logoUrl} alt={a.name} style={{ width: 22, height: 22, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
-                    : <div style={{ width: 22, height: 22, borderRadius: 6, background: '#E2E8F0', flexShrink: 0 }} />}
-                  <span style={{ fontSize: 13, fontWeight: selectedAgencyId === a.id ? 700 : 500, color: selectedAgencyId === a.id ? coAccent : '#64748B' }}>{a.name}</span>
+                    ? <img src={a.logoUrl} alt={a.name} style={{ width: 60, height: 60, borderRadius: 12, objectFit: 'cover', flexShrink: 0 }} />
+                    : <div style={{ width: 60, height: 60, borderRadius: 12, background: '#E2E8F0', flexShrink: 0 }} />}
+                  <span style={{ fontSize: 13, fontWeight: selectedAgencyId === a.id ? 700 : 500, color: selectedAgencyId === a.id ? coAccent : '#64748B', textAlign: 'center' as const, lineHeight: 1.2 }}>{a.name}</span>
                 </button>
               ))}
             </div>

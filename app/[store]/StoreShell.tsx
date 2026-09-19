@@ -136,7 +136,7 @@ function cartItemCalories(item: CartItem): number | null {
 }
 
 const PM_LABELS: Record<string, string> = {
-  pago_movil: 'Pago Móvil', zelle: 'Zelle', efectivo_usd: 'Efectivo USD',
+  pago_movil: 'Pago Móvil', zelle: 'Zelle', paypal: 'PayPal', efectivo_usd: 'Efectivo USD',
   efectivo_bs: 'Efectivo Bs', usdt: 'USDT / Cripto', binance: 'Binance Pay',
   transferencia: 'Transferencia Bs', punto_venta: 'Punto de venta',
 }

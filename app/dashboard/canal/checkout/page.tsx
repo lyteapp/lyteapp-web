@@ -23,6 +23,10 @@ const METHODS: Omit<PaymentMethod, 'enabled' | 'values'>[] = [
     { key: 'email', label: 'Email o telefono', placeholder: 'nombre@email.com' },
     { key: 'titular', label: 'Nombre del titular', placeholder: 'Juan Perez' },
   ]},
+  { id: 'paypal', name: 'PayPal', icon: 'PP', fields: [
+    { key: 'email', label: 'Email o PayPal.me', placeholder: 'nombre@email.com o paypal.me/tuusuario' },
+    { key: 'titular', label: 'Nombre del titular', placeholder: 'Juan Perez' },
+  ]},
   { id: 'usdt', name: 'USDT / Cripto', icon: 'CR', fields: [
     { key: 'red', label: 'Red', placeholder: 'Ej: TRC20 (Tron)' },
     { key: 'wallet', label: 'Wallet / Direccion', placeholder: 'TXxx...' },

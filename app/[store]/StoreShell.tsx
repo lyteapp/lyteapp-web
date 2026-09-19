@@ -336,6 +336,7 @@ type Store = {
     allowNotes?: boolean; minOrder?: string
     deliveryEnabled?: boolean; deliveryFee?: string
     deliveryTypes?: { delivery?: boolean; pickup?: boolean; national?: boolean }
+    shippingAgencies?: { id: string; name: string; logoUrl: string }[]
     requirePaymentMethod?: boolean; requirePaymentProof?: boolean
     whatsappFloating?: boolean
     showBcvInSummary?: boolean
@@ -758,6 +759,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [customerAddress, setCustomerAddress] = useState('')
   const [customerCity, setCustomerCity] = useState('')
   const [customerState, setCustomerState] = useState('')
+  const [selectedAgencyId, setSelectedAgencyId] = useState<string | null>(null)
+  const [agencyAddress, setAgencyAddress] = useState('')
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([])
   const [selectedLocId, setSelectedLocId]   = useState<string | null>(null)
   const [showNewLoc, setShowNewLoc]         = useState(false)
@@ -1083,6 +1086,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const dtOn            = cs.deliveryTypes?.delivery !== false  // domicilio habilitado (default true)
   const puOn            = cs.deliveryTypes?.pickup === true     // retiro habilitado (default false)
   const natOn           = cs.deliveryTypes?.national === true   // envio nacional habilitado (default false)
+  const shippingAgencies = cs.shippingAgencies ?? []
   const enabledTypesCount = [dtOn, puOn, natOn].filter(Boolean).length
   const multiTypes      = enabledTypesCount > 1
   const zoneBasedFee   = deliveryZones.length > 0 && customerLat !== null ? (matchedZone?.fee ?? 0) : null
@@ -2204,6 +2208,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
       setError('Ingresa direccion, ciudad y estado para el envio nacional')
       return
     }
+    if (deliveryType === 'national' && shippingAgencies.length > 0 && !selectedAgencyId) {
+      setError('Selecciona la agencia de envio')
+      return
+    }
+    if (deliveryType === 'national' && selectedAgencyId && !agencyAddress.trim()) {
+      setError('Ingresa la direccion de la agencia')
+      return
+    }
     if (requirePaymentMethod && !selectedPayment && !paymentFreeText.trim()) {
       setError('Debes seleccionar un metodo de pago para continuar')
       return
@@ -2292,6 +2304,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
         ...(!isPickup && customerAddress.trim() ? [`*Direccion:* ${customerAddress.trim()}`] : []),
         ...(isNational && customerCity.trim() ? [`*Ciudad:* ${customerCity.trim()}`] : []),
         ...(isNational && customerState.trim() ? [`*Estado:* ${customerState.trim()}`] : []),
+        ...(isNational && selectedAgencyId ? [`*Agencia:* ${shippingAgencies.find(a => a.id === selectedAgencyId)?.name ?? ''}`] : []),
+        ...(isNational && agencyAddress.trim() ? [`*Direccion de la agencia:* ${agencyAddress.trim()}`] : []),
         ...(paymentLabel ? [`*Pago:* ${paymentLabel}`] : []),
         '', '*Productos:*',
         ...cartItems.flatMap(i => {
@@ -2391,6 +2405,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     setCart({}); clearSavedCart()
     setCustomerName(''); setCustomerPhone(''); setCustomerAddress(''); setCustomerNotes('')
     setCustomerCity(''); setCustomerState('')
+    setSelectedAgencyId(null); setAgencyAddress('')
     setCustomerCedula(''); setCedulaStatus('idle')
     setSelectedPayment(''); setPaymentFreeText('')
     setDeliveryTrackId(''); setPickupTrackId('')
@@ -2499,6 +2514,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     setCedulaStatus('idle')
     setCustomerName(''); setCustomerPhone(''); setCustomerAddress('')
     setCustomerCity(''); setCustomerState('')
+    setSelectedAgencyId(null); setAgencyAddress('')
     setLocationState('idle'); setCustomerLat(null); setCustomerLng(null); setLocationLabel('')
   }
   function pressCedulaDigit(d: string) {
@@ -3397,6 +3413,41 @@ export default function StoreShell({ store, products, categories = [], initialBc
                     </button>
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Agencia de envio — solo para envio nacional, cuando la tienda configuro alguna */}
+        {deliveryType === 'national' && shippingAgencies.length > 0 && (
+          <div className="sf-co-section">
+            <h3 className="sf-co-section-title">
+              Agencia de envio <span style={{ color: '#EF4444' }}>*</span>
+            </h3>
+            <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 8 }}>
+              {shippingAgencies.map(a => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => setSelectedAgencyId(a.id)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                    background: selectedAgencyId === a.id ? coAccentTint : '#F8FAFC',
+                    outline: `2px solid ${selectedAgencyId === a.id ? coAccent : '#E2E8F0'}`,
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {a.logoUrl
+                    ? <img src={a.logoUrl} alt={a.name} style={{ width: 22, height: 22, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
+                    : <div style={{ width: 22, height: 22, borderRadius: 6, background: '#E2E8F0', flexShrink: 0 }} />}
+                  <span style={{ fontSize: 13, fontWeight: selectedAgencyId === a.id ? 700 : 500, color: selectedAgencyId === a.id ? coAccent : '#64748B' }}>{a.name}</span>
+                </button>
+              ))}
+            </div>
+            {selectedAgencyId && (
+              <div className="sf-co-field" style={{ marginTop: 12 }}>
+                <label>Direccion de la agencia</label>
+                <input type="text" placeholder="Sucursal o direccion de la agencia" value={agencyAddress} onChange={e => setAgencyAddress(e.target.value)} />
               </div>
             )}
           </div>

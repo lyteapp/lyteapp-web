@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useDashboardStore } from '../../../lib/DashboardStoreProvider'
 import '../canal.css'
@@ -48,6 +48,7 @@ interface CheckoutSettings {
   requireName: boolean; requirePhone: boolean; requireAddress: boolean
   allowNotes: boolean; minOrder: string; deliveryEnabled: boolean; deliveryFee: string
   deliveryTypes: { delivery: boolean; pickup: boolean; national: boolean }
+  shippingAgencies: { id: string; name: string; logoUrl: string }[]
   requirePaymentMethod: boolean; requirePaymentProof: boolean
   whatsappFloating: boolean
   showBcvInSummary: boolean
@@ -59,6 +60,7 @@ const DEFAULTS: CheckoutSettings = {
   requireName: true, requirePhone: true, requireAddress: false,
   allowNotes: true, minOrder: '', deliveryEnabled: false, deliveryFee: '',
   deliveryTypes: { delivery: true, pickup: false, national: false },
+  shippingAgencies: [],
   requirePaymentMethod: false, requirePaymentProof: false,
   whatsappFloating: false,
   accentColor: '',
@@ -111,6 +113,39 @@ export default function CheckoutPage() {
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
   const [settingsError, setSettingsError] = useState('')
+
+  // Agencias de envio nacional
+  const [newAgencyName, setNewAgencyName] = useState('')
+  const [newAgencyLogo, setNewAgencyLogo] = useState('')
+  const [agencyUploading, setAgencyUploading] = useState(false)
+  const agencyLogoRef = useRef<HTMLInputElement | null>(null)
+
+  async function handleAgencyLogoUpload(e: { target: { files: FileList | null } }) {
+    const file = e.target.files?.[0]
+    if (!file || !storeId) return
+    setAgencyUploading(true)
+    const ext = file.name.split('.').pop()
+    const path = `agencies/${storeId}-${Date.now()}.${ext}`
+    const { error } = await supabase.storage.from('store-assets').upload(path, file, { upsert: true, contentType: file.type })
+    if (!error) {
+      const { data } = supabase.storage.from('store-assets').getPublicUrl(path)
+      setNewAgencyLogo(data.publicUrl)
+    }
+    setAgencyUploading(false)
+  }
+
+  function addAgency() {
+    if (!newAgencyName.trim()) return
+    setSettings(s => ({
+      ...s,
+      shippingAgencies: [...s.shippingAgencies, { id: crypto.randomUUID(), name: newAgencyName.trim(), logoUrl: newAgencyLogo }],
+    }))
+    setNewAgencyName(''); setNewAgencyLogo('')
+  }
+
+  function removeAgency(id: string) {
+    setSettings(s => ({ ...s, shippingAgencies: s.shippingAgencies.filter(a => a.id !== id) }))
+  }
 
   // Pagos
   const [methods, setMethods] = useState<PaymentMethod[]>(() =>
@@ -353,6 +388,67 @@ export default function CheckoutPage() {
                     onChange={v => setSettings(s => ({ ...s, deliveryTypes: { ...s.deliveryTypes, national: v } }))}
                   />
                 </div>
+                {settings.deliveryTypes.national && (
+                  <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #F1F5F9' }}>
+                    <div className="cn-label" style={{ marginBottom: 10 }}>Agencias de envio</div>
+                    {settings.shippingAgencies.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+                        {settings.shippingAgencies.map(a => (
+                          <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', background: '#F8FAFC', borderRadius: 10 }}>
+                            {a.logoUrl
+                              ? <img src={a.logoUrl} alt={a.name} style={{ width: 32, height: 32, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+                              : <div style={{ width: 32, height: 32, borderRadius: 8, background: '#E2E8F0', flexShrink: 0 }} />}
+                            <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#0F172A' }}>{a.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeAgency(a.id)}
+                              style={{ width: 26, height: 26, borderRadius: '50%', border: 'none', background: '#FEE2E2', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                            >
+                              <svg viewBox="0 0 20 20" fill="#EF4444" width="11" height="11">
+                                <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.519.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div
+                        onClick={() => agencyLogoRef.current?.click()}
+                        style={{
+                          width: 44, height: 44, borderRadius: 10, flexShrink: 0, cursor: 'pointer',
+                          background: newAgencyLogo ? `url(${newAgencyLogo}) center/cover` : '#F1F5F9',
+                          border: '1.5px dashed #CBD5E1',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 18, color: '#94A3B8', position: 'relative',
+                        }}
+                      >
+                        {agencyUploading ? '...' : (!newAgencyLogo ? '+' : null)}
+                      </div>
+                      <input ref={agencyLogoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAgencyLogoUpload} />
+                      <input
+                        type="text"
+                        placeholder="Nombre de la agencia (ej: Zoom, MRW)"
+                        value={newAgencyName}
+                        onChange={e => setNewAgencyName(e.target.value)}
+                        className="cn-prefix-input"
+                        style={{ flex: 1, border: '1.5px solid #E2E8F0', borderRadius: 10, padding: '10px 12px' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={addAgency}
+                        disabled={!newAgencyName.trim()}
+                        style={{
+                          padding: '10px 16px', borderRadius: 10, border: 'none', cursor: newAgencyName.trim() ? 'pointer' : 'not-allowed',
+                          background: newAgencyName.trim() ? '#0F172A' : '#E2E8F0', color: newAgencyName.trim() ? 'white' : '#94A3B8',
+                          fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap',
+                        }}
+                      >
+                        Agregar
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

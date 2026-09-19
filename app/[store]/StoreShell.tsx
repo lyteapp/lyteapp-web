@@ -3439,7 +3439,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   }}
                 >
                   {a.logoUrl
-                    ? <img src={a.logoUrl} alt={a.name} style={{ width: 60, height: 60, borderRadius: 12, objectFit: 'cover', flexShrink: 0 }} />
+                    ? <div style={{ width: 60, height: 60, borderRadius: 12, background: 'white', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 6 }}>
+                        <img src={a.logoUrl} alt={a.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                      </div>
                     : <div style={{ width: 60, height: 60, borderRadius: 12, background: '#E2E8F0', flexShrink: 0 }} />}
                   <span style={{ fontSize: 13, fontWeight: selectedAgencyId === a.id ? 700 : 500, color: selectedAgencyId === a.id ? coAccent : '#64748B', textAlign: 'center' as const, lineHeight: 1.2 }}>{a.name}</span>
                 </button>

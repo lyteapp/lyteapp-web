@@ -396,7 +396,9 @@ export default function CheckoutPage() {
                         {settings.shippingAgencies.map(a => (
                           <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', background: '#F8FAFC', borderRadius: 10 }}>
                             {a.logoUrl
-                              ? <img src={a.logoUrl} alt={a.name} style={{ width: 32, height: 32, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+                              ? <div style={{ width: 32, height: 32, borderRadius: 8, background: 'white', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 3 }}>
+                                  <img src={a.logoUrl} alt={a.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                                </div>
                               : <div style={{ width: 32, height: 32, borderRadius: 8, background: '#E2E8F0', flexShrink: 0 }} />}
                             <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#0F172A' }}>{a.name}</span>
                             <button
@@ -417,7 +419,7 @@ export default function CheckoutPage() {
                         onClick={() => agencyLogoRef.current?.click()}
                         style={{
                           width: 44, height: 44, borderRadius: 10, flexShrink: 0, cursor: 'pointer',
-                          background: newAgencyLogo ? `url(${newAgencyLogo}) center/cover` : '#F1F5F9',
+                          background: newAgencyLogo ? `white url(${newAgencyLogo}) center/contain no-repeat` : '#F1F5F9',
                           border: '1.5px dashed #CBD5E1',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: 18, color: '#94A3B8', position: 'relative',

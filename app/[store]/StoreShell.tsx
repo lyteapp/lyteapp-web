@@ -4434,7 +4434,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           {menuOpen && <div className="sf-drawer-overlay" onClick={() => setMenuOpen(false)} />}
           <div className={`sf-drawer${menuOpen ? ' sf-drawer-open' : ''}`}>
             <div className="sf-drawer-header">
-              <div className="sf-drawer-brand">
+              <div className="sf-drawer-brand" style={{ cursor: 'pointer' }} onClick={goHome}>
                 {store.logo_url && (
                 <div className={`sf-drawer-logo sf-nav-logo-${cfgLogoShape}`}>
                   <img src={store.logo_url} alt={store.name} />

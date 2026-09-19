@@ -3548,7 +3548,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           </div>
           <div className="sf-co-field">
             <label>{t('store.notes')} <span className="sf-optional">{t('store.optional')}</span></label>
-            <textarea placeholder={t('store.notesPlaceholder')} rows={2} value={customerNotes} onChange={e => setCustomerNotes(e.target.value)} />
+            <textarea rows={2} value={customerNotes} onChange={e => setCustomerNotes(e.target.value)} />
           </div>
         </div>
 

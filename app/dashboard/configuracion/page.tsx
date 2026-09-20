@@ -50,7 +50,7 @@ function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
 
 // ── MAIN PAGE ──────────────────────────────────────────────────
 function ConfiguracionInner() {
-  const { storeId } = useDashboardStore()
+  const { storeId, store: activeStore } = useDashboardStore()
   const searchParams = useSearchParams()
   const [loading, setLoading] = useState(true)
   const [openSection, setOpenSection] = useState<string>(() => searchParams.get('section') ?? 'general')
@@ -442,6 +442,11 @@ function ConfiguracionInner() {
 
             {/* Push notifications — per-device toggle, saved immediately on click */}
             <div className="cf-group-label" style={{ marginTop: 6 }}>Notificaciones</div>
+            {activeStore && (
+              <div style={{ fontSize: 12, color: '#94A3B8', marginBottom: 8 }}>
+                Aplica a la tienda activa: <strong style={{ color: '#0F172A' }}>{activeStore.name}</strong>
+              </div>
+            )}
             {pushSupported ? (
               <div className={`cf-hours-row${pushEnabled ? ' cf-hours-open' : ''}`} style={{ cursor: pushBusy ? 'wait' : 'pointer' }} onClick={togglePush}>
                 <button className={`cf-toggle${pushEnabled ? ' on' : ''}`} disabled={pushBusy} onClick={e => { e.stopPropagation(); togglePush() }}>

@@ -1064,6 +1064,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       // rendered width — cards are percentage-width (e.g. flex: 0 0 46%),
       // so this isn't a fixed constant across screen sizes.
       let perPage = 1
+      let pageCount = 1
       const measure = () => {
         const cardWidth = cards[0].getBoundingClientRect().width
         if (cardWidth <= 0) return
@@ -1071,7 +1072,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
         const styles = getComputedStyle(row)
         const gapPx = parseFloat(styles.columnGap || styles.gap || '0') || 0
         perPage = Math.max(1, Math.round((rowWidth + gapPx) / (cardWidth + gapPx)))
-        const pageCount = Math.max(1, Math.ceil(cards.length / perPage))
+        pageCount = Math.max(1, Math.ceil(cards.length / perPage))
         if (layoutKey) {
           setHcarouselPages(prev => prev[layoutKey] === pageCount ? prev : { ...prev, [layoutKey]: pageCount })
         }
@@ -1081,18 +1082,32 @@ export default function StoreShell({ store, products, categories = [], initialBc
       resizeObserver.observe(row)
       cleanups.push(() => resizeObserver.disconnect())
 
+      // Driven by actual scroll position rather than per-card intersection —
+      // at the end of the row the last card can't always reach a "start"
+      // snap position (not enough content left to scroll to), so watching
+      // intersection alone left the last page's dot never lighting up.
+      // Clamping to the last dot once scrollLeft hits its max sidesteps that.
+      const onScroll = () => {
+        const maxScroll = row.scrollWidth - row.clientWidth
+        let pageIdx = 0
+        if (maxScroll > 0) {
+          if (row.scrollLeft >= maxScroll - 2) {
+            pageIdx = pageCount - 1
+          } else {
+            const step = (cards[1]?.offsetLeft ?? cards[0].offsetWidth) - cards[0].offsetLeft
+            const cardIdx = step > 0 ? Math.round(row.scrollLeft / step) : 0
+            pageIdx = Math.min(pageCount - 1, Math.floor(cardIdx / perPage))
+          }
+        }
+        const dots = row.parentElement?.querySelectorAll<HTMLElement>('.sf-hcarousel-dot')
+        dots?.forEach((dot, i) => dot.classList.toggle('on', i === pageIdx))
+      }
+      onScroll()
+      row.addEventListener('scroll', onScroll, { passive: true })
+      cleanups.push(() => row.removeEventListener('scroll', onScroll))
+
       const observer = new IntersectionObserver(
-        entries => {
-          entries.forEach(entry => {
-            entry.target.classList.toggle('sf-carousel-focused', entry.isIntersecting)
-            if (entry.isIntersecting) {
-              const idx = cards.indexOf(entry.target as HTMLElement)
-              const pageIdx = Math.floor(idx / perPage)
-              const dots = row.parentElement?.querySelectorAll<HTMLElement>('.sf-hcarousel-dot')
-              dots?.forEach((dot, i) => dot.classList.toggle('on', i === pageIdx))
-            }
-          })
-        },
+        entries => entries.forEach(entry => entry.target.classList.toggle('sf-carousel-focused', entry.isIntersecting)),
         { root: row, rootMargin: '0px -80% 0px 0px', threshold: 0 }
       )
       cards.forEach(card => observer.observe(card))

@@ -5,7 +5,7 @@ self.addEventListener('push', function (event) {
       body: data.body || 'Tienes un pedido asignado',
       icon: '/icon-192.png',
       badge: '/icon-192.png',
-      tag: 'delivery',
+      tag: data.tag || 'delivery',
       renotify: true,
       requireInteraction: true,
       data: { url: data.url || '/' },

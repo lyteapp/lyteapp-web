@@ -39,6 +39,15 @@ function SaveBtn({ saving, onClick }: { saving: boolean; onClick: () => void }) 
   )
 }
 
+function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const raw = atob(base64)
+  const arr = new Uint8Array(raw.length)
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i)
+  return arr.buffer
+}
+
 // ── MAIN PAGE ──────────────────────────────────────────────────
 function ConfiguracionInner() {
   const { storeId } = useDashboardStore()
@@ -72,6 +81,13 @@ function ConfiguracionInner() {
   const [showWhatsappBtn, setShowWhatsappBtn] = useState(true)
   const [showTrackBtn, setShowTrackBtn] = useState(true)
   const [showMapBtn, setShowMapBtn] = useState(false)
+
+  // Push notifications — per-device, not part of checkout_settings, so
+  // these don't go through the "Guardar cambios" flow below.
+  const [pushSupported, setPushSupported] = useState(true)
+  const [pushEnabled, setPushEnabled] = useState(false)
+  const [pushBusy, setPushBusy] = useState(false)
+  const [pushError, setPushError] = useState('')
 
   const [error, setError] = useState('')
 
@@ -114,6 +130,57 @@ function ConfiguracionInner() {
     }
     load()
   }, [storeId])
+
+  // Reflects whether THIS browser/device already has an active push
+  // subscription — notifications are per-device, so there's no single
+  // on/off stored against the store itself.
+  useEffect(() => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
+      setPushSupported(false)
+      return
+    }
+    navigator.serviceWorker.getRegistration('/sw.js').then(async reg => {
+      const sub = await reg?.pushManager.getSubscription()
+      setPushEnabled(!!sub)
+    }).catch(() => {})
+  }, [])
+
+  async function togglePush() {
+    if (!storeId || pushBusy) return
+    setPushError(''); setPushBusy(true)
+    try {
+      if (pushEnabled) {
+        const reg = await navigator.serviceWorker.getRegistration('/sw.js')
+        const sub = await reg?.pushManager.getSubscription()
+        if (sub) {
+          await supabase.from('store_owner_push_subscriptions').delete().eq('store_id', storeId).eq('endpoint', sub.endpoint)
+          await sub.unsubscribe()
+        }
+        setPushEnabled(false)
+      } else {
+        const permission = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission()
+        if (permission !== 'granted') { setPushError('Debes permitir las notificaciones en tu navegador'); return }
+        const reg = await navigator.serviceWorker.register('/sw.js')
+        await navigator.serviceWorker.ready
+        const existing = await reg.pushManager.getSubscription()
+        const sub = existing ?? await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!),
+        })
+        const { error: subErr } = await supabase.from('store_owner_push_subscriptions').upsert({
+          store_id: storeId,
+          endpoint: sub.endpoint,
+          subscription: JSON.parse(JSON.stringify(sub)),
+        }, { onConflict: 'store_id,endpoint' })
+        if (subErr) { setPushError(subErr.message); return }
+        setPushEnabled(true)
+      }
+    } catch {
+      setPushError('No se pudo activar las notificaciones en este dispositivo')
+    } finally {
+      setPushBusy(false)
+    }
+  }
 
   function flash(set: (v: boolean) => void) {
     set(true); setTimeout(() => set(false), 3000)
@@ -339,6 +406,26 @@ function ConfiguracionInner() {
                 </span>
               </div>
             ))}
+
+            {/* Push notifications — per-device toggle, saved immediately on click */}
+            <div className="cf-group-label" style={{ marginTop: 6 }}>Notificaciones</div>
+            {pushSupported ? (
+              <div className={`cf-hours-row${pushEnabled ? ' cf-hours-open' : ''}`} style={{ cursor: pushBusy ? 'wait' : 'pointer' }} onClick={togglePush}>
+                <button className={`cf-toggle${pushEnabled ? ' on' : ''}`} disabled={pushBusy} onClick={e => { e.stopPropagation(); togglePush() }}>
+                  <div className="cf-toggle-knob" />
+                </button>
+                <div style={{ flex: 1 }}>
+                  <span className="cf-hours-day">Avisarme cuando llegue un pedido</span>
+                  <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }}>Notificacion en este dispositivo, aunque no tengas el dashboard abierto</div>
+                </div>
+                <span style={{ fontSize: 11, color: pushEnabled ? '#7C3AED' : '#94A3B8', fontWeight: 500 }}>
+                  {pushBusy ? '...' : pushEnabled ? 'Activado' : 'Desactivado'}
+                </span>
+              </div>
+            ) : (
+              <div style={{ fontSize: 12, color: '#94A3B8' }}>Tu navegador no soporta notificaciones push. En iPhone, agrega el dashboard a tu pantalla de inicio primero.</div>
+            )}
+            {pushError && <div style={{ fontSize: 12, color: '#EF4444', marginTop: 6 }}>{pushError}</div>}
 
             <SaveBtn saving={savingGeneral} onClick={saveGeneral} />
           </div>

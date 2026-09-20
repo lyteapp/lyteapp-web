@@ -59,6 +59,19 @@ export async function POST(req: NextRequest) {
       if (itemsError) console.error('order_items insert failed', itemsError)
     }
 
+    // Not awaited — the order response shouldn't wait on notifying the
+    // owner's phone, and a failed/slow push shouldn't fail the order.
+    fetch(new URL('/api/push-owner', req.nextUrl.origin), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        storeId: store_id,
+        title: 'Nuevo pedido',
+        body: `${customer_name} · $${Number(total).toFixed(2)}`,
+        url: '/dashboard/pedidos',
+      }),
+    }).catch(() => {})
+
     return NextResponse.json({ id, order_number: orderNumber ?? null })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })

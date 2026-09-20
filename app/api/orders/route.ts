@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 export async function POST(req: NextRequest) {
@@ -59,18 +59,28 @@ export async function POST(req: NextRequest) {
       if (itemsError) console.error('order_items insert failed', itemsError)
     }
 
-    // Not awaited — the order response shouldn't wait on notifying the
-    // owner's phone, and a failed/slow push shouldn't fail the order.
-    fetch(new URL('/api/push-owner', req.nextUrl.origin), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        storeId: store_id,
-        title: 'Nuevo pedido',
-        body: `${customer_name} · $${Number(total).toFixed(2)}`,
-        url: '/dashboard/pedidos',
-      }),
-    }).catch(() => {})
+    // Scheduled via after() rather than a bare unawaited fetch — on a
+    // serverless platform the function can be torn down the moment the
+    // response below is sent, which was cutting the push request off
+    // before it ever reached web-push. after() keeps the invocation alive
+    // until this finishes, without making the customer wait on it.
+    const origin = req.nextUrl.origin
+    after(async () => {
+      try {
+        await fetch(new URL('/api/push-owner', origin), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            storeId: store_id,
+            title: 'Nuevo pedido',
+            body: `${customer_name} · $${Number(total).toFixed(2)}`,
+            url: '/dashboard/pedidos',
+          }),
+        })
+      } catch (err) {
+        console.error('push-owner notify failed', err)
+      }
+    })
 
     return NextResponse.json({ id, order_number: orderNumber ?? null })
   } catch (err) {

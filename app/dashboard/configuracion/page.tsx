@@ -133,19 +133,26 @@ function ConfiguracionInner() {
     load()
   }, [storeId])
 
-  // Reflects whether THIS browser/device already has an active push
-  // subscription — notifications are per-device, so there's no single
-  // on/off stored against the store itself.
+  // Reflects whether THIS device's subscription is actually registered for
+  // the currently active store — an owner managing more than one store can
+  // have a subscription from a different one still sitting in the browser,
+  // which used to show as "Activado" here even with nothing saved for the
+  // store actually being viewed.
   useEffect(() => {
+    if (!storeId) return
     if (!('serviceWorker' in navigator) || !('PushManager' in window) || !process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
       setPushSupported(false)
       return
     }
     navigator.serviceWorker.getRegistration('/sw.js').then(async reg => {
       const sub = await reg?.pushManager.getSubscription()
-      setPushEnabled(!!sub)
+      if (!sub) { setPushEnabled(false); return }
+      const { data } = await supabase
+        .from('store_owner_push_subscriptions')
+        .select('id').eq('store_id', storeId).eq('endpoint', sub.endpoint).maybeSingle()
+      setPushEnabled(!!data)
     }).catch(() => {})
-  }, [])
+  }, [storeId])
 
   async function togglePush() {
     if (!storeId || pushBusy) return

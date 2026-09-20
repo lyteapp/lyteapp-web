@@ -7,7 +7,9 @@ self.addEventListener('push', function (event) {
       badge: '/icon-192.png',
       tag: data.tag || 'delivery',
       renotify: true,
-      requireInteraction: true,
+      // requireInteraction isn't supported on Safari/iOS — some WebKit
+      // versions handle an unrecognized option by falling back to a bare
+      // system sound instead of rendering the custom banner at all.
       data: { url: data.url || '/' },
     })
   )

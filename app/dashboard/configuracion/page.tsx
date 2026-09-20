@@ -90,6 +90,7 @@ function ConfiguracionInner() {
   const [pushError, setPushError] = useState('')
   const [pushTestBusy, setPushTestBusy] = useState(false)
   const [pushTestResult, setPushTestResult] = useState('')
+  const [pushDebugEndpoint, setPushDebugEndpoint] = useState<string | null>(null)
 
   const [error, setError] = useState('')
 
@@ -146,6 +147,7 @@ function ConfiguracionInner() {
     }
     navigator.serviceWorker.getRegistration('/sw.js').then(async reg => {
       const sub = await reg?.pushManager.getSubscription()
+      setPushDebugEndpoint(sub?.endpoint ?? null)
       if (!sub) { setPushEnabled(false); return }
       const { data } = await supabase
         .from('store_owner_push_subscriptions')
@@ -448,6 +450,11 @@ function ConfiguracionInner() {
                 Aplica a la tienda activa: <strong style={{ color: '#0F172A' }}>{activeStore.name}</strong>
               </div>
             )}
+            {/* Temporary diagnostic — remove once push delivery is confirmed working */}
+            <div style={{ fontSize: 10, color: '#CBD5E1', marginBottom: 8, wordBreak: 'break-all' as const, fontFamily: 'monospace' }}>
+              storeId: {storeId ?? '(ninguno)'}<br />
+              endpoint: {pushDebugEndpoint ? `...${pushDebugEndpoint.slice(-24)}` : '(sin suscripcion en este dispositivo)'}
+            </div>
             {pushSupported ? (
               <div className={`cf-hours-row${pushEnabled ? ' cf-hours-open' : ''}`} style={{ cursor: pushBusy ? 'wait' : 'pointer' }} onClick={togglePush}>
                 <button className={`cf-toggle${pushEnabled ? ' on' : ''}`} disabled={pushBusy} onClick={e => { e.stopPropagation(); togglePush() }}>

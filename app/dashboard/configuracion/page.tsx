@@ -88,6 +88,8 @@ function ConfiguracionInner() {
   const [pushEnabled, setPushEnabled] = useState(false)
   const [pushBusy, setPushBusy] = useState(false)
   const [pushError, setPushError] = useState('')
+  const [pushTestBusy, setPushTestBusy] = useState(false)
+  const [pushTestResult, setPushTestResult] = useState('')
 
   const [error, setError] = useState('')
 
@@ -179,6 +181,30 @@ function ConfiguracionInner() {
       setPushError('No se pudo activar las notificaciones en este dispositivo')
     } finally {
       setPushBusy(false)
+    }
+  }
+
+  async function sendTestPush() {
+    if (!storeId || pushTestBusy) return
+    setPushTestResult(''); setPushTestBusy(true)
+    try {
+      const res = await fetch('/api/push-owner', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeId, title: 'Notificacion de prueba',
+          body: 'Si ves esto, las notificaciones estan funcionando',
+          url: '/dashboard/pedidos',
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) setPushTestResult(`Error: ${data.error ?? res.status}`)
+      else if (data.sent > 0) setPushTestResult(`Enviada a ${data.sent} dispositivo${data.sent > 1 ? 's' : ''} — revisa si llego`)
+      else setPushTestResult('No hay ningun dispositivo con notificaciones activadas para esta tienda')
+    } catch {
+      setPushTestResult('No se pudo contactar al servidor')
+    } finally {
+      setPushTestBusy(false)
     }
   }
 
@@ -426,6 +452,22 @@ function ConfiguracionInner() {
               <div style={{ fontSize: 12, color: '#94A3B8' }}>Tu navegador no soporta notificaciones push. En iPhone, agrega el dashboard a tu pantalla de inicio primero.</div>
             )}
             {pushError && <div style={{ fontSize: 12, color: '#EF4444', marginTop: 6 }}>{pushError}</div>}
+            {pushEnabled && (
+              <div style={{ marginTop: 10 }}>
+                <button
+                  type="button"
+                  onClick={sendTestPush}
+                  disabled={pushTestBusy}
+                  style={{
+                    padding: '8px 14px', borderRadius: 8, border: '1.5px solid #E2E8F0', background: 'white',
+                    color: '#0F172A', fontSize: 12, fontWeight: 600, cursor: pushTestBusy ? 'wait' : 'pointer',
+                  }}
+                >
+                  {pushTestBusy ? 'Enviando...' : 'Enviar notificacion de prueba'}
+                </button>
+                {pushTestResult && <div style={{ fontSize: 12, color: '#64748B', marginTop: 6 }}>{pushTestResult}</div>}
+              </div>
+            )}
 
             <SaveBtn saving={savingGeneral} onClick={saveGeneral} />
           </div>

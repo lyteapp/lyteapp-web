@@ -207,6 +207,7 @@ function ConfiguracionInner() {
       const data = await res.json().catch(() => ({}))
       if (!res.ok) setPushTestResult(`Error: ${data.error ?? res.status}`)
       else if (data.sent > 0) setPushTestResult(`Enviada a ${data.sent} dispositivo${data.sent > 1 ? 's' : ''} — revisa si llego`)
+      else if (data.found > 0) setPushTestResult(`Encontre ${data.found} dispositivo${data.found > 1 ? 's' : ''} pero el envio fallo: ${data.lastError ?? 'error desconocido'}`)
       else setPushTestResult('No hay ningun dispositivo con notificaciones activadas para esta tienda')
     } catch {
       setPushTestResult('No se pudo contactar al servidor')

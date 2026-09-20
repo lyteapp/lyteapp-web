@@ -1042,8 +1042,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
     return () => observer.disconnect()
   }, [view])
 
+  // Number of dots per horizontal category carousel — a "page" is however
+  // many cards actually fit across the row at once (measured, since cards
+  // are percentage-width), not one dot per product. Keyed by layoutKey.
+  const [hcarouselPages, setHcarouselPages] = useState<Record<string, number>>({})
+
   // ── Horizontal category carousels: keep only the leading (start-snapped) card in focus,
-  // and dismiss the "Desliza" hint the first time each row is scrolled ──
+  // light up the dot for whichever page it's in, and dismiss the "Desliza"
+  // hint the first time each row is scrolled ──
   useEffect(() => {
     if (view !== 'catalog') return
     const rows = Array.from(document.querySelectorAll<HTMLElement>('.sf-grid-horizontal'))
@@ -1051,14 +1057,39 @@ export default function StoreShell({ store, products, categories = [], initialBc
     const cleanups: (() => void)[] = []
     rows.forEach(row => {
       const cards = Array.from(row.querySelectorAll<HTMLElement>('.sf-card'))
-      const dots  = row.parentElement?.querySelectorAll<HTMLElement>('.sf-hcarousel-dot') ?? null
+      if (cards.length === 0) return
+      const layoutKey = row.dataset.layoutKey
+
+      // How many cards fit across the row at once, from their actual
+      // rendered width — cards are percentage-width (e.g. flex: 0 0 46%),
+      // so this isn't a fixed constant across screen sizes.
+      let perPage = 1
+      const measure = () => {
+        const cardWidth = cards[0].getBoundingClientRect().width
+        if (cardWidth <= 0) return
+        const rowWidth = row.getBoundingClientRect().width
+        const styles = getComputedStyle(row)
+        const gapPx = parseFloat(styles.columnGap || styles.gap || '0') || 0
+        perPage = Math.max(1, Math.round((rowWidth + gapPx) / (cardWidth + gapPx)))
+        const pageCount = Math.max(1, Math.ceil(cards.length / perPage))
+        if (layoutKey) {
+          setHcarouselPages(prev => prev[layoutKey] === pageCount ? prev : { ...prev, [layoutKey]: pageCount })
+        }
+      }
+      measure()
+      const resizeObserver = new ResizeObserver(measure)
+      resizeObserver.observe(row)
+      cleanups.push(() => resizeObserver.disconnect())
+
       const observer = new IntersectionObserver(
         entries => {
           entries.forEach(entry => {
             entry.target.classList.toggle('sf-carousel-focused', entry.isIntersecting)
-            if (entry.isIntersecting && dots) {
+            if (entry.isIntersecting) {
               const idx = cards.indexOf(entry.target as HTMLElement)
-              dots.forEach((dot, i) => dot.classList.toggle('on', i === idx))
+              const pageIdx = Math.floor(idx / perPage)
+              const dots = row.parentElement?.querySelectorAll<HTMLElement>('.sf-hcarousel-dot')
+              dots?.forEach((dot, i) => dot.classList.toggle('on', i === pageIdx))
             }
           })
         },
@@ -1720,9 +1751,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
     if (cfgCategoryLayouts[layoutKey] !== 'horizontal') {
       return <div className="sf-grid">{items.map(renderCard)}</div>
     }
+    // Falls back to one dot per item until the row's been measured (first
+    // effect pass right after mount) — corrects itself a frame later.
+    const pageCount = Math.min(hcarouselPages[layoutKey] ?? items.length, items.length)
     return (
       <div className="sf-hcarousel-wrap">
-        <div className="sf-grid-horizontal">{items.map(renderCard)}</div>
+        <div className="sf-grid-horizontal" data-layout-key={layoutKey}>{items.map(renderCard)}</div>
         <div className="sf-hcarousel-hint" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
             <path d="M13 5l7 7-7 7M4 12h15" />
@@ -1731,7 +1765,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
         </div>
         {items.length > 1 && (
           <div className="sf-hcarousel-dots">
-            {items.map((_, i) => (
+            {Array.from({ length: pageCount }, (_, i) => (
               <div key={i} className={`sf-hcarousel-dot${i === 0 ? ' on' : ''}`} />
             ))}
           </div>

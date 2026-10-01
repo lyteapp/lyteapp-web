@@ -653,10 +653,9 @@ export default function PedidosPage() {
                       ? <span className="pd-comanda-elapsed pd-elapsed-ok pd-kitchen-time">Cocina: {kitchenMins} min</span>
                       : <span className={`pd-comanda-elapsed pd-elapsed-${level}`}>{elapsed}</span>
                     }
-                    <span className="pd-comanda-badge">{DISPLAY_STATUS[order.status] ?? order.status}</span>
-                    {order.locker_number != null && (
-                      <span className="pd-comanda-badge" style={{ background: '#7C3AED', color: 'white' }}>Casillero {order.locker_number}</span>
-                    )}
+                    <span className="pd-comanda-badge">
+                      {DISPLAY_STATUS[order.status] ?? order.status}{order.locker_number != null ? ` · Casillero ${order.locker_number}` : ''}
+                    </span>
                   </div>
                   <div className="pd-comanda-customer">
                     <div className="pd-comanda-name">{order.customer_name}</div>
@@ -815,10 +814,9 @@ export default function PedidosPage() {
                     <div className="pd-customer-phone">{order.customer_phone}</div>
                   </div>
                   <div className="pd-total">{fmt(order.total)}</div>
-                  {order.locker_number != null && (
-                    <div className="pd-status" style={{ background: '#7C3AED', color: 'white' }}>Casillero {order.locker_number}</div>
-                  )}
-                  <div className={`pd-status ${order.status}`}>{t(STATUS_KEYS[order.status])}</div>
+                  <div className={`pd-status ${order.status}`}>
+                    {t(STATUS_KEYS[order.status])}{order.locker_number != null ? ` · Casillero ${order.locker_number}` : ''}
+                  </div>
                   <svg className={`pd-chevron${isExpanded ? ' open' : ''}`} viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                   </svg>

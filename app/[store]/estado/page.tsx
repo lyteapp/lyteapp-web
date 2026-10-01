@@ -17,6 +17,7 @@ type QueueOrder = {
   status: OrderStatus
   customer_name: string
   created_at: string
+  locker_number: number | null
 }
 
 type CustomerDisplay = 'firstName' | 'fullName' | 'code'
@@ -139,7 +140,7 @@ export default function EstadoPage() {
     const cutoff = new Date(Date.now() - QUEUE_WINDOW_MS).toISOString()
     supabase
       .from('orders')
-      .select('id, status, customer_name, created_at')
+      .select('id, status, customer_name, created_at, locker_number')
       .eq('store_id', storeId)
       .not('status', 'in', '(delivered,cancelled,completed)')
       .gte('created_at', cutoff)
@@ -257,6 +258,11 @@ function QueueColumn({
             </span>
             {customerDisplay !== 'code' && (
               <span className="oq-card-name">{displayName(o.customer_name, customerDisplay)}</span>
+            )}
+            {o.locker_number != null && (
+              <span className="oq-card-code" style={{ color: accentColor, background: accentColor + '14' }}>
+                Casillero {o.locker_number}
+              </span>
             )}
           </div>
           {showTime && <span className="oq-card-time">{minutesAgo(o.created_at)}</span>}

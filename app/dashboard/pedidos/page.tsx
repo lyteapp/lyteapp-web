@@ -138,6 +138,7 @@ export default function PedidosPage() {
   // Order currently waiting on a locker pick, from either view — set
   // instead of advancing straight to 'ready' when locker mode is on.
   const [lockerPickerOrder, setLockerPickerOrder] = useState<{ id: string; fromDisplay: boolean } | null>(null)
+  const [copiedLockerUrl, setCopiedLockerUrl] = useState(false)
   const displayModeRef = useRef(false)
   const displayDateRef = useRef('')
   const bcChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
@@ -179,6 +180,13 @@ export default function PedidosPage() {
     await supabase.from('stores').update({
       checkout_settings: { ...cs, lockerMode: { enabled, count } },
     }).eq('id', storeId)
+  }
+
+  function copyLockerDisplayUrl() {
+    if (!storeId) return
+    navigator.clipboard.writeText(`${window.location.origin}/casillero/${storeId}`)
+    setCopiedLockerUrl(true)
+    setTimeout(() => setCopiedLockerUrl(false), 1500)
   }
 
   useEffect(() => { displayModeRef.current = displayMode }, [displayMode])
@@ -1022,6 +1030,25 @@ export default function PedidosPage() {
                   <span className="pd-modal-step-val">{lockerCount}</span>
                   <button className="pd-modal-step-btn" onClick={() => saveLockerSettings(true, lockerCount + 1)}>+</button>
                 </div>
+              </div>
+            )}
+
+            {lockerModeEnabled && storeId && (
+              <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #F1F5F9' }}>
+                <div className="pd-modal-row-label" style={{ marginBottom: 6 }}>Pantalla de casilleros</div>
+                <div style={{ fontSize: 12, color: '#94A3B8', marginBottom: 10 }}>
+                  Instala este link en una tablet o telefono junto a los casilleros: muestra cual esta ocupado y por quien, y al tocarlo confirma el retiro
+                </div>
+                <button
+                  type="button"
+                  onClick={copyLockerDisplayUrl}
+                  style={{
+                    padding: '9px 14px', borderRadius: 10, border: '1.5px solid #E2E8F0', background: 'white',
+                    color: '#0F172A', fontSize: 13, fontWeight: 600, cursor: 'pointer', width: '100%',
+                  }}
+                >
+                  {copiedLockerUrl ? 'Link copiado' : 'Copiar link de la pantalla'}
+                </button>
               </div>
             )}
           </div>

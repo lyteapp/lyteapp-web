@@ -330,9 +330,6 @@ export default function PedidosPage() {
     if (status === 'ready') {
       const order = orders.find(o => o.id === orderId)
       if (order?.delivery_type === 'delivery') await notifyDrivers(order?.customer_name)
-      if (lockerNumber !== undefined && order) {
-        openLockerPickupWhatsApp(order.customer_name, order.customer_phone, order.order_number, order.id, lockerNumber)
-      }
     }
     setUpdating(null)
   }
@@ -429,10 +426,6 @@ export default function PedidosPage() {
         const displayOrder = displayOrders.find(o => o.id === orderId)
         const isDeliveryOrder = (displayOrder?.delivery_type ?? order?.delivery_type) === 'delivery'
         if (isDeliveryOrder) await notifyDrivers(displayOrder?.customer_name ?? order?.customer_name)
-        if (lockerNumber !== undefined && (displayOrder || order)) {
-          const src = displayOrder ?? order!
-          openLockerPickupWhatsApp(src.customer_name, src.customer_phone, src.order_number, src.id, lockerNumber)
-        }
       }
     } finally {
       setDisplayUpdating(null)
@@ -459,17 +452,6 @@ export default function PedidosPage() {
       ? `https://wa.me/${num}?text=${encodeURIComponent(lines.join('\n'))}`
       : `https://wa.me/?text=${encodeURIComponent(lines.join('\n'))}`
     window.open(url, '_blank')
-  }
-
-  function openLockerPickupWhatsApp(customerName: string, customerPhone: string, orderNum: number | null | undefined, orderId: string, lockerNumber: number) {
-    const phone = (customerPhone ?? '').replace(/\D/g, '')
-    const msg = [
-      `Hola ${customerName},`,
-      `Tu pedido *#${orderNum ?? orderId.slice(0, 8).toUpperCase()}* esta listo.`,
-      '',
-      `Retiralo en el *casillero #${lockerNumber}*`,
-    ].join('\n')
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank')
   }
 
   function openWhatsApp(order: Order) {
@@ -1054,7 +1036,7 @@ export default function PedidosPage() {
             <div className="pd-modal-header">
               <div>
                 <div className="pd-modal-title">Elige el casillero</div>
-                <div className="pd-modal-desc">El cliente recibe un WhatsApp con el numero al confirmar</div>
+                <div className="pd-modal-desc">El pedido queda marcado listo con este casillero</div>
               </div>
               <button className="pd-modal-x" onClick={() => setLockerPickerOrder(null)}>
                 <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">

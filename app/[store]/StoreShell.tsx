@@ -332,7 +332,8 @@ type Store = {
   store_currency?: string | null
   template_config?: TemplateConfig | null
   checkout_settings?: {
-    requireName?: boolean; requirePhone?: boolean; requireAddress?: boolean
+    requireName?: boolean; requirePhone?: boolean
+    showLocationBox?: boolean
     allowNotes?: boolean; minOrder?: string
     deliveryEnabled?: boolean; deliveryFee?: string
     deliveryTypes?: { delivery?: boolean; pickup?: boolean; national?: boolean }
@@ -2255,7 +2256,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     // actually place an order.
     if (isCheckoutPreview) { setError('Esto es una vista previa — los pedidos no se envian aqui.'); return }
     if (!customerName.trim() || !customerPhone.trim()) { setError(t('store.error.required')); return }
-    if (deliveryType === 'delivery' && !customerLat && !customerAddress.trim()) {
+    if (deliveryType === 'delivery' && cs.showLocationBox !== false && !customerLat && !customerAddress.trim()) {
       setError('Ingresa tu direccion o comparte tu ubicacion GPS para continuar')
       return
     }
@@ -3271,8 +3272,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
           </div>
         )}
 
-        {/* Ubicacion de entrega — solo para domicilio */}
-        {deliveryType === 'delivery' && (
+        {/* Ubicacion de entrega — solo para domicilio, y solo si la tienda no la desactivo */}
+        {deliveryType === 'delivery' && cs.showLocationBox !== false && (
           <div className="sf-co-section">
             <h3 className="sf-co-section-title">
               Ubicacion de entrega <span style={{ color: '#EF4444' }}>*</span>

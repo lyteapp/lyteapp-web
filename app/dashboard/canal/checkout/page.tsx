@@ -49,7 +49,11 @@ const METHODS: Omit<PaymentMethod, 'enabled' | 'values'>[] = [
 ]
 
 interface CheckoutSettings {
-  requireName: boolean; requirePhone: boolean; requireAddress: boolean
+  requireName: boolean; requirePhone: boolean
+  // Whether the "Ubicacion de entrega" box (address/GPS/saved locations)
+  // shows at all for domicilio — some stores coordinate the address
+  // separately and don't want to ask for it in the checkout itself.
+  showLocationBox: boolean
   allowNotes: boolean; minOrder: string; deliveryEnabled: boolean; deliveryFee: string
   deliveryTypes: { delivery: boolean; pickup: boolean; national: boolean }
   shippingAgencies: { id: string; name: string; logoUrl: string }[]
@@ -65,7 +69,7 @@ interface CheckoutSettings {
 }
 
 const DEFAULTS: CheckoutSettings = {
-  requireName: true, requirePhone: true, requireAddress: false,
+  requireName: true, requirePhone: true, showLocationBox: true,
   allowNotes: true, minOrder: '', deliveryEnabled: false, deliveryFee: '',
   deliveryTypes: { delivery: true, pickup: false, national: false },
   shippingAgencies: [],
@@ -352,10 +356,10 @@ export default function CheckoutPage() {
                 </div>
                 <div className="cn-toggle-row">
                   <div className="cn-toggle-info">
-                    <div className="cn-toggle-label">Direccion de entrega</div>
-                    <div className="cn-toggle-hint">Activar si haces domicilios</div>
+                    <div className="cn-toggle-label">Cuadro de ubicacion de entrega</div>
+                    <div className="cn-toggle-hint">Pide direccion o GPS para domicilios. Desactivalo si prefieres coordinarla aparte</div>
                   </div>
-                  <Toggle checked={settings.requireAddress} onChange={v => setSetting('requireAddress', v)} />
+                  <Toggle checked={settings.showLocationBox} onChange={v => setSetting('showLocationBox', v)} />
                 </div>
                 <div className="cn-toggle-row">
                   <div className="cn-toggle-info">

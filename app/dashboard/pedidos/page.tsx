@@ -28,6 +28,7 @@ interface OrderItem {
 interface Order {
   id: string
   order_number?: number | null
+  locker_number?: number | null
   customer_name: string
   customer_phone: string
   customer_notes: string | null
@@ -43,6 +44,7 @@ interface Order {
 interface DisplayOrder {
   id: string
   order_number?: number | null
+  locker_number?: number | null
   created_at: string
   ready_at?: string | null
   delivery_type?: string | null
@@ -130,6 +132,12 @@ export default function PedidosPage() {
   const [warnMins, setWarnMins]   = useState(() => Number(typeof window !== 'undefined' ? (localStorage.getItem('pd-warn-mins') ?? '10') : '10'))
   const [alertMins, setAlertMins] = useState(() => Number(typeof window !== 'undefined' ? (localStorage.getItem('pd-alert-mins') ?? '20') : '20'))
   const [showTimerSettings, setShowTimerSettings] = useState(false)
+  const [lockerModeEnabled, setLockerModeEnabled] = useState(false)
+  const [lockerCount, setLockerCount] = useState(0)
+  const [showLockerSettings, setShowLockerSettings] = useState(false)
+  // Order currently waiting on a locker pick, from either view — set
+  // instead of advancing straight to 'ready' when locker mode is on.
+  const [lockerPickerOrder, setLockerPickerOrder] = useState<{ id: string; fromDisplay: boolean } | null>(null)
   const displayModeRef = useRef(false)
   const displayDateRef = useRef('')
   const bcChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
@@ -152,13 +160,26 @@ export default function PedidosPage() {
         .eq('id', storeId!)
         .maybeSingle()
       setWhatsapp(storeRow?.whatsapp ?? '')
-      const savedOrderTitle = (storeRow?.checkout_settings as Record<string, unknown> | null)?.orderTitle
+      const cs = (storeRow?.checkout_settings as Record<string, unknown> | null) ?? {}
+      const savedOrderTitle = cs.orderTitle
       if (typeof savedOrderTitle === 'string' && savedOrderTitle.trim()) setOrderTitle(savedOrderTitle.trim())
+      const lm = cs.lockerMode as { enabled?: boolean; count?: number } | undefined
+      if (lm) { setLockerModeEnabled(!!lm.enabled); setLockerCount(lm.count ?? 0) }
       await loadOrders(storeId!)
       setLoading(false)
     }
     init()
   }, [storeId, loadOrders])
+
+  async function saveLockerSettings(enabled: boolean, count: number) {
+    setLockerModeEnabled(enabled); setLockerCount(count)
+    if (!storeId) return
+    const { data: storeRow } = await supabase.from('stores').select('checkout_settings').eq('id', storeId).maybeSingle()
+    const cs = (storeRow?.checkout_settings as Record<string, unknown> | null) ?? {}
+    await supabase.from('stores').update({
+      checkout_settings: { ...cs, lockerMode: { enabled, count } },
+    }).eq('id', storeId)
+  }
 
   useEffect(() => { displayModeRef.current = displayMode }, [displayMode])
 
@@ -289,23 +310,29 @@ export default function PedidosPage() {
     broadcastDrivers(customerName)
   }
 
-  async function updateStatus(orderId: string, status: OrderStatus) {
+  async function updateStatus(orderId: string, status: OrderStatus, lockerNumber?: number) {
     setUpdating(orderId)
     const order = orders.find(o => o.id === orderId)
     const isPickupOrder = order?.delivery_type === 'pickup'
     const deliveryStatus = isPickupOrder ? undefined : DELIVERY_STATUS_MAP[status]
     const readyAt = status === 'ready' ? new Date().toISOString() : undefined
-    await supabase.from('orders').update({ status, ...(readyAt ? { ready_at: readyAt } : {}) }).eq('id', orderId)
+    await supabase.from('orders').update({
+      status, ...(readyAt ? { ready_at: readyAt } : {}),
+      ...(lockerNumber !== undefined ? { locker_number: lockerNumber } : {}),
+    }).eq('id', orderId)
     if (deliveryStatus) await syncDelivery(orderId, deliveryStatus).catch(() => {})
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o))
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status, ...(lockerNumber !== undefined ? { locker_number: lockerNumber } : {}) } : o))
     if (['delivered', 'cancelled', 'completed'].includes(status)) {
       setDisplayOrders(prev => prev.filter(o => o.id !== orderId))
     } else {
-      setDisplayOrders(prev => prev.map(o => o.id === orderId ? { ...o, status, ...(readyAt ? { ready_at: readyAt } : {}) } : o))
+      setDisplayOrders(prev => prev.map(o => o.id === orderId ? { ...o, status, ...(readyAt ? { ready_at: readyAt } : {}), ...(lockerNumber !== undefined ? { locker_number: lockerNumber } : {}) } : o))
     }
     if (status === 'ready') {
       const order = orders.find(o => o.id === orderId)
       if (order?.delivery_type === 'delivery') await notifyDrivers(order?.customer_name)
+      if (lockerNumber !== undefined && order) {
+        openLockerPickupWhatsApp(order.customer_name, order.customer_phone, order.order_number, order.id, lockerNumber)
+      }
     }
     setUpdating(null)
   }
@@ -370,7 +397,7 @@ export default function PedidosPage() {
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
     const { data } = await supabase
       .from('orders')
-      .select('id, order_number, created_at, ready_at, delivery_type, customer_name, customer_phone, customer_notes, payment_method, total, status, order_items(product_name, quantity, subtotal, selected_options)')
+      .select('id, order_number, locker_number, created_at, ready_at, delivery_type, customer_name, customer_phone, customer_notes, payment_method, total, status, order_items(product_name, quantity, subtotal, selected_options)')
       .eq('store_id', storeId)
       .not('status', 'in', '(delivered,cancelled,completed)')
       .gte('created_at', todayStart.toISOString())
@@ -379,26 +406,33 @@ export default function PedidosPage() {
     setDisplayLoading(false)
   }
 
-  async function updateDisplayStatus(orderId: string, status: string) {
+  async function updateDisplayStatus(orderId: string, status: string, lockerNumber?: number) {
     setDisplayUpdating(orderId)
     try {
       const displayOrder = displayOrders.find(o => o.id === orderId)
       const isPickupOrder = displayOrder?.delivery_type === 'pickup'
       const deliveryStatus = isPickupOrder ? undefined : DELIVERY_STATUS_MAP[status]
       const readyAt = status === 'ready' ? new Date().toISOString() : undefined
-      await supabase.from('orders').update({ status, ...(readyAt ? { ready_at: readyAt } : {}) }).eq('id', orderId)
+      await supabase.from('orders').update({
+        status, ...(readyAt ? { ready_at: readyAt } : {}),
+        ...(lockerNumber !== undefined ? { locker_number: lockerNumber } : {}),
+      }).eq('id', orderId)
       if (deliveryStatus) await syncDelivery(orderId, deliveryStatus).catch(() => {})
-      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: status as OrderStatus } : o))
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: status as OrderStatus, ...(lockerNumber !== undefined ? { locker_number: lockerNumber } : {}) } : o))
       if (['completed', 'cancelled', 'delivered'].includes(status)) {
         setDisplayOrders(prev => prev.filter(o => o.id !== orderId))
       } else {
-        setDisplayOrders(prev => prev.map(o => o.id === orderId ? { ...o, status, ...(readyAt ? { ready_at: readyAt } : {}) } : o))
+        setDisplayOrders(prev => prev.map(o => o.id === orderId ? { ...o, status, ...(readyAt ? { ready_at: readyAt } : {}), ...(lockerNumber !== undefined ? { locker_number: lockerNumber } : {}) } : o))
       }
       if (status === 'ready') {
         const order = orders.find(o => o.id === orderId)
         const displayOrder = displayOrders.find(o => o.id === orderId)
         const isDeliveryOrder = (displayOrder?.delivery_type ?? order?.delivery_type) === 'delivery'
         if (isDeliveryOrder) await notifyDrivers(displayOrder?.customer_name ?? order?.customer_name)
+        if (lockerNumber !== undefined && (displayOrder || order)) {
+          const src = displayOrder ?? order!
+          openLockerPickupWhatsApp(src.customer_name, src.customer_phone, src.order_number, src.id, lockerNumber)
+        }
       }
     } finally {
       setDisplayUpdating(null)
@@ -425,6 +459,17 @@ export default function PedidosPage() {
       ? `https://wa.me/${num}?text=${encodeURIComponent(lines.join('\n'))}`
       : `https://wa.me/?text=${encodeURIComponent(lines.join('\n'))}`
     window.open(url, '_blank')
+  }
+
+  function openLockerPickupWhatsApp(customerName: string, customerPhone: string, orderNum: number | null | undefined, orderId: string, lockerNumber: number) {
+    const phone = (customerPhone ?? '').replace(/\D/g, '')
+    const msg = [
+      `Hola ${customerName},`,
+      `Tu pedido *#${orderNum ?? orderId.slice(0, 8).toUpperCase()}* esta listo.`,
+      '',
+      `Retiralo en el *casillero #${lockerNumber}*`,
+    ].join('\n')
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank')
   }
 
   function openWhatsApp(order: Order) {
@@ -471,6 +516,11 @@ export default function PedidosPage() {
       })
     : orders
   const filtered = filter === 'all' ? dateFiltered : dateFiltered.filter(o => o.status === filter)
+  // Lockers still holding a ready-but-not-yet-picked-up order — frees up
+  // the moment that order moves past 'ready'.
+  const occupiedLockers = new Set(
+    orders.filter(o => o.status === 'ready' && o.locker_number != null).map(o => o.locker_number as number)
+  )
 
   if (loading) {
     return (
@@ -569,6 +619,16 @@ export default function PedidosPage() {
               <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd"/>
             </svg>
           </button>
+          <button
+            className="pd-timer-settings-btn"
+            onClick={() => setShowLockerSettings(true)}
+            title="Modo casillero"
+            style={lockerModeEnabled ? { background: '#7C3AED', color: 'white' } : undefined}
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+              <path fillRule="evenodd" d="M4 3a1 1 0 00-1 1v12a1 1 0 001 1h5a1 1 0 001-1V4a1 1 0 00-1-1H4zm7 0a1 1 0 00-1 1v12a1 1 0 001 1h5a1 1 0 001-1V4a1 1 0 00-1-1h-5zM6 9a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd"/>
+            </svg>
+          </button>
           <button className="pd-display-btn" onClick={openDisplay}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
               <rect x="2" y="3" width="20" height="14" rx="2"/>
@@ -612,6 +672,9 @@ export default function PedidosPage() {
                       : <span className={`pd-comanda-elapsed pd-elapsed-${level}`}>{elapsed}</span>
                     }
                     <span className="pd-comanda-badge">{DISPLAY_STATUS[order.status] ?? order.status}</span>
+                    {order.locker_number != null && (
+                      <span className="pd-comanda-badge" style={{ background: '#7C3AED', color: 'white' }}>Casillero {order.locker_number}</span>
+                    )}
                   </div>
                   <div className="pd-comanda-customer">
                     <div className="pd-comanda-name">{order.customer_name}</div>
@@ -667,7 +730,14 @@ export default function PedidosPage() {
                       </button>
                     )}
                     {order.status === 'processing' && (
-                      <button className="pd-comanda-btn ready" disabled={displayUpdating === order.id} onClick={() => updateDisplayStatus(order.id, 'ready')}>
+                      <button
+                        className="pd-comanda-btn ready"
+                        disabled={displayUpdating === order.id}
+                        onClick={() => {
+                          if (lockerModeEnabled) setLockerPickerOrder({ id: order.id, fromDisplay: true })
+                          else updateDisplayStatus(order.id, 'ready')
+                        }}
+                      >
                         {displayUpdating === order.id ? '...' : (<>Marcar listo <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></>)}
                       </button>
                     )}
@@ -763,6 +833,9 @@ export default function PedidosPage() {
                     <div className="pd-customer-phone">{order.customer_phone}</div>
                   </div>
                   <div className="pd-total">{fmt(order.total)}</div>
+                  {order.locker_number != null && (
+                    <div className="pd-status" style={{ background: '#7C3AED', color: 'white' }}>Casillero {order.locker_number}</div>
+                  )}
                   <div className={`pd-status ${order.status}`}>{t(STATUS_KEYS[order.status])}</div>
                   <svg className={`pd-chevron${isExpanded ? ' open' : ''}`} viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -827,7 +900,10 @@ export default function PedidosPage() {
                             <button
                               className={`pd-action-btn ${advance.cls}`}
                               disabled={isBusy}
-                              onClick={() => updateStatus(order.id, advance.status)}
+                              onClick={() => {
+                                if (advance.status === 'ready' && lockerModeEnabled) setLockerPickerOrder({ id: order.id, fromDisplay: false })
+                                else updateStatus(order.id, advance.status)
+                              }}
                             >
                               {isBusy ? '...' : (advance.label ?? t(advance.tKey!))}
                             </button>
@@ -919,6 +995,104 @@ export default function PedidosPage() {
               <div className="pd-modal-summary-item alert">Rojo desde {alertMins} min</div>
             </div>
 
+          </div>
+        </div>
+      , document.body)}
+
+      {showLockerSettings && createPortal(
+        <div className="pd-modal-overlay" onClick={() => setShowLockerSettings(false)}>
+          <div className="pd-modal" onClick={e => e.stopPropagation()}>
+            <div className="pd-modal-header">
+              <div>
+                <div className="pd-modal-title">Modo casillero</div>
+                <div className="pd-modal-desc">Al marcar un pedido listo, eliges en que casillero lo retira el cliente</div>
+              </div>
+              <button className="pd-modal-x" onClick={() => setShowLockerSettings(false)}>
+                <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/>
+                </svg>
+              </button>
+            </div>
+
+            <div className="pd-modal-row">
+              <div className="pd-modal-row-left">
+                <span className="pd-modal-row-label">Activar modo casillero</span>
+              </div>
+              <button
+                onClick={() => saveLockerSettings(!lockerModeEnabled, lockerCount || 1)}
+                style={{
+                  width: 40, height: 24, borderRadius: 100, border: 'none', cursor: 'pointer', position: 'relative',
+                  background: lockerModeEnabled ? '#7C3AED' : '#D1D5DB', transition: 'background 0.2s', flexShrink: 0,
+                }}
+              >
+                <span style={{
+                  position: 'absolute', top: 3, left: lockerModeEnabled ? 19 : 3,
+                  width: 18, height: 18, borderRadius: '50%', background: 'white', transition: 'left 0.2s',
+                }} />
+              </button>
+            </div>
+
+            {lockerModeEnabled && (
+              <div className="pd-modal-row">
+                <div className="pd-modal-row-left">
+                  <span className="pd-modal-row-label">Cantidad de casilleros</span>
+                </div>
+                <div className="pd-modal-stepper">
+                  <button className="pd-modal-step-btn" onClick={() => saveLockerSettings(true, Math.max(1, lockerCount - 1))}>−</button>
+                  <span className="pd-modal-step-val">{lockerCount}</span>
+                  <button className="pd-modal-step-btn" onClick={() => saveLockerSettings(true, lockerCount + 1)}>+</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      , document.body)}
+
+      {lockerPickerOrder && createPortal(
+        <div className="pd-modal-overlay" onClick={() => setLockerPickerOrder(null)}>
+          <div className="pd-modal" onClick={e => e.stopPropagation()}>
+            <div className="pd-modal-header">
+              <div>
+                <div className="pd-modal-title">Elige el casillero</div>
+                <div className="pd-modal-desc">El cliente recibe un WhatsApp con el numero al confirmar</div>
+              </div>
+              <button className="pd-modal-x" onClick={() => setLockerPickerOrder(null)}>
+                <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/>
+                </svg>
+              </button>
+            </div>
+
+            {lockerCount === 0 ? (
+              <div style={{ fontSize: 13, color: '#94A3B8', marginTop: 4 }}>
+                No has configurado casilleros todavia. Cierra esto y usa el boton de casillero junto a Display para elegir cuantos tienes.
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, marginTop: 4 }}>
+                {Array.from({ length: lockerCount }, (_, i) => i + 1).map(n => {
+                  const occupied = occupiedLockers.has(n)
+                  return (
+                    <button
+                      key={n}
+                      disabled={occupied}
+                      onClick={() => {
+                        const { id, fromDisplay } = lockerPickerOrder
+                        if (fromDisplay) updateDisplayStatus(id, 'ready', n)
+                        else updateStatus(id, 'ready', n)
+                        setLockerPickerOrder(null)
+                      }}
+                      style={{
+                        padding: '12px 0', borderRadius: 10, border: 'none', cursor: occupied ? 'not-allowed' : 'pointer',
+                        background: occupied ? '#F1F5F9' : '#F8FAFC', color: occupied ? '#CBD5E1' : '#0F172A',
+                        outline: occupied ? 'none' : '1.5px solid #E2E8F0', fontWeight: 700, fontSize: 14,
+                      }}
+                    >
+                      {n}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </div>
       , document.body)}

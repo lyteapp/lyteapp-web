@@ -135,9 +135,6 @@ export default function PedidosPage() {
   const [lockerModeEnabled, setLockerModeEnabled] = useState(false)
   const [lockerCount, setLockerCount] = useState(0)
   const [showLockerSettings, setShowLockerSettings] = useState(false)
-  // Order currently waiting on a locker pick, from either view — set
-  // instead of advancing straight to 'ready' when locker mode is on.
-  const [lockerPickerOrder, setLockerPickerOrder] = useState<{ id: string; fromDisplay: boolean } | null>(null)
   const [copiedLockerUrl, setCopiedLockerUrl] = useState(false)
   const displayModeRef = useRef(false)
   const displayDateRef = useRef('')
@@ -242,13 +239,13 @@ export default function PedidosPage() {
         (payload) => {
           const updated = payload.new as Order
           setOrders(prev =>
-            prev.map(o => o.id === updated.id ? { ...o, status: updated.status } : o)
+            prev.map(o => o.id === updated.id ? { ...o, status: updated.status, locker_number: updated.locker_number } : o)
           )
           if (['delivered', 'cancelled', 'completed'].includes(updated.status)) {
             setDisplayOrders(prev => prev.filter(o => o.id !== updated.id))
           } else {
             setDisplayOrders(prev =>
-              prev.map(o => o.id === updated.id ? { ...o, status: updated.status } : o)
+              prev.map(o => o.id === updated.id ? { ...o, status: updated.status, locker_number: updated.locker_number } : o)
             )
           }
         }
@@ -318,22 +315,19 @@ export default function PedidosPage() {
     broadcastDrivers(customerName)
   }
 
-  async function updateStatus(orderId: string, status: OrderStatus, lockerNumber?: number) {
+  async function updateStatus(orderId: string, status: OrderStatus) {
     setUpdating(orderId)
     const order = orders.find(o => o.id === orderId)
     const isPickupOrder = order?.delivery_type === 'pickup'
     const deliveryStatus = isPickupOrder ? undefined : DELIVERY_STATUS_MAP[status]
     const readyAt = status === 'ready' ? new Date().toISOString() : undefined
-    await supabase.from('orders').update({
-      status, ...(readyAt ? { ready_at: readyAt } : {}),
-      ...(lockerNumber !== undefined ? { locker_number: lockerNumber } : {}),
-    }).eq('id', orderId)
+    await supabase.from('orders').update({ status, ...(readyAt ? { ready_at: readyAt } : {}) }).eq('id', orderId)
     if (deliveryStatus) await syncDelivery(orderId, deliveryStatus).catch(() => {})
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status, ...(lockerNumber !== undefined ? { locker_number: lockerNumber } : {}) } : o))
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o))
     if (['delivered', 'cancelled', 'completed'].includes(status)) {
       setDisplayOrders(prev => prev.filter(o => o.id !== orderId))
     } else {
-      setDisplayOrders(prev => prev.map(o => o.id === orderId ? { ...o, status, ...(readyAt ? { ready_at: readyAt } : {}), ...(lockerNumber !== undefined ? { locker_number: lockerNumber } : {}) } : o))
+      setDisplayOrders(prev => prev.map(o => o.id === orderId ? { ...o, status, ...(readyAt ? { ready_at: readyAt } : {}) } : o))
     }
     if (status === 'ready') {
       const order = orders.find(o => o.id === orderId)
@@ -411,23 +405,20 @@ export default function PedidosPage() {
     setDisplayLoading(false)
   }
 
-  async function updateDisplayStatus(orderId: string, status: string, lockerNumber?: number) {
+  async function updateDisplayStatus(orderId: string, status: string) {
     setDisplayUpdating(orderId)
     try {
       const displayOrder = displayOrders.find(o => o.id === orderId)
       const isPickupOrder = displayOrder?.delivery_type === 'pickup'
       const deliveryStatus = isPickupOrder ? undefined : DELIVERY_STATUS_MAP[status]
       const readyAt = status === 'ready' ? new Date().toISOString() : undefined
-      await supabase.from('orders').update({
-        status, ...(readyAt ? { ready_at: readyAt } : {}),
-        ...(lockerNumber !== undefined ? { locker_number: lockerNumber } : {}),
-      }).eq('id', orderId)
+      await supabase.from('orders').update({ status, ...(readyAt ? { ready_at: readyAt } : {}) }).eq('id', orderId)
       if (deliveryStatus) await syncDelivery(orderId, deliveryStatus).catch(() => {})
-      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: status as OrderStatus, ...(lockerNumber !== undefined ? { locker_number: lockerNumber } : {}) } : o))
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: status as OrderStatus } : o))
       if (['completed', 'cancelled', 'delivered'].includes(status)) {
         setDisplayOrders(prev => prev.filter(o => o.id !== orderId))
       } else {
-        setDisplayOrders(prev => prev.map(o => o.id === orderId ? { ...o, status, ...(readyAt ? { ready_at: readyAt } : {}), ...(lockerNumber !== undefined ? { locker_number: lockerNumber } : {}) } : o))
+        setDisplayOrders(prev => prev.map(o => o.id === orderId ? { ...o, status, ...(readyAt ? { ready_at: readyAt } : {}) } : o))
       }
       if (status === 'ready') {
         const order = orders.find(o => o.id === orderId)
@@ -506,11 +497,6 @@ export default function PedidosPage() {
       })
     : orders
   const filtered = filter === 'all' ? dateFiltered : dateFiltered.filter(o => o.status === filter)
-  // Lockers still holding a ready-but-not-yet-picked-up order — frees up
-  // the moment that order moves past 'ready'.
-  const occupiedLockers = new Set(
-    orders.filter(o => o.status === 'ready' && o.locker_number != null).map(o => o.locker_number as number)
-  )
 
   if (loading) {
     return (
@@ -722,10 +708,7 @@ export default function PedidosPage() {
                       <button
                         className="pd-comanda-btn ready"
                         disabled={displayUpdating === order.id}
-                        onClick={() => {
-                          if (lockerModeEnabled) setLockerPickerOrder({ id: order.id, fromDisplay: true })
-                          else updateDisplayStatus(order.id, 'ready')
-                        }}
+                        onClick={() => updateDisplayStatus(order.id, 'ready')}
                       >
                         {displayUpdating === order.id ? '...' : (<>Marcar listo <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg></>)}
                       </button>
@@ -888,10 +871,7 @@ export default function PedidosPage() {
                             <button
                               className={`pd-action-btn ${advance.cls}`}
                               disabled={isBusy}
-                              onClick={() => {
-                                if (advance.status === 'ready' && lockerModeEnabled) setLockerPickerOrder({ id: order.id, fromDisplay: false })
-                                else updateStatus(order.id, advance.status)
-                              }}
+                              onClick={() => updateStatus(order.id, advance.status)}
                             >
                               {isBusy ? '...' : (advance.label ?? t(advance.tKey!))}
                             </button>
@@ -993,7 +973,7 @@ export default function PedidosPage() {
             <div className="pd-modal-header">
               <div>
                 <div className="pd-modal-title">Modo casillero</div>
-                <div className="pd-modal-desc">Al marcar un pedido listo, eliges en que casillero lo retira el cliente</div>
+                <div className="pd-modal-desc">La asignacion de casillero se hace desde la pantalla dedicada, no aqui</div>
               </div>
               <button className="pd-modal-x" onClick={() => setShowLockerSettings(false)}>
                 <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
@@ -1055,54 +1035,6 @@ export default function PedidosPage() {
         </div>
       , document.body)}
 
-      {lockerPickerOrder && createPortal(
-        <div className="pd-modal-overlay" onClick={() => setLockerPickerOrder(null)}>
-          <div className="pd-modal" onClick={e => e.stopPropagation()}>
-            <div className="pd-modal-header">
-              <div>
-                <div className="pd-modal-title">Elige el casillero</div>
-                <div className="pd-modal-desc">El pedido queda marcado listo con este casillero</div>
-              </div>
-              <button className="pd-modal-x" onClick={() => setLockerPickerOrder(null)}>
-                <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
-                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/>
-                </svg>
-              </button>
-            </div>
-
-            {lockerCount === 0 ? (
-              <div style={{ fontSize: 13, color: '#94A3B8', marginTop: 4 }}>
-                No has configurado casilleros todavia. Cierra esto y usa el boton de casillero junto a Display para elegir cuantos tienes.
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, marginTop: 4 }}>
-                {Array.from({ length: lockerCount }, (_, i) => i + 1).map(n => {
-                  const occupied = occupiedLockers.has(n)
-                  return (
-                    <button
-                      key={n}
-                      disabled={occupied}
-                      onClick={() => {
-                        const { id, fromDisplay } = lockerPickerOrder
-                        if (fromDisplay) updateDisplayStatus(id, 'ready', n)
-                        else updateStatus(id, 'ready', n)
-                        setLockerPickerOrder(null)
-                      }}
-                      style={{
-                        padding: '12px 0', borderRadius: 10, border: 'none', cursor: occupied ? 'not-allowed' : 'pointer',
-                        background: occupied ? '#F1F5F9' : '#F8FAFC', color: occupied ? '#CBD5E1' : '#0F172A',
-                        outline: occupied ? 'none' : '1.5px solid #E2E8F0', fontWeight: 700, fontSize: 14,
-                      }}
-                    >
-                      {n}
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-      , document.body)}
     </div>
   )
 }

@@ -44,6 +44,7 @@ export default function OrderTrackPage({ params }: { params: Promise<{ orderId: 
   const [status, setStatus]         = useState<OrderStatus | null>(null)
   const [customerName, setCustomerName] = useState('')
   const [orderNumber, setOrderNumber] = useState<number | null>(null)
+  const [lockerNumber, setLockerNumber] = useState<number | null>(null)
   const [store, setStore]           = useState<StoreInfo | null>(null)
   const [error, setError]           = useState(false)
 
@@ -51,7 +52,7 @@ export default function OrderTrackPage({ params }: { params: Promise<{ orderId: 
     async function load() {
       const { data: order, error: oErr } = await supabase
         .from('orders')
-        .select('customer_name, status, store_id, delivery_type, order_number')
+        .select('customer_name, status, store_id, delivery_type, order_number, locker_number')
         .eq('id', orderId)
         .maybeSingle()
 
@@ -60,6 +61,7 @@ export default function OrderTrackPage({ params }: { params: Promise<{ orderId: 
       setCustomerName(order.customer_name)
       setStatus(order.status as OrderStatus)
       setOrderNumber(order.order_number ?? null)
+      setLockerNumber(order.locker_number ?? null)
 
       const { data: st } = await supabase
         .from('stores')
@@ -76,7 +78,11 @@ export default function OrderTrackPage({ params }: { params: Promise<{ orderId: 
     const ch = supabase
       .channel(`order-track-${orderId}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${orderId}` },
-        (payload) => setStatus((payload.new as { status: OrderStatus }).status))
+        (payload) => {
+          const row = payload.new as { status: OrderStatus; locker_number: number | null }
+          setStatus(row.status)
+          setLockerNumber(row.locker_number ?? null)
+        })
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, [orderId])
@@ -161,7 +167,13 @@ export default function OrderTrackPage({ params }: { params: Promise<{ orderId: 
                   </svg>
                 </div>
                 <div className="ot-ready-title">Tu pedido esta listo</div>
-                <div className="ot-ready-sub">Puedes pasar a recogerlo en tienda cuando quieras.</div>
+                {lockerNumber != null ? (
+                  <div className="ot-ready-sub">
+                    Retiralo en el <strong>casillero #{lockerNumber}</strong>
+                  </div>
+                ) : (
+                  <div className="ot-ready-sub">Puedes pasar a recogerlo en tienda cuando quieras.</div>
+                )}
               </div>
             )}
 

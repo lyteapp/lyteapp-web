@@ -64,15 +64,6 @@ html, body { overflow-x: clip; }
     contain: layout;
     box-shadow: 0 0 0 1px rgba(15,23,42,0.06), 0 30px 70px rgba(15,23,42,0.22);
   }
-  /* .sf-hcarousel-wrap's "100vw" full-bleed trick reaches the true
-     (tablet-wide) viewport edges regardless of .sf-page's frame — vw units
-     aren't scoped by `contain`. Here the frame's own width already is "the
-     edges", so just fill it normally instead of breaking out past it. */
-  .sf-hcarousel-wrap {
-    width: 100%;
-    margin-left: 0;
-    transform: none;
-  }
 }
 .sf-page input,
 .sf-page textarea {

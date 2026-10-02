@@ -413,6 +413,9 @@ export default function EditorPage() {
   // iframeKey back to 0) would request the exact same URL a previous
   // session already loaded, and a CDN could still serve that stale response.
   const [previewLoadId] = useState(() => Date.now())
+  // Preview-only — resizes the device frame so the owner can check how the
+  // storefront looks on each screen size; never saved or sent to the store.
+  const [deviceType, setDeviceType] = useState<'mobile' | 'tablet' | 'desktop'>('mobile')
   const [saving, setSaving]         = useState(false)
   const [toolSaved, setToolSaved]   = useState(false)
   const toolPanelRef = useRef<HTMLDivElement>(null)
@@ -1335,7 +1338,30 @@ export default function EditorPage() {
       {/* ── CANVAS ──────────────────────────────────── */}
       <main className="ed-canvas">
         <div className="ed-canvas-scroll">
-          <div className="ed-device">
+          <div className="ed-device-switch">
+            {([
+              { id: 'desktop', label: 'Computadora', icon: (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="12" rx="1.5" /><path d="M8 20h8M12 16v4" /></svg>
+              )},
+              { id: 'tablet', label: 'Tablet', icon: (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" /><path d="M12 18h.01" /></svg>
+              )},
+              { id: 'mobile', label: 'Telefono', icon: (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="2" width="12" height="20" rx="2" /><path d="M11 18h2" /></svg>
+              )},
+            ] as const).map(d => (
+              <button
+                key={d.id}
+                type="button"
+                className={`ed-device-switch-btn${deviceType === d.id ? ' ed-device-switch-btn-active' : ''}`}
+                onClick={() => setDeviceType(d.id)}
+                title={d.label}
+              >
+                {d.icon}
+              </button>
+            ))}
+          </div>
+          <div className={`ed-device ed-device-${deviceType}`}>
             <div className="ed-device-chrome">
               <div className="ed-device-chrome-dots">
                 <span className="ed-dot" /><span className="ed-dot" /><span className="ed-dot" />
@@ -1371,9 +1397,11 @@ export default function EditorPage() {
               )}
             </div>
 
-            <div className="ed-device-bottom">
-              <div className="ed-home-bar" />
-            </div>
+            {deviceType === 'mobile' && (
+              <div className="ed-device-bottom">
+                <div className="ed-home-bar" />
+              </div>
+            )}
           </div>
         </div>
       </main>

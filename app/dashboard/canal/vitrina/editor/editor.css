@@ -249,7 +249,35 @@
   justify-content: center;
 }
 
-/* DEVICE FRAME — full phone, fits viewport */
+/* Preview-only device switcher — doesn't affect what's saved */
+.ed-device-switch {
+  display: flex;
+  gap: 4px;
+  background: var(--ed-surface);
+  border: 1px solid var(--ed-line);
+  border-radius: 10px;
+  padding: 3px;
+  margin-bottom: 10px;
+}
+.ed-device-switch-btn {
+  width: 32px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ed-ink-muted);
+  cursor: pointer;
+}
+.ed-device-switch-btn svg { width: 16px; height: 16px; }
+.ed-device-switch-btn-active {
+  background: var(--ed-canvas-bg);
+  color: var(--ed-ink);
+}
+
+/* DEVICE FRAME — full phone, fits viewport (default: mobile) */
 .ed-device {
   width: 100%;
   max-width: min(390px, calc(100vw - 56px - 48px));
@@ -265,6 +293,18 @@
   height: calc(100vh - 76px);
   height: calc(100dvh - 76px);
   max-height: 820px;
+}
+.ed-device-tablet {
+  max-width: min(820px, calc(100vw - 56px - 48px));
+  border-radius: 20px;
+  box-shadow:
+    0 0 0 6px rgba(15, 23, 42, 0.06),
+    0 30px 60px -10px rgba(15, 23, 42, 0.2);
+}
+.ed-device-desktop {
+  max-width: min(1240px, calc(100vw - 56px - 48px));
+  border-radius: 10px;
+  box-shadow: 0 20px 50px -10px rgba(15, 23, 42, 0.18);
 }
 .ed-device-chrome {
   height: 36px;

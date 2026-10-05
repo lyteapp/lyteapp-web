@@ -853,6 +853,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const blockSlideBarRefs = useRef<Map<string, HTMLDivElement>>(new Map())
   const blockSlideDraggingRef = useRef<Record<string, boolean>>({})
   const [selectedVariants, setSelectedVariants] = useState<Record<string, number>>({})
+  // Which photo a catalog card is showing, for products with more than one
+  // photo but no color variants to swipe between instead.
+  const [selectedCardPhoto, setSelectedCardPhoto] = useState<Record<string, number>>({})
 
   // Product options modal
   const [modalProduct, setModalProduct]       = useState<Product | null>(null)
@@ -3977,41 +3980,54 @@ export default function StoreShell({ store, products, categories = [], initialBc
     const displayImg = variants?.length
       ? (variants[selIdx ?? 0]?.imageUrl || product.image_url)
       : product.image_url
+    // No color variants to swipe between — fall back to swiping the
+    // product's own photos (cover + extras) when it has more than one.
+    const plainImgs = !variants?.length
+      ? ([product.image_url, ...(product.options?.images ?? [])].filter(Boolean) as string[])
+      : []
+    const swipePlain  = plainImgs.length > 1
+    const photoIdx    = selectedCardPhoto[product.id] ?? 0
+    const swipeCount  = variants?.length ? variants.length : (swipePlain ? plainImgs.length : 0)
+    const swipeStartIdx = variants?.length ? (selIdx ?? 0) : photoIdx
+    const commitSwipe = (idx: number) => {
+      if (variants?.length) setSelectedVariants(p => ({ ...p, [product.id]: idx }))
+      else setSelectedCardPhoto(p => ({ ...p, [product.id]: idx }))
+    }
     return (
       <div key={product.id} className="sf-card" onClick={() => openProductModal(product)}>
         <div
           className="sf-card-img-wrap"
-          style={{ touchAction: variants?.length ? 'pan-y' : 'auto' }}
-          onTouchStart={variants?.length ? e => {
+          style={{ touchAction: swipeCount > 1 ? 'pan-y' : 'auto' }}
+          onTouchStart={swipeCount > 1 ? e => {
             touchStartX.current = e.touches[0].clientX
             swipedRef.current = false
-            dragStartIdxRef.current = selIdx ?? 0
+            dragStartIdxRef.current = swipeStartIdx
             const strip = stripRefs.current.get(product.id)
             if (strip) strip.classList.add('dragging')
           } : undefined}
-          onTouchMove={variants?.length ? e => {
+          onTouchMove={swipeCount > 1 ? e => {
             const dx = e.touches[0].clientX - touchStartX.current
             if (Math.abs(dx) > 5) {
               e.stopPropagation()
               const strip = stripRefs.current.get(product.id)
               if (strip) {
-                const n = variants.length
+                const n = swipeCount
                 const fw = strip.offsetWidth / n
                 const pct = (Math.max(0, Math.min((n - 1) * fw, dragStartIdxRef.current * fw - dx)) / (n * fw)) * 100
                 strip.style.transform = `translateX(-${pct}%)`
               }
             }
           } : undefined}
-          onTouchEnd={variants?.length ? e => {
+          onTouchEnd={swipeCount > 1 ? e => {
             const dx = (e.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current
             const strip = stripRefs.current.get(product.id)
             if (strip) strip.classList.remove('dragging')
             if (Math.abs(dx) > 25) {
               swipedRef.current = true
-              const next = dx < 0 ? Math.min(variants.length - 1, dragStartIdxRef.current + 1) : Math.max(0, dragStartIdxRef.current - 1)
-              setSelectedVariants(p => ({ ...p, [product.id]: next }))
+              const next = dx < 0 ? Math.min(swipeCount - 1, dragStartIdxRef.current + 1) : Math.max(0, dragStartIdxRef.current - 1)
+              commitSwipe(next)
             } else {
-              setSelectedVariants(p => ({ ...p, [product.id]: dragStartIdxRef.current }))
+              commitSwipe(dragStartIdxRef.current)
             }
           } : undefined}
           onClick={e => { if (swipedRef.current) { e.stopPropagation(); swipedRef.current = false } }}
@@ -4030,6 +4046,18 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 </div>
               ))}
             </div>
+          ) : swipePlain ? (
+            <div className="sf-slide-strip"
+              ref={el => { if (el) stripRefs.current.set(product.id, el); else stripRefs.current.delete(product.id) }}
+              style={{ width: `${plainImgs.length * 100}%`, transform: `translateX(-${photoIdx * (100 / plainImgs.length)}%)` }}>
+              {plainImgs.map((img, i) => (
+                <div key={i} className="sf-slide-frame" style={{ width: `${100 / plainImgs.length}%` }}>
+                  {isVideoUrl(img)
+                    ? <video src={img} autoPlay muted loop playsInline className="sf-card-img" />
+                    : <img src={img} alt={product.name} className="sf-card-img" loading="lazy" />}
+                </div>
+              ))}
+            </div>
           ) : displayImg ? (
             isVideoUrl(displayImg)
               ? <video src={displayImg} autoPlay muted loop playsInline className="sf-card-img" />
@@ -4038,10 +4066,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
             <div className="sf-card-img-empty">{PLACEHOLDER}</div>
           )}
           {qty > 0 && <div className="sf-card-badge">{qty}</div>}
-          {(variants?.length ?? 0) > 1 && (
+          {swipeCount > 1 && (
             <div className="sf-slide-dots">
-              {variants!.map((_, i) => (
-                <div key={i} className={`sf-slide-dot${(selIdx ?? 0) === i ? ' on' : ''}`} />
+              {Array.from({ length: swipeCount }, (_, i) => (
+                <div key={i} className={`sf-slide-dot${swipeStartIdx === i ? ' on' : ''}`} />
               ))}
             </div>
           )}
@@ -4072,40 +4100,51 @@ export default function StoreShell({ store, products, categories = [], initialBc
     const displayImg = variants?.length
       ? (variants[selIdx ?? 0]?.imageUrl || product.image_url)
       : product.image_url
+    const plainImgs = !variants?.length
+      ? ([product.image_url, ...(product.options?.images ?? [])].filter(Boolean) as string[])
+      : []
+    const swipePlain  = plainImgs.length > 1
+    const photoIdx    = selectedCardPhoto[product.id] ?? 0
+    const swipeCount  = variants?.length ? variants.length : (swipePlain ? plainImgs.length : 0)
+    const swipeStartIdx = variants?.length ? (selIdx ?? 0) : photoIdx
+    const commitSwipe = (idx: number) => {
+      if (variants?.length) setSelectedVariants(p => ({ ...p, [product.id]: idx }))
+      else setSelectedCardPhoto(p => ({ ...p, [product.id]: idx }))
+    }
     return (
       <div key={product.id} className="sf-esc-row" onClick={() => openProductModal(product)}>
         <div
           className="sf-esc-img-wrap"
-          onTouchStart={variants?.length ? e => {
+          onTouchStart={swipeCount > 1 ? e => {
             touchStartX.current = e.touches[0].clientX
             swipedRef.current = false
-            dragStartIdxRef.current = selIdx ?? 0
+            dragStartIdxRef.current = swipeStartIdx
             const strip = stripRefs.current.get(product.id)
             if (strip) strip.classList.add('dragging')
           } : undefined}
-          onTouchMove={variants?.length ? e => {
+          onTouchMove={swipeCount > 1 ? e => {
             const dx = e.touches[0].clientX - touchStartX.current
             if (Math.abs(dx) > 5) {
               e.stopPropagation()
               const strip = stripRefs.current.get(product.id)
               if (strip) {
-                const n = variants.length
+                const n = swipeCount
                 const fw = strip.offsetWidth / n
                 const pct = (Math.max(0, Math.min((n - 1) * fw, dragStartIdxRef.current * fw - dx)) / (n * fw)) * 100
                 strip.style.transform = `translateX(-${pct}%)`
               }
             }
           } : undefined}
-          onTouchEnd={variants?.length ? e => {
+          onTouchEnd={swipeCount > 1 ? e => {
             const dx = (e.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current
             const strip = stripRefs.current.get(product.id)
             if (strip) strip.classList.remove('dragging')
             if (Math.abs(dx) > 25) {
               swipedRef.current = true
-              const next = dx < 0 ? Math.min(variants.length - 1, dragStartIdxRef.current + 1) : Math.max(0, dragStartIdxRef.current - 1)
-              setSelectedVariants(p => ({ ...p, [product.id]: next }))
+              const next = dx < 0 ? Math.min(swipeCount - 1, dragStartIdxRef.current + 1) : Math.max(0, dragStartIdxRef.current - 1)
+              commitSwipe(next)
             } else {
-              setSelectedVariants(p => ({ ...p, [product.id]: dragStartIdxRef.current }))
+              commitSwipe(dragStartIdxRef.current)
             }
           } : undefined}
           onClick={e => { if (swipedRef.current) { e.stopPropagation(); swipedRef.current = false } }}
@@ -4124,6 +4163,18 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 </div>
               ))}
             </div>
+          ) : swipePlain ? (
+            <div className="sf-slide-strip"
+              ref={el => { if (el) stripRefs.current.set(product.id, el); else stripRefs.current.delete(product.id) }}
+              style={{ width: `${plainImgs.length * 100}%`, transform: `translateX(-${photoIdx * (100 / plainImgs.length)}%)` }}>
+              {plainImgs.map((img, i) => (
+                <div key={i} className="sf-slide-frame" style={{ width: `${100 / plainImgs.length}%` }}>
+                  {isVideoUrl(img)
+                    ? <video src={img} autoPlay muted loop playsInline className="sf-esc-img" />
+                    : <img src={img} alt={product.name} className="sf-esc-img" loading="lazy" />}
+                </div>
+              ))}
+            </div>
           ) : displayImg ? (
             isVideoUrl(displayImg)
               ? <video src={displayImg} autoPlay muted loop playsInline className="sf-esc-img" />
@@ -4132,10 +4183,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
             <div className="sf-esc-img sf-esc-img-empty">{PLACEHOLDER}</div>
           )}
           {getProdQty(product.id) > 0 && <div className="sf-card-badge">{getProdQty(product.id)}</div>}
-          {(variants?.length ?? 0) > 1 && (
+          {swipeCount > 1 && (
             <div className="sf-slide-dots">
-              {variants!.map((_, i) => (
-                <div key={i} className={`sf-slide-dot${(selIdx ?? 0) === i ? ' on' : ''}`} />
+              {Array.from({ length: swipeCount }, (_, i) => (
+                <div key={i} className={`sf-slide-dot${swipeStartIdx === i ? ' on' : ''}`} />
               ))}
             </div>
           )}
@@ -4163,40 +4214,51 @@ export default function StoreShell({ store, products, categories = [], initialBc
     const displayImg = variants?.length
       ? (variants[selIdx ?? 0]?.imageUrl || product.image_url)
       : product.image_url
+    const plainImgs = !variants?.length
+      ? ([product.image_url, ...(product.options?.images ?? [])].filter(Boolean) as string[])
+      : []
+    const swipePlain  = plainImgs.length > 1
+    const photoIdx    = selectedCardPhoto[product.id] ?? 0
+    const swipeCount  = variants?.length ? variants.length : (swipePlain ? plainImgs.length : 0)
+    const swipeStartIdx = variants?.length ? (selIdx ?? 0) : photoIdx
+    const commitSwipe = (idx: number) => {
+      if (variants?.length) setSelectedVariants(p => ({ ...p, [product.id]: idx }))
+      else setSelectedCardPhoto(p => ({ ...p, [product.id]: idx }))
+    }
     return (
       <div key={product.id} className="sf-cat-card" onClick={() => openProductModal(product)}>
         <div
           className="sf-cat-img-wrap"
-          onTouchStart={variants?.length ? e => {
+          onTouchStart={swipeCount > 1 ? e => {
             touchStartX.current = e.touches[0].clientX
             swipedRef.current = false
-            dragStartIdxRef.current = selIdx ?? 0
+            dragStartIdxRef.current = swipeStartIdx
             const strip = stripRefs.current.get(product.id)
             if (strip) strip.classList.add('dragging')
           } : undefined}
-          onTouchMove={variants?.length ? e => {
+          onTouchMove={swipeCount > 1 ? e => {
             const dx = e.touches[0].clientX - touchStartX.current
             if (Math.abs(dx) > 5) {
               e.stopPropagation()
               const strip = stripRefs.current.get(product.id)
               if (strip) {
-                const n = variants.length
+                const n = swipeCount
                 const fw = strip.offsetWidth / n
                 const pct = (Math.max(0, Math.min((n - 1) * fw, dragStartIdxRef.current * fw - dx)) / (n * fw)) * 100
                 strip.style.transform = `translateX(-${pct}%)`
               }
             }
           } : undefined}
-          onTouchEnd={variants?.length ? e => {
+          onTouchEnd={swipeCount > 1 ? e => {
             const dx = (e.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current
             const strip = stripRefs.current.get(product.id)
             if (strip) strip.classList.remove('dragging')
             if (Math.abs(dx) > 25) {
               swipedRef.current = true
-              const next = dx < 0 ? Math.min(variants.length - 1, dragStartIdxRef.current + 1) : Math.max(0, dragStartIdxRef.current - 1)
-              setSelectedVariants(p => ({ ...p, [product.id]: next }))
+              const next = dx < 0 ? Math.min(swipeCount - 1, dragStartIdxRef.current + 1) : Math.max(0, dragStartIdxRef.current - 1)
+              commitSwipe(next)
             } else {
-              setSelectedVariants(p => ({ ...p, [product.id]: dragStartIdxRef.current }))
+              commitSwipe(dragStartIdxRef.current)
             }
           } : undefined}
           onClick={e => { if (swipedRef.current) { e.stopPropagation(); swipedRef.current = false } }}
@@ -4215,6 +4277,18 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 </div>
               ))}
             </div>
+          ) : swipePlain ? (
+            <div className="sf-slide-strip"
+              ref={el => { if (el) stripRefs.current.set(product.id, el); else stripRefs.current.delete(product.id) }}
+              style={{ width: `${plainImgs.length * 100}%`, transform: `translateX(-${photoIdx * (100 / plainImgs.length)}%)` }}>
+              {plainImgs.map((img, i) => (
+                <div key={i} className="sf-slide-frame" style={{ width: `${100 / plainImgs.length}%` }}>
+                  {isVideoUrl(img)
+                    ? <video src={img} autoPlay muted loop playsInline className="sf-cat-img" />
+                    : <img src={img} alt={product.name} className="sf-cat-img" loading="lazy" />}
+                </div>
+              ))}
+            </div>
           ) : displayImg ? (
             isVideoUrl(displayImg)
               ? <video src={displayImg} autoPlay muted loop playsInline className="sf-cat-img" />
@@ -4223,10 +4297,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
             <div className="sf-cat-img sf-cat-img-empty">{PLACEHOLDER}</div>
           )}
           {getProdQty(product.id) > 0 && <div className="sf-card-badge">{getProdQty(product.id)}</div>}
-          {(variants?.length ?? 0) > 1 && (
+          {swipeCount > 1 && (
             <div className="sf-slide-dots">
-              {variants!.map((_, i) => (
-                <div key={i} className={`sf-slide-dot${(selIdx ?? 0) === i ? ' on' : ''}`} />
+              {Array.from({ length: swipeCount }, (_, i) => (
+                <div key={i} className={`sf-slide-dot${swipeStartIdx === i ? ' on' : ''}`} />
               ))}
             </div>
           )}

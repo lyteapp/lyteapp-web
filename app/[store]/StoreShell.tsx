@@ -228,6 +228,13 @@ function estimateAdBarHeight(ad: Ad): number {
   const contentHeight = Math.max(textHeight, buttonHeight, 16)
   return Math.round(contentHeight + 20)
 }
+type ResponsiveSizeOverrides = {
+  fontSizePx?: number
+  priceSize?: 'small' | 'medium' | 'large'
+  categorySpacing?: number
+  photoSize?: 'small' | 'medium' | 'large'
+  variantSize?: 'small' | 'medium' | 'large'
+}
 type TemplateConfig = {
   pageBg?: string; pageFont?: string
   fontSize?: 'small' | 'medium' | 'large'
@@ -244,6 +251,14 @@ type TemplateConfig = {
   variantShape?: 'pill' | 'rounded' | 'square'
   variantSize?: 'small' | 'medium' | 'large'
   extraShape?: 'rounded' | 'pill' | 'square'
+  // Per-breakpoint overrides for a handful of size/spacing settings, set
+  // from the vitrina editor's tablet/desktop preview. Each only carries
+  // what's explicitly different there — anything unset falls back to the
+  // mobile value above.
+  responsiveSizes?: {
+    tablet?: ResponsiveSizeOverrides
+    desktop?: ResponsiveSizeOverrides
+  }
   showCatNav?: boolean
   stickyCatNav?: boolean
   catNavOverBanner?: boolean
@@ -359,6 +374,41 @@ function toEmbedUrl(url: string): string {
   const vm = url.match(/vimeo\.com\/(\d+)/)
   if (vm) return `https://player.vimeo.com/video/${vm[1]}`
   return url
+}
+
+// Mirrors store.css's .sf-prsize-*/.sf-imgsize-*/.sf-vsize-* declarations —
+// "medium" is each element's own un-prefixed (em-based) default, since
+// there's no .sf-prsize-medium class in the stylesheet to copy from.
+const PRICE_SIZE_CSS: Record<'small' | 'medium' | 'large', string> = {
+  small: '.sf-card-price{font-size:12px!important}.sf-esc-price{font-size:11px!important}.sf-cat-price{font-size:12px!important}.sf-vit-hero-price{font-size:20px!important}',
+  medium: '.sf-card-price{font-size:1.07em!important}.sf-esc-price{font-size:0.87em!important}.sf-cat-price{font-size:1em!important}.sf-vit-hero-price{font-size:1.73em!important}',
+  large: '.sf-card-price{font-size:20px!important}.sf-esc-price{font-size:16px!important}.sf-cat-price{font-size:19px!important}.sf-vit-hero-price{font-size:32px!important}',
+}
+const PHOTO_SIZE_CSS: Record<'small' | 'medium' | 'large', string> = {
+  small: '.sf-card-img-wrap{aspect-ratio:4/3!important}.sf-esc-img{width:48px!important;height:48px!important}.sf-cat-img{width:52px!important;height:52px!important}.sf-vit-hero-img-wrap{aspect-ratio:4/3!important}',
+  medium: '.sf-card-img-wrap{aspect-ratio:1!important}.sf-esc-img{width:60px!important;height:60px!important}.sf-cat-img{width:68px!important;height:68px!important}.sf-vit-hero-img-wrap{aspect-ratio:1!important}',
+  large: '.sf-card-img-wrap{aspect-ratio:2/3!important}.sf-esc-img{width:80px!important;height:80px!important}.sf-cat-img{width:86px!important;height:86px!important}.sf-vit-hero-img-wrap{aspect-ratio:2/3!important}',
+}
+const VARIANT_SIZE_CSS: Record<'small' | 'medium' | 'large', string> = {
+  small: '.sf-modal-chip{padding:6px 12px!important;font-size:12px!important}',
+  medium: '.sf-modal-chip{padding:8px 16px!important;font-size:14px!important}',
+  large: '.sf-modal-chip{padding:10px 20px!important;font-size:16px!important}',
+}
+
+// .sf-page's font-size is set inline (see pageStyle), and most component
+// text is sized in em off of it — a plain !important rule at the right
+// breakpoint overrides that inline value and the em-based text cascades
+// with it automatically.
+function buildResponsiveSizeCSS(overrides: ResponsiveSizeOverrides | undefined, minWidthPx: number): string {
+  if (!overrides) return ''
+  const parts: string[] = []
+  if (overrides.fontSizePx !== undefined) parts.push(`.sf-page{font-size:${overrides.fontSizePx}px!important}`)
+  if (overrides.categorySpacing !== undefined) parts.push(`.sf-page{--sf-cat-spacing:${overrides.categorySpacing}px!important}`)
+  if (overrides.priceSize) parts.push(PRICE_SIZE_CSS[overrides.priceSize])
+  if (overrides.photoSize) parts.push(PHOTO_SIZE_CSS[overrides.photoSize])
+  if (overrides.variantSize) parts.push(VARIANT_SIZE_CSS[overrides.variantSize])
+  if (!parts.length) return ''
+  return `@media (min-width:${minWidthPx}px){${parts.join('')}}`
 }
 
 function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -1327,6 +1377,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
     ...pageStyle,
     ...(topScreenAdHeight > 0 ? { paddingTop: topScreenAdHeight } : {}),
   }
+
+  const responsiveSizeCSS =
+    buildResponsiveSizeCSS(cfg.responsiveSizes?.tablet, 768) +
+    buildResponsiveSizeCSS(cfg.responsiveSizes?.desktop, 1024)
 
   function blockSlideUpdate(btnId: string, clientX: number) {
     const bar = blockSlideBarRefs.current.get(btnId)
@@ -3121,6 +3175,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     <>
     {installed && <div className="sf-statusbar-strip" />}
     <div className={`sf-page sf-tpl-${store.template ?? 'clasico'} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize} sf-vshape-${cfgVariantShape} sf-vsize-${cfgVariantSize} sf-eshape-${cfgExtraShape}`} style={pageStyle}>
+      {responsiveSizeCSS && <style dangerouslySetInnerHTML={{ __html: responsiveSizeCSS }} />}
       {showMapPicker && mapboxToken && (
         <LocationMapPicker
           initialLat={customerLat ?? 10.4806}
@@ -4201,6 +4256,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     {renderLogoMorphOverlay()}
     {installed && <div className="sf-statusbar-strip" />}
     <div className={`sf-page sf-tpl-${tpl} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize} sf-vshape-${cfgVariantShape} sf-vsize-${cfgVariantSize} sf-eshape-${cfgExtraShape}${catalogEnter ? ` sf-catalog-enter sf-trans-${store.template_config?.homePage?.transition || 'slide'}` : ''}`} style={catalogPageStyle}>
+      {responsiveSizeCSS && <style dangerouslySetInnerHTML={{ __html: responsiveSizeCSS }} />}
       <div className={`sf-topbar${cfgHeaderOverBanner ? ' sf-topbar-glass' : ''}${cfgHeaderSticky && !cfgHeaderOverBanner ? ' sf-topbar-sticky' : ''}${cfgHeaderSticky && cfgHeaderOverBanner ? ' sf-topbar-pinned' : ''}${showHeaderAboveModal ? ' sf-topbar-above-modal' : ''}`}>
         <div className="sf-topbar-inner sf-topbar-3col">
           <div className="sf-topbar-slot-left">

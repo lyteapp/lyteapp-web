@@ -351,6 +351,59 @@ export default function EditorPage() {
   const [modalSize, setModalSize] = useState<'full' | 'half'>('full')
   const [variantShape, setVariantShape] = useState<'pill' | 'rounded' | 'square'>('pill')
   const [variantSize, setVariantSize] = useState<'small' | 'medium' | 'large'>('medium')
+
+  // Per-breakpoint overrides for a handful of size/spacing settings — the
+  // base fontSizePx/priceSize/categorySpacing/photoSize/variantSize state
+  // above always represents mobile; tablet/desktop only store what's
+  // explicitly different, falling back to the mobile value otherwise.
+  type SizeOverrides = {
+    fontSizePx?: number
+    priceSize?: 'small' | 'medium' | 'large'
+    categorySpacing?: number
+    photoSize?: 'small' | 'medium' | 'large'
+    variantSize?: 'small' | 'medium' | 'large'
+  }
+  const [responsiveSizes, setResponsiveSizes] = useState<{ tablet: SizeOverrides; desktop: SizeOverrides }>({ tablet: {}, desktop: {} })
+
+  function sizeValue<K extends keyof SizeOverrides>(key: K, mobileValue: NonNullable<SizeOverrides[K]>): NonNullable<SizeOverrides[K]> {
+    if (deviceType === 'mobile') return mobileValue
+    return responsiveSizes[deviceType][key] ?? mobileValue
+  }
+  function setSizeValue<K extends keyof SizeOverrides>(key: K, value: NonNullable<SizeOverrides[K]>, mobileSetter: (v: NonNullable<SizeOverrides[K]>) => void) {
+    if (deviceType === 'mobile') { mobileSetter(value); return }
+    setResponsiveSizes(prev => ({ ...prev, [deviceType]: { ...prev[deviceType], [key]: value } }))
+  }
+  function clearSizeOverride<K extends keyof SizeOverrides>(key: K) {
+    if (deviceType === 'mobile') return
+    setResponsiveSizes(prev => {
+      const next = { ...prev[deviceType] }
+      delete next[key]
+      return { ...prev, [deviceType]: next }
+    })
+  }
+  function hasSizeOverride<K extends keyof SizeOverrides>(key: K): boolean {
+    return deviceType !== 'mobile' && responsiveSizes[deviceType][key] !== undefined
+  }
+  function renderDeviceOverrideHint<K extends keyof SizeOverrides>(key: K) {
+    if (deviceType === 'mobile') return null
+    const deviceLabel = deviceType === 'tablet' ? 'tablet' : 'computadora'
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontSize: 11, color: '#94A3B8' }}>
+        {hasSizeOverride(key)
+          ? <>Ajustado para {deviceLabel}</>
+          : <>Igual que telefono — edita para ajustar solo en {deviceLabel}</>}
+        {hasSizeOverride(key) && (
+          <button
+            type="button"
+            onClick={() => clearSizeOverride(key)}
+            style={{ border: 'none', background: 'none', color: '#7C3AED', fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: 0 }}
+          >
+            Restablecer
+          </button>
+        )}
+      </div>
+    )
+  }
   const [enableReorder, setEnableReorder] = useState(false)
   const [reorderBannerEnabled, setReorderBannerEnabled] = useState(true)
   const [reorderHeaderButton, setReorderHeaderButton] = useState(false)
@@ -489,6 +542,10 @@ export default function EditorPage() {
       if (cfg.modalSize) setModalSize(cfg.modalSize as 'full' | 'half')
       if (cfg.variantShape) setVariantShape(cfg.variantShape as 'pill' | 'rounded' | 'square')
       if (cfg.variantSize) setVariantSize(cfg.variantSize as 'small' | 'medium' | 'large')
+      if (cfg.responsiveSizes) {
+        const rs = cfg.responsiveSizes as { tablet?: SizeOverrides; desktop?: SizeOverrides }
+        setResponsiveSizes({ tablet: rs.tablet ?? {}, desktop: rs.desktop ?? {} })
+      }
       if (cfg.enableReorder !== undefined) setEnableReorder(cfg.enableReorder as boolean)
       if (cfg.reorderBannerEnabled !== undefined) setReorderBannerEnabled(cfg.reorderBannerEnabled as boolean)
       if (cfg.reorderHeaderButton !== undefined) setReorderHeaderButton(cfg.reorderHeaderButton as boolean)
@@ -528,6 +585,14 @@ export default function EditorPage() {
     const catFont = catTitleFont && FONT_MAP[catTitleFont] ? FONT_MAP[catTitleFont] : ''
     const prodFont = productNameFont && FONT_MAP[productNameFont] ? FONT_MAP[productNameFont] : ''
     const prSizeMap = { small: '12px', medium: '15px', large: '20px' }
+    // Live preview reflects whichever device is currently selected —
+    // tablet/desktop show their own override (falling back to mobile)
+    // instead of always previewing the mobile values.
+    const effFontSizePx = sizeValue('fontSizePx', fontSizePx)
+    const effPhotoSize = sizeValue('photoSize', photoSize)
+    const effPriceSize = sizeValue('priceSize', priceSize)
+    const effCategorySpacing = sizeValue('categorySpacing', categorySpacing)
+    const effVariantSize = sizeValue('variantSize', variantSize)
 
     let shapeCSS = ''
     if (photoShape === 'sharp') {
@@ -566,12 +631,12 @@ export default function EditorPage() {
       `
     }
 
-    const imgSizeCSS = photoSize === 'small' ? `
+    const imgSizeCSS = effPhotoSize === 'small' ? `
       .sf-card-img-wrap     { aspect-ratio: 4/3 !important; }
       .sf-esc-img           { width: 48px !important; height: 48px !important; }
       .sf-cat-img           { width: 52px !important; height: 52px !important; }
       .sf-vit-hero-img-wrap { aspect-ratio: 4/3 !important; }
-    ` : photoSize === 'large' ? `
+    ` : effPhotoSize === 'large' ? `
       .sf-card-img-wrap     { aspect-ratio: 2/3 !important; }
       .sf-esc-img           { width: 80px !important; height: 80px !important; }
       .sf-cat-img           { width: 86px !important; height: 86px !important; }
@@ -584,9 +649,9 @@ export default function EditorPage() {
       .sf-modal-chip { border-radius: 4px !important; }
     ` : ''
 
-    const variantSizeCSS = variantSize === 'small' ? `
+    const variantSizeCSS = effVariantSize === 'small' ? `
       .sf-modal-chip { padding: 6px 12px !important; font-size: 12px !important; }
-    ` : variantSize === 'large' ? `
+    ` : effVariantSize === 'large' ? `
       .sf-modal-chip { padding: 10px 20px !important; font-size: 16px !important; }
     ` : ''
 
@@ -607,37 +672,37 @@ export default function EditorPage() {
       .sf-page {
         ${pageBg ? `background: ${pageBg} !important;` : ''}
         ${font  ? `font-family: ${font} !important;` : ''}
-        font-size: ${fontSizePx}px !important;
+        font-size: ${effFontSizePx}px !important;
         --sf-price-color: ${priceColor} !important;
         --sf-accent-color: ${accentColor} !important;
         --sf-price-font: ${font};
       }
-      .sf-nav-name       { font-size: ${(fontSizePx * 1.07).toFixed(1)}px !important; }
-      .sf-store-name     { font-size: ${(fontSizePx * 1.6).toFixed(1)}px !important; }
-      .sf-store-desc     { font-size: ${(fontSizePx * 0.93).toFixed(1)}px !important; }
-      .sf-section-title  { font-size: ${(fontSizePx * 1.2).toFixed(1)}px !important; ${catTitleColor ? `color: ${catTitleColor} !important;` : ''} ${catFont ? `font-family: ${catFont} !important;` : ''} }
-      .sf-cat-section    { margin-top: ${categorySpacing}px !important; }
-      .sf-card-name      { font-size: ${(fontSizePx * 0.93).toFixed(1)}px !important; ${prodFont ? `font-family: ${prodFont} !important;` : ''} }
-      .sf-card-desc      { font-size: ${(fontSizePx * 0.8).toFixed(1)}px !important; }
-      .sf-card-price     { font-size: ${(fontSizePx * 1.07).toFixed(1)}px !important; }
-      .sf-vit-hero-name  { font-size: ${(fontSizePx * 1.47).toFixed(1)}px !important; ${prodFont ? `font-family: ${prodFont} !important;` : ''} }
-      .sf-vit-hero-desc  { font-size: ${(fontSizePx * 0.93).toFixed(1)}px !important; }
-      .sf-vit-hero-price { font-size: ${(fontSizePx * 1.73).toFixed(1)}px !important; }
-      .sf-esc-name       { font-size: ${(fontSizePx * 0.93).toFixed(1)}px !important; ${prodFont ? `font-family: ${prodFont} !important;` : ''} }
-      .sf-esc-price      { font-size: ${(fontSizePx * 0.87).toFixed(1)}px !important; }
-      .sf-cat-name       { font-size: ${(fontSizePx * 0.93).toFixed(1)}px !important; ${prodFont ? `font-family: ${prodFont} !important;` : ''} }
-      .sf-cat-desc       { font-size: ${(fontSizePx * 0.8).toFixed(1)}px !important; }
-      .sf-cat-price      { font-size: ${fontSizePx}px !important; }
-      .sf-modal-name     { font-size: ${(fontSizePx * 1.13).toFixed(1)}px !important; }
-      .sf-modal-desc     { font-size: ${(fontSizePx * 0.87).toFixed(1)}px !important; }
-      .sf-cart-label     { font-size: ${(fontSizePx * 0.93).toFixed(1)}px !important; ${font ? `font-family: ${font} !important;` : ''} }
-      .sf-cart-total     { font-size: ${(fontSizePx * 0.93).toFixed(1)}px !important; ${font ? `font-family: ${font} !important;` : ''} }
-      .sf-cart-badge     { font-size: ${(fontSizePx * 0.8).toFixed(1)}px !important; }
+      .sf-nav-name       { font-size: ${(effFontSizePx * 1.07).toFixed(1)}px !important; }
+      .sf-store-name     { font-size: ${(effFontSizePx * 1.6).toFixed(1)}px !important; }
+      .sf-store-desc     { font-size: ${(effFontSizePx * 0.93).toFixed(1)}px !important; }
+      .sf-section-title  { font-size: ${(effFontSizePx * 1.2).toFixed(1)}px !important; ${catTitleColor ? `color: ${catTitleColor} !important;` : ''} ${catFont ? `font-family: ${catFont} !important;` : ''} }
+      .sf-cat-section    { margin-top: ${effCategorySpacing}px !important; }
+      .sf-card-name      { font-size: ${(effFontSizePx * 0.93).toFixed(1)}px !important; ${prodFont ? `font-family: ${prodFont} !important;` : ''} }
+      .sf-card-desc      { font-size: ${(effFontSizePx * 0.8).toFixed(1)}px !important; }
+      .sf-card-price     { font-size: ${(effFontSizePx * 1.07).toFixed(1)}px !important; }
+      .sf-vit-hero-name  { font-size: ${(effFontSizePx * 1.47).toFixed(1)}px !important; ${prodFont ? `font-family: ${prodFont} !important;` : ''} }
+      .sf-vit-hero-desc  { font-size: ${(effFontSizePx * 0.93).toFixed(1)}px !important; }
+      .sf-vit-hero-price { font-size: ${(effFontSizePx * 1.73).toFixed(1)}px !important; }
+      .sf-esc-name       { font-size: ${(effFontSizePx * 0.93).toFixed(1)}px !important; ${prodFont ? `font-family: ${prodFont} !important;` : ''} }
+      .sf-esc-price      { font-size: ${(effFontSizePx * 0.87).toFixed(1)}px !important; }
+      .sf-cat-name       { font-size: ${(effFontSizePx * 0.93).toFixed(1)}px !important; ${prodFont ? `font-family: ${prodFont} !important;` : ''} }
+      .sf-cat-desc       { font-size: ${(effFontSizePx * 0.8).toFixed(1)}px !important; }
+      .sf-cat-price      { font-size: ${effFontSizePx}px !important; }
+      .sf-modal-name     { font-size: ${(effFontSizePx * 1.13).toFixed(1)}px !important; }
+      .sf-modal-desc     { font-size: ${(effFontSizePx * 0.87).toFixed(1)}px !important; }
+      .sf-cart-label     { font-size: ${(effFontSizePx * 0.93).toFixed(1)}px !important; ${font ? `font-family: ${font} !important;` : ''} }
+      .sf-cart-total     { font-size: ${(effFontSizePx * 0.93).toFixed(1)}px !important; ${font ? `font-family: ${font} !important;` : ''} }
+      .sf-cart-badge     { font-size: ${(effFontSizePx * 0.8).toFixed(1)}px !important; }
       .sf-co-price       { ${prFont ? `font-family: ${prFont} !important;` : ''} }
       .sf-co-total-amt   { ${font ? `font-family: ${font} !important;` : ''} }
       .sf-card-price, .sf-esc-price, .sf-cat-price, .sf-vit-hero-price {
         color: ${priceColor} !important;
-        font-size: ${prSizeMap[priceSize]} !important;
+        font-size: ${prSizeMap[effPriceSize]} !important;
         ${prFont ? `font-family: ${prFont} !important;` : ''}
       }
       .sf-modal-base-price  { color: ${priceColor} !important; }
@@ -929,7 +994,7 @@ export default function EditorPage() {
   useEffect(() => {
     applyPreview()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, variantShape, variantSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign, newBlockFont, contentBlocks, blockGroups, newBlockButtons, newBlockButtonStyle, newBlockButtonSize, newBlockButtonWidth, editingBlockId, newBlockImageSize, enableReorder, reorderBannerEnabled, reorderPosition, reorderTitle, reorderImageUrl, reorderFontSize, reorderFontWeight, reorderColor, reorderFont, reorderButtonStyle, reorderButtonSize, reorderButtonColor, reorderScale, reorderInset, ads])
+  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, variantShape, variantSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign, newBlockFont, contentBlocks, blockGroups, newBlockButtons, newBlockButtonStyle, newBlockButtonSize, newBlockButtonWidth, editingBlockId, newBlockImageSize, enableReorder, reorderBannerEnabled, reorderPosition, reorderTitle, reorderImageUrl, reorderFontSize, reorderFontWeight, reorderColor, reorderFont, reorderButtonStyle, reorderButtonSize, reorderButtonColor, reorderScale, reorderInset, ads, deviceType, responsiveSizes])
 
   // ── Auto-save category shape (reloads iframe immediately) ─
   async function handleCategoryShape(catId: string, shape: string | null) {
@@ -1031,6 +1096,8 @@ export default function EditorPage() {
         ? { categoryLayouts }
         : { categoryLayouts: undefined }),
       hiddenCategoryIds: hiddenCategoryIds.length > 0 ? hiddenCategoryIds : undefined,
+      responsiveSizes: (Object.keys(responsiveSizes.tablet).length > 0 || Object.keys(responsiveSizes.desktop).length > 0)
+        ? responsiveSizes : undefined,
     }
     await supabase.from('stores').update({
       template,
@@ -1762,7 +1829,7 @@ export default function EditorPage() {
 
             <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>
               Tamano
-              <span className="ed-size-slider-val">{fontSizePx}px</span>
+              <span className="ed-size-slider-val">{sizeValue('fontSizePx', fontSizePx)}px</span>
             </div>
             <div className="ed-size-slider-wrap">
               <span className="ed-size-slider-hint">A</span>
@@ -1771,12 +1838,13 @@ export default function EditorPage() {
                 min={12}
                 max={22}
                 step={1}
-                value={fontSizePx}
-                onChange={e => setFontSizePx(Number(e.target.value))}
+                value={sizeValue('fontSizePx', fontSizePx)}
+                onChange={e => setSizeValue('fontSizePx', Number(e.target.value), setFontSizePx)}
                 className="ed-size-slider"
               />
               <span className="ed-size-slider-hint ed-size-slider-hint-lg">A</span>
             </div>
+            {renderDeviceOverrideHint('fontSizePx')}
 
             <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Alineacion</div>
             <div className="ed-align-opts">
@@ -1868,8 +1936,8 @@ export default function EditorPage() {
               ] as const).map(s => (
                 <button
                   key={s.id}
-                  className={`ed-size-opt${photoSize === s.id ? ' ed-size-opt-active' : ''}`}
-                  onClick={() => setPhotoSize(s.id)}
+                  className={`ed-size-opt${sizeValue('photoSize', photoSize) === s.id ? ' ed-size-opt-active' : ''}`}
+                  onClick={() => setSizeValue('photoSize', s.id, setPhotoSize)}
                 >
                   <svg
                     viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
@@ -1883,6 +1951,7 @@ export default function EditorPage() {
                 </button>
               ))}
             </div>
+            {renderDeviceOverrideHint('photoSize')}
 
             {categories.length > 0 && (
               <>
@@ -1965,8 +2034,8 @@ export default function EditorPage() {
               ] as const).map(s => (
                 <button
                   key={s.id}
-                  className={`ed-size-opt${priceSize === s.id ? ' ed-size-opt-active' : ''}`}
-                  onClick={() => setPriceSize(s.id)}
+                  className={`ed-size-opt${sizeValue('priceSize', priceSize) === s.id ? ' ed-size-opt-active' : ''}`}
+                  onClick={() => setSizeValue('priceSize', s.id, setPriceSize)}
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="ed-size-preview" style={{ width: 24, height: 24 }}>
                     {s.id === 'small'  && <text x="4" y="17" fontSize="10" stroke="none" fill="currentColor">$</text>}
@@ -1977,6 +2046,7 @@ export default function EditorPage() {
                 </button>
               ))}
             </div>
+            {renderDeviceOverrideHint('priceSize')}
 
             <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Fuente</div>
             <FontSelect
@@ -2119,7 +2189,7 @@ export default function EditorPage() {
 
             <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>
               Separacion entre categorias
-              <span className="ed-size-slider-val">{categorySpacing}px</span>
+              <span className="ed-size-slider-val">{sizeValue('categorySpacing', categorySpacing)}px</span>
             </div>
             <div className="ed-size-slider-wrap">
               <span className="ed-size-slider-hint">S</span>
@@ -2128,12 +2198,13 @@ export default function EditorPage() {
                 min={0}
                 max={100}
                 step={4}
-                value={categorySpacing}
-                onChange={e => setCategorySpacing(Number(e.target.value))}
+                value={sizeValue('categorySpacing', categorySpacing)}
+                onChange={e => setSizeValue('categorySpacing', Number(e.target.value), setCategorySpacing)}
                 className="ed-size-slider"
               />
               <span className="ed-size-slider-hint ed-size-slider-hint-lg">L</span>
             </div>
+            {renderDeviceOverrideHint('categorySpacing')}
 
             {categories.length > 0 && (
               <>
@@ -3240,8 +3311,8 @@ export default function EditorPage() {
               ] as const).map(s => (
                 <button
                   key={s.id}
-                  className={`ed-size-opt${variantSize === s.id ? ' ed-size-opt-active' : ''}`}
-                  onClick={() => setVariantSize(s.id)}
+                  className={`ed-size-opt${sizeValue('variantSize', variantSize) === s.id ? ' ed-size-opt-active' : ''}`}
+                  onClick={() => setSizeValue('variantSize', s.id, setVariantSize)}
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="ed-size-preview" style={{ width: 24, height: 24 }}>
                     {s.id === 'small'  && <rect x="4"  y="9"  width="16" height="6" rx="3" />}
@@ -3252,6 +3323,7 @@ export default function EditorPage() {
                 </button>
               ))}
             </div>
+            {renderDeviceOverrideHint('variantSize')}
 
             <PanelSave />
           </div>

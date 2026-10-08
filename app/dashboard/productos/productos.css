@@ -635,7 +635,16 @@
   display: flex; align-items: center; gap: 10px;
   background: white; border: 1px solid rgba(15,23,42,0.06);
   border-radius: 10px; padding: 7px 10px;
+  transition: border-color 0.1s, box-shadow 0.1s;
 }
+.cat-product-row-dragging { opacity: 0.5; }
+.cat-product-row-dragover { border-color: #7C3AED; box-shadow: 0 0 0 2px rgba(124,58,237,0.2); }
+.cat-drag-handle {
+  width: 22px; height: 22px; border: none; background: none; color: #CBD5E1;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  cursor: grab; touch-action: none;
+}
+.cat-drag-handle:hover { color: #7C3AED; }
 .cat-product-img { width: 32px; height: 32px; border-radius: 7px; object-fit: cover; flex-shrink: 0; background: #F1F5F9; }
 .cat-product-img-empty { background: #F1F5F9; }
 .cat-product-name { flex: 1; font-size: 13px; color: #0F172A; font-weight: 500; }

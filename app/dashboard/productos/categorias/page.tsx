@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useDashboardStore } from '../../../lib/DashboardStoreProvider'
 import '../productos.css'
@@ -19,6 +19,9 @@ export default function CategoriasPage() {
   const [editingId, setEditingId]     = useState<string | null>(null)
   const [editName, setEditName]       = useState('')
   const [saving, setSaving]           = useState(false)
+  const [draggingId, setDraggingId]   = useState<string | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+  const dragRef = useRef<{ catId: string; productId: string } | null>(null)
 
   useEffect(() => { if (storeId) loadData() }, [storeId])
 
@@ -43,18 +46,48 @@ export default function CategoriasPage() {
     setLoading(false)
   }
 
-  // Swaps two products' display order — a and b are whatever's currently
-  // adjacent within the expanded category's own product list.
-  async function swapProductPosition(a: Product, b: Product) {
-    const posA = a.position ?? 0
-    const posB = b.position ?? 0
+  // Drags a product to a new spot within its category's own list. Reuses
+  // the exact position values already held by that category's products
+  // (just permuted into the new order) so nothing outside this category's
+  // subset — or a product's standing in any OTHER category it also
+  // belongs to — needs to move.
+  async function moveProduct(catId: string, productId: string, targetIndex: number) {
+    const catProducts = products.filter(p => p.category_ids.includes(catId))
+    const fromIndex = catProducts.findIndex(p => p.id === productId)
+    if (fromIndex === -1 || fromIndex === targetIndex) return
+    const reordered = [...catProducts]
+    const [moved] = reordered.splice(fromIndex, 1)
+    reordered.splice(targetIndex, 0, moved)
+    const positions = catProducts.map(p => p.position ?? 0).sort((a, b) => a - b)
+    const updates = reordered.map((p, i) => ({ id: p.id, position: positions[i] }))
+    const posMap = new Map(updates.map(u => [u.id, u.position]))
     setProducts(prev => prev
-      .map(p => p.id === a.id ? { ...p, position: posB } : p.id === b.id ? { ...p, position: posA } : p)
-      .sort((x, y) => (x.position ?? 0) - (y.position ?? 0)))
-    await Promise.all([
-      supabase.from('products').update({ position: posB }).eq('id', a.id),
-      supabase.from('products').update({ position: posA }).eq('id', b.id),
-    ])
+      .map(p => posMap.has(p.id) ? { ...p, position: posMap.get(p.id)! } : p)
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0)))
+    await Promise.all(updates.map(u => supabase.from('products').update({ position: u.position }).eq('id', u.id)))
+  }
+
+  function handleDragPointerDown(catId: string, productId: string, index: number, e: React.PointerEvent) {
+    e.currentTarget.setPointerCapture(e.pointerId)
+    dragRef.current = { catId, productId }
+    setDraggingId(productId)
+    setDragOverIndex(index)
+  }
+  function handleDragPointerMove(e: React.PointerEvent) {
+    if (!dragRef.current) return
+    const el = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-cat-row-index]') as HTMLElement | null
+    if (el) {
+      const idx = Number(el.dataset.catRowIndex)
+      if (!Number.isNaN(idx)) setDragOverIndex(idx)
+    }
+  }
+  function handleDragPointerUp() {
+    const drag = dragRef.current
+    const targetIndex = dragOverIndex
+    dragRef.current = null
+    setDraggingId(null)
+    setDragOverIndex(null)
+    if (drag && targetIndex != null) moveProduct(drag.catId, drag.productId, targetIndex)
   }
 
   async function handleAdd() {
@@ -210,19 +243,22 @@ export default function CategoriasPage() {
                   <div className="cat-products-empty">Esta categoria todavia no tiene productos.</div>
                 ) : (
                   catProducts.map((p, i) => (
-                    <div key={p.id} className="cat-product-row">
-                      <div className="cat-order-btns">
-                        <button className="cat-order-btn" onClick={() => swapProductPosition(p, catProducts[i - 1])} disabled={i === 0}>
-                          <svg viewBox="0 0 20 20" fill="currentColor" width="10" height="10">
-                            <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                        <button className="cat-order-btn" onClick={() => swapProductPosition(p, catProducts[i + 1])} disabled={i === catProducts.length - 1}>
-                          <svg viewBox="0 0 20 20" fill="currentColor" width="10" height="10">
-                            <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                      </div>
+                    <div
+                      key={p.id}
+                      data-cat-row-index={i}
+                      className={`cat-product-row${draggingId === p.id ? ' cat-product-row-dragging' : ''}${draggingId && dragOverIndex === i && draggingId !== p.id ? ' cat-product-row-dragover' : ''}`}
+                    >
+                      <button
+                        className="cat-drag-handle"
+                        onPointerDown={e => handleDragPointerDown(cat.id, p.id, i, e)}
+                        onPointerMove={handleDragPointerMove}
+                        onPointerUp={handleDragPointerUp}
+                        aria-label="Arrastrar para reordenar"
+                      >
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="12" height="12">
+                          <path d="M7 5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zm0 5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zm0 5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zm9-10a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zm0 5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zm0 5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+                        </svg>
+                      </button>
                       {p.image_url
                         ? <img src={p.image_url} alt="" className="cat-product-img" />
                         : <div className="cat-product-img cat-product-img-empty" />

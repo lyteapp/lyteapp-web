@@ -981,6 +981,19 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // modal's edge swipe does in reverse. Only touches starting in the edge
   // strip count, so horizontal product carousels and photo swipes elsewhere
   // are unaffected; mostly-vertical drags are left to scroll the page.
+  // While a product is open, the store behind it must not scroll — touches
+  // on the photo/header (not themselves scrollable) or a drag that runs past
+  // the end of the product's own content would otherwise scroll the page.
+  useEffect(() => {
+    if (!modalProduct) return
+    const html = document.documentElement, body = document.body
+    const prev = [html.style.overflow, body.style.overflow, body.style.overscrollBehavior]
+    html.style.overflow = 'hidden'
+    body.style.overflow = 'hidden'
+    body.style.overscrollBehavior = 'none'
+    return () => { [html.style.overflow, body.style.overflow, body.style.overscrollBehavior] = prev }
+  }, [!!modalProduct])
+
   const menuSwipeEnabled = !!store.template_config?.showMenuButton && view === 'catalog' && !modalProduct && !menuOpen && !headerSearchOpen
   useEffect(() => {
     if (!menuSwipeEnabled) return

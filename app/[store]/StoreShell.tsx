@@ -3226,7 +3226,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 {item.selectedOptions && (
                   <div className="sf-co-opts">
                     {item.selectedOptions.variables && Object.entries(item.selectedOptions.variables).map(([k, v]) => (
-                      <span key={k} className="sf-co-opt-tag">{k}: {variableValueLabel(v)}</span>
+                      <span key={k} className="sf-co-opt-tag">{variableValueLabel(v)}</span>
                     ))}
                     {item.selectedOptions.color && <span className="sf-co-opt-tag">{item.selectedOptions.color}</span>}
                     {item.selectedOptions.additionals?.map(a => (

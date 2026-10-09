@@ -1294,12 +1294,7 @@ export default function EditorPage() {
       <div className="ed-block-item" style={editingBlockId === b.id ? { outline: '2px solid #7C3AED', outlineOffset: 2 } : undefined}>
         <div className="ed-block-item-head">
           <span className="ed-block-item-type">{b.type === 'text' ? 'Texto' : b.type === 'image' ? 'Imagen' : b.type === 'video' ? 'Video' : 'Botones'}</span>
-          <span className="ed-block-item-pos">
-            {b.afterId === 'top' ? 'Al inicio' : b.afterId === 'bottom' ? 'Al final' : (categories.find(c => c.id === b.afterId)?.name ?? b.afterId)}
-            {b.afterId !== 'top' && b.afterId !== 'bottom' && (
-              b.catPosition === 'before' ? ' — arriba' : typeof b.catPosition === 'number' ? ` — tras el producto ${b.catPosition}` : ' — despues'
-            )}
-          </span>
+          <span className="ed-block-item-pos" />
           <button
             onClick={() => startEditBlock(b)}
             style={{ width: 26, height: 26, borderRadius: 6, border: 'none', background: 'transparent', color: '#94A3B8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 }}
@@ -1427,6 +1422,250 @@ export default function EditorPage() {
     blockUnitPositionIndex.set(u, idx)
     blockUnitPositionCount[key] = idx + 1
   }
+  function renderDisplayUnit(unit: BlockDisplayUnit) {
+                    const afterId = unit.kind === 'single' ? unit.block.afterId : unit.group.afterId
+                    const catPosition = unit.kind === 'single' ? unit.block.catPosition : unit.group.catPosition
+                    const index = blockUnitPositionIndex.get(unit) ?? 0
+                    const count = blockUnitPositionCount[posKey(afterId, catPosition)] ?? 1
+                    return unit.kind === 'single' ? (
+                    <div key={unit.block.id} style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                      {renderOrderArrows(afterId, catPosition, index, count)}
+                      {groupMode && !unit.block.groupId && (
+                        <input
+                          type="checkbox"
+                          checked={selectedForGroup.has(unit.block.id)}
+                          onChange={() => toggleBlockForGroup(unit.block.id)}
+                          style={{ marginTop: 12, flexShrink: 0 }}
+                        />
+                      )}
+                      <div style={{ flex: 1 }}>{renderBlockItemRow(unit.block)}</div>
+                    </div>
+                  ) : (
+                    <div key={unit.group.id} className="ed-block-group">
+                      <div className="ed-block-group-head">
+                        {renderOrderArrows(afterId, catPosition, index, count)}
+                        <span className="ed-block-item-type" style={{ background: '#EDE9FE', color: '#7C3AED' }}>Grupo · {unit.members.length} bloques</span>
+                        <button
+                          onClick={() => ungroupBlocks(unit.group.id)}
+                          style={{ marginLeft: 'auto', padding: '4px 10px', borderRadius: 7, border: 'none', background: '#FEF2F2', color: '#DC2626', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}
+                        >
+                          Desagrupar
+                        </button>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '8px 0' }}>
+                        <input
+                          type="color"
+                          value={unit.group.background || '#F8FAFC'}
+                          onChange={e => updateBlockGroup(unit.group.id, { background: e.target.value })}
+                          style={{ width: 30, height: 30, padding: 0, border: '1.5px solid #E2E8F0', borderRadius: 7, cursor: 'pointer', flexShrink: 0 }}
+                          title="Color de fondo del grupo"
+                        />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
+                          <span style={{ fontSize: 10, color: '#94A3B8' }}>Radio</span>
+                          <input
+                            type="range" min={0} max={32} step={2}
+                            value={unit.group.borderRadius ?? 12}
+                            onChange={e => updateBlockGroup(unit.group.id, { borderRadius: Number(e.target.value) })}
+                            style={{ flex: 1 }}
+                          />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
+                          <span style={{ fontSize: 10, color: '#94A3B8' }}>Relleno</span>
+                          <input
+                            type="range" min={0} max={40} step={2}
+                            value={unit.group.padding ?? 16}
+                            onChange={e => updateBlockGroup(unit.group.id, { padding: Number(e.target.value) })}
+                            style={{ flex: 1 }}
+                          />
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                        <div style={{ display: 'flex', gap: 4, flex: 1 }}>
+                          {([['column', 'Apilado'], ['row', 'En fila']] as const).map(([dir, label]) => (
+                            <button
+                              key={dir}
+                              onClick={() => updateBlockGroup(unit.group.id, { direction: dir })}
+                              style={{
+                                flex: 1, padding: '6px 4px', borderRadius: 7,
+                                border: `1.5px solid ${(unit.group.direction ?? 'column') === dir ? '#7C3AED' : '#E2E8F0'}`,
+                                background: (unit.group.direction ?? 'column') === dir ? '#F5F3FF' : 'white',
+                                color: (unit.group.direction ?? 'column') === dir ? '#7C3AED' : '#64748B',
+                                fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                              }}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
+                          <span style={{ fontSize: 10, color: '#94A3B8' }}>Espacio</span>
+                          <input
+                            type="range" min={0} max={40} step={2}
+                            value={unit.group.gap ?? 12}
+                            onChange={e => updateBlockGroup(unit.group.id, { gap: Number(e.target.value) })}
+                            style={{ flex: 1 }}
+                          />
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {unit.members.map(m => <div key={m.id}>{renderBlockItemRow(m)}</div>)}
+                      </div>
+                      {contentBlocks.some(b => !b.groupId && b.afterId === unit.group.afterId) && (
+                        <select
+                          value=""
+                          onChange={e => {
+                            const id = e.target.value
+                            if (!id) return
+                            setContentBlocks(prev => prev.map(x => x.id === id ? { ...x, groupId: unit.group.id } : x))
+                          }}
+                          className="ed-block-select"
+                          style={{ marginTop: 6, fontSize: 11 }}
+                        >
+                          <option value="">+ Agregar un bloque existente a este grupo...</option>
+                          {contentBlocks.filter(b => !b.groupId && b.afterId === unit.group.afterId).map(b => (
+                            <option key={b.id} value={b.id}>
+                              {b.type === 'text' ? 'Texto' : b.type === 'image' ? 'Imagen' : b.type === 'video' ? 'Video' : 'Botones'}: {b.content.slice(0, 24)}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+
+                      {blockGroups.filter(g => g.parentGroupId === unit.group.id).map(sub => (
+                        <div key={sub.id} className="ed-block-group" style={{ marginTop: 10, background: '#F1F5F9' }}>
+                          <div className="ed-block-group-head">
+                            <span className="ed-block-item-type" style={{ background: '#DBEAFE', color: '#2563EB' }}>
+                              Sub-grupo · {contentBlocks.filter(m => m.groupId === sub.id).length} bloques
+                            </span>
+                            <button
+                              onClick={() => updateBlockGroup(sub.id, { parentGroupId: undefined })}
+                              style={{ marginLeft: 6, padding: '4px 10px', borderRadius: 7, border: 'none', background: '#F1F5F9', color: '#475569', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}
+                            >
+                              Sacar del grupo
+                            </button>
+                            <button
+                              onClick={() => ungroupBlocks(sub.id)}
+                              style={{ marginLeft: 'auto', padding: '4px 10px', borderRadius: 7, border: 'none', background: '#FEF2F2', color: '#DC2626', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}
+                            >
+                              Desagrupar
+                            </button>
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '8px 0' }}>
+                            <input
+                              type="color"
+                              value={sub.background || '#F8FAFC'}
+                              onChange={e => updateBlockGroup(sub.id, { background: e.target.value })}
+                              style={{ width: 30, height: 30, padding: 0, border: '1.5px solid #E2E8F0', borderRadius: 7, cursor: 'pointer', flexShrink: 0 }}
+                              title="Color de fondo del sub-grupo"
+                            />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
+                              <span style={{ fontSize: 10, color: '#94A3B8' }}>Radio</span>
+                              <input
+                                type="range" min={0} max={32} step={2}
+                                value={sub.borderRadius ?? 12}
+                                onChange={e => updateBlockGroup(sub.id, { borderRadius: Number(e.target.value) })}
+                                style={{ flex: 1 }}
+                              />
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
+                              <span style={{ fontSize: 10, color: '#94A3B8' }}>Relleno</span>
+                              <input
+                                type="range" min={0} max={40} step={2}
+                                value={sub.padding ?? 16}
+                                onChange={e => updateBlockGroup(sub.id, { padding: Number(e.target.value) })}
+                                style={{ flex: 1 }}
+                              />
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                            <div style={{ display: 'flex', gap: 4, flex: 1 }}>
+                              {([['column', 'Apilado'], ['row', 'En fila']] as const).map(([dir, label]) => (
+                                <button
+                                  key={dir}
+                                  onClick={() => updateBlockGroup(sub.id, { direction: dir })}
+                                  style={{
+                                    flex: 1, padding: '6px 4px', borderRadius: 7,
+                                    border: `1.5px solid ${(sub.direction ?? 'column') === dir ? '#7C3AED' : '#E2E8F0'}`,
+                                    background: (sub.direction ?? 'column') === dir ? '#F5F3FF' : 'white',
+                                    color: (sub.direction ?? 'column') === dir ? '#7C3AED' : '#64748B',
+                                    fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                                  }}
+                                >
+                                  {label}
+                                </button>
+                              ))}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
+                              <span style={{ fontSize: 10, color: '#94A3B8' }}>Espacio</span>
+                              <input
+                                type="range" min={0} max={40} step={2}
+                                value={sub.gap ?? 12}
+                                onChange={e => updateBlockGroup(sub.id, { gap: Number(e.target.value) })}
+                                style={{ flex: 1 }}
+                              />
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            {contentBlocks.filter(m => m.groupId === sub.id).map(m => <div key={m.id}>{renderBlockItemRow(m)}</div>)}
+                          </div>
+                        </div>
+                      ))}
+
+                      {blockGroups.filter(g =>
+                        g.id !== unit.group.id && g.afterId === unit.group.afterId && !g.parentGroupId
+                        && (g.catPosition ?? 'after') === (unit.group.catPosition ?? 'after')
+                        && !blockGroups.some(x => x.parentGroupId === g.id)
+                      ).length > 0 && (
+                        <select
+                          value=""
+                          onChange={e => {
+                            const id = e.target.value
+                            if (!id) return
+                            updateBlockGroup(id, { parentGroupId: unit.group.id })
+                          }}
+                          className="ed-block-select"
+                          style={{ marginTop: 6, fontSize: 11 }}
+                        >
+                          <option value="">+ Anidar un grupo existente aqui...</option>
+                          {blockGroups.filter(g =>
+                            g.id !== unit.group.id && g.afterId === unit.group.afterId && !g.parentGroupId
+                            && (g.catPosition ?? 'after') === (unit.group.catPosition ?? 'after')
+                            && !blockGroups.some(x => x.parentGroupId === g.id)
+                          ).map(g => (
+                            <option key={g.id} value={g.id}>Grupo ({contentBlocks.filter(m => m.groupId === g.id).length} bloques)</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                  )
+  }
+  // The block list, laid out in the same order things appear on the store:
+  // Al inicio → each category (arriba / intercalados / despues) → Al final.
+  // Only spots that actually hold blocks are listed.
+  type BlockBucket = { key: string; label: string; units: BlockDisplayUnit[] }
+  const unitAfterId = (u: BlockDisplayUnit) => u.kind === 'single' ? u.block.afterId : u.group.afterId
+  const unitCatPos = (u: BlockDisplayUnit) => u.kind === 'single' ? u.block.catPosition : u.group.catPosition
+  const blockSections: { key: string; title: string; buckets: BlockBucket[] }[] = []
+  const flatSection = (key: string, title: string) => {
+    const units = blockDisplayUnits.filter(u => unitAfterId(u) === key)
+    if (units.length) blockSections.push({ key, title, buckets: [{ key, label: '', units }] })
+  }
+  const categorySection = (catId: string, title: string) => {
+    const units = blockDisplayUnits.filter(u => unitAfterId(u) === catId)
+    if (!units.length) return
+    const buckets: BlockBucket[] = []
+    const before = units.filter(u => unitCatPos(u) === 'before')
+    if (before.length) buckets.push({ key: 'before', label: 'Arriba de los productos', units: before })
+    const nums = [...new Set(units.map(unitCatPos).filter((p): p is number => typeof p === 'number'))].sort((a, b) => a - b)
+    nums.forEach(n => buckets.push({ key: `n${n}`, label: `Despues del producto ${n}`, units: units.filter(u => unitCatPos(u) === n) }))
+    const after = units.filter(u => unitCatPos(u) === undefined)
+    if (after.length) buckets.push({ key: 'after', label: 'Despues de la categoria', units: after })
+    blockSections.push({ key: catId, title, buckets })
+  }
+  flatSection('top', 'Al inicio')
+  categories.forEach(c => categorySection(c.id, c.name))
+  const knownIds = new Set(['top', 'bottom', ...categories.map(c => c.id)])
+  ;[...new Set(blockDisplayUnits.map(unitAfterId).filter(id => !knownIds.has(id)))].forEach(id => categorySection(id, 'Categoria eliminada'))
+  flatSection('bottom', 'Al final')
 
   return (
     <div className="ed-app">
@@ -2624,221 +2863,17 @@ export default function EditorPage() {
                   </div>
                 )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-                  {blockDisplayUnits.map(unit => {
-                    const afterId = unit.kind === 'single' ? unit.block.afterId : unit.group.afterId
-                    const catPosition = unit.kind === 'single' ? unit.block.catPosition : unit.group.catPosition
-                    const index = blockUnitPositionIndex.get(unit) ?? 0
-                    const count = blockUnitPositionCount[posKey(afterId, catPosition)] ?? 1
-                    return unit.kind === 'single' ? (
-                    <div key={unit.block.id} style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
-                      {renderOrderArrows(afterId, catPosition, index, count)}
-                      {groupMode && !unit.block.groupId && (
-                        <input
-                          type="checkbox"
-                          checked={selectedForGroup.has(unit.block.id)}
-                          onChange={() => toggleBlockForGroup(unit.block.id)}
-                          style={{ marginTop: 12, flexShrink: 0 }}
-                        />
-                      )}
-                      <div style={{ flex: 1 }}>{renderBlockItemRow(unit.block)}</div>
-                    </div>
-                  ) : (
-                    <div key={unit.group.id} className="ed-block-group">
-                      <div className="ed-block-group-head">
-                        {renderOrderArrows(afterId, catPosition, index, count)}
-                        <span className="ed-block-item-type" style={{ background: '#EDE9FE', color: '#7C3AED' }}>Grupo · {unit.members.length} bloques</span>
-                        <button
-                          onClick={() => ungroupBlocks(unit.group.id)}
-                          style={{ marginLeft: 'auto', padding: '4px 10px', borderRadius: 7, border: 'none', background: '#FEF2F2', color: '#DC2626', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}
-                        >
-                          Desagrupar
-                        </button>
-                      </div>
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '8px 0' }}>
-                        <input
-                          type="color"
-                          value={unit.group.background || '#F8FAFC'}
-                          onChange={e => updateBlockGroup(unit.group.id, { background: e.target.value })}
-                          style={{ width: 30, height: 30, padding: 0, border: '1.5px solid #E2E8F0', borderRadius: 7, cursor: 'pointer', flexShrink: 0 }}
-                          title="Color de fondo del grupo"
-                        />
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
-                          <span style={{ fontSize: 10, color: '#94A3B8' }}>Radio</span>
-                          <input
-                            type="range" min={0} max={32} step={2}
-                            value={unit.group.borderRadius ?? 12}
-                            onChange={e => updateBlockGroup(unit.group.id, { borderRadius: Number(e.target.value) })}
-                            style={{ flex: 1 }}
-                          />
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
-                          <span style={{ fontSize: 10, color: '#94A3B8' }}>Relleno</span>
-                          <input
-                            type="range" min={0} max={40} step={2}
-                            value={unit.group.padding ?? 16}
-                            onChange={e => updateBlockGroup(unit.group.id, { padding: Number(e.target.value) })}
-                            style={{ flex: 1 }}
-                          />
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                        <div style={{ display: 'flex', gap: 4, flex: 1 }}>
-                          {([['column', 'Apilado'], ['row', 'En fila']] as const).map(([dir, label]) => (
-                            <button
-                              key={dir}
-                              onClick={() => updateBlockGroup(unit.group.id, { direction: dir })}
-                              style={{
-                                flex: 1, padding: '6px 4px', borderRadius: 7,
-                                border: `1.5px solid ${(unit.group.direction ?? 'column') === dir ? '#7C3AED' : '#E2E8F0'}`,
-                                background: (unit.group.direction ?? 'column') === dir ? '#F5F3FF' : 'white',
-                                color: (unit.group.direction ?? 'column') === dir ? '#7C3AED' : '#64748B',
-                                fontSize: 10, fontWeight: 600, cursor: 'pointer',
-                              }}
-                            >
-                              {label}
-                            </button>
-                          ))}
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
-                          <span style={{ fontSize: 10, color: '#94A3B8' }}>Espacio</span>
-                          <input
-                            type="range" min={0} max={40} step={2}
-                            value={unit.group.gap ?? 12}
-                            onChange={e => updateBlockGroup(unit.group.id, { gap: Number(e.target.value) })}
-                            style={{ flex: 1 }}
-                          />
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        {unit.members.map(m => <div key={m.id}>{renderBlockItemRow(m)}</div>)}
-                      </div>
-                      {contentBlocks.some(b => !b.groupId && b.afterId === unit.group.afterId) && (
-                        <select
-                          value=""
-                          onChange={e => {
-                            const id = e.target.value
-                            if (!id) return
-                            setContentBlocks(prev => prev.map(x => x.id === id ? { ...x, groupId: unit.group.id } : x))
-                          }}
-                          className="ed-block-select"
-                          style={{ marginTop: 6, fontSize: 11 }}
-                        >
-                          <option value="">+ Agregar un bloque existente a este grupo...</option>
-                          {contentBlocks.filter(b => !b.groupId && b.afterId === unit.group.afterId).map(b => (
-                            <option key={b.id} value={b.id}>
-                              {b.type === 'text' ? 'Texto' : b.type === 'image' ? 'Imagen' : b.type === 'video' ? 'Video' : 'Botones'}: {b.content.slice(0, 24)}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-
-                      {blockGroups.filter(g => g.parentGroupId === unit.group.id).map(sub => (
-                        <div key={sub.id} className="ed-block-group" style={{ marginTop: 10, background: '#F1F5F9' }}>
-                          <div className="ed-block-group-head">
-                            <span className="ed-block-item-type" style={{ background: '#DBEAFE', color: '#2563EB' }}>
-                              Sub-grupo · {contentBlocks.filter(m => m.groupId === sub.id).length} bloques
-                            </span>
-                            <button
-                              onClick={() => updateBlockGroup(sub.id, { parentGroupId: undefined })}
-                              style={{ marginLeft: 6, padding: '4px 10px', borderRadius: 7, border: 'none', background: '#F1F5F9', color: '#475569', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}
-                            >
-                              Sacar del grupo
-                            </button>
-                            <button
-                              onClick={() => ungroupBlocks(sub.id)}
-                              style={{ marginLeft: 'auto', padding: '4px 10px', borderRadius: 7, border: 'none', background: '#FEF2F2', color: '#DC2626', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}
-                            >
-                              Desagrupar
-                            </button>
-                          </div>
-                          <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '8px 0' }}>
-                            <input
-                              type="color"
-                              value={sub.background || '#F8FAFC'}
-                              onChange={e => updateBlockGroup(sub.id, { background: e.target.value })}
-                              style={{ width: 30, height: 30, padding: 0, border: '1.5px solid #E2E8F0', borderRadius: 7, cursor: 'pointer', flexShrink: 0 }}
-                              title="Color de fondo del sub-grupo"
-                            />
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
-                              <span style={{ fontSize: 10, color: '#94A3B8' }}>Radio</span>
-                              <input
-                                type="range" min={0} max={32} step={2}
-                                value={sub.borderRadius ?? 12}
-                                onChange={e => updateBlockGroup(sub.id, { borderRadius: Number(e.target.value) })}
-                                style={{ flex: 1 }}
-                              />
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
-                              <span style={{ fontSize: 10, color: '#94A3B8' }}>Relleno</span>
-                              <input
-                                type="range" min={0} max={40} step={2}
-                                value={sub.padding ?? 16}
-                                onChange={e => updateBlockGroup(sub.id, { padding: Number(e.target.value) })}
-                                style={{ flex: 1 }}
-                              />
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                            <div style={{ display: 'flex', gap: 4, flex: 1 }}>
-                              {([['column', 'Apilado'], ['row', 'En fila']] as const).map(([dir, label]) => (
-                                <button
-                                  key={dir}
-                                  onClick={() => updateBlockGroup(sub.id, { direction: dir })}
-                                  style={{
-                                    flex: 1, padding: '6px 4px', borderRadius: 7,
-                                    border: `1.5px solid ${(sub.direction ?? 'column') === dir ? '#7C3AED' : '#E2E8F0'}`,
-                                    background: (sub.direction ?? 'column') === dir ? '#F5F3FF' : 'white',
-                                    color: (sub.direction ?? 'column') === dir ? '#7C3AED' : '#64748B',
-                                    fontSize: 10, fontWeight: 600, cursor: 'pointer',
-                                  }}
-                                >
-                                  {label}
-                                </button>
-                              ))}
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }}>
-                              <span style={{ fontSize: 10, color: '#94A3B8' }}>Espacio</span>
-                              <input
-                                type="range" min={0} max={40} step={2}
-                                value={sub.gap ?? 12}
-                                onChange={e => updateBlockGroup(sub.id, { gap: Number(e.target.value) })}
-                                style={{ flex: 1 }}
-                              />
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            {contentBlocks.filter(m => m.groupId === sub.id).map(m => <div key={m.id}>{renderBlockItemRow(m)}</div>)}
-                          </div>
+                  {blockSections.map(sec => (
+                    <div key={sec.key} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: 4 }}>{sec.title}</div>
+                      {sec.buckets.map(bk => (
+                        <div key={bk.key} style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingLeft: bk.label ? 10 : 0, borderLeft: bk.label ? '2px solid #EDE9FE' : undefined }}>
+                          {bk.label && <div style={{ fontSize: 10, fontWeight: 600, color: '#7C3AED' }}>{bk.label}</div>}
+                          {bk.units.map(renderDisplayUnit)}
                         </div>
                       ))}
-
-                      {blockGroups.filter(g =>
-                        g.id !== unit.group.id && g.afterId === unit.group.afterId && !g.parentGroupId
-                        && (g.catPosition ?? 'after') === (unit.group.catPosition ?? 'after')
-                        && !blockGroups.some(x => x.parentGroupId === g.id)
-                      ).length > 0 && (
-                        <select
-                          value=""
-                          onChange={e => {
-                            const id = e.target.value
-                            if (!id) return
-                            updateBlockGroup(id, { parentGroupId: unit.group.id })
-                          }}
-                          className="ed-block-select"
-                          style={{ marginTop: 6, fontSize: 11 }}
-                        >
-                          <option value="">+ Anidar un grupo existente aqui...</option>
-                          {blockGroups.filter(g =>
-                            g.id !== unit.group.id && g.afterId === unit.group.afterId && !g.parentGroupId
-                            && (g.catPosition ?? 'after') === (unit.group.catPosition ?? 'after')
-                            && !blockGroups.some(x => x.parentGroupId === g.id)
-                          ).map(g => (
-                            <option key={g.id} value={g.id}>Grupo ({contentBlocks.filter(m => m.groupId === g.id).length} bloques)</option>
-                          ))}
-                        </select>
-                      )}
                     </div>
-                  )})}
+                  ))}
                 </div>
               </>
             )}
@@ -2846,28 +2881,27 @@ export default function EditorPage() {
             <div className="ed-tp-subtitle">{editingBlockId ? 'Editando bloque' : 'Agregar bloque'}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <select
-                value={newBlockPos}
-                onChange={e => setNewBlockPos(e.target.value)}
+                value={newBlockPos === 'top' || newBlockPos === 'bottom' ? newBlockPos : `${newBlockPos}|${newBlockCatMode}`}
+                onChange={e => {
+                  const [pos, mode] = e.target.value.split('|')
+                  setNewBlockPos(pos)
+                  if (mode) setNewBlockCatMode(mode as 'after' | 'before' | 'interleave')
+                }}
                 className="ed-block-select"
               >
                 <option value="top">Al inicio (antes de todo)</option>
                 {categories.map(c => (
-                  <option key={c.id} value={c.id}>Despues de {c.name}</option>
+                  <optgroup key={c.id} label={c.name}>
+                    <option value={`${c.id}|before`}>{c.name} · arriba de los productos</option>
+                    <option value={`${c.id}|interleave`}>{c.name} · entre los productos</option>
+                    <option value={`${c.id}|after`}>{c.name} · despues de la categoria</option>
+                  </optgroup>
                 ))}
                 <option value="bottom">Al final (despues de todo)</option>
               </select>
 
               {newBlockPos !== 'top' && newBlockPos !== 'bottom' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <select
-                    value={newBlockCatMode}
-                    onChange={e => setNewBlockCatMode(e.target.value as 'after' | 'before' | 'interleave')}
-                    className="ed-block-select"
-                  >
-                    <option value="after">Despues de los productos de la categoria</option>
-                    <option value="before">Arriba de los productos, debajo del titulo</option>
-                    <option value="interleave">Intercalado entre los productos</option>
-                  </select>
                   {newBlockCatMode === 'interleave' && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontSize: 11, color: '#64748B' }}>Despues del producto numero</span>

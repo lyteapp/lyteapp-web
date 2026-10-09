@@ -2386,7 +2386,7 @@ html, body { overflow-x: clip; }
 }
 .sf-co-transition-bar span {
   display: block; width: 40%; height: 100%; border-radius: 3px;
-  background: var(--sf-accent-color, #7C3AED);
+  background: var(--sf-loader-color, var(--sf-accent-color, #0F172A));
   animation: sfCoTransBar 0.9s ease-in-out infinite;
 }
 @keyframes sfCoTransIn { from { opacity: 0; } to { opacity: 1; } }

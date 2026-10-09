@@ -9,6 +9,7 @@ import { revealFontStack, loadRevealFont } from '../lib/revealFonts'
 import { isLightColor, poweredByColors } from '../lib/colorContrast'
 import LocationMapPicker from './LocationMapPicker'
 import { isVideoUrl, resizedImg } from '../lib/storeImages'
+import { storeLoaderColor } from '../lib/storeTheme'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -427,6 +428,7 @@ type Store = {
   description: string | null; whatsapp: string | null; instagram: string | null
   payment_methods: unknown; template: string | null
   store_currency?: string | null
+  brand_color?: string | null
   template_config?: TemplateConfig | null
   checkout_settings?: {
     requireName?: boolean; requirePhone?: boolean
@@ -1477,6 +1479,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     ...(cfgPriceFontFamily ? { '--sf-price-font': cfgPriceFontFamily } : {}),
     ...(cfg.cardBg      ? { '--sf-card-bg':     cfg.cardBg      } : {}),
     ...(cfg.accentColor ? { '--sf-accent-color': cfg.accentColor } : {}),
+    '--sf-loader-color': storeLoaderColor(store),
     ...(cs.accentColor ? { '--sf-checkout-accent-color': cs.accentColor } : {}),
     ...(cfg.pageBg      ? { '--sf-page-bg':      cfg.pageBg      } : {}),
     ...(cfg.catTitleColor ? { '--sf-cat-title-color': cfg.catTitleColor } : {}),

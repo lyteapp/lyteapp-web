@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 import StoreShell from './StoreShell'
 import { resizedImg } from '../lib/storeImages'
+import { storeLoaderColor } from '../lib/storeTheme'
 import './store.css'
 
 export const dynamic = 'force-dynamic'
@@ -102,7 +103,7 @@ export default async function StorePage({ params, searchParams }: { params: Prom
   return (
     <>
       {showBoot && (
-        <div id="sf-boot" className="sf-co-transition sf-boot" style={pageBg ? { background: pageBg } : undefined} aria-hidden="true">
+        <div id="sf-boot" className="sf-co-transition sf-boot" style={{ ...(pageBg ? { background: pageBg } : {}), '--sf-loader-color': storeLoaderColor(store) } as React.CSSProperties} aria-hidden="true">
           {store.logo_url
             ? <img src={resizedImg(store.logo_url, 400)} alt="" className="sf-co-transition-logo" />
             : <div className="sf-co-transition-name">{store.name}</div>}

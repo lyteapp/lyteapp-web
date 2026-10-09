@@ -4163,7 +4163,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
   function renderSearchOverlay() {
     const q = searchQuery.trim()
     return (
-      <div className="sf-search-overlay">
+      // Starts below a screen-anchored top ad bar (fixed, z-index 1000) instead
+      // of sliding under it and having the search bar covered.
+      <div
+        className={`sf-search-overlay${topScreenAdHeight > 0 ? ' sf-search-overlay-below-ad' : ''}`}
+        style={topScreenAdHeight > 0 ? { top: `calc(env(safe-area-inset-top, 0px) + ${topScreenAdHeight}px)` } : undefined}
+      >
         <div className="sf-search-overlay-top">
           <button type="button" className="sf-search-back" onClick={toggleHeaderSearch} aria-label="Cerrar busqueda">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 5l-7 7 7 7" /></svg>

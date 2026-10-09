@@ -2402,3 +2402,4 @@ html, body { overflow-x: clip; }
 @media (prefers-reduced-motion: reduce) {
   .sf-co-transition-logo, .sf-co-transition-name, .sf-co-transition-bar span { animation: none; }
 }
+.sf-search-overlay-below-ad .sf-search-overlay-top { padding-top: 10px; }

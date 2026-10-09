@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, Fragment } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, Fragment } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -1495,6 +1495,18 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // visible. Only makes sense over the catalog (checkout has no header).
   const headerPxNow = headerHeightMeasured ?? cfg.headerHeightPx ?? 56
   const showHeaderAboveModal = cfgModalFull && view === 'catalog' && !!modalProduct
+  // headerPxNow is only a real measurement for sticky/over-banner headers —
+  // otherwise it's the configured minimum, often shorter than the header
+  // actually renders (big logo) and not counting a top ad bar above it, so
+  // the modal's top (and its close X) slid under the header. Measure where
+  // the header really ends whenever a full-page product opens.
+  const [modalTopPx, setModalTopPx] = useState<number | null>(null)
+  useLayoutEffect(() => {
+    if (!showHeaderAboveModal) return
+    const header = document.querySelector<HTMLElement>('.sf-topbar')
+    if (header) setModalTopPx(Math.max(0, Math.round(header.getBoundingClientRect().bottom)))
+  }, [showHeaderAboveModal])
+  const modalTop = modalTopPx ?? headerPxNow
 
   // ── iOS Safari reveals <body>'s own background during the rubber-band
   // overscroll bounce past the top/bottom of the page. The app shell's
@@ -2087,7 +2099,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   function renderProductModal() {
     if (!modalProduct) return null
     return (
-      <div className="sf-modal-overlay" style={showHeaderAboveModal ? { top: headerPxNow } : undefined} onClick={() => setModalProduct(null)}>
+      <div className="sf-modal-overlay" style={showHeaderAboveModal ? { top: modalTop } : undefined} onClick={() => setModalProduct(null)}>
         {chipNutritionPreview && (
           <div
             className="sf-chip-nutrition-tip"
@@ -2139,7 +2151,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           )}
         <div
           className={`sf-modal${cfgModalHalf ? ' sf-modal-half' : ''}${cfgModalFull ? ' sf-modal-fullpage' : ''}`}
-          style={showHeaderAboveModal ? { height: `calc(100dvh - ${headerPxNow}px)`, maxHeight: `calc(100dvh - ${headerPxNow}px)` } : undefined}
+          style={showHeaderAboveModal ? { height: `calc(100dvh - ${modalTop}px)`, maxHeight: `calc(100dvh - ${modalTop}px)` } : undefined}
           onClick={e => e.stopPropagation()}
           onTouchStartCapture={e => {
             const t = e.touches[0]
@@ -2196,11 +2208,17 @@ export default function StoreShell({ store, products, categories = [], initialBc
             if (g?.locked) { g.wrap.style.transform = ''; if (g.overlay) g.overlay.style.backgroundColor = '' }
           }}
         >
-          {/* Full-page mode has no button over the photo — it's closed by
-              swiping from the left edge (or the store header/logo). */}
-          {!cfgModalFull && (
-            <button className="sf-modal-close" onClick={() => setModalProduct(null)}>×</button>
-          )}
+          {/* Full-page mode also closes by swiping from the left edge; its X
+              sits over the photo, so it gets a dark translucent style. */}
+          <button
+            className={`sf-modal-close${cfgModalFull ? ' sf-modal-close-full' : ''}`}
+            onClick={() => setModalProduct(null)}
+            aria-label="Cerrar"
+          >
+            {cfgModalFull ? (
+              <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M15 5L5 15M5 5l10 10" /></svg>
+            ) : '×'}
+          </button>
 
           <div className={`sf-modal-product-head${cfgModalFull ? ' sf-modal-product-head-hero' : ''}`}>
             {modalDisplayImage && (() => {

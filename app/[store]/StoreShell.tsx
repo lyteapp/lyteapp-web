@@ -228,6 +228,10 @@ type ContentBlock = {
   // after the whole category grid. 'before' puts it above the products,
   // and a number interleaves it after that many products in the grid/list.
   catPosition?: 'before' | number
+  // Interleaved blocks pin to a specific product, so they stay next to it
+  // even if products get reordered; catPosition is the fallback when that
+  // product isn't in the list (hidden, deleted, filtered out by search).
+  afterProductId?: string
 }
 type BlockGroup = {
   id: string; afterId: string; background?: string; borderRadius?: number; padding?: number
@@ -1727,7 +1731,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
     if (numeric.length === 0) return wrap(items.map(renderItem))
     const byPos = new Map<number, ContentBlock[]>()
     numeric.forEach(b => {
-      const pos = Math.max(0, Math.min(items.length, Math.round(b.catPosition as number)))
+      const pinned = b.afterProductId ? items.findIndex(it => it.id === b.afterProductId) : -1
+      const pos = pinned >= 0 ? pinned + 1 : Math.max(0, Math.min(items.length, Math.round(b.catPosition as number)))
       byPos.set(pos, [...(byPos.get(pos) ?? []), b])
     })
     const nodes: React.ReactNode[] = []

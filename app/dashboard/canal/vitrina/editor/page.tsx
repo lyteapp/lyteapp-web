@@ -155,6 +155,7 @@ type ContentBlock = {
   linkCategoryId?: string
   linkProductId?: string
   catPosition?: 'before' | number
+  afterProductId?: string
 }
 type BlockButtonItem = { id: string; label: string; target: 'product' | 'category'; targetId: string }
 // Mirrors StoreShell.tsx's buttonSizeMetrics — keeps the dashboard's draft
@@ -448,6 +449,10 @@ export default function EditorPage() {
   // product N"), clamped/used at render time in StoreShell.
   const [newBlockCatMode, setNewBlockCatMode] = useState<'after' | 'before' | 'interleave'>('after')
   const [newBlockInterleaveAt, setNewBlockInterleaveAt] = useState(1)
+  const [newBlockAfterProductId, setNewBlockAfterProductId] = useState('')
+  // Each category's active products in store order — what the "entre los
+  // productos" picker lists, and how a picked product maps to a position.
+  const [catProducts, setCatProducts] = useState<Record<string, ProductLite[]>>({})
   const [newBlockType, setNewBlockType]     = useState<'text' | 'image' | 'video' | 'buttons'>('text')
   const [newBlockContent, setNewBlockContent] = useState('')
   const [newBlockButtons, setNewBlockButtons] = useState<BlockButtonItem[]>([])
@@ -586,6 +591,23 @@ export default function EditorPage() {
         .from('products').select('id,name')
         .eq('store_id', store.id).order('name', { ascending: true })
       if (prods) setProductsLite(prods)
+      const { data: ordered } = await supabase
+        .from('products').select('id,name,category_id')
+        .eq('store_id', store.id).eq('is_active', true)
+        .order('position', { ascending: true, nullsFirst: false })
+      if (ordered) {
+        const ids = ordered.map(p => p.id)
+        const { data: pc } = ids.length
+          ? await supabase.from('product_categories').select('product_id,category_id').in('product_id', ids)
+          : { data: [] as { product_id: string; category_id: string }[] }
+        const catsOf: Record<string, string[]> = {}
+        for (const r of pc ?? []) (catsOf[r.product_id] ??= []).push(r.category_id)
+        const byCat: Record<string, ProductLite[]> = {}
+        for (const p of ordered) {
+          for (const c of catsOf[p.id] ?? (p.category_id ? [p.category_id] : [])) (byCat[c] ??= []).push({ id: p.id, name: p.name })
+        }
+        setCatProducts(byCat)
+      }
     })()
   }, [activeStoreId])
 
@@ -1266,11 +1288,13 @@ export default function EditorPage() {
     setNewBlockLinkProductId(b.linkProductId ?? '')
     setNewBlockCatMode(b.catPosition === 'before' ? 'before' : typeof b.catPosition === 'number' ? 'interleave' : 'after')
     setNewBlockInterleaveAt(typeof b.catPosition === 'number' ? b.catPosition : 1)
+    setNewBlockAfterProductId(b.afterProductId ?? (typeof b.catPosition === 'number' ? catProducts[b.afterId]?.[b.catPosition - 1]?.id ?? '' : ''))
   }
   function cancelEditBlock() {
     setEditingBlockId(null)
     setNewBlockCatMode('after')
     setNewBlockInterleaveAt(1)
+    setNewBlockAfterProductId('')
     setNewBlockContent('')
     setNewBlockButtons([])
     setNewBlockFontSize(15)
@@ -1656,7 +1680,13 @@ export default function EditorPage() {
     const before = units.filter(u => unitCatPos(u) === 'before')
     if (before.length) buckets.push({ key: 'before', label: 'Arriba de los productos', units: before })
     const nums = [...new Set(units.map(unitCatPos).filter((p): p is number => typeof p === 'number'))].sort((a, b) => a - b)
-    nums.forEach(n => buckets.push({ key: `n${n}`, label: `Despues del producto ${n}`, units: units.filter(u => unitCatPos(u) === n) }))
+    nums.forEach(n => {
+      const bucketUnits = units.filter(u => unitCatPos(u) === n)
+      const first = bucketUnits[0]
+      const pinnedId = first.kind === 'single' ? first.block.afterProductId : contentBlocks.find(b => b.groupId === first.group.id)?.afterProductId
+      const name = productsLite.find(p => p.id === pinnedId)?.name ?? catProducts[catId]?.[n - 1]?.name
+      buckets.push({ key: `n${n}`, label: name ? `Despues de ${name}` : `Despues del producto ${n}`, units: bucketUnits })
+    })
     const after = units.filter(u => unitCatPos(u) === undefined)
     if (after.length) buckets.push({ key: 'after', label: 'Despues de la categoria', units: after })
     blockSections.push({ key: catId, title, buckets })
@@ -2903,17 +2933,22 @@ export default function EditorPage() {
               {newBlockPos !== 'top' && newBlockPos !== 'bottom' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {newBlockCatMode === 'interleave' && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 11, color: '#64748B' }}>Despues del producto numero</span>
-                      <input
-                        type="number"
-                        min={1}
-                        value={newBlockInterleaveAt}
-                        onChange={e => setNewBlockInterleaveAt(Math.max(1, Number(e.target.value) || 1))}
-                        className="ed-block-select"
-                        style={{ width: 64, textAlign: 'center' }}
-                      />
-                    </div>
+                    (catProducts[newBlockPos]?.length ?? 0) > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <span style={{ fontSize: 11, color: '#64748B' }}>Mostrar despues de:</span>
+                        <select
+                          value={catProducts[newBlockPos]!.some(p => p.id === newBlockAfterProductId) ? newBlockAfterProductId : catProducts[newBlockPos]![0].id}
+                          onChange={e => setNewBlockAfterProductId(e.target.value)}
+                          className="ed-block-select"
+                        >
+                          {catProducts[newBlockPos]!.map((p, i) => (
+                            <option key={p.id} value={p.id}>{i + 1}. {p.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: 11, color: '#94A3B8' }}>Esta categoria aun no tiene productos visibles.</span>
+                    )
                   )}
                 </div>
               )}
@@ -3250,23 +3285,28 @@ export default function EditorPage() {
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   onClick={() => {
+                    const interleaveList = catProducts[newBlockPos] ?? []
+                    const interleaveProductId = newBlockAfterProductId && interleaveList.some(p => p.id === newBlockAfterProductId) ? newBlockAfterProductId : interleaveList[0]?.id ?? ''
+                    const interleaveIdx = interleaveList.findIndex(p => p.id === interleaveProductId)
+                    const interleavePos = interleaveIdx >= 0 ? interleaveIdx + 1 : newBlockInterleaveAt
                     const catPosition = (newBlockPos === 'top' || newBlockPos === 'bottom') ? undefined
                       : newBlockCatMode === 'before' ? 'before' as const
-                      : newBlockCatMode === 'interleave' ? newBlockInterleaveAt
+                      : newBlockCatMode === 'interleave' ? interleavePos
                       : undefined
+                    const afterProductId = catPosition !== undefined && typeof catPosition === 'number' ? (interleaveProductId || undefined) : undefined
                     if (newBlockType === 'buttons') {
                       const valid = newBlockButtons.filter(b => b.label.trim() && b.targetId)
                       if (valid.length === 0) return
                       if (editingBlockId) {
                         setContentBlocks(prev => prev.map(x => x.id === editingBlockId
-                          ? { ...x, afterId: newBlockPos, type: 'buttons' as const, content: JSON.stringify(valid), spacing: newBlockSpacing, buttonStyle: newBlockButtonStyle, buttonSize: newBlockButtonSize, buttonWidth: newBlockButtonWidth || undefined, catPosition }
+                          ? { ...x, afterId: newBlockPos, type: 'buttons' as const, content: JSON.stringify(valid), spacing: newBlockSpacing, buttonStyle: newBlockButtonStyle, buttonSize: newBlockButtonSize, buttonWidth: newBlockButtonWidth || undefined, catPosition, afterProductId }
                           : x))
                         cancelEditBlock()
                         return
                       }
                       setContentBlocks(prev => [...prev, {
                         id: crypto.randomUUID(), afterId: newBlockPos, type: 'buttons', content: JSON.stringify(valid),
-                        spacing: newBlockSpacing, buttonStyle: newBlockButtonStyle, buttonSize: newBlockButtonSize, buttonWidth: newBlockButtonWidth || undefined, catPosition,
+                        spacing: newBlockSpacing, buttonStyle: newBlockButtonStyle, buttonSize: newBlockButtonSize, buttonWidth: newBlockButtonWidth || undefined, catPosition, afterProductId,
                       }])
                       setNewBlockButtons([])
                       return
@@ -3275,6 +3315,7 @@ export default function EditorPage() {
                     const fields = {
                       afterId: newBlockPos,
                       catPosition,
+                      afterProductId,
                       type: newBlockType,
                       content: newBlockContent.trim(),
                       spacing: newBlockSpacing,

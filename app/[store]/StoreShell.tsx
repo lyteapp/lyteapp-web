@@ -2889,8 +2889,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // the catalog, if this store doesn't use one) — unlike resetToHome, it
   // keeps their cart and any in-progress checkout info intact.
   function goHome() {
+    if (focusCategory && !hp.enabled) { closeFocusCategory(); return }
     setModalProduct(null)
     setMenuOpen(false)
+    setFocusCategory(null)
     if (hp.enabled) {
       setSplashLeaving(false); setCatalogEnter(false)
       window.scrollTo(0, 0)
@@ -4471,20 +4473,21 @@ export default function StoreShell({ store, products, categories = [], initialBc
       setTimeout(() => setCoTransition(null), 320)
     }, 800)
   }
-  // Opening a category on its own page: the same logo loading screen covers
-  // the switch and stays until the category's on-screen photos and videos
-  // have loaded, so it appears already in place (capped at 5s).
-  function openFocusCategory(cat: { id: string; name: string }) {
+  // Switching between the storefront and a category's own page (either
+  // way): the same logo loading screen covers the switch and stays until the
+  // new page's on-screen photos and videos have loaded, so it appears
+  // already in place (capped at 5s).
+  function coverWhileLoading(change: () => void, rootSelector: string) {
     setModalProduct(null)
     setMenuOpen(false)
-    if (coTransition) { setFocusCategory(cat); window.scrollTo(0, 0); return }
+    if (coTransition) { change(); window.scrollTo(0, 0); return }
     setCoTransition('in')
     setTimeout(() => {
-      setFocusCategory(cat)
+      change()
       window.scrollTo(0, 0)
       const started = Date.now()
       const check = () => {
-        const root = document.querySelector('.sf-focus-category')
+        const root = document.querySelector(rootSelector)
         const ready = !!root && onScreenMediaReady(root, 1.2)
         if ((ready && Date.now() - started > 150) || Date.now() - started > 5000) {
           requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -4497,6 +4500,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
       }
       setTimeout(check, 50)
     }, 220)
+  }
+  function openFocusCategory(cat: { id: string; name: string }) {
+    coverWhileLoading(() => setFocusCategory(cat), '.sf-focus-category')
+  }
+  function closeFocusCategory() {
+    coverWhileLoading(() => setFocusCategory(null), '.sf-page')
   }
 
   function renderCheckoutTransition() {
@@ -5060,7 +5069,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           className="sf-focus-category"
           style={cfgHeaderOverBanner ? { paddingTop: `${(headerHeightMeasured ?? cfg.headerHeightPx ?? 56) + 12}px` } : undefined}
         >
-          <button className="sf-focus-back" onClick={() => setFocusCategory(null)}>
+          <button className="sf-focus-back" onClick={closeFocusCategory}>
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16"><path d="M12 15l-5-5 5-5" /></svg>
             Volver
           </button>

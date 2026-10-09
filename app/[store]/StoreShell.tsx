@@ -1599,7 +1599,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
             />
           ) : (
             <img
-              src={block.content}
+              src={resizedImg(block.content, 1200)}
               alt=""
               className="sf-block-img"
               style={sharedStyle}

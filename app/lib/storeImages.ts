@@ -19,7 +19,8 @@ const SUPABASE_PUBLIC_OBJECT_MARKER = '/storage/v1/object/public/'
 export function resizedImg(url: string | null | undefined, width: number): string {
   if (!url) return url ?? ''
   const i = url.indexOf(SUPABASE_PUBLIC_OBJECT_MARKER)
-  if (i === -1 || isVideoUrl(url)) return url
+  // GIFs (would lose their animation) and SVGs (vector) are served as-is.
+  if (i === -1 || isVideoUrl(url) || /\.(gif|svg)(\?|#|$)/i.test(url)) return url
   const rendered = `${url.slice(0, i)}/storage/v1/render/image/public/${url.slice(i + SUPABASE_PUBLIC_OBJECT_MARKER.length)}`
   const sep = rendered.includes('?') ? '&' : '?'
   // "resize=contain" is required here — without it, Supabase's default

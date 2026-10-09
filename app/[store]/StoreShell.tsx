@@ -66,6 +66,35 @@ function resizedImg(url: string | null | undefined, width: number): string {
   // ratio instead of a scaled-down version of the original.
   return `${rendered}${sep}width=${width}&quality=70&resize=contain`
 }
+function normSearch(t: string) {
+  return t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+}
+// Edit distance capped at max+1 (early exit) — only ever used on short words.
+function editDistance(a: string, b: string, max: number): number {
+  if (Math.abs(a.length - b.length) > max) return max + 1
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i)
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i]
+    let rowMin = i
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1))
+      rowMin = Math.min(rowMin, cur[j])
+    }
+    if (rowMin > max) return max + 1
+    prev = cur
+  }
+  return prev[b.length]
+}
+function searchTermScore(term: string, word: string): number {
+  if (word === term) return 4
+  if (word.startsWith(term)) return 3
+  if (word.includes(term)) return 2
+  const tol = term.length >= 7 ? 2 : term.length >= 4 ? 1 : 0
+  if (tol === 0) return 0
+  if (editDistance(term, word, tol) <= tol) return 1.5
+  if (word.length > term.length && editDistance(term, word.slice(0, term.length), tol) <= tol) return 1
+  return 0
+}
 // Product-card images are requested at this width, so the browser already
 // has it cached by the time the product modal opens.
 const CARD_IMG_WIDTH = 750
@@ -4060,17 +4089,27 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const escRest     = visibleProducts.slice(2)
   const vitHero     = visibleProducts.length > 0 ? visibleProducts[0] : null
   const vitRest     = visibleProducts.slice(1)
-  // Accent/case-insensitive, every word must match somewhere in the
-  // product's name, description or category names — "pizza peq" finds
-  // "Pizza Pequeña", "cafe" finds "Café".
-  const normSearch = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  // Accent/case-insensitive search where every typed word has to match
+  // something — exactly, as the start of a word, inside a word, or within a
+  // typo or two ("pescdo" → "pescado") — in the product's name, description
+  // or category names. Name hits rank above the rest.
   const searchTerms = normSearch(searchQuery).split(/\s+/).filter(Boolean)
   const catNameById = new Map(categories.map(c => [c.id, c.name]))
-  const matchesSearch = (p: Product) => {
-    if (searchTerms.length === 0) return true
-    const hay = normSearch([p.name, p.description ?? '', ...productCatIds(p).map(id => catNameById.get(id) ?? '')].join(' '))
-    return searchTerms.every(term => hay.includes(term))
+  const searchScore = (p: Product) => {
+    if (searchTerms.length === 0) return 1
+    const nameWords = normSearch(p.name).split(/[^a-z0-9ñ]+/).filter(Boolean)
+    const otherWords = normSearch([p.description ?? '', ...productCatIds(p).map(id => catNameById.get(id) ?? '')].join(' ')).split(/[^a-z0-9ñ]+/).filter(Boolean)
+    let total = 0
+    for (const term of searchTerms) {
+      let best = 0
+      for (const w of nameWords) best = Math.max(best, searchTermScore(term, w) * 2)
+      for (const w of otherWords) best = Math.max(best, searchTermScore(term, w))
+      if (best === 0) return 0
+      total += best
+    }
+    return total
   }
+  const matchesSearch = (p: Product) => searchScore(p) > 0
   // The catalogo template's own bar and the header search icon (any
   // template) both just write into the same searchQuery state.
   const catFiltered = visibleProducts.filter(matchesSearch)
@@ -4080,8 +4119,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
   })).filter(g => g.items.length > 0)
   const uncatGroupFiltered = uncategorized.filter(matchesSearch)
   // Header search (every template but catalogo, which has its own always-on
-  // bar): while there's a query, the page swaps to a plain results list.
-  const headerSearchActive = tpl !== 'catalogo' && headerSearchOpen && searchTerms.length > 0
+  // bar) looks through every product in the store, including ones that only
+  // live in hidden categories, best matches first.
+  const headerSearchResults = tpl !== 'catalogo' && headerSearchOpen && searchTerms.length > 0
+    ? products.map(p => ({ p, score: searchScore(p) })).filter(r => r.score > 0)
+        .sort((a, b) => b.score - a.score || a.p.name.localeCompare(b.p.name)).map(r => r.p)
+    : []
 
   function toggleHeaderSearch() {
     if (headerSearchOpen) {
@@ -4092,35 +4135,76 @@ export default function StoreShell({ store, products, categories = [], initialBc
     setModalProduct(null)
     setFocusCategory(null)
     setHeaderSearchOpen(true)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   function renderSearchBar() {
-    const headerMode = tpl !== 'catalogo'
     return (
-      <div className={`sf-search-wrap${headerMode ? ' sf-search-wrap-header' : ''}`}>
-        <form className="sf-search-bar" role="search" onSubmit={e => { e.preventDefault(); (document.activeElement as HTMLElement | null)?.blur() }}>
+      <div className="sf-search-wrap">
+        <div className="sf-search-bar">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
-          <input
-            type="search"
-            enterKeyHint="search"
-            placeholder="Buscar productos…"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Escape' && headerMode) toggleHeaderSearch() }}
-            autoFocus={headerMode}
-          />
-          {(searchQuery || headerMode) && (
-            <button
-              type="button"
-              className="sf-search-clear"
-              aria-label={searchQuery ? 'Borrar busqueda' : 'Cerrar busqueda'}
-              onClick={() => { if (searchQuery) setSearchQuery(''); else if (headerMode) toggleHeaderSearch() }}
-            >
+          <input type="search" placeholder="Buscar productos…" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+          {searchQuery && (
+            <button type="button" className="sf-search-clear" aria-label="Borrar busqueda" onClick={() => setSearchQuery('')}>
               <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path strokeLinecap="round" d="M15 5L5 15M5 5l10 10" /></svg>
             </button>
           )}
-        </form>
+        </div>
+      </div>
+    )
+  }
+
+  // Full-screen search: the bar sits where the header is, results update
+  // with every keystroke, and tapping one opens the product (the modal
+  // stacks on top, so closing it lands back on these same results).
+  function renderSearchOverlay() {
+    const q = searchQuery.trim()
+    return (
+      <div className="sf-search-overlay">
+        <div className="sf-search-overlay-top">
+          <button type="button" className="sf-search-back" onClick={toggleHeaderSearch} aria-label="Cerrar busqueda">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 5l-7 7 7 7" /></svg>
+          </button>
+          <form className="sf-search-bar" role="search" onSubmit={e => { e.preventDefault(); (document.activeElement as HTMLElement | null)?.blur() }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
+            <input
+              type="search"
+              enterKeyHint="search"
+              placeholder="Buscar productos…"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Escape') toggleHeaderSearch() }}
+              autoFocus
+            />
+            {searchQuery && (
+              <button type="button" className="sf-search-clear" aria-label="Borrar busqueda" onClick={() => setSearchQuery('')}>
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path strokeLinecap="round" d="M15 5L5 15M5 5l10 10" /></svg>
+              </button>
+            )}
+          </form>
+        </div>
+        <div className="sf-search-results">
+          {!q ? (
+            <div className="sf-search-hint">Escribe para buscar entre {products.length} productos</div>
+          ) : headerSearchResults.length === 0 ? (
+            <div className="sf-search-hint">No encontramos productos para &quot;{q}&quot;</div>
+          ) : headerSearchResults.slice(0, 60).map(p => {
+            const catName = productCatIds(p).map(id => catNameById.get(id)).find(Boolean)
+            return (
+              <button key={p.id} type="button" className="sf-search-result" onClick={() => openProductModal(p)}>
+                {p.image_url
+                  ? (isVideoUrl(p.image_url)
+                      ? <video src={p.image_url} muted playsInline className="sf-search-result-img" />
+                      : <img src={resizedImg(p.image_url, 180)} alt="" className="sf-search-result-img" loading="lazy" />)
+                  : <div className="sf-search-result-img" />}
+                <div className="sf-search-result-info">
+                  <div className="sf-search-result-name">{p.name}</div>
+                  {catName && <div className="sf-search-result-cat">{catName}</div>}
+                </div>
+                <div className="sf-search-result-price">{currencySymbol}{Number(p.price).toFixed(2)}</div>
+              </button>
+            )
+          })}
+        </div>
       </div>
     )
   }
@@ -4662,27 +4746,6 @@ export default function StoreShell({ store, products, categories = [], initialBc
         </div>
       ) : (
       <>
-      {tpl !== 'catalogo' && headerSearchOpen && renderSearchBar()}
-      {headerSearchActive ? (
-        <div className="sf-products-section">
-          <div className="sf-section-inner">
-            {catFiltered.length === 0 ? (
-              <div className="sf-empty">
-                <div className="sf-empty-title">Sin resultados</div>
-                <div className="sf-empty-sub">No encontramos productos para &quot;{searchQuery.trim()}&quot;.</div>
-              </div>
-            ) : (
-              <>
-                <h2 className="sf-section-title">{catFiltered.length} {catFiltered.length === 1 ? 'resultado' : 'resultados'}</h2>
-                {tpl === 'escaparate'
-                  ? <div className="sf-esc-list">{catFiltered.map(renderEscRow)}</div>
-                  : <div className="sf-grid">{catFiltered.map(renderCard)}</div>}
-              </>
-            )}
-          </div>
-        </div>
-      ) : (
-      <>
       {store.banner_url && tpl !== 'vitrina' && tpl !== 'catalogo' && (
         <div className="sf-banner-wrap">
           <div className="sf-banner"><img src={resizedImg(store.banner_url, 1600)} alt="Banner" className="sf-banner-img" /></div>
@@ -4879,8 +4942,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
       </div>
       </>
       )}
-      </>
-      )}
+
+      {tpl !== 'catalogo' && headerSearchOpen && renderSearchOverlay()}
 
       {cartCount > 0 && (
         <button className="sf-cart-bar" onClick={() => setView('checkout')}>

@@ -1367,7 +1367,44 @@ html, body { overflow-x: clip; }
 }
 .sf-search-bar input::placeholder { color: #94A3B8; }
 .sf-search-bar input::-webkit-search-cancel-button { display: none; }
-.sf-search-wrap-header { padding-top: 14px; }
+/* Header search — full-screen, under the product modal (z 200) so a result
+   opened from here stacks on top and closing it returns to the results. */
+.sf-search-overlay {
+  position: fixed; inset: 0; z-index: 190;
+  background: var(--sf-page-bg, #FAFAF9);
+  display: flex; flex-direction: column;
+  animation: sfOverlayIn 0.15s ease;
+}
+.sf-search-overlay-top {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px;
+  padding-top: max(10px, env(safe-area-inset-top, 0px));
+  background: white; border-bottom: 1px solid rgba(15,23,42,0.08);
+  flex-shrink: 0;
+}
+.sf-search-overlay-top .sf-search-bar { flex: 1; padding: 10px 14px; box-shadow: none; }
+.sf-search-overlay-top .sf-search-bar input { font-size: 16px; }
+.sf-search-back {
+  width: 36px; height: 36px; border-radius: 50%; border: none; background: transparent;
+  color: #0F172A; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+}
+.sf-search-results {
+  flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  padding: 8px 12px 24px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.sf-search-hint { text-align: center; color: #94A3B8; font-size: 14px; padding: 40px 16px; }
+.sf-search-result {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  background: white; border: 1px solid rgba(15,23,42,0.06); border-radius: 12px;
+  padding: 8px; text-align: left; cursor: pointer; font: inherit; color: inherit;
+}
+.sf-search-result:active { background: #F8FAFC; }
+.sf-search-result-img { width: 52px; height: 52px; border-radius: 9px; object-fit: cover; background: #F1F5F9; flex-shrink: 0; }
+.sf-search-result-info { flex: 1; min-width: 0; }
+.sf-search-result-name { font-size: 14px; font-weight: 600; color: #0F172A; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.sf-search-result-cat { font-size: 12px; color: #94A3B8; margin-top: 2px; }
+.sf-search-result-price { font-size: 14px; font-weight: 700; color: var(--sf-price-color, var(--sf-accent-color, #7C3AED)); flex-shrink: 0; }
 .sf-search-clear {
   width: 26px; height: 26px; border-radius: 50%; border: none;
   background: #F1F5F9; color: #64748B; cursor: pointer; flex-shrink: 0;

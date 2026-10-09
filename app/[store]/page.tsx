@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import StoreShell from './StoreShell'
 import { resizedImg } from '../lib/storeImages'
 import { storeLoaderColor } from '../lib/storeTheme'
+import { isLightColor, poweredByColors } from '../lib/colorContrast'
 import './store.css'
 
 export const dynamic = 'force-dynamic'
@@ -100,6 +101,7 @@ export default async function StorePage({ params, searchParams }: { params: Prom
   // Skipped inside the dashboard's live-preview iframes, which reload a lot.
   const showBoot = query.preview !== '1' && query.previewCheckout !== '1'
   const pageBg = (store.template_config as { pageBg?: string } | null)?.pageBg
+  const bootPowered = poweredByColors(isLightColor(pageBg || '#FAFAF9'))
   return (
     <>
       {showBoot && (
@@ -108,6 +110,10 @@ export default async function StorePage({ params, searchParams }: { params: Prom
             ? <img src={resizedImg(store.logo_url, 400)} alt="" className="sf-co-transition-logo" />
             : <div className="sf-co-transition-name">{store.name}</div>}
           <div className="sf-co-transition-bar"><span /></div>
+          <div className="sf-powered-by" style={{ color: bootPowered.text }}>
+            <img src="/logo.png" alt="" />
+            <span>Powered by <strong style={{ color: bootPowered.strong }}>LYTE APP</strong></span>
+          </div>
         </div>
       )}
       <StoreShell store={store} products={productsWithCategories} categories={categories ?? []} initialBcvRate={initialBcvRate} initialDeliveryZones={initialDeliveryZones} mapboxToken={mapboxToken} />

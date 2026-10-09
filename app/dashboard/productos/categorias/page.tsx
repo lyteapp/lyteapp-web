@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
 import { supabase } from '../../../lib/supabase'
 import { useDashboardStore } from '../../../lib/DashboardStoreProvider'
 import '../productos.css'
@@ -12,7 +13,9 @@ export default function CategoriasPage() {
   const { storeId } = useDashboardStore()
   const [categories, setCategories]   = useState<Category[]>([])
   const [products, setProducts]       = useState<Product[]>([])
-  const [expandedId, setExpandedId]   = useState<string | null>(null)
+  // Coming back from editing a product (?open=<catId>) reopens that category.
+  const [expandedId, setExpandedId]   = useState<string | null>(() =>
+    typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('open'))
   const [loading, setLoading]         = useState(true)
   const [showAddBar, setShowAddBar]   = useState(false)
   const [newName, setNewName]         = useState('')
@@ -259,12 +262,15 @@ export default function CategoriasPage() {
                           <path d="M7 5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zm0 5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zm0 5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zm9-10a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zm0 5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zm0 5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
                         </svg>
                       </button>
-                      {p.image_url
-                        ? <img src={p.image_url} alt="" className="cat-product-img" />
-                        : <div className="cat-product-img cat-product-img-empty" />
-                      }
-                      <div className="cat-product-name">{p.name}</div>
-                      {!p.is_active && <div className="pr-card-opts-badge">Oculto</div>}
+                      <Link href={`/dashboard/productos?edit=${p.id}&from=${cat.id}`} className="cat-product-link" title="Editar producto">
+                        {p.image_url
+                          ? <img src={p.image_url} alt="" className="cat-product-img" />
+                          : <div className="cat-product-img cat-product-img-empty" />
+                        }
+                        <div className="cat-product-name">{p.name}</div>
+                        {!p.is_active && <div className="pr-card-opts-badge">Oculto</div>}
+                        <svg className="cat-product-edit" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M13.5 3.5l3 3L7 16l-4 1 1-4 9.5-9.5z" /></svg>
+                      </Link>
                     </div>
                   ))
                 )}

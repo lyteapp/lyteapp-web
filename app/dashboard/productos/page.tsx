@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 import { useDashboardStore } from '../../lib/DashboardStoreProvider'
 import { useT } from '../../lib/LocaleProvider'
@@ -64,6 +65,10 @@ export default function ProductosPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading]   = useState(true)
   const [mode, setMode]         = useState<'list' | 'form'>('list')
+  // Set when the form was opened from Categorias (?edit=<id>&from=<catId>):
+  // leaving the form goes back there, with that category reopened.
+  const [returnToCat, setReturnToCat] = useState<string | null>(null)
+  const router = useRouter()
   const [editing, setEditing]   = useState<Product | null>(null)
 
   // basic fields
@@ -125,6 +130,10 @@ export default function ProductosPage() {
   const variantGalleryImgRef = useRef<HTMLInputElement>(null)
   useEffect(() => { setMounted(true) }, [])
   useEffect(() => { if (storeId) loadData() }, [storeId])
+  function leaveForm() {
+    if (returnToCat) { router.push(`/dashboard/productos/categorias?open=${returnToCat}`); return }
+    setMode('list')
+  }
 
   async function loadData() {
     if (!storeId) { setLoading(false); return }
@@ -143,7 +152,17 @@ export default function ProductosPage() {
         (catIdsByProduct[row.product_id] ??= []).push(row.category_id)
       }
     }
-    setProducts((prods ?? []).map(p => ({ ...p, category_ids: catIdsByProduct[p.id] ?? (p.category_id ? [p.category_id] : []) })))
+    const loaded = (prods ?? []).map(p => ({ ...p, category_ids: catIdsByProduct[p.id] ?? (p.category_id ? [p.category_id] : []) }))
+    setProducts(loaded)
+    // Opened from Categorias (?edit=<id>&from=<catId>): go straight to that
+    // product's form. The params are dropped so a reload lands on the list.
+    const params = new URLSearchParams(window.location.search)
+    const editId = params.get('edit')
+    if (editId) {
+      window.history.replaceState(null, '', window.location.pathname)
+      const target = loaded.find(p => p.id === editId)
+      if (target) { setReturnToCat(params.get('from')); openEdit(target) }
+    }
     setCategories(cats ?? [])
     const cs = (storeCs?.checkout_settings && typeof storeCs.checkout_settings === 'object') ? storeCs.checkout_settings as Record<string, unknown> : {}
     setCheckoutSettings(cs)
@@ -465,7 +484,7 @@ export default function ProductosPage() {
       if (insCatErr) { setError(`Categorias: ${insCatErr.message}`); setSaving(false); return }
     }
 
-    await loadData(); setMode('list'); setIsDirty(false)
+    await loadData(); setIsDirty(false); leaveForm()
     setSaving(false)
   }
 
@@ -508,7 +527,7 @@ export default function ProductosPage() {
   if (mode === 'form') return (
     <div className="pr-form-wrap">
       <div className="pr-form-header">
-        <button className="pr-back-btn" onClick={() => setMode('list')}>{t('prod.back')}</button>
+        <button className="pr-back-btn" onClick={leaveForm}>{t('prod.back')}</button>
         <h2 className="pr-form-title">{editing ? t('prod.edit.title') : t('prod.new.title')}</h2>
       </div>
 
@@ -1063,7 +1082,7 @@ export default function ProductosPage() {
 
       {mounted && isDirty && createPortal(
         <div className="pr-bottom-save">
-          <button className="pr-cancel-btn" onClick={() => setMode('list')}>{t('prod.cancel')}</button>
+          <button className="pr-cancel-btn" onClick={leaveForm}>{t('prod.cancel')}</button>
           <button className="pr-save-btn pr-save-btn-lg" onClick={handleSave} disabled={saving || imgUploading}>
             {saving ? t('prod.saving') : 'Guardar producto'}
           </button>

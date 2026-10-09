@@ -602,6 +602,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [view, setView]                   = useState<'catalog' | 'checkout' | 'confirmed' | 'splash' | 'reveal'>(() =>
     isCheckoutPreview ? 'checkout' : (!isDashboardPreview && store.template_config?.homePage?.enabled) ? 'splash' : 'catalog'
   )
+  // The storefront is in the DOM (under the welcome overlay) in these views,
+  // so its layout measurements need to run there too.
+  const catalogMounted = view === 'catalog' || view === 'splash' || view === 'reveal'
   // Storefront → checkout hand-off: the store logo pulses center-screen for
   // a beat (fade in → switch view underneath → fade out) instead of a hard cut.
   const [coTransition, setCoTransition] = useState<'in' | 'out' | null>(null)
@@ -815,7 +818,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // bottom edge it will actually have once stuck.
   const [catNavOwnHeight, setCatNavOwnHeight] = useState(0)
   useEffect(() => {
-    if (view !== 'catalog') return
+    if (!catalogMounted) return
     const header = document.querySelector<HTMLElement>('.sf-topbar')
     const catNav = document.querySelector<HTMLElement>('.sf-cat-nav')
     const measure = () => {
@@ -845,7 +848,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // to be right once settled, same as the header/catnav bottom edges above.
   const [headerAdHeight, setHeaderAdHeight] = useState(0)
   useEffect(() => {
-    if (view !== 'catalog') return
+    if (!catalogMounted) return
     const measure = () => {
       const els = document.querySelectorAll<HTMLElement>('[data-sf-ad-header-bar="1"]')
       setHeaderAdHeight(Array.from(els).reduce((sum, el) => sum + el.getBoundingClientRect().height, 0))
@@ -1253,7 +1256,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
   // ── Scroll-spy: highlight whichever category pill matches the section in view ──
   useEffect(() => {
-    if (view !== 'catalog') return
+    if (!catalogMounted) return
     const sections = Array.from(document.querySelectorAll<HTMLElement>('.sf-cat-section[id]'))
     if (sections.length === 0) return
     const observer = new IntersectionObserver(
@@ -1279,7 +1282,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // light up the dot for whichever page it's in, and dismiss the "Desliza"
   // hint the first time each row is scrolled ──
   useEffect(() => {
-    if (view !== 'catalog') return
+    if (!catalogMounted) return
     const rows = Array.from(document.querySelectorAll<HTMLElement>('.sf-grid-horizontal'))
     if (rows.length === 0) return
     const cleanups: (() => void)[] = []
@@ -1497,7 +1500,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // the focused-category view's top padding when the header floats over the
   // banner and would otherwise sit on top of the "Volver" button) ──
   useEffect(() => {
-    if (view !== 'catalog' || (!cfgHeaderSticky && !cfgHeaderOverBanner)) { setHeaderHeightMeasured(null); return }
+    if (!catalogMounted || (!cfgHeaderSticky && !cfgHeaderOverBanner)) { setHeaderHeightMeasured(null); return }
     const header = document.querySelector<HTMLElement>('.sf-topbar')
     if (!header) return
     const update = () => setHeaderHeightMeasured(header.getBoundingClientRect().height)
@@ -1518,7 +1521,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // measuring its own height keeps that overlap exact regardless of font
   // size / button padding. ──
   useEffect(() => {
-    if (view !== 'catalog' || !cfgCatNavOverBanner) { setCatNavHeightMeasured(null); return }
+    if (!catalogMounted || !cfgCatNavOverBanner) { setCatNavHeightMeasured(null); return }
     const el = document.querySelector<HTMLElement>('.sf-cat-nav-glass')
     if (!el) return
     const update = () => setCatNavHeightMeasured(el.getBoundingClientRect().height)
@@ -2828,6 +2831,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
     setPaymentProofFile(null); setPaymentProofPreview(null)
     setOrderId(''); setError(''); setSplashError('')
     setSplashLeaving(false); setCatalogEnter(false)
+    // The welcome overlay sits at the top of the document over the store.
+    if (hp.enabled) window.scrollTo(0, 0)
     setView(hp.enabled ? 'splash' : 'catalog')
   }
 
@@ -2837,6 +2842,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
   function goHome() {
     setModalProduct(null)
     setMenuOpen(false)
+    if (hp.enabled) {
+      setSplashLeaving(false); setCatalogEnter(false)
+      window.scrollTo(0, 0)
+    }
     setView(hp.enabled ? 'splash' : 'catalog')
   }
 
@@ -2973,54 +2982,44 @@ export default function StoreShell({ store, products, categories = [], initialBc
     })
   }
 
-  // While the welcome page is up, warm the browser cache with everything
-  // the storefront shows first (banner, logo, content-block images, the
-  // first products' photos) so leaving the splash doesn't land on a page
-  // that's still popping images in and shifting around.
-  const splashPreloadRef = useRef<Promise<void> | null>(null)
+  // The splash only leaves once the storefront mounted underneath it has
+  // settled: every image and video in its first ~1.5 screens has loaded
+  // (videos: enough to play), fonts are ready, and two frames have passed
+  // for measured positions to apply. Capped so a slow network still gets
+  // in; the button shows a spinner if it has to wait at all.
   const [splashWaiting, setSplashWaiting] = useState(false)
-  useEffect(() => {
-    if (view !== 'splash' || splashPreloadRef.current) return
-    const cfgAll = store.template_config ?? {}
-    const hidden = new Set(cfgAll.hiddenCategoryIds ?? [])
-    const catIds = (p: Product) => p.category_ids ?? (p.category_id ? [p.category_id] : [])
-    const ordered = [
-      ...categories.filter(c => !hidden.has(c.id)).flatMap(c => products.filter(p => catIds(p).includes(c.id))),
-      ...products.filter(p => catIds(p).length === 0),
-    ]
-    const urls = new Set<string>()
-    if (store.banner_url) urls.add(resizedImg(store.banner_url, 1600))
-    if (store.logo_url) urls.add(resizedImg(store.logo_url, 400))
-    for (const b of (cfgAll.contentBlocks ?? []) as ContentBlock[]) {
-      if (b.type === 'image' && b.content && !isVideoUrl(b.content)) urls.add(resizedImg(b.content, 1200))
+  function storefrontReady(): boolean {
+    const page = document.querySelector('.sf-page')
+    if (!page) return false
+    const limit = window.innerHeight * 1.5
+    const near = (el: Element) => el.getBoundingClientRect().top < limit
+    for (const img of Array.from(page.querySelectorAll('img'))) {
+      if (near(img) && img.loading !== 'lazy' && !img.complete) return false
+      if (near(img) && img.loading === 'lazy' && img.getBoundingClientRect().top < window.innerHeight && !img.complete) return false
     }
-    for (const p of ordered.slice(0, 8)) {
-      const img = p.options?.colorVariants?.[0]?.imageUrl || p.image_url
-      if (img && !isVideoUrl(img)) urls.add(resizedImg(img, CARD_IMG_WIDTH))
+    for (const v of Array.from(page.querySelectorAll('video'))) {
+      if (near(v) && v.readyState < 3 && !v.error) return false
     }
-    const load = (src: string) => new Promise<void>(resolve => {
-      const im = new Image()
-      let done = false
-      const fin = () => { if (!done) { done = true; resolve() } }
-      im.onload = () => { im.decode ? im.decode().then(fin, fin) : fin() }
-      im.onerror = fin
-      im.src = src
-      setTimeout(fin, 6000)
-    })
-    splashPreloadRef.current = Promise.all([...urls].map(load)).then(() => {})
-  }, [view])
-
-  // The splash only leaves once that preload is done (capped, so a slow
-  // network still gets in) — the button shows a spinner meanwhile.
+    return true
+  }
   function proceedToTransition() {
     if (splashWaiting) return
-    const ready = splashPreloadRef.current
-    if (!ready) { runSplashTransition(); return }
     let finished = false
-    const go = () => { if (finished) return; finished = true; setSplashWaiting(false); runSplashTransition() }
-    ready.then(go)
-    setTimeout(() => { if (!finished) setSplashWaiting(true) }, 120)
-    setTimeout(go, 5000)
+    const go = () => {
+      if (finished) return
+      finished = true
+      setSplashWaiting(false)
+      requestAnimationFrame(() => requestAnimationFrame(runSplashTransition))
+    }
+    const started = Date.now()
+    const check = () => {
+      if (finished) return
+      if (storefrontReady()) { (document.fonts?.ready ?? Promise.resolve()).then(go); return }
+      if (Date.now() - started > 6000) { go(); return }
+      setTimeout(check, 100)
+    }
+    check()
+    setTimeout(() => { if (!finished) setSplashWaiting(true) }, 150)
   }
 
   function runSplashTransition() {
@@ -3131,11 +3130,15 @@ export default function StoreShell({ store, products, categories = [], initialBc
     )
   }
 
+  // The welcome screens (splash, and the name "reveal" after it) render as
+  // an overlay on top of the storefront instead of replacing it: the store
+  // underneath mounts right away, so its images, videos and measured
+  // positions are all loaded and settled by the time the overlay leaves.
+  let welcomeOverlay: React.ReactNode = null
   if (view === 'splash') {
     const splashPoweredColors = poweredByColors(!hp.imageUrl && isLightColor(hp.bgColor || '#0F172A'))
-    return (
+    welcomeOverlay = (
       <>
-      {renderLogoMorphOverlay()}
       <div
         ref={splashScreenRef}
         className={`sf-splash-screen sf-trans-${transitionId}${splashLeaving ? ' sf-splash-leaving' : ''}`}
@@ -3364,7 +3367,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     const revealShowSkip = rv.showSkip !== false
     const revealFont = revealFontStack(rv.fontFamily)
     const revealPoweredColors = poweredByColors(isLightColor(rv.bgColor || '#111111'))
-    return (
+    welcomeOverlay = (
       <div
         className="sf-reveal-screen"
         style={{
@@ -4813,7 +4816,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
     <>
     {renderLogoMorphOverlay()}
     {installed && <div className="sf-statusbar-strip" />}
-    <div className={`sf-page sf-tpl-${tpl} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize} sf-vshape-${cfgVariantShape} sf-vsize-${cfgVariantSize} sf-eshape-${cfgExtraShape}${catalogEnter ? ` sf-catalog-enter sf-trans-${store.template_config?.homePage?.transition || 'slide'}` : ''}`} style={catalogPageStyle}>
+    {welcomeOverlay && <div className="sf-welcome-host">{welcomeOverlay}</div>}
+    <div className={`sf-page sf-tpl-${tpl} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize} sf-vshape-${cfgVariantShape} sf-vsize-${cfgVariantSize} sf-eshape-${cfgExtraShape}${catalogEnter ? ` sf-catalog-enter sf-trans-${store.template_config?.homePage?.transition || 'slide'}` : ''}`} style={welcomeOverlay ? { ...catalogPageStyle, height: '100vh', overflow: 'hidden', opacity: 0 } : catalogPageStyle}>
       {responsiveSizeCSS && <style dangerouslySetInnerHTML={{ __html: responsiveSizeCSS }} />}
       {renderCheckoutTransition()}
       <div className={`sf-topbar${cfgHeaderOverBanner ? ' sf-topbar-glass' : ''}${cfgHeaderSticky && !cfgHeaderOverBanner ? ' sf-topbar-sticky' : ''}${cfgHeaderSticky && cfgHeaderOverBanner ? ' sf-topbar-pinned' : ''}${showHeaderAboveModal ? ' sf-topbar-above-modal' : ''}`}>

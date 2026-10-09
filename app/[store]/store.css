@@ -2417,7 +2417,7 @@ html, body { overflow-x: clip; }
 
 /* Initial-load logo screen (server-rendered in page.tsx) — above the top ad
    bar (1000) and the standalone status-bar strip (999). */
-.sf-boot { z-index: 2000; animation: none; }
+.sf-boot { z-index: 4000; animation: none; }
 .sf-boot.out { animation: sfCoTransOut 0.3s ease both; pointer-events: none; }
 .sf-boot.gone { display: none; }
 
@@ -2428,3 +2428,7 @@ html, body { overflow-x: clip; }
   animation: sfSpin 0.7s linear infinite; flex-shrink: 0;
 }
 @keyframes sfSpin { to { transform: rotate(360deg); } }
+
+/* Welcome screens drawn over the (already mounting, transparent) store —
+   below the initial-load logo screen, above everything the store renders. */
+.sf-welcome-host { position: absolute; top: 0; left: 0; right: 0; z-index: 3000; }

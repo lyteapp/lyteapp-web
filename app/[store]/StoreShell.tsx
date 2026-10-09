@@ -60,7 +60,11 @@ function resizedImg(url: string | null | undefined, width: number): string {
   if (i === -1 || isVideoUrl(url)) return url
   const rendered = `${url.slice(0, i)}/storage/v1/render/image/public/${url.slice(i + SUPABASE_PUBLIC_OBJECT_MARKER.length)}`
   const sep = rendered.includes('?') ? '&' : '?'
-  return `${rendered}${sep}width=${width}&quality=70`
+  // "resize=contain" is required here — without it, Supabase's default
+  // resizing mode mishandles EXIF-rotated phone photos (portrait shots
+  // saved with a rotated raw buffer) and returns a badly distorted aspect
+  // ratio instead of a scaled-down version of the original.
+  return `${rendered}${sep}width=${width}&quality=70&resize=contain`
 }
 // Content-block button size: a continuous font-size (px) slider drives every
 // other dimension proportionally. Older blocks saved 'sm'/'md'/'lg' presets —

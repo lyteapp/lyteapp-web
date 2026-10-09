@@ -4060,21 +4060,70 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const escRest     = visibleProducts.slice(2)
   const vitHero     = visibleProducts.length > 0 ? visibleProducts[0] : null
   const vitRest     = visibleProducts.slice(1)
-  // Filtering keys off having a search query at all, not the template — the
-  // catalogo template's own bar and the header search icon (any template)
-  // both just write into the same searchQuery state.
-  const catFiltered = searchQuery.trim()
-    ? visibleProducts.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.description ?? '').toLowerCase().includes(searchQuery.toLowerCase()))
-    : visibleProducts
+  // Accent/case-insensitive, every word must match somewhere in the
+  // product's name, description or category names — "pizza peq" finds
+  // "Pizza Pequeña", "cafe" finds "Café".
+  const normSearch = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  const searchTerms = normSearch(searchQuery).split(/\s+/).filter(Boolean)
+  const catNameById = new Map(categories.map(c => [c.id, c.name]))
+  const matchesSearch = (p: Product) => {
+    if (searchTerms.length === 0) return true
+    const hay = normSearch([p.name, p.description ?? '', ...productCatIds(p).map(id => catNameById.get(id) ?? '')].join(' '))
+    return searchTerms.every(term => hay.includes(term))
+  }
+  // The catalogo template's own bar and the header search icon (any
+  // template) both just write into the same searchQuery state.
+  const catFiltered = visibleProducts.filter(matchesSearch)
   const catGroupsFiltered = catGroups.map(({ cat, items }) => ({
     cat,
-    items: searchQuery.trim()
-      ? items.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.description ?? '').toLowerCase().includes(searchQuery.toLowerCase()))
-      : items,
+    items: items.filter(matchesSearch),
   })).filter(g => g.items.length > 0)
-  const uncatGroupFiltered = searchQuery.trim()
-    ? uncategorized.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.description ?? '').toLowerCase().includes(searchQuery.toLowerCase()))
-    : uncategorized
+  const uncatGroupFiltered = uncategorized.filter(matchesSearch)
+  // Header search (every template but catalogo, which has its own always-on
+  // bar): while there's a query, the page swaps to a plain results list.
+  const headerSearchActive = tpl !== 'catalogo' && headerSearchOpen && searchTerms.length > 0
+
+  function toggleHeaderSearch() {
+    if (headerSearchOpen) {
+      setHeaderSearchOpen(false)
+      setSearchQuery('')
+      return
+    }
+    setModalProduct(null)
+    setFocusCategory(null)
+    setHeaderSearchOpen(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function renderSearchBar() {
+    const headerMode = tpl !== 'catalogo'
+    return (
+      <div className={`sf-search-wrap${headerMode ? ' sf-search-wrap-header' : ''}`}>
+        <form className="sf-search-bar" role="search" onSubmit={e => { e.preventDefault(); (document.activeElement as HTMLElement | null)?.blur() }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
+          <input
+            type="search"
+            enterKeyHint="search"
+            placeholder="Buscar productos…"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Escape' && headerMode) toggleHeaderSearch() }}
+            autoFocus={headerMode}
+          />
+          {(searchQuery || headerMode) && (
+            <button
+              type="button"
+              className="sf-search-clear"
+              aria-label={searchQuery ? 'Borrar busqueda' : 'Cerrar busqueda'}
+              onClick={() => { if (searchQuery) setSearchQuery(''); else if (headerMode) toggleHeaderSearch() }}
+            >
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path strokeLinecap="round" d="M15 5L5 15M5 5l10 10" /></svg>
+            </button>
+          )}
+        </form>
+      </div>
+    )
+  }
 
   const PLACEHOLDER = (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 22, height: 22 }}>
@@ -4500,7 +4549,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
               </a>
             )}
             {cfg.showHeaderSearch && (
-              <button className="sf-header-icon-btn" onClick={() => setHeaderSearchOpen(o => !o)} aria-label="Buscar">
+              <button className="sf-header-icon-btn" onClick={toggleHeaderSearch} aria-label="Buscar">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="19" height="19"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
               </button>
             )}
@@ -4613,6 +4662,27 @@ export default function StoreShell({ store, products, categories = [], initialBc
         </div>
       ) : (
       <>
+      {tpl !== 'catalogo' && headerSearchOpen && renderSearchBar()}
+      {headerSearchActive ? (
+        <div className="sf-products-section">
+          <div className="sf-section-inner">
+            {catFiltered.length === 0 ? (
+              <div className="sf-empty">
+                <div className="sf-empty-title">Sin resultados</div>
+                <div className="sf-empty-sub">No encontramos productos para &quot;{searchQuery.trim()}&quot;.</div>
+              </div>
+            ) : (
+              <>
+                <h2 className="sf-section-title">{catFiltered.length} {catFiltered.length === 1 ? 'resultado' : 'resultados'}</h2>
+                {tpl === 'escaparate'
+                  ? <div className="sf-esc-list">{catFiltered.map(renderEscRow)}</div>
+                  : <div className="sf-grid">{catFiltered.map(renderCard)}</div>}
+              </>
+            )}
+          </div>
+        </div>
+      ) : (
+      <>
       {store.banner_url && tpl !== 'vitrina' && tpl !== 'catalogo' && (
         <div className="sf-banner-wrap">
           <div className="sf-banner"><img src={resizedImg(store.banner_url, 1600)} alt="Banner" className="sf-banner-img" /></div>
@@ -4636,14 +4706,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
         </div>
       )}
 
-      {(tpl === 'catalogo' || headerSearchOpen) && (
-        <div className="sf-search-wrap">
-          <div className="sf-search-bar">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
-            <input type="search" placeholder="Buscar productos…" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} autoFocus={headerSearchOpen && tpl !== 'catalogo'} />
-          </div>
-        </div>
-      )}
+      {tpl === 'catalogo' && renderSearchBar()}
 
       {!cfgCatNavOverBanner && catNavEl}
       {!cfgCatNavOverBanner && renderCatNavAnchoredBars()}
@@ -4814,6 +4877,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
           )}
         </div>
       </div>
+      </>
+      )}
       </>
       )}
 

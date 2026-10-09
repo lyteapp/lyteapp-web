@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
 import { useDashboardStore } from '../../lib/DashboardStoreProvider'
 import { useT } from '../../lib/LocaleProvider'
+import { isLightColor as isLightHex } from '../../lib/colorContrast'
 import './productos.css'
 
 type VariableChoice = { value: string; price: number; calories?: number; fat?: number; protein?: number; carbs?: number }
@@ -34,8 +35,11 @@ type ProductOptions = {
   images?:        string[]
   // On sale: price is what's charged, compareAtPrice the original shown
   // struck through on the store; badge replaces the default "-XX%" label.
-  sale?:          { compareAtPrice: number; badge?: string }
+  sale?:          { compareAtPrice: number; badge?: string; badgeColor?: string }
 }
+
+// First one is the store's default sale badge color (stored as unset).
+const SALE_COLORS = ['#EF4444', '#F97316', '#EAB308', '#16A34A', '#2563EB', '#7C3AED', '#DB2777', '#0F172A']
 
 type Product = {
   id: string; store_id: string; name: string
@@ -99,6 +103,7 @@ export default function ProductosPage() {
   const [optSaleEnabled, setOptSaleEnabled]     = useState(false)
   const [optSaleWas, setOptSaleWas]             = useState('')
   const [optSaleBadge, setOptSaleBadge]         = useState('')
+  const [optSaleColor, setOptSaleColor]         = useState('')
   const [galleryUploading, setGalleryUploading]  = useState(false)
   const [variantGalleryUploadIdx, setVariantGalleryUploadIdx] = useState<number | null>(null)
   const [variantGalleryUploading, setVariantGalleryUploading] = useState(false)
@@ -156,7 +161,7 @@ export default function ProductosPage() {
     setOptNutritionEnabled(false)
     setOptCalories(''); setOptFat(''); setOptProtein(''); setOptCarbs('')
     setOptImages([])
-    setOptSaleEnabled(false); setOptSaleWas(''); setOptSaleBadge('')
+    setOptSaleEnabled(false); setOptSaleWas(''); setOptSaleBadge(''); setOptSaleColor('')
   }
 
   function openAdd() {
@@ -181,6 +186,7 @@ export default function ProductosPage() {
     setOptSaleEnabled(!!opts.sale)
     setOptSaleWas(opts.sale ? String(opts.sale.compareAtPrice) : '')
     setOptSaleBadge(opts.sale?.badge ?? '')
+    setOptSaleColor(opts.sale?.badgeColor ?? '')
     setOptAdditionals(opts.additionals ?? [])
     setOptAllowNotes(opts.allowNotes ?? false)
     setOptNutritionEnabled(opts.nutrition?.enabled ?? false)
@@ -426,7 +432,7 @@ export default function ProductosPage() {
         carbs:    parseFloat(optCarbs) || 0,
       } : undefined,
       images: optImages,
-      sale: optSaleEnabled ? { compareAtPrice: saleWasNum, badge: optSaleBadge.trim() || undefined } : undefined,
+      sale: optSaleEnabled ? { compareAtPrice: saleWasNum, badge: optSaleBadge.trim() || undefined, badgeColor: optSaleColor || undefined } : undefined,
     }
     const hasOpts = opts.variables!.length > 0 || opts.colors!.length > 0 ||
       (opts.colorVariants?.length ?? 0) > 0 ||
@@ -616,6 +622,41 @@ export default function ProductosPage() {
                     return was > now && now >= 0 ? `-${Math.round((1 - now / was) * 100)}%` : 'Oferta'
                   })()}
                   value={optSaleBadge} onChange={e => { setOptSaleBadge(e.target.value); setIsDirty(true) }} />
+              </div>
+              <div className="pr-field" style={{ gridColumn: '1 / -1' }}>
+                <label className="pr-label">Color del anuncio</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  {SALE_COLORS.map(c => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => { setOptSaleColor(c === SALE_COLORS[0] ? '' : c); setIsDirty(true) }}
+                      aria-label={c}
+                      style={{
+                        width: 28, height: 28, borderRadius: '50%', background: c, cursor: 'pointer', padding: 0,
+                        border: (optSaleColor || SALE_COLORS[0]).toLowerCase() === c.toLowerCase() ? '3px solid #0F172A' : '2px solid white',
+                        boxShadow: '0 0 0 1px rgba(15,23,42,0.15)',
+                      }}
+                    />
+                  ))}
+                  <input
+                    type="color"
+                    value={optSaleColor || SALE_COLORS[0]}
+                    onChange={e => { setOptSaleColor(e.target.value); setIsDirty(true) }}
+                    style={{ width: 34, height: 30, border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}
+                    title="Otro color"
+                  />
+                  <span style={{
+                    marginLeft: 6, padding: '3px 9px', borderRadius: 100, fontSize: 11, fontWeight: 800,
+                    background: optSaleColor || SALE_COLORS[0],
+                    color: isLightHex(optSaleColor || SALE_COLORS[0]) ? '#0F172A' : 'white',
+                  }}>
+                    {optSaleBadge.trim() || (() => {
+                      const was = parseFloat(optSaleWas), now = parseFloat(price)
+                      return was > now && now >= 0 ? `-${Math.round((1 - now / was) * 100)}%` : 'Oferta'
+                    })()}
+                  </span>
+                </div>
               </div>
             </div>
           )}

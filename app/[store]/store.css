@@ -1553,6 +1553,24 @@ html, body { overflow-x: clip; }
 }
 .sf-modal-product-head-hero .sf-modal-product-info { padding: 16px 20px 0; }
 
+/* "Pagina completa": the photo fills the whole visible modal area (below
+   the store header, above the add-to-cart footer) and the details scroll
+   up from under it. cqh = the scroll area's own height, whatever the
+   header/footer leave for it. */
+.sf-modal-scroll-passthru { display: contents; }
+.sf-modal-scroll {
+  flex: 1; min-height: 0;
+  overflow-y: auto; overscroll-behavior: contain;
+  display: flex; flex-direction: column;
+  container-type: size;
+}
+.sf-modal-scroll > .sf-modal-body { flex: none; min-height: auto; overflow: visible; }
+.sf-modal-scroll .sf-modal-product-head-hero .sf-modal-img-wrap,
+.sf-modal-scroll .sf-modal-product-head-hero .sf-modal-img {
+  height: 100cqh;
+  object-fit: cover;
+}
+
 .sf-modal-nutrition-badge {
   display: flex; align-items: center; gap: 16px;
   background: white; border: 1px solid rgba(15, 23, 42, 0.08);

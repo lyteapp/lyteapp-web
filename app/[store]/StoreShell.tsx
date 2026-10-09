@@ -66,6 +66,31 @@ function resizedImg(url: string | null | undefined, width: number): string {
   // ratio instead of a scaled-down version of the original.
   return `${rendered}${sep}width=${width}&quality=70&resize=contain`
 }
+// Product-card images are requested at this width, so the browser already
+// has it cached by the time the product modal opens.
+const CARD_IMG_WIDTH = 750
+// Shows the card-sized image (already cached → instant) right away, then
+// fades in the sharper large version over it once that finishes loading,
+// instead of leaving the modal blank while a fresh large image downloads.
+function ProgressiveImg({ src, alt, className }: { src: string; alt: string; className: string }) {
+  const [hiLoaded, setHiLoaded] = useState(false)
+  const lo = resizedImg(src, CARD_IMG_WIDTH)
+  const hi = resizedImg(src, 1200)
+  return (
+    <>
+      <img src={lo} alt={alt} className={className} />
+      {hi !== lo && (
+        <img
+          src={hi}
+          alt=""
+          aria-hidden="true"
+          className={`${className} sf-img-hi${hiLoaded ? ' loaded' : ''}`}
+          onLoad={() => setHiLoaded(true)}
+        />
+      )}
+    </>
+  )
+}
 // Content-block button size: a continuous font-size (px) slider drives every
 // other dimension proportionally. Older blocks saved 'sm'/'md'/'lg' presets —
 // map those to their old equivalents so they keep rendering the same.
@@ -2051,14 +2076,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
                         <div key={i} className="sf-modal-img-frame" style={{ width: `${100 / imgs.length}%` }}>
                           {isVideoUrl(img)
                             ? <video src={img} autoPlay muted loop playsInline className="sf-modal-img sf-modal-img-zoom" />
-                            : <img src={resizedImg(img, 1200)} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" />}
+                            : <ProgressiveImg key={img} src={img} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" />}
                         </div>
                       ))}
                     </div>
                   ) : (
                     isVideoUrl(modalDisplayImage)
                       ? <video src={modalDisplayImage} autoPlay muted loop playsInline className="sf-modal-img sf-modal-img-zoom" />
-                      : <img src={resizedImg(modalDisplayImage, 1200)} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" />
+                      : <ProgressiveImg key={modalDisplayImage ?? ''} src={modalDisplayImage ?? ''} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" />
                   )}
                   {imgs.length > 1 && <div className="sf-modal-img-count">{curIdx + 1}/{imgs.length}</div>}
                 </div>
@@ -4116,7 +4141,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   {v.imageUrl
                     ? (isVideoUrl(v.imageUrl)
                         ? <video src={v.imageUrl} autoPlay muted loop playsInline className="sf-card-img" />
-                        : <img src={resizedImg(v.imageUrl, 750)} alt={product.name} className="sf-card-img" loading="lazy" />)
+                        : <img src={resizedImg(v.imageUrl, CARD_IMG_WIDTH)} alt={product.name} className="sf-card-img" loading="lazy" />)
                     : <div className="sf-card-img-empty">{PLACEHOLDER}</div>}
                 </div>
               ))}
@@ -4129,14 +4154,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 <div key={i} className="sf-slide-frame" style={{ width: `${100 / plainImgs.length}%` }}>
                   {isVideoUrl(img)
                     ? <video src={img} autoPlay muted loop playsInline className="sf-card-img" />
-                    : <img src={resizedImg(img, 750)} alt={product.name} className="sf-card-img" loading="lazy" />}
+                    : <img src={resizedImg(img, CARD_IMG_WIDTH)} alt={product.name} className="sf-card-img" loading="lazy" />}
                 </div>
               ))}
             </div>
           ) : displayImg ? (
             isVideoUrl(displayImg)
               ? <video src={displayImg} autoPlay muted loop playsInline className="sf-card-img" />
-              : <img src={resizedImg(displayImg, 750)} alt={product.name} className="sf-card-img" loading="lazy" />
+              : <img src={resizedImg(displayImg, CARD_IMG_WIDTH)} alt={product.name} className="sf-card-img" loading="lazy" />
           ) : (
             <div className="sf-card-img-empty">{PLACEHOLDER}</div>
           )}
@@ -4233,7 +4258,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   {v.imageUrl
                     ? (isVideoUrl(v.imageUrl)
                         ? <video src={v.imageUrl} autoPlay muted loop playsInline className="sf-esc-img" />
-                        : <img src={resizedImg(v.imageUrl, 750)} alt={product.name} className="sf-esc-img" loading="lazy" />)
+                        : <img src={resizedImg(v.imageUrl, CARD_IMG_WIDTH)} alt={product.name} className="sf-esc-img" loading="lazy" />)
                     : <div className="sf-esc-img sf-esc-img-empty">{PLACEHOLDER}</div>}
                 </div>
               ))}
@@ -4246,14 +4271,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 <div key={i} className="sf-slide-frame" style={{ width: `${100 / plainImgs.length}%` }}>
                   {isVideoUrl(img)
                     ? <video src={img} autoPlay muted loop playsInline className="sf-esc-img" />
-                    : <img src={resizedImg(img, 750)} alt={product.name} className="sf-esc-img" loading="lazy" />}
+                    : <img src={resizedImg(img, CARD_IMG_WIDTH)} alt={product.name} className="sf-esc-img" loading="lazy" />}
                 </div>
               ))}
             </div>
           ) : displayImg ? (
             isVideoUrl(displayImg)
               ? <video src={displayImg} autoPlay muted loop playsInline className="sf-esc-img" />
-              : <img src={resizedImg(displayImg, 750)} alt={product.name} className="sf-esc-img" loading="lazy" />
+              : <img src={resizedImg(displayImg, CARD_IMG_WIDTH)} alt={product.name} className="sf-esc-img" loading="lazy" />
           ) : (
             <div className="sf-esc-img sf-esc-img-empty">{PLACEHOLDER}</div>
           )}
@@ -4347,7 +4372,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   {v.imageUrl
                     ? (isVideoUrl(v.imageUrl)
                         ? <video src={v.imageUrl} autoPlay muted loop playsInline className="sf-cat-img" />
-                        : <img src={resizedImg(v.imageUrl, 750)} alt={product.name} className="sf-cat-img" loading="lazy" />)
+                        : <img src={resizedImg(v.imageUrl, CARD_IMG_WIDTH)} alt={product.name} className="sf-cat-img" loading="lazy" />)
                     : <div className="sf-cat-img sf-cat-img-empty">{PLACEHOLDER}</div>}
                 </div>
               ))}
@@ -4360,14 +4385,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 <div key={i} className="sf-slide-frame" style={{ width: `${100 / plainImgs.length}%` }}>
                   {isVideoUrl(img)
                     ? <video src={img} autoPlay muted loop playsInline className="sf-cat-img" />
-                    : <img src={resizedImg(img, 750)} alt={product.name} className="sf-cat-img" loading="lazy" />}
+                    : <img src={resizedImg(img, CARD_IMG_WIDTH)} alt={product.name} className="sf-cat-img" loading="lazy" />}
                 </div>
               ))}
             </div>
           ) : displayImg ? (
             isVideoUrl(displayImg)
               ? <video src={displayImg} autoPlay muted loop playsInline className="sf-cat-img" />
-              : <img src={resizedImg(displayImg, 750)} alt={product.name} className="sf-cat-img" loading="lazy" />
+              : <img src={resizedImg(displayImg, CARD_IMG_WIDTH)} alt={product.name} className="sf-cat-img" loading="lazy" />
           ) : (
             <div className="sf-cat-img sf-cat-img-empty">{PLACEHOLDER}</div>
           )}

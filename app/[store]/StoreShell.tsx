@@ -584,6 +584,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [view, setView]                   = useState<'catalog' | 'checkout' | 'confirmed' | 'splash' | 'reveal'>(() =>
     isCheckoutPreview ? 'checkout' : (!isDashboardPreview && store.template_config?.homePage?.enabled) ? 'splash' : 'catalog'
   )
+  // Storefront → checkout hand-off: the store logo pulses center-screen for
+  // a beat (fade in → switch view underneath → fade out) instead of a hard cut.
+  const [coTransition, setCoTransition] = useState<'in' | 'out' | null>(null)
   const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [splashLeaving, setSplashLeaving] = useState(false)
   const [catalogEnter, setCatalogEnter] = useState(false)
@@ -886,7 +889,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     }
     setCart(next)
     setShowReorder(false)
-    setView('checkout')
+    goToCheckout()
   }
   const [selectedPayment, setSelectedPayment]   = useState('')
   const [paymentFreeText, setPaymentFreeText]   = useState('')
@@ -3317,6 +3320,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     {installed && <div className="sf-statusbar-strip" />}
     <div className={`sf-page sf-tpl-${store.template ?? 'clasico'} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize} sf-vshape-${cfgVariantShape} sf-vsize-${cfgVariantSize} sf-eshape-${cfgExtraShape}`} style={pageStyle}>
       {responsiveSizeCSS && <style dangerouslySetInnerHTML={{ __html: responsiveSizeCSS }} />}
+      {renderCheckoutTransition()}
       {showMapPicker && mapboxToken && (
         <LocationMapPicker
           initialLat={customerLat ?? 10.4806}
@@ -4209,6 +4213,30 @@ export default function StoreShell({ store, products, categories = [], initialBc
     )
   }
 
+  function goToCheckout() {
+    if (coTransition) return
+    setModalProduct(null)
+    setMenuOpen(false)
+    setCoTransition('in')
+    setTimeout(() => {
+      setView('checkout')
+      window.scrollTo(0, 0)
+      setCoTransition('out')
+      setTimeout(() => setCoTransition(null), 320)
+    }, 800)
+  }
+  function renderCheckoutTransition() {
+    if (!coTransition) return null
+    return (
+      <div className={`sf-co-transition${coTransition === 'out' ? ' out' : ''}`} aria-hidden="true">
+        {store.logo_url
+          ? <img src={resizedImg(store.logo_url, 400)} alt="" className={`sf-co-transition-logo sf-nav-logo-${cfgLogoShape}`} />
+          : <div className="sf-co-transition-name">{store.name}</div>}
+        <div className="sf-co-transition-bar"><span /></div>
+      </div>
+    )
+  }
+
   const PLACEHOLDER = (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 22, height: 22 }}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
@@ -4573,6 +4601,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     {installed && <div className="sf-statusbar-strip" />}
     <div className={`sf-page sf-tpl-${tpl} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize} sf-vshape-${cfgVariantShape} sf-vsize-${cfgVariantSize} sf-eshape-${cfgExtraShape}${catalogEnter ? ` sf-catalog-enter sf-trans-${store.template_config?.homePage?.transition || 'slide'}` : ''}`} style={catalogPageStyle}>
       {responsiveSizeCSS && <style dangerouslySetInnerHTML={{ __html: responsiveSizeCSS }} />}
+      {renderCheckoutTransition()}
       <div className={`sf-topbar${cfgHeaderOverBanner ? ' sf-topbar-glass' : ''}${cfgHeaderSticky && !cfgHeaderOverBanner ? ' sf-topbar-sticky' : ''}${cfgHeaderSticky && cfgHeaderOverBanner ? ' sf-topbar-pinned' : ''}${showHeaderAboveModal ? ' sf-topbar-above-modal' : ''}`}>
         <div className="sf-topbar-inner sf-topbar-3col">
           <div className="sf-topbar-slot-left">
@@ -4638,7 +4667,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
               </button>
             )}
             {cfg.showHeaderCart && (
-              <button className="sf-header-icon-btn" onClick={() => setView('checkout')} aria-label="Carrito">
+              <button className="sf-header-icon-btn" onClick={goToCheckout} aria-label="Carrito">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="19" height="19">
                   <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
                   <path d="M3 6h18" />
@@ -4946,7 +4975,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       {tpl !== 'catalogo' && headerSearchOpen && renderSearchOverlay()}
 
       {cartCount > 0 && (
-        <button className="sf-cart-bar" onClick={() => setView('checkout')}>
+        <button className="sf-cart-bar" onClick={goToCheckout}>
           <span className="sf-cart-badge">{cartCount}</span>
           <span className="sf-cart-label">{t('store.viewOrder')}</span>
           <span className="sf-cart-total">{currencySymbol}{cartTotal.toFixed(2)}</span>

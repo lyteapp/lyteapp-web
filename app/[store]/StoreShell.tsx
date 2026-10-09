@@ -2552,7 +2552,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           const unitTotal = (i.price + i.extraPrice) * i.quantity
           const rows = [`  - ${i.quantity}x ${i.name}  ${currencySymbol}${unitTotal.toFixed(2)}`]
           const so = i.selectedOptions
-          if (so?.variables) Object.entries(so.variables).forEach(([k, v]) => rows.push(`    ${k}: ${variableValueLabel(v)}`))
+          if (so?.variables) Object.values(so.variables).forEach(v => rows.push(`    ${variableValueLabel(v)}`))
           if (so?.color)     rows.push(`    Color: ${so.color}`)
           if (so?.additionals?.length) rows.push(`    Extras: ${so.additionals.map(a => a.name).join(', ')}`)
           if (so?.notes)     rows.push(`    Nota: ${so.notes}`)

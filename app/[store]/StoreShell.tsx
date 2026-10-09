@@ -302,6 +302,7 @@ type TemplateConfig = {
   headerHeightPx?: number
   modalWizard?: boolean
   hideVariableCount?: boolean
+  showMinHint?: boolean
   modalSize?: 'full' | 'half'
   enableReorder?: boolean
   reorderBannerEnabled?: boolean
@@ -1313,6 +1314,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const adBarCatNavBottom = cfgStickyOffsetPx + catNavOwnHeight
   const cfgModalWizard = !!cfg.modalWizard
   const cfgHideVariableCount = !!cfg.hideVariableCount
+  const cfgShowMinHint = !!cfg.showMinHint
   const cfgModalHalf = cfg.modalSize === 'half'
   // Explicit "full" is a real full-screen takeover — distinct from the
   // unset/legacy default, which keeps today's ~90vh sheet look unchanged.
@@ -2137,7 +2139,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                         </button>
                       ))}
                     </div>
-                    {min > 0 && count < min && !cfgHideVariableCount && <div className="sf-modal-section-hint">Elige al menos {min}</div>}
+                    {min > 0 && count < min && cfgShowMinHint && <div className="sf-modal-section-hint">Elige al menos {min}</div>}
                   </div>
                 )
               })}

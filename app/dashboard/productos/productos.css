@@ -640,7 +640,7 @@
 .cat-product-row-dragging { opacity: 0.5; }
 .cat-product-row-dragover { border-color: #7C3AED; box-shadow: 0 0 0 2px rgba(124,58,237,0.2); }
 .cat-drag-handle {
-  width: 22px; height: 22px; border: none; background: none; color: #CBD5E1;
+  width: 26px; height: 30px; border: none; background: #F1F5F9; border-radius: 6px; color: #64748B;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   cursor: grab; touch-action: none;
 }
@@ -734,3 +734,12 @@
 .cat-product-edit { color: #CBD5E1; flex-shrink: 0; transition: color 0.15s; }
 .cat-product-link:hover .cat-product-edit { color: #7C3AED; }
 .cat-product-link:hover .cat-product-name { color: #7C3AED; }
+
+.cat-reorder-hint {
+  display: flex; gap: 8px; align-items: flex-start;
+  background: #F5F3FF; color: #5B21B6; border-radius: 10px;
+  padding: 9px 11px; margin-bottom: 4px;
+  font-size: 12px; line-height: 1.45;
+}
+.cat-reorder-hint svg { flex-shrink: 0; margin-top: 2px; color: #7C3AED; }
+.cat-reorder-hint strong { font-weight: 700; }

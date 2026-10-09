@@ -245,7 +245,15 @@ export default function CategoriasPage() {
                 {catProducts.length === 0 ? (
                   <div className="cat-products-empty">Esta categoria todavia no tiene productos.</div>
                 ) : (
-                  catProducts.map((p, i) => (
+                  <>
+                  <div className="cat-reorder-hint">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="12" height="12"><path d="M7 5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zm0 5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zm0 5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zm9-10a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zm0 5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zm0 5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" /></svg>
+                    <span>
+                      <strong>Para cambiar el orden:</strong> manten presionados los puntitos a la izquierda de un producto y arrastralo hacia arriba o abajo hasta donde quieras que aparezca. Sueltalo y se guarda solo. El primero de la lista es el primero que se ve en la tienda.
+                      {' '}Toca el nombre para editar el producto.
+                    </span>
+                  </div>
+                  {catProducts.map((p, i) => (
                     <div
                       key={p.id}
                       data-cat-row-index={i}
@@ -272,7 +280,8 @@ export default function CategoriasPage() {
                         <svg className="cat-product-edit" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M13.5 3.5l3 3L7 16l-4 1 1-4 9.5-9.5z" /></svg>
                       </Link>
                     </div>
-                  ))
+                  ))}
+                  </>
                 )}
               </div>
             )}

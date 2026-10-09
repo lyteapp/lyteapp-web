@@ -4451,6 +4451,15 @@ export default function StoreShell({ store, products, categories = [], initialBc
           ? <img src={resizedImg(store.logo_url, 400)} alt="" className={`sf-co-transition-logo sf-nav-logo-${cfgLogoShape}`} />
           : <div className="sf-co-transition-name">{store.name}</div>}
         <div className="sf-co-transition-bar"><span /></div>
+        {(() => {
+          const c = poweredByColors(isLightColor(cfg.pageBg || '#FAFAF9'))
+          return (
+            <div className="sf-powered-by" style={{ color: c.text }}>
+              <img src="/logo.png" alt="" />
+              <span>Powered by <strong style={{ color: c.strong }}>LYTE APP</strong></span>
+            </div>
+          )
+        })()}
       </div>
     )
   }

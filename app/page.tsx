@@ -19,7 +19,7 @@ export default function Home() {
   return (
     <>
       {/* NAV */}
-      <nav>
+      <nav className="lp-nav">
         <Link href="/" className="logo">
           <span className="logo-mark">
             <Image src="/logo.png" alt="LyteApp" width={28} height={28} style={{ objectFit: 'contain' }} />
@@ -508,7 +508,7 @@ export default function Home() {
       </section>
 
       {/* FOOTER */}
-      <footer>
+      <footer className="lp-footer">
         <div className="footer-inner">
           <div className="footer-top">
             <div className="footer-brand">

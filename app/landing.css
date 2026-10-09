@@ -33,8 +33,10 @@ body {
 
 .mono { font-family: var(--font-geist-mono), monospace; }
 
-/* NAV */
-nav {
+/* NAV — scoped by class: a bare `nav`/`footer` selector here stays loaded
+   after client-side navigation away from the landing page and restyles every
+   other page's <nav>/<footer> (it pinned the dashboard sidebar menu to the top). */
+.lp-nav {
   position: fixed;
   top: 0;
   left: 0;
@@ -1012,7 +1014,7 @@ nav {
 }
 
 /* FOOTER */
-footer {
+.lp-footer {
   background: var(--ink);
   color: white;
   padding: 80px 40px 36px;
@@ -1121,13 +1123,13 @@ footer {
 
 /* ── RESPONSIVE ── */
 @media (max-width: 900px) {
-  nav { padding: 14px 20px; }
+  .lp-nav { padding: 14px 20px; }
   .nav-links { display: none; }
   .nav-hamburger { display: flex; }
   .hero { padding: 120px 20px 56px; }
   .hero h1 { font-size: 48px; }
   .float-card { display: none; }
-  .section, .pagos-section, .how-section, .pricing-section, .testimonials, .comparison, .cta-section, footer { padding-left: 20px; padding-right: 20px; }
+  .section, .pagos-section, .how-section, .pricing-section, .testimonials, .comparison, .cta-section, .lp-footer { padding-left: 20px; padding-right: 20px; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 28px; }
   .stat-num { font-size: 44px; }
   .features-grid { grid-template-columns: 1fr; }

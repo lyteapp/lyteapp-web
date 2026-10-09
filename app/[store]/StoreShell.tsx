@@ -2017,10 +2017,6 @@ export default function StoreShell({ store, products, categories = [], initialBc
             ) : '×'}
           </button>
 
-          {/* Full-page mode scrolls the photo + details together so the photo
-              can take the whole first screen; other modes keep the original
-              layout (display: contents makes this wrapper a no-op there). */}
-          <div className={cfgModalFull ? 'sf-modal-scroll' : 'sf-modal-scroll-passthru'}>
           <div className={`sf-modal-product-head${cfgModalFull ? ' sf-modal-product-head-hero' : ''}`}>
             {modalDisplayImage && (() => {
               // Gallery for whatever is currently shown: the selected
@@ -2301,7 +2297,6 @@ export default function StoreShell({ store, products, categories = [], initialBc
               )}
             </div>
           )}
-          </div>
 
           {!modalWizardActive && (
             <div className="sf-modal-footer">

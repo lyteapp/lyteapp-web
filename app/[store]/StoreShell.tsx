@@ -44,6 +44,24 @@ const PRODUCT_VIDEO_EXT_RE = /\.(mp4|webm|mov|m4v)(\?|#|$)/i
 function isVideoUrl(url?: string | null): boolean {
   return !!url && PRODUCT_VIDEO_EXT_RE.test(url)
 }
+// Routes Supabase Storage images through its on-the-fly image transform
+// endpoint instead of serving the original upload — product photos come in
+// straight off customers' phones (often several MB each), which is both slow
+// to download and, served with the storage bucket's default "no-cache"
+// header, gets re-fetched over the network every time an image scrolls back
+// into view instead of coming from the browser's disk cache. Requesting a
+// resized render both shrinks the payload and gets a real max-age back.
+// No-ops for anything that isn't a Supabase Storage URL (blob:, data:, local
+// /path.png, videos), so it's safe to wrap any image src unconditionally.
+const SUPABASE_PUBLIC_OBJECT_MARKER = '/storage/v1/object/public/'
+function resizedImg(url: string | null | undefined, width: number): string {
+  if (!url) return url ?? ''
+  const i = url.indexOf(SUPABASE_PUBLIC_OBJECT_MARKER)
+  if (i === -1 || isVideoUrl(url)) return url
+  const rendered = `${url.slice(0, i)}/storage/v1/render/image/public/${url.slice(i + SUPABASE_PUBLIC_OBJECT_MARKER.length)}`
+  const sep = rendered.includes('?') ? '&' : '?'
+  return `${rendered}${sep}width=${width}&quality=70`
+}
 // Content-block button size: a continuous font-size (px) slider drives every
 // other dimension proportionally. Older blocks saved 'sm'/'md'/'lg' presets —
 // map those to their old equivalents so they keep rendering the same.
@@ -1711,7 +1729,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
             ...accentVars,
           } as React.CSSProperties}
         >
-          {ad.imageUrl && <img src={ad.imageUrl} alt="" className="sf-ad-float-img" />}
+          {ad.imageUrl && <img src={resizedImg(ad.imageUrl, 500)} alt="" className="sf-ad-float-img" />}
           {ad.title && <div className="sf-ad-title sf-ad-float-title" style={titleStyle}>{ad.title}</div>}
           <div className="sf-ad-float-actions">
             {renderAdButton(ad, bm)}
@@ -1730,7 +1748,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
             <button type="button" className="sf-ad-popup-close" onClick={() => closeAd(ad)} aria-label="Cerrar">
               <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path strokeLinecap="round" d="M15 5L5 15M5 5l10 10"/></svg>
             </button>
-            {ad.imageUrl && <img src={ad.imageUrl} alt="" className="sf-ad-popup-img" />}
+            {ad.imageUrl && <img src={resizedImg(ad.imageUrl, 700)} alt="" className="sf-ad-popup-img" />}
             <div className="sf-ad-popup-body">
               {ad.title && <div className="sf-ad-title" style={titleStyle}>{ad.title}</div>}
               {renderAdButton(ad, bm)}
@@ -1978,14 +1996,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
                         <div key={i} className="sf-modal-img-frame" style={{ width: `${100 / imgs.length}%` }}>
                           {isVideoUrl(img)
                             ? <video src={img} autoPlay muted loop playsInline className="sf-modal-img sf-modal-img-zoom" />
-                            : <img src={img} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" />}
+                            : <img src={resizedImg(img, 900)} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" />}
                         </div>
                       ))}
                     </div>
                   ) : (
                     isVideoUrl(modalDisplayImage)
                       ? <video src={modalDisplayImage} autoPlay muted loop playsInline className="sf-modal-img sf-modal-img-zoom" />
-                      : <img src={modalDisplayImage} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" />
+                      : <img src={resizedImg(modalDisplayImage, 900)} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" />
                   )}
                   {imgs.length > 1 && <div className="sf-modal-img-count">{curIdx + 1}/{imgs.length}</div>}
                 </div>
@@ -2819,7 +2837,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
             same way normal flow does — that mismatch, not a height or
             overscroll issue, was the actual cause of the blank strip). */}
         {hp.imageUrl ? (
-          <img src={hp.imageUrl} alt="" className="sf-splash-bg-img" />
+          <img src={resizedImg(hp.imageUrl, 1200)} alt="" className="sf-splash-bg-img" />
         ) : (
           <div className="sf-splash-bg-img" style={{ background: hp.bgColor || '#0F172A' }} />
         )}
@@ -3219,7 +3237,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
               {item.image_url
                 ? (isVideoUrl(item.image_url)
                     ? <video src={item.image_url} autoPlay muted loop playsInline className="sf-co-img" />
-                    : <img src={item.image_url} alt={item.name} className="sf-co-img" />)
+                    : <img src={resizedImg(item.image_url, 150)} alt={item.name} className="sf-co-img" />)
                 : <div className="sf-co-img sf-co-img-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 18, height: 18 }}><path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" /></svg></div>
               }
               <div className="sf-co-info">
@@ -3847,7 +3865,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 <div key={i} className="sf-lightbox-frame" style={{ width: `${100 / lightbox.images.length}%` }}>
                   {isVideoUrl(img)
                     ? <video src={img} autoPlay muted loop playsInline className="sf-lightbox-img" />
-                    : <img src={img} alt="" className="sf-lightbox-img" />}
+                    : <img src={resizedImg(img, 900)} alt="" className="sf-lightbox-img" />}
                 </div>
               ))}
             </div>
@@ -4043,7 +4061,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   {v.imageUrl
                     ? (isVideoUrl(v.imageUrl)
                         ? <video src={v.imageUrl} autoPlay muted loop playsInline className="sf-card-img" />
-                        : <img src={v.imageUrl} alt={product.name} className="sf-card-img" loading="lazy" />)
+                        : <img src={resizedImg(v.imageUrl, 750)} alt={product.name} className="sf-card-img" loading="lazy" />)
                     : <div className="sf-card-img-empty">{PLACEHOLDER}</div>}
                 </div>
               ))}
@@ -4056,14 +4074,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 <div key={i} className="sf-slide-frame" style={{ width: `${100 / plainImgs.length}%` }}>
                   {isVideoUrl(img)
                     ? <video src={img} autoPlay muted loop playsInline className="sf-card-img" />
-                    : <img src={img} alt={product.name} className="sf-card-img" loading="lazy" />}
+                    : <img src={resizedImg(img, 750)} alt={product.name} className="sf-card-img" loading="lazy" />}
                 </div>
               ))}
             </div>
           ) : displayImg ? (
             isVideoUrl(displayImg)
               ? <video src={displayImg} autoPlay muted loop playsInline className="sf-card-img" />
-              : <img src={displayImg} alt={product.name} className="sf-card-img" loading="lazy" />
+              : <img src={resizedImg(displayImg, 750)} alt={product.name} className="sf-card-img" loading="lazy" />
           ) : (
             <div className="sf-card-img-empty">{PLACEHOLDER}</div>
           )}
@@ -4160,7 +4178,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   {v.imageUrl
                     ? (isVideoUrl(v.imageUrl)
                         ? <video src={v.imageUrl} autoPlay muted loop playsInline className="sf-esc-img" />
-                        : <img src={v.imageUrl} alt={product.name} className="sf-esc-img" loading="lazy" />)
+                        : <img src={resizedImg(v.imageUrl, 750)} alt={product.name} className="sf-esc-img" loading="lazy" />)
                     : <div className="sf-esc-img sf-esc-img-empty">{PLACEHOLDER}</div>}
                 </div>
               ))}
@@ -4173,14 +4191,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 <div key={i} className="sf-slide-frame" style={{ width: `${100 / plainImgs.length}%` }}>
                   {isVideoUrl(img)
                     ? <video src={img} autoPlay muted loop playsInline className="sf-esc-img" />
-                    : <img src={img} alt={product.name} className="sf-esc-img" loading="lazy" />}
+                    : <img src={resizedImg(img, 750)} alt={product.name} className="sf-esc-img" loading="lazy" />}
                 </div>
               ))}
             </div>
           ) : displayImg ? (
             isVideoUrl(displayImg)
               ? <video src={displayImg} autoPlay muted loop playsInline className="sf-esc-img" />
-              : <img src={displayImg} alt={product.name} className="sf-esc-img" loading="lazy" />
+              : <img src={resizedImg(displayImg, 750)} alt={product.name} className="sf-esc-img" loading="lazy" />
           ) : (
             <div className="sf-esc-img sf-esc-img-empty">{PLACEHOLDER}</div>
           )}
@@ -4274,7 +4292,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   {v.imageUrl
                     ? (isVideoUrl(v.imageUrl)
                         ? <video src={v.imageUrl} autoPlay muted loop playsInline className="sf-cat-img" />
-                        : <img src={v.imageUrl} alt={product.name} className="sf-cat-img" loading="lazy" />)
+                        : <img src={resizedImg(v.imageUrl, 750)} alt={product.name} className="sf-cat-img" loading="lazy" />)
                     : <div className="sf-cat-img sf-cat-img-empty">{PLACEHOLDER}</div>}
                 </div>
               ))}
@@ -4287,14 +4305,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 <div key={i} className="sf-slide-frame" style={{ width: `${100 / plainImgs.length}%` }}>
                   {isVideoUrl(img)
                     ? <video src={img} autoPlay muted loop playsInline className="sf-cat-img" />
-                    : <img src={img} alt={product.name} className="sf-cat-img" loading="lazy" />}
+                    : <img src={resizedImg(img, 750)} alt={product.name} className="sf-cat-img" loading="lazy" />}
                 </div>
               ))}
             </div>
           ) : displayImg ? (
             isVideoUrl(displayImg)
               ? <video src={displayImg} autoPlay muted loop playsInline className="sf-cat-img" />
-              : <img src={displayImg} alt={product.name} className="sf-cat-img" loading="lazy" />
+              : <img src={resizedImg(displayImg, 750)} alt={product.name} className="sf-cat-img" loading="lazy" />
           ) : (
             <div className="sf-cat-img sf-cat-img-empty">{PLACEHOLDER}</div>
           )}
@@ -4361,7 +4379,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
             )}
             {cfgLogoPosition === 'left' && store.logo_url && (
               <div ref={catalogLogoRef} className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape}${logoMorphStart ? ' sf-nav-logo-hidden' : ''}`} style={{ height: cfgLogoSizePx, cursor: 'pointer' }} onClick={goHome}>
-                <img src={store.logo_url} alt={store.name} className="sf-nav-logo-img" />
+                <img src={resizedImg(store.logo_url, 120)} alt={store.name} className="sf-nav-logo-img" />
               </div>
             )}
             {cfgNamePosition === 'left' && (
@@ -4371,7 +4389,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           <div className="sf-topbar-slot-center">
             {cfgLogoPosition === 'center' && store.logo_url && (
               <div ref={catalogLogoRef} className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape}${logoMorphStart ? ' sf-nav-logo-hidden' : ''}`} style={{ height: cfgLogoSizePx, cursor: 'pointer' }} onClick={goHome}>
-                <img src={store.logo_url} alt={store.name} className="sf-nav-logo-img" />
+                <img src={resizedImg(store.logo_url, 120)} alt={store.name} className="sf-nav-logo-img" />
               </div>
             )}
             {cfgNamePosition === 'center' && (
@@ -4381,7 +4399,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           <div className="sf-topbar-slot-right">
             {cfgLogoPosition === 'right' && store.logo_url && (
               <div ref={catalogLogoRef} className={`sf-nav-logo-wrap sf-nav-logo-${cfgLogoShape}${logoMorphStart ? ' sf-nav-logo-hidden' : ''}`} style={{ height: cfgLogoSizePx, cursor: 'pointer' }} onClick={goHome}>
-                <img src={store.logo_url} alt={store.name} className="sf-nav-logo-img" />
+                <img src={resizedImg(store.logo_url, 120)} alt={store.name} className="sf-nav-logo-img" />
               </div>
             )}
             {cfgNamePosition === 'right' && (
@@ -4426,7 +4444,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
             } as React.CSSProperties}
           >
             {cfg.reorderImageUrl && (
-              <img src={cfg.reorderImageUrl} alt="" className="sf-reorder-img" />
+              <img src={resizedImg(cfg.reorderImageUrl, 120)} alt="" className="sf-reorder-img" />
             )}
             <div className="sf-reorder-info">
               <div
@@ -4509,7 +4527,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       <>
       {store.banner_url && tpl !== 'vitrina' && tpl !== 'catalogo' && (
         <div className="sf-banner-wrap">
-          <div className="sf-banner"><img src={store.banner_url} alt="Banner" className="sf-banner-img" /></div>
+          <div className="sf-banner"><img src={resizedImg(store.banner_url, 1200)} alt="Banner" className="sf-banner-img" /></div>
         </div>
       )}
       {cfgCatNavOverBanner && catNavEl}
@@ -4581,7 +4599,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                       {vitHero.image_url
                         ? (isVideoUrl(vitHero.image_url)
                             ? <video src={vitHero.image_url} autoPlay muted loop playsInline className="sf-vit-hero-img" />
-                            : <img src={vitHero.image_url} alt={vitHero.name} className="sf-vit-hero-img" />)
+                            : <img src={resizedImg(vitHero.image_url, 900)} alt={vitHero.name} className="sf-vit-hero-img" />)
                         : <div className="sf-vit-hero-img-empty">{PLACEHOLDER}</div>
                       }
                       {getProdQty(vitHero.id) > 0 && <div className="sf-card-badge sf-vit-badge">{getProdQty(vitHero.id)}</div>}
@@ -4779,7 +4797,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 <div key={i} className="sf-lightbox-frame" style={{ width: `${100 / lightbox.images.length}%` }}>
                   {isVideoUrl(img)
                     ? <video src={img} autoPlay muted loop playsInline className="sf-lightbox-img" />
-                    : <img src={img} alt="" className="sf-lightbox-img" />}
+                    : <img src={resizedImg(img, 900)} alt="" className="sf-lightbox-img" />}
                 </div>
               ))}
             </div>
@@ -4802,7 +4820,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
               <div className="sf-drawer-brand" style={{ cursor: 'pointer' }} onClick={goHome}>
                 {store.logo_url && (
                 <div className={`sf-drawer-logo sf-nav-logo-${cfgLogoShape}`}>
-                  <img src={store.logo_url} alt={store.name} />
+                  <img src={resizedImg(store.logo_url, 120)} alt={store.name} />
                 </div>
               )}
               </div>

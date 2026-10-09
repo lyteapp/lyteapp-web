@@ -347,6 +347,9 @@ html, body { overflow-x: clip; }
 }
 
 .sf-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+/* A content block interleaved between a category's products — spans the
+   full row instead of sitting in a single product-sized grid cell. */
+.sf-grid-block { grid-column: 1 / -1; }
 
 /* per-category horizontal product carousel (opt-in, see cfgCategoryLayouts) —
    one card "in focus" at a time, edge-to-edge (no side inset needed since

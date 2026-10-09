@@ -194,11 +194,17 @@ type ContentBlock = {
   linkTarget?: 'url' | 'category' | 'product'
   linkCategoryId?: string
   linkProductId?: string
+  // Where within a category-scoped (afterId = a category id) spot this
+  // lands — undefined/'after' keeps the pre-existing behavior of showing
+  // after the whole category grid. 'before' puts it above the products,
+  // and a number interleaves it after that many products in the grid/list.
+  catPosition?: 'before' | number
 }
 type BlockGroup = {
   id: string; afterId: string; background?: string; borderRadius?: number; padding?: number
   direction?: 'column' | 'row'; gap?: number
   parentGroupId?: string
+  catPosition?: 'before' | number
 }
 type BlockButtonItem = { id: string; label: string; target: 'product' | 'category'; targetId: string }
 type Ad = {
@@ -1645,28 +1651,68 @@ export default function StoreShell({ store, products, categories = [], initialBc
     )
   }
 
-  function renderContentBlocks(afterId: string) {
-    const blocks = (cfg.contentBlocks ?? []) as ContentBlock[]
+  // Resolves a flat list of matching blocks into the units that actually
+  // get rendered — a lone block, or (once, for the whole group) a group of
+  // blocks sharing a groupId — each tagged with a stable key so callers
+  // that need to wrap individual units (the grid interleaving below) can.
+  function renderBlockUnits(matching: ContentBlock[]): { key: string; node: React.ReactNode }[] {
     const groups = (cfg.blockGroups ?? []) as BlockGroup[]
-    const matching = blocks.filter(b => b.afterId === afterId)
-    if (matching.length === 0) return null
+    const allBlocks = (cfg.contentBlocks ?? []) as ContentBlock[]
     const renderedGroups = new Set<string>()
-    return (
-      <>
-        {matching.map(block => {
-          if (block.groupId) {
-            const groupMeta = groups.find(g => g.id === block.groupId)
-            // Nested inside another group — rendered by that group instead.
-            if (groupMeta?.parentGroupId) return null
-            if (renderedGroups.has(block.groupId)) return null
-            renderedGroups.add(block.groupId)
-            if (!groupMeta) return renderSingleBlock(block)
-            return renderBlockGroup(groupMeta, blocks, groups)
-          }
-          return renderSingleBlock(block)
-        })}
-      </>
-    )
+    const units: { key: string; node: React.ReactNode }[] = []
+    matching.forEach(block => {
+      if (block.groupId) {
+        const groupMeta = groups.find(g => g.id === block.groupId)
+        // Nested inside another group — rendered by that group instead.
+        if (groupMeta?.parentGroupId) return
+        if (renderedGroups.has(block.groupId)) return
+        renderedGroups.add(block.groupId)
+        units.push({ key: block.groupId, node: groupMeta ? renderBlockGroup(groupMeta, allBlocks, groups) : renderSingleBlock(block) })
+        return
+      }
+      units.push({ key: block.id, node: renderSingleBlock(block) })
+    })
+    return units
+  }
+  function renderBlockList(matching: ContentBlock[]) {
+    const units = renderBlockUnits(matching)
+    if (units.length === 0) return null
+    return <>{units.map(u => <Fragment key={u.key}>{u.node}</Fragment>)}</>
+  }
+  // catPos defaults to 'after' — the pre-existing, only-ever-had behavior
+  // for a block whose afterId is a category: rendered once, after that
+  // category's whole product grid. 'before' and a numeric position (see
+  // renderCategoryItems) are additive, opt-in placements within it.
+  function renderContentBlocks(afterId: string, catPos: 'before' | 'after' | number = 'after') {
+    const blocks = (cfg.contentBlocks ?? []) as ContentBlock[]
+    return renderBlockList(blocks.filter(b => b.afterId === afterId && (b.catPosition ?? 'after') === catPos))
+  }
+  // Renders a category's products with any numeric-position blocks spliced
+  // in at their requested spot (clamped to the actual item count, so a
+  // position beyond the last product just lands at the end instead of
+  // vanishing). `wrap` supplies the surrounding list/grid container, kept
+  // identical to what each template already used before this existed.
+  function renderCategoryItems(catId: string, items: Product[], renderItem: (item: Product) => React.ReactNode, wrap: (children: React.ReactNode[]) => React.ReactNode) {
+    const blocks = (cfg.contentBlocks ?? []) as ContentBlock[]
+    const numeric = blocks.filter(b => b.afterId === catId && typeof b.catPosition === 'number')
+    if (numeric.length === 0) return wrap(items.map(renderItem))
+    const byPos = new Map<number, ContentBlock[]>()
+    numeric.forEach(b => {
+      const pos = Math.max(0, Math.min(items.length, Math.round(b.catPosition as number)))
+      byPos.set(pos, [...(byPos.get(pos) ?? []), b])
+    })
+    const nodes: React.ReactNode[] = []
+    const flush = (pos: number) => {
+      const list = byPos.get(pos)
+      if (!list) return
+      renderBlockUnits(list).forEach(u => nodes.push(<div key={`cb-${u.key}`} className="sf-grid-block">{u.node}</div>))
+    }
+    flush(0)
+    items.forEach((item, i) => {
+      nodes.push(renderItem(item))
+      flush(i + 1)
+    })
+    return wrap(nodes)
   }
 
   function renderAdButton(ad: Ad, bm: ReturnType<typeof buttonSizeMetrics>) {
@@ -1848,8 +1894,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
   function renderProductGrid(items: Product[], layoutKey: string) {
     if (cfgCategoryLayouts[layoutKey] !== 'horizontal') {
-      return <div className="sf-grid">{items.map(renderCard)}</div>
+      return renderCategoryItems(layoutKey, items, renderCard, children => <div className="sf-grid">{children}</div>)
     }
+    // Interleaved blocks aren't supported in the horizontal-carousel layout
+    // — a full-width "break" tile doesn't fit a single-row side-scroller —
+    // so they're silently skipped here rather than rendered somewhere odd.
     // Falls back to one dot per item until the row's been measured (first
     // effect pass right after mount) — corrects itself a frame later.
     const pageCount = Math.min(hcarouselPages[layoutKey] ?? items.length, items.length)
@@ -4524,9 +4573,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
             Volver
           </button>
           <h2 className="sf-section-title">{focusCategory.name}</h2>
-          <div className="sf-grid">
-            {products.filter(p => productCatIds(p).includes(focusCategory.id)).map(renderCard)}
-          </div>
+          {renderContentBlocks(focusCategory.id, 'before')}
+          {renderCategoryItems(focusCategory.id, products.filter(p => productCatIds(p).includes(focusCategory.id)), renderCard, children => <div className="sf-grid">{children}</div>)}
           {renderContentBlocks(focusCategory.id)}
         </div>
       ) : (
@@ -4582,7 +4630,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   <Fragment key={cat.id}>
                     <div id={`cat-${cat.id}`} className={`sf-cat-section${cfgCategoryShapes[cat.id] ? ` sf-pshape-${cfgCategoryShapes[cat.id]}` : ''}`}>
                       <h2 className="sf-section-title sf-cat-section-title">{cat.name}</h2>
-                      <div className="sf-grid">{items.map(renderCard)}</div>
+                      {renderContentBlocks(cat.id, 'before')}
+                      {renderCategoryItems(cat.id, items, renderCard, children => <div className="sf-grid">{children}</div>)}
                     </div>
                     {renderContentBlocks(cat.id)}
                   </Fragment>
@@ -4635,7 +4684,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   <Fragment key={cat.id}>
                     <div id={`cat-${cat.id}`} className={`sf-cat-section${cfgCategoryShapes[cat.id] ? ` sf-pshape-${cfgCategoryShapes[cat.id]}` : ''}`}>
                       <h2 className="sf-section-title sf-cat-section-title">{cat.name}</h2>
-                      <div className="sf-esc-list">{items.map(renderEscRow)}</div>
+                      {renderContentBlocks(cat.id, 'before')}
+                      {renderCategoryItems(cat.id, items, renderEscRow, children => <div className="sf-esc-list">{children}</div>)}
                     </div>
                     {renderContentBlocks(cat.id)}
                   </Fragment>
@@ -4700,6 +4750,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 <Fragment key={cat.id}>
                   <div id={`cat-${cat.id}`} className={`sf-cat-section${cfgCategoryShapes[cat.id] ? ` sf-pshape-${cfgCategoryShapes[cat.id]}` : ''}`}>
                     <h2 className="sf-section-title sf-cat-section-title">{cat.name}</h2>
+                    {renderContentBlocks(cat.id, 'before')}
                     {renderProductGrid(items, cat.id)}
                   </div>
                   {renderContentBlocks(cat.id)}

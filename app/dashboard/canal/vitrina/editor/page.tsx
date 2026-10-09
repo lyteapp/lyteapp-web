@@ -154,6 +154,7 @@ type ContentBlock = {
   linkTarget?: 'url' | 'category' | 'product'
   linkCategoryId?: string
   linkProductId?: string
+  catPosition?: 'before' | number
 }
 type BlockButtonItem = { id: string; label: string; target: 'product' | 'category'; targetId: string }
 // Mirrors StoreShell.tsx's buttonSizeMetrics — keeps the dashboard's draft
@@ -176,6 +177,7 @@ type BlockGroup = {
   // item alongside its regular block members — one level deep only, so a
   // group that's already nested can't itself be chosen as a target here.
   parentGroupId?: string
+  catPosition?: 'before' | number
 }
 type Ad = {
   id: string
@@ -441,6 +443,11 @@ export default function EditorPage() {
   const [groupMode, setGroupMode]           = useState(false)
   const [selectedForGroup, setSelectedForGroup] = useState<Set<string>>(new Set())
   const [newBlockPos,  setNewBlockPos]      = useState('top')
+  // Only meaningful when newBlockPos is a category id — where inside it the
+  // block lands. 'interleave' pairs with newBlockInterleaveAt (1-based: "after
+  // product N"), clamped/used at render time in StoreShell.
+  const [newBlockCatMode, setNewBlockCatMode] = useState<'after' | 'before' | 'interleave'>('after')
+  const [newBlockInterleaveAt, setNewBlockInterleaveAt] = useState(1)
   const [newBlockType, setNewBlockType]     = useState<'text' | 'image' | 'video' | 'buttons'>('text')
   const [newBlockContent, setNewBlockContent] = useState('')
   const [newBlockButtons, setNewBlockButtons] = useState<BlockButtonItem[]>([])
@@ -1135,10 +1142,12 @@ export default function EditorPage() {
     const selected = contentBlocks.filter(b => selectedForGroup.has(b.id) && !b.groupId)
     if (selected.length < 2) return
     const afterId = selected[0].afterId
-    if (!selected.every(b => b.afterId === afterId)) return
+    const catPosition = selected[0].catPosition
+    const samePos = (a?: 'before' | number, b?: 'before' | number) => (a ?? 'after') === (b ?? 'after')
+    if (!selected.every(b => b.afterId === afterId && samePos(b.catPosition, catPosition))) return
     const groupId = crypto.randomUUID()
     setContentBlocks(prev => prev.map(b => selectedForGroup.has(b.id) ? { ...b, groupId } : b))
-    setBlockGroups(prev => [...prev, { id: groupId, afterId, background: '#F8FAFC', borderRadius: 12, padding: 16 }])
+    setBlockGroups(prev => [...prev, { id: groupId, afterId, catPosition, background: '#F8FAFC', borderRadius: 12, padding: 16 }])
     setSelectedForGroup(new Set())
     setGroupMode(false)
   }
@@ -1172,18 +1181,25 @@ export default function EditorPage() {
     }
     return units
   }
-  function renderOrderArrows(afterId: string, index: number, count: number) {
+  // Blocks sharing an afterId can still land in different spots (before the
+  // products, after them, or interleaved at a specific one) — reordering
+  // must stay scoped to whichever one of those a block is actually in, not
+  // just its afterId, or "move down" could hop it into a different spot.
+  function posKey(afterId: string, catPosition: 'before' | number | undefined) {
+    return `${afterId}::${catPosition ?? 'after'}`
+  }
+  function renderOrderArrows(afterId: string, catPosition: 'before' | number | undefined, index: number, count: number) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0, marginTop: 2 }}>
         <button
-          onClick={() => moveDisplayUnit(afterId, index, -1)}
+          onClick={() => moveDisplayUnit(afterId, catPosition, index, -1)}
           disabled={index === 0}
           style={{ width: 20, height: 16, border: 'none', background: 'transparent', color: '#94A3B8', cursor: index === 0 ? 'default' : 'pointer', fontSize: 10, padding: 0, opacity: index === 0 ? 0.3 : 1, lineHeight: 1 }}
         >
           ▲
         </button>
         <button
-          onClick={() => moveDisplayUnit(afterId, index, 1)}
+          onClick={() => moveDisplayUnit(afterId, catPosition, index, 1)}
           disabled={index >= count - 1}
           style={{ width: 20, height: 16, border: 'none', background: 'transparent', color: '#94A3B8', cursor: index >= count - 1 ? 'default' : 'pointer', fontSize: 10, padding: 0, opacity: index >= count - 1 ? 0.3 : 1, lineHeight: 1 }}
         >
@@ -1194,10 +1210,10 @@ export default function EditorPage() {
   }
   // Reorders a display unit (a single block, or a whole group moved as one)
   // relative to the other units sharing the same position — units at a
-  // different afterId are never touched, since they render somewhere else
-  // on the page entirely.
-  function moveDisplayUnit(afterId: string, unitIndex: number, dir: -1 | 1) {
-    const matching = contentBlocks.filter(b => b.afterId === afterId)
+  // different afterId, or a different catPosition within the same afterId,
+  // are never touched, since they render somewhere else on the page entirely.
+  function moveDisplayUnit(afterId: string, catPosition: 'before' | number | undefined, unitIndex: number, dir: -1 | 1) {
+    const matching = contentBlocks.filter(b => b.afterId === afterId && (b.catPosition ?? 'after') === (catPosition ?? 'after'))
     const seen = new Set<string>()
     const units: string[][] = []
     for (const b of matching) {
@@ -1248,9 +1264,13 @@ export default function EditorPage() {
     setNewBlockLinkTarget(b.linkTarget ?? 'url')
     setNewBlockLinkCategoryId(b.linkCategoryId ?? '')
     setNewBlockLinkProductId(b.linkProductId ?? '')
+    setNewBlockCatMode(b.catPosition === 'before' ? 'before' : typeof b.catPosition === 'number' ? 'interleave' : 'after')
+    setNewBlockInterleaveAt(typeof b.catPosition === 'number' ? b.catPosition : 1)
   }
   function cancelEditBlock() {
     setEditingBlockId(null)
+    setNewBlockCatMode('after')
+    setNewBlockInterleaveAt(1)
     setNewBlockContent('')
     setNewBlockButtons([])
     setNewBlockFontSize(15)
@@ -1276,6 +1296,9 @@ export default function EditorPage() {
           <span className="ed-block-item-type">{b.type === 'text' ? 'Texto' : b.type === 'image' ? 'Imagen' : b.type === 'video' ? 'Video' : 'Botones'}</span>
           <span className="ed-block-item-pos">
             {b.afterId === 'top' ? 'Al inicio' : b.afterId === 'bottom' ? 'Al final' : (categories.find(c => c.id === b.afterId)?.name ?? b.afterId)}
+            {b.afterId !== 'top' && b.afterId !== 'bottom' && (
+              b.catPosition === 'before' ? ' — arriba' : typeof b.catPosition === 'number' ? ` — tras el producto ${b.catPosition}` : ' — despues'
+            )}
           </span>
           <button
             onClick={() => startEditBlock(b)}
@@ -1397,7 +1420,9 @@ export default function EditorPage() {
   const blockUnitPositionIndex = new Map<BlockDisplayUnit, number>()
   const blockUnitPositionCount: Record<string, number> = {}
   for (const u of blockDisplayUnits) {
-    const key = u.kind === 'single' ? u.block.afterId : u.group.afterId
+    const afterId = u.kind === 'single' ? u.block.afterId : u.group.afterId
+    const catPosition = u.kind === 'single' ? u.block.catPosition : u.group.catPosition
+    const key = posKey(afterId, catPosition)
     const idx = blockUnitPositionCount[key] ?? 0
     blockUnitPositionIndex.set(u, idx)
     blockUnitPositionCount[key] = idx + 1
@@ -2601,11 +2626,12 @@ export default function EditorPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
                   {blockDisplayUnits.map(unit => {
                     const afterId = unit.kind === 'single' ? unit.block.afterId : unit.group.afterId
+                    const catPosition = unit.kind === 'single' ? unit.block.catPosition : unit.group.catPosition
                     const index = blockUnitPositionIndex.get(unit) ?? 0
-                    const count = blockUnitPositionCount[afterId] ?? 1
+                    const count = blockUnitPositionCount[posKey(afterId, catPosition)] ?? 1
                     return unit.kind === 'single' ? (
                     <div key={unit.block.id} style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
-                      {renderOrderArrows(afterId, index, count)}
+                      {renderOrderArrows(afterId, catPosition, index, count)}
                       {groupMode && !unit.block.groupId && (
                         <input
                           type="checkbox"
@@ -2619,7 +2645,7 @@ export default function EditorPage() {
                   ) : (
                     <div key={unit.group.id} className="ed-block-group">
                       <div className="ed-block-group-head">
-                        {renderOrderArrows(afterId, index, count)}
+                        {renderOrderArrows(afterId, catPosition, index, count)}
                         <span className="ed-block-item-type" style={{ background: '#EDE9FE', color: '#7C3AED' }}>Grupo · {unit.members.length} bloques</span>
                         <button
                           onClick={() => ungroupBlocks(unit.group.id)}
@@ -2788,6 +2814,7 @@ export default function EditorPage() {
 
                       {blockGroups.filter(g =>
                         g.id !== unit.group.id && g.afterId === unit.group.afterId && !g.parentGroupId
+                        && (g.catPosition ?? 'after') === (unit.group.catPosition ?? 'after')
                         && !blockGroups.some(x => x.parentGroupId === g.id)
                       ).length > 0 && (
                         <select
@@ -2803,6 +2830,7 @@ export default function EditorPage() {
                           <option value="">+ Anidar un grupo existente aqui...</option>
                           {blockGroups.filter(g =>
                             g.id !== unit.group.id && g.afterId === unit.group.afterId && !g.parentGroupId
+                            && (g.catPosition ?? 'after') === (unit.group.catPosition ?? 'after')
                             && !blockGroups.some(x => x.parentGroupId === g.id)
                           ).map(g => (
                             <option key={g.id} value={g.id}>Grupo ({contentBlocks.filter(m => m.groupId === g.id).length} bloques)</option>
@@ -2828,6 +2856,33 @@ export default function EditorPage() {
                 ))}
                 <option value="bottom">Al final (despues de todo)</option>
               </select>
+
+              {newBlockPos !== 'top' && newBlockPos !== 'bottom' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <select
+                    value={newBlockCatMode}
+                    onChange={e => setNewBlockCatMode(e.target.value as 'after' | 'before' | 'interleave')}
+                    className="ed-block-select"
+                  >
+                    <option value="after">Despues de los productos de la categoria</option>
+                    <option value="before">Arriba de los productos, debajo del titulo</option>
+                    <option value="interleave">Intercalado entre los productos</option>
+                  </select>
+                  {newBlockCatMode === 'interleave' && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 11, color: '#64748B' }}>Despues del producto numero</span>
+                      <input
+                        type="number"
+                        min={1}
+                        value={newBlockInterleaveAt}
+                        onChange={e => setNewBlockInterleaveAt(Math.max(1, Number(e.target.value) || 1))}
+                        className="ed-block-select"
+                        style={{ width: 64, textAlign: 'center' }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div style={{ display: 'flex', gap: 6 }}>
                 {(['text', 'image', 'video', 'buttons'] as const).map(tp => (
@@ -3161,19 +3216,23 @@ export default function EditorPage() {
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   onClick={() => {
+                    const catPosition = (newBlockPos === 'top' || newBlockPos === 'bottom') ? undefined
+                      : newBlockCatMode === 'before' ? 'before' as const
+                      : newBlockCatMode === 'interleave' ? newBlockInterleaveAt
+                      : undefined
                     if (newBlockType === 'buttons') {
                       const valid = newBlockButtons.filter(b => b.label.trim() && b.targetId)
                       if (valid.length === 0) return
                       if (editingBlockId) {
                         setContentBlocks(prev => prev.map(x => x.id === editingBlockId
-                          ? { ...x, afterId: newBlockPos, type: 'buttons' as const, content: JSON.stringify(valid), spacing: newBlockSpacing, buttonStyle: newBlockButtonStyle, buttonSize: newBlockButtonSize, buttonWidth: newBlockButtonWidth || undefined }
+                          ? { ...x, afterId: newBlockPos, type: 'buttons' as const, content: JSON.stringify(valid), spacing: newBlockSpacing, buttonStyle: newBlockButtonStyle, buttonSize: newBlockButtonSize, buttonWidth: newBlockButtonWidth || undefined, catPosition }
                           : x))
                         cancelEditBlock()
                         return
                       }
                       setContentBlocks(prev => [...prev, {
                         id: crypto.randomUUID(), afterId: newBlockPos, type: 'buttons', content: JSON.stringify(valid),
-                        spacing: newBlockSpacing, buttonStyle: newBlockButtonStyle, buttonSize: newBlockButtonSize, buttonWidth: newBlockButtonWidth || undefined,
+                        spacing: newBlockSpacing, buttonStyle: newBlockButtonStyle, buttonSize: newBlockButtonSize, buttonWidth: newBlockButtonWidth || undefined, catPosition,
                       }])
                       setNewBlockButtons([])
                       return
@@ -3181,6 +3240,7 @@ export default function EditorPage() {
                     if (!newBlockContent.trim()) return
                     const fields = {
                       afterId: newBlockPos,
+                      catPosition,
                       type: newBlockType,
                       content: newBlockContent.trim(),
                       spacing: newBlockSpacing,

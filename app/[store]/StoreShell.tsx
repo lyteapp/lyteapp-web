@@ -43,6 +43,24 @@ function variableValueLabel(v: string | string[] | undefined): string {
 // Width (px) of the left-edge strip a touch must start in to swipe the
 // product modal closed.
 const EDGE_SWIPE_ZONE = 28
+// True once every image/video inside `root` that's actually on screen (or
+// within `screens` screen-heights below the top) has loaded — videos: enough
+// to play. Media scrolled sideways out of view (a card's other swipe photos,
+// carousel items) is skipped: lazy-loading never fetches it until shown.
+function onScreenMediaReady(root: Element, screens: number): boolean {
+  const limit = window.innerHeight * screens
+  const inView = (el: Element) => {
+    const r = el.getBoundingClientRect()
+    return r.top < limit && r.bottom > 0 && r.left < window.innerWidth && r.right > 0 && r.width > 0
+  }
+  for (const img of Array.from(root.querySelectorAll('img'))) {
+    if (inView(img) && !img.complete) return false
+  }
+  for (const v of Array.from(root.querySelectorAll('video'))) {
+    if (inView(v) && v.readyState < 3 && !v.error) return false
+  }
+  return true
+}
 function normSearch(t: string) {
   return t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 }
@@ -872,7 +890,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       if (p) openProductModal(p)
     } else if (ad.linkTarget === 'category' && ad.linkCategoryId) {
       const cat = categories.find(c => c.id === ad.linkCategoryId)
-      if (cat) { setFocusCategory(cat); window.scrollTo({ top: 0 }) }
+      if (cat) openFocusCategory(cat)
     } else if (ad.linkTarget === 'url' && ad.linkUrl?.trim()) {
       window.open(ad.linkUrl, '_blank', 'noopener,noreferrer')
     }
@@ -1676,7 +1694,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           }
           const onClickHandler = isCategoryLink ? () => {
             const cat = categories.find(c => c.id === block.linkCategoryId)
-            if (cat) { setFocusCategory(cat); window.scrollTo({ top: 0 }) }
+            if (cat) openFocusCategory(cat)
           } : isProductLink ? () => {
             const p = products.find(pr => pr.id === block.linkProductId)
             if (p) openProductModal(p)
@@ -1731,7 +1749,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   if (p) openProductModal(p)
                 } else {
                   const cat = categories.find(c => c.id === b.targetId)
-                  if (cat) { setFocusCategory(cat); window.scrollTo({ top: 0 }) }
+                  if (cat) openFocusCategory(cat)
                 }
               }
               if (block.buttonStyle === 'slide') {
@@ -3021,17 +3039,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [splashWaiting, setSplashWaiting] = useState(false)
   function storefrontReady(): boolean {
     const page = document.querySelector('.sf-page')
-    if (!page) return false
-    const limit = window.innerHeight * 1.5
-    const near = (el: Element) => el.getBoundingClientRect().top < limit
-    for (const img of Array.from(page.querySelectorAll('img'))) {
-      if (near(img) && img.loading !== 'lazy' && !img.complete) return false
-      if (near(img) && img.loading === 'lazy' && img.getBoundingClientRect().top < window.innerHeight && !img.complete) return false
-    }
-    for (const v of Array.from(page.querySelectorAll('video'))) {
-      if (near(v) && v.readyState < 3 && !v.error) return false
-    }
-    return true
+    // The page is clipped to one screen under the welcome overlay, so lazy
+    // media below that wouldn't start loading — wait on the first screen.
+    return !!page && onScreenMediaReady(page, 1)
   }
   function proceedToTransition() {
     if (splashWaiting) return
@@ -4461,6 +4471,34 @@ export default function StoreShell({ store, products, categories = [], initialBc
       setTimeout(() => setCoTransition(null), 320)
     }, 800)
   }
+  // Opening a category on its own page: the same logo loading screen covers
+  // the switch and stays until the category's on-screen photos and videos
+  // have loaded, so it appears already in place (capped at 5s).
+  function openFocusCategory(cat: { id: string; name: string }) {
+    setModalProduct(null)
+    setMenuOpen(false)
+    if (coTransition) { setFocusCategory(cat); window.scrollTo(0, 0); return }
+    setCoTransition('in')
+    setTimeout(() => {
+      setFocusCategory(cat)
+      window.scrollTo(0, 0)
+      const started = Date.now()
+      const check = () => {
+        const root = document.querySelector('.sf-focus-category')
+        const ready = !!root && onScreenMediaReady(root, 1.2)
+        if ((ready && Date.now() - started > 150) || Date.now() - started > 5000) {
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            setCoTransition('out')
+            setTimeout(() => setCoTransition(null), 320)
+          }))
+          return
+        }
+        setTimeout(check, 100)
+      }
+      setTimeout(check, 50)
+    }, 220)
+  }
+
   function renderCheckoutTransition() {
     if (!coTransition) return null
     return (
@@ -5362,10 +5400,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                     key={cat.id}
                     className="sf-drawer-link"
                     onClick={() => {
-                      setMenuOpen(false)
-                      setModalProduct(null)
-                      setFocusCategory(cat)
-                      window.scrollTo({ top: 0 })
+                      openFocusCategory(cat)
                     }}
                   >
                     {cat.name}

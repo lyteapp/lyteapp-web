@@ -1538,7 +1538,7 @@ html, body { overflow-x: clip; }
 .sf-modal-img-frame { flex-shrink: 0; position: relative; }
 .sf-modal-img-frame .sf-modal-img { width: 100%; }
 /* Sharper large version layered over the instantly-shown card-size image. */
-.sf-img-hi { position: absolute; top: 0; left: 0; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+.sf-img-hi { position: absolute; top: 0; left: 0; opacity: 0; transition: opacity 0.2s; pointer-events: none; background: transparent !important; }
 .sf-img-hi.loaded { opacity: 1; }
 
 /* "Pagina completa" — a large hero photo up top instead of a small

@@ -78,14 +78,18 @@ function ProgressiveImg({ src, alt, className }: { src: string; alt: string; cla
   const hi = resizedImg(src, 1200)
   return (
     <>
-      <img src={lo} alt={alt} className={className} />
+      {/* sync decode: it's already cached, so paint it in the same frame the
+          modal opens instead of one blank frame later. */}
+      <img src={lo} alt={alt} className={className} decoding="sync" />
       {hi !== lo && (
         <img
           src={hi}
           alt=""
           aria-hidden="true"
           className={`${className} sf-img-hi${hiLoaded ? ' loaded' : ''}`}
-          onLoad={() => setHiLoaded(true)}
+          // onLoad fires once downloaded, not decoded — revealing it then
+          // flashes its empty box for a frame over the image underneath.
+          onLoad={e => { e.currentTarget.decode().catch(() => {}).finally(() => setHiLoaded(true)) }}
         />
       )}
     </>

@@ -57,7 +57,9 @@ function onScreenMediaReady(root: Element, screens: number): boolean {
     if (inView(img) && !img.complete) return false
   }
   for (const v of Array.from(root.querySelectorAll('video'))) {
-    if (inView(v) && v.readyState < 3 && !v.error) return false
+    // A video the browser can't load at all (error / no usable source) is
+    // never going to be ready, so it doesn't hold the page back.
+    if (inView(v) && v.readyState < 3 && !v.error && v.networkState !== HTMLMediaElement.NETWORK_NO_SOURCE) return false
   }
   return true
 }

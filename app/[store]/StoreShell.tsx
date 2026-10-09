@@ -95,6 +95,13 @@ function searchTermScore(term: string, word: string): number {
   if (word.length > term.length && editDistance(term, word.slice(0, term.length), tol) <= tol) return 1
   return 0
 }
+function productSale(p: { price: number; options?: ProductOptions | null }): { was: number; badge: string } | null {
+  const was = Number(p.options?.sale?.compareAtPrice)
+  const price = Number(p.price)
+  if (!was || !(was > price)) return null
+  const pct = Math.round((1 - price / was) * 100)
+  return { was, badge: p.options?.sale?.badge?.trim() || (pct > 0 ? `-${pct}%` : 'Oferta') }
+}
 // Product-card images are requested at this width, so the browser already
 // has it cached by the time the product modal opens.
 const CARD_IMG_WIDTH = 750
@@ -167,6 +174,9 @@ type ProductOptions = {
   nutrition?:     NutritionInfo
   // Extra gallery photos for the product itself, beyond its cover image_url.
   images?:        string[]
+  // On sale: `price` is what's charged; compareAtPrice is the original
+  // shown struck through. badge overrides the default "-XX%" label.
+  sale?:          { compareAtPrice: number; badge?: string }
 }
 type SelectedOptions = {
   variables?:   Record<string, string[] | string>
@@ -2135,7 +2145,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
               {modalProduct.description && <div className="sf-modal-desc">{modalProduct.description}</div>}
               <div className="sf-modal-base-price">
                 {currencySymbol}{(modalProduct.price + modalExtraPrice).toFixed(2)}
-                {modalExtraPrice > 0 && <span className="sf-modal-base-price-was">{currencySymbol}{Number(modalProduct.price).toFixed(2)}</span>}
+                {productSale(modalProduct)
+                  ? <>
+                      <span className="sf-modal-base-price-was">{currencySymbol}{(productSale(modalProduct)!.was + modalExtraPrice).toFixed(2)}</span>
+                      <span className="sf-sale-pill">{productSale(modalProduct)!.badge}</span>
+                    </>
+                  : modalExtraPrice > 0 && <span className="sf-modal-base-price-was">{currencySymbol}{Number(modalProduct.price).toFixed(2)}</span>}
               </div>
             </div>
           </div>
@@ -4341,6 +4356,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
             <div className="sf-card-img-empty">{PLACEHOLDER}</div>
           )}
           {qty > 0 && <div className="sf-card-badge">{qty}</div>}
+          {productSale(product) && <div className="sf-sale-badge">{productSale(product)!.badge}</div>}
           {swipeCount > 1 && (
             <div className="sf-slide-dots">
               {Array.from({ length: swipeCount }, (_, i) => (
@@ -4362,7 +4378,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
             </div>
           ) : null}
           <div className="sf-card-footer">
-            <div className="sf-card-price">{currencySymbol}{Number(product.price).toFixed(2)}</div>
+            <div className="sf-card-price">
+              {currencySymbol}{Number(product.price).toFixed(2)}
+              {productSale(product) && <span className="sf-price-was">{currencySymbol}{productSale(product)!.was.toFixed(2)}</span>}
+            </div>
           </div>
         </div>
       </div>
@@ -4458,6 +4477,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
             <div className="sf-esc-img sf-esc-img-empty">{PLACEHOLDER}</div>
           )}
           {getProdQty(product.id) > 0 && <div className="sf-card-badge">{getProdQty(product.id)}</div>}
+          {productSale(product) && <div className="sf-sale-badge">{productSale(product)!.badge}</div>}
           {swipeCount > 1 && (
             <div className="sf-slide-dots">
               {Array.from({ length: swipeCount }, (_, i) => (
@@ -4477,7 +4497,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
               ))}
             </div>
           ) : null}
-          <div className="sf-esc-price">{currencySymbol}{Number(product.price).toFixed(2)}</div>
+          <div className="sf-esc-price">
+            {currencySymbol}{Number(product.price).toFixed(2)}
+            {productSale(product) && <span className="sf-price-was">{currencySymbol}{productSale(product)!.was.toFixed(2)}</span>}
+          </div>
         </div>
       </div>
     )
@@ -4572,6 +4595,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
             <div className="sf-cat-img sf-cat-img-empty">{PLACEHOLDER}</div>
           )}
           {getProdQty(product.id) > 0 && <div className="sf-card-badge">{getProdQty(product.id)}</div>}
+          {productSale(product) && <div className="sf-sale-badge">{productSale(product)!.badge}</div>}
           {swipeCount > 1 && (
             <div className="sf-slide-dots">
               {Array.from({ length: swipeCount }, (_, i) => (
@@ -4594,7 +4618,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
           ) : null}
         </div>
         <div className="sf-cat-action">
-          <div className="sf-cat-price">{currencySymbol}{Number(product.price).toFixed(2)}</div>
+          <div className="sf-cat-price">
+            {currencySymbol}{Number(product.price).toFixed(2)}
+            {productSale(product) && <span className="sf-price-was">{currencySymbol}{productSale(product)!.was.toFixed(2)}</span>}
+          </div>
         </div>
       </div>
     )
@@ -4852,12 +4879,16 @@ export default function StoreShell({ store, products, categories = [], initialBc
                         : <div className="sf-vit-hero-img-empty">{PLACEHOLDER}</div>
                       }
                       {getProdQty(vitHero.id) > 0 && <div className="sf-card-badge sf-vit-badge">{getProdQty(vitHero.id)}</div>}
+                      {productSale(vitHero) && <div className="sf-sale-badge">{productSale(vitHero)!.badge}</div>}
                     </div>
                     <div className="sf-vit-hero-body">
                       <div className="sf-vit-hero-name">{vitHero.name}</div>
                       {vitHero.description && <div className="sf-vit-hero-desc">{vitHero.description}</div>}
                       <div className="sf-vit-hero-footer">
-                        <div className="sf-vit-hero-price">{currencySymbol}{Number(vitHero.price).toFixed(2)}</div>
+                        <div className="sf-vit-hero-price">
+                          {currencySymbol}{Number(vitHero.price).toFixed(2)}
+                          {productSale(vitHero) && <span className="sf-price-was">{currencySymbol}{productSale(vitHero)!.was.toFixed(2)}</span>}
+                        </div>
                       </div>
                     </div>
                   </div>

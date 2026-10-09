@@ -32,6 +32,9 @@ type ProductOptions = {
   nutrition?:     NutritionInfo
   // Extra gallery photos for the product itself, beyond its cover image_url.
   images?:        string[]
+  // On sale: price is what's charged, compareAtPrice the original shown
+  // struck through on the store; badge replaces the default "-XX%" label.
+  sale?:          { compareAtPrice: number; badge?: string }
 }
 
 type Product = {
@@ -93,6 +96,9 @@ export default function ProductosPage() {
 
   // extra gallery photos — product-level and per color variant
   const [optImages, setOptImages]               = useState<string[]>([])
+  const [optSaleEnabled, setOptSaleEnabled]     = useState(false)
+  const [optSaleWas, setOptSaleWas]             = useState('')
+  const [optSaleBadge, setOptSaleBadge]         = useState('')
   const [galleryUploading, setGalleryUploading]  = useState(false)
   const [variantGalleryUploadIdx, setVariantGalleryUploadIdx] = useState<number | null>(null)
   const [variantGalleryUploading, setVariantGalleryUploading] = useState(false)
@@ -150,6 +156,7 @@ export default function ProductosPage() {
     setOptNutritionEnabled(false)
     setOptCalories(''); setOptFat(''); setOptProtein(''); setOptCarbs('')
     setOptImages([])
+    setOptSaleEnabled(false); setOptSaleWas(''); setOptSaleBadge('')
   }
 
   function openAdd() {
@@ -171,6 +178,9 @@ export default function ProductosPage() {
     setOptColors(opts.colors ?? [])
     setOptColorVariants(opts.colorVariants ?? [])
     setOptImages(opts.images ?? [])
+    setOptSaleEnabled(!!opts.sale)
+    setOptSaleWas(opts.sale ? String(opts.sale.compareAtPrice) : '')
+    setOptSaleBadge(opts.sale?.badge ?? '')
     setOptAdditionals(opts.additionals ?? [])
     setOptAllowNotes(opts.allowNotes ?? false)
     setOptNutritionEnabled(opts.nutrition?.enabled ?? false)
@@ -396,6 +406,10 @@ export default function ProductosPage() {
     if (!storeId || !name.trim()) { setError(t('prod.error.name')); return }
     const priceNum = parseFloat(price)
     if (isNaN(priceNum) || priceNum < 0) { setError(t('prod.error.price')); return }
+    const saleWasNum = parseFloat(optSaleWas)
+    if (optSaleEnabled && (isNaN(saleWasNum) || saleWasNum <= priceNum)) {
+      setError('El precio original debe ser mayor que el precio de oferta'); return
+    }
     setSaving(true); setError('')
 
     const opts: ProductOptions = {
@@ -412,11 +426,12 @@ export default function ProductosPage() {
         carbs:    parseFloat(optCarbs) || 0,
       } : undefined,
       images: optImages,
+      sale: optSaleEnabled ? { compareAtPrice: saleWasNum, badge: optSaleBadge.trim() || undefined } : undefined,
     }
     const hasOpts = opts.variables!.length > 0 || opts.colors!.length > 0 ||
       (opts.colorVariants?.length ?? 0) > 0 ||
       opts.additionals!.length > 0 || opts.allowNotes || !!opts.nutrition ||
-      opts.images!.length > 0
+      opts.images!.length > 0 || !!opts.sale
 
     const payload = {
       store_id: storeId, name: name.trim(),
@@ -561,7 +576,7 @@ export default function ProductosPage() {
 
           <div className="pr-two-col">
             <div className="pr-field">
-              <label className="pr-label">{t('prod.price.label')}</label>
+              <label className="pr-label">{optSaleEnabled ? 'Precio de oferta' : t('prod.price.label')}</label>
               <div className="pr-prefix-wrap">
                 <span className="pr-prefix">$</span>
                 <input type="number" className="pr-prefix-input" placeholder="0.00" min="0" step="0.01"
@@ -576,6 +591,34 @@ export default function ProductosPage() {
               </div>
             </div>
           </div>
+
+          <div className="pr-field">
+            <div className="pr-toggle-row" onClick={() => { setOptSaleEnabled(v => !v); setIsDirty(true) }}>
+              <div className={`pr-toggle ${optSaleEnabled ? 'on' : ''}`}><div className="pr-toggle-knob" /></div>
+              <span className="pr-toggle-lbl">Poner en oferta</span>
+            </div>
+          </div>
+          {optSaleEnabled && (
+            <div className="pr-two-col">
+              <div className="pr-field">
+                <label className="pr-label">Precio original (tachado)</label>
+                <div className="pr-prefix-wrap">
+                  <span className="pr-prefix">$</span>
+                  <input type="number" className="pr-prefix-input" placeholder="0.00" min="0" step="0.01"
+                    value={optSaleWas} onChange={e => { setOptSaleWas(e.target.value); setIsDirty(true) }} />
+                </div>
+              </div>
+              <div className="pr-field">
+                <label className="pr-label">Texto del anuncio</label>
+                <input className="pr-input" maxLength={20}
+                  placeholder={(() => {
+                    const was = parseFloat(optSaleWas), now = parseFloat(price)
+                    return was > now && now >= 0 ? `-${Math.round((1 - now / was) * 100)}%` : 'Oferta'
+                  })()}
+                  value={optSaleBadge} onChange={e => { setOptSaleBadge(e.target.value); setIsDirty(true) }} />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1037,7 +1080,12 @@ export default function ProductosPage() {
                   <div className="pr-card-name">{p.name}</div>
                   {p.description && <div className="pr-card-desc">{p.description}</div>}
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <div className="pr-card-price">${Number(p.price).toFixed(2)}</div>
+                    <div className="pr-card-price">
+                      ${Number(p.price).toFixed(2)}
+                      {p.options?.sale && Number(p.options.sale.compareAtPrice) > Number(p.price) && (
+                        <span style={{ marginLeft: 6, fontSize: '0.8em', fontWeight: 500, color: '#94A3B8', textDecoration: 'line-through' }}>${Number(p.options.sale.compareAtPrice).toFixed(2)}</span>
+                      )}
+                    </div>
                     {hasOpts && <div className="pr-card-opts-badge">Con opciones</div>}
                     {(p.category_ids ?? []).map(id => categories.find(c => c.id === id)).filter((c): c is Category => !!c).map(cat => (
                       <div key={cat.id} className="pr-card-cat">{cat.name}</div>

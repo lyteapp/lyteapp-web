@@ -2420,3 +2420,11 @@ html, body { overflow-x: clip; }
 .sf-boot { z-index: 2000; animation: none; }
 .sf-boot.out { animation: sfCoTransOut 0.3s ease both; pointer-events: none; }
 .sf-boot.gone { display: none; }
+
+/* Welcome-page button while the storefront's images finish preloading. */
+.sf-splash-btn-spinner {
+  width: 15px; height: 15px; border-radius: 50%;
+  border: 2px solid currentColor; border-right-color: transparent;
+  animation: sfSpin 0.7s linear infinite; flex-shrink: 0;
+}
+@keyframes sfSpin { to { transform: rotate(360deg); } }

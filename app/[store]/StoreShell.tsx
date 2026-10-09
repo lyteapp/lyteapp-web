@@ -2973,7 +2973,57 @@ export default function StoreShell({ store, products, categories = [], initialBc
     })
   }
 
+  // While the welcome page is up, warm the browser cache with everything
+  // the storefront shows first (banner, logo, content-block images, the
+  // first products' photos) so leaving the splash doesn't land on a page
+  // that's still popping images in and shifting around.
+  const splashPreloadRef = useRef<Promise<void> | null>(null)
+  const [splashWaiting, setSplashWaiting] = useState(false)
+  useEffect(() => {
+    if (view !== 'splash' || splashPreloadRef.current) return
+    const cfgAll = store.template_config ?? {}
+    const hidden = new Set(cfgAll.hiddenCategoryIds ?? [])
+    const catIds = (p: Product) => p.category_ids ?? (p.category_id ? [p.category_id] : [])
+    const ordered = [
+      ...categories.filter(c => !hidden.has(c.id)).flatMap(c => products.filter(p => catIds(p).includes(c.id))),
+      ...products.filter(p => catIds(p).length === 0),
+    ]
+    const urls = new Set<string>()
+    if (store.banner_url) urls.add(resizedImg(store.banner_url, 1600))
+    if (store.logo_url) urls.add(resizedImg(store.logo_url, 400))
+    for (const b of (cfgAll.contentBlocks ?? []) as ContentBlock[]) {
+      if (b.type === 'image' && b.content && !isVideoUrl(b.content)) urls.add(resizedImg(b.content, 1200))
+    }
+    for (const p of ordered.slice(0, 8)) {
+      const img = p.options?.colorVariants?.[0]?.imageUrl || p.image_url
+      if (img && !isVideoUrl(img)) urls.add(resizedImg(img, CARD_IMG_WIDTH))
+    }
+    const load = (src: string) => new Promise<void>(resolve => {
+      const im = new Image()
+      let done = false
+      const fin = () => { if (!done) { done = true; resolve() } }
+      im.onload = () => { im.decode ? im.decode().then(fin, fin) : fin() }
+      im.onerror = fin
+      im.src = src
+      setTimeout(fin, 6000)
+    })
+    splashPreloadRef.current = Promise.all([...urls].map(load)).then(() => {})
+  }, [view])
+
+  // The splash only leaves once that preload is done (capped, so a slow
+  // network still gets in) — the button shows a spinner meanwhile.
   function proceedToTransition() {
+    if (splashWaiting) return
+    const ready = splashPreloadRef.current
+    if (!ready) { runSplashTransition(); return }
+    let finished = false
+    const go = () => { if (finished) return; finished = true; setSplashWaiting(false); runSplashTransition() }
+    ready.then(go)
+    setTimeout(() => { if (!finished) setSplashWaiting(true) }, 120)
+    setTimeout(go, 5000)
+  }
+
+  function runSplashTransition() {
     if (transitionId === 'logo-morph' && splashLogoRef.current) {
       const r = splashLogoRef.current.getBoundingClientRect()
       setLogoMorphStart({ top: r.top, left: r.left, width: r.width, height: r.height })
@@ -3263,11 +3313,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
             <button
               className={`sf-splash-btn${collectCustomerData ? ' sf-splash-btn-in' : ''}`}
               style={hp.buttonColor ? { background: hp.buttonColor } : undefined}
-              disabled={cedulaStatus === 'checking'}
+              disabled={cedulaStatus === 'checking' || splashWaiting}
               onClick={handleSplashStart}
             >
               <span>{cedulaStatus === 'checking' ? 'Buscando...' : (hp.buttonLabel || 'Empezar')}</span>
-              {cedulaStatus !== 'checking' && (
+              {splashWaiting && <span className="sf-splash-btn-spinner" aria-label="Cargando" />}
+              {cedulaStatus !== 'checking' && !splashWaiting && (
                 <svg className="sf-splash-btn-arrow" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
                   <path d="M4 10h12M12 5l5 5-5 5" />
                 </svg>

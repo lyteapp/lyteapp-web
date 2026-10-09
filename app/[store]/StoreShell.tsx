@@ -39,6 +39,9 @@ function variableValues(v: string | string[] | undefined): string[] {
 function variableValueLabel(v: string | string[] | undefined): string {
   return variableValues(v).join(', ')
 }
+// Width (px) of the left-edge strip a touch must start in to swipe the
+// product modal closed.
+const EDGE_SWIPE_ZONE = 28
 function normSearch(t: string) {
   return t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 }
@@ -1077,6 +1080,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const lightboxDragStartIdxRef = useRef<number>(0)
   const [modalImgIdx, setModalImgIdx] = useState(0)
   const modalImgStripRef        = useRef<HTMLDivElement | null>(null)
+  // Edge-swipe to close the product modal (like iOS "back"): only a touch
+  // that starts within EDGE_SWIPE_ZONE px of the left screen edge counts,
+  // so swiping the photo gallery (anywhere else) is never mistaken for it.
+  const edgeSwipeRef = useRef<{ x0: number; y0: number; lastX: number; lastT: number; v: number; locked: boolean; wrap: HTMLElement; overlay: HTMLElement | null } | null>(null)
   useEffect(() => { setModalImgIdx(0) }, [modalProduct?.id, modalColor])
 
   const storeCurrency = (store.store_currency ?? 'USD') as 'USD' | 'EUR'
@@ -2058,6 +2065,60 @@ export default function StoreShell({ store, products, categories = [], initialBc
           className={`sf-modal${cfgModalHalf ? ' sf-modal-half' : ''}${cfgModalFull ? ' sf-modal-fullpage' : ''}`}
           style={showHeaderAboveModal ? { height: `calc(100dvh - ${headerPxNow}px)`, maxHeight: `calc(100dvh - ${headerPxNow}px)` } : undefined}
           onClick={e => e.stopPropagation()}
+          onTouchStartCapture={e => {
+            const t = e.touches[0]
+            if (e.touches.length !== 1 || t.clientX > EDGE_SWIPE_ZONE) { edgeSwipeRef.current = null; return }
+            const wrap = e.currentTarget.parentElement as HTMLElement
+            edgeSwipeRef.current = { x0: t.clientX, y0: t.clientY, lastX: t.clientX, lastT: e.timeStamp, v: 0, locked: false, wrap, overlay: wrap.closest('.sf-modal-overlay') }
+            // Keep the photo gallery's own swipe handlers out of this gesture.
+            e.stopPropagation()
+          }}
+          onTouchMoveCapture={e => {
+            const g = edgeSwipeRef.current
+            if (!g) return
+            e.stopPropagation()
+            const t = e.touches[0]
+            const dx = Math.max(0, t.clientX - g.x0)
+            const dy = t.clientY - g.y0
+            if (!g.locked) {
+              if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return
+              // Mostly vertical → it's a scroll, not a back swipe.
+              if (Math.abs(dy) > Math.abs(dx)) { edgeSwipeRef.current = null; return }
+              g.locked = true
+              g.wrap.style.transition = 'none'
+              if (g.overlay) g.overlay.style.transition = 'none'
+            }
+            const dt = Math.max(1, e.timeStamp - g.lastT)
+            g.v = (t.clientX - g.lastX) / dt
+            g.lastX = t.clientX; g.lastT = e.timeStamp
+            g.wrap.style.transform = `translateX(${dx}px)`
+            if (g.overlay) g.overlay.style.backgroundColor = `rgba(15,23,42,${0.55 * (1 - Math.min(1, dx / window.innerWidth))})`
+          }}
+          onTouchEndCapture={e => {
+            const g = edgeSwipeRef.current
+            edgeSwipeRef.current = null
+            if (!g) return
+            e.stopPropagation()
+            if (!g.locked) return
+            const dx = Math.max(0, g.lastX - g.x0)
+            const close = dx > window.innerWidth * 0.33 || g.v > 0.5
+            const ease = 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+            g.wrap.style.transition = `transform 0.22s ${ease}`
+            if (g.overlay) g.overlay.style.transition = `background-color 0.22s ${ease}`
+            if (close) {
+              g.wrap.style.transform = 'translateX(100%)'
+              if (g.overlay) g.overlay.style.backgroundColor = 'rgba(15,23,42,0)'
+              setTimeout(() => setModalProduct(null), 220)
+            } else {
+              g.wrap.style.transform = ''
+              if (g.overlay) g.overlay.style.backgroundColor = ''
+            }
+          }}
+          onTouchCancelCapture={() => {
+            const g = edgeSwipeRef.current
+            edgeSwipeRef.current = null
+            if (g?.locked) { g.wrap.style.transform = ''; if (g.overlay) g.overlay.style.backgroundColor = '' }
+          }}
         >
           <button className={`sf-modal-close${cfgModalFull ? ' sf-modal-close-hero' : ''}`} onClick={() => setModalProduct(null)}>
             {cfgModalFull ? (

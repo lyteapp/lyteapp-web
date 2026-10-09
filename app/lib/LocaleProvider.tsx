@@ -17,29 +17,21 @@ const LocaleCtx = createContext<LocaleCtxValue>({
   setLocale: () => {},
 })
 
-const STORAGE_KEY = 'lyte-locale'
+// Always follows the device's language — there's no in-app switcher, so
+// nothing is persisted. The old saved choice (from when there was one) is
+// cleared so it can't keep overriding the device.
+const LEGACY_STORAGE_KEY = 'lyte-locale'
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>('en')
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY) as Locale | null
-      if (saved === 'en' || saved === 'es') {
-        setLocaleState(saved)
-      } else {
-        const detected = detectLocale()
-        setLocaleState(detected)
-        localStorage.setItem(STORAGE_KEY, detected)
-      }
-    } catch {
-      setLocaleState(detectLocale())
-    }
+    try { localStorage.removeItem(LEGACY_STORAGE_KEY) } catch {}
+    setLocaleState(detectLocale())
   }, [])
 
   function setLocale(l: Locale) {
     setLocaleState(l)
-    try { localStorage.setItem(STORAGE_KEY, l) } catch {}
   }
 
   function t(key: TranslationKey, vars?: Record<string, string>): string {

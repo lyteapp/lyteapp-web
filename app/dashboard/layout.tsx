@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth, signOut } from '../lib/auth'
 import { supabase } from '../lib/supabase'
-import { useT, useLocale } from '../lib/LocaleProvider'
+import { useT } from '../lib/LocaleProvider'
 import { useLyteSound } from '../lib/useLyteSound'
 import { DashboardStoreProvider, useDashboardStore } from '../lib/DashboardStoreProvider'
 import './dashboard.css'
@@ -61,7 +61,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 function DashboardShell({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   const t = useT()
-  const [locale, setLocale] = useLocale()
   const router = useRouter()
   const pathname = usePathname()
   const { storeId, store, stores, setActiveStoreId, loading: storeLoading } = useDashboardStore()
@@ -479,11 +478,6 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <div className="db-topbar-right">
-            <div className="db-lang-switch">
-              <button className={locale === 'es' ? 'active' : ''} onClick={() => setLocale('es')}>ESP</button>
-              <span className="db-lang-sep" />
-              <button className={locale === 'en' ? 'active' : ''} onClick={() => setLocale('en')}>ING</button>
-            </div>
             <button className="db-icon-btn" aria-label="Buscar">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>

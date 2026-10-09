@@ -2,6 +2,7 @@ import { cache } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 import StoreShell from './StoreShell'
+import { resizedImg } from '../lib/storeImages'
 import './store.css'
 
 export const dynamic = 'force-dynamic'
@@ -48,8 +49,9 @@ export async function generateMetadata({ params }: { params: Promise<{ store: st
   }
 }
 
-export default async function StorePage({ params }: { params: Promise<{ store: string }> }) {
+export default async function StorePage({ params, searchParams }: { params: Promise<{ store: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { store: slug } = await params
+  const query = await searchParams
 
   const store = await getStore(slug)
 
@@ -90,5 +92,24 @@ export default async function StorePage({ params }: { params: Promise<{ store: s
     category_ids: categoryIdsByProduct[p.id] ?? (p.category_id ? [p.category_id] : []),
   }))
 
-  return <StoreShell store={store} products={productsWithCategories} categories={categories ?? []} initialBcvRate={initialBcvRate} initialDeliveryZones={initialDeliveryZones} mapboxToken={mapboxToken} />
+  // Logo loading screen, in the server HTML so it covers the very first
+  // paint — StoreShell fades it out once fonts, the banner/logo and the
+  // measured header/ad positions have settled (see its boot effect), so the
+  // store appears already in place instead of visibly shifting around.
+  // Skipped inside the dashboard's live-preview iframes, which reload a lot.
+  const showBoot = query.preview !== '1' && query.previewCheckout !== '1'
+  const pageBg = (store.template_config as { pageBg?: string } | null)?.pageBg
+  return (
+    <>
+      {showBoot && (
+        <div id="sf-boot" className="sf-co-transition sf-boot" style={pageBg ? { background: pageBg } : undefined} aria-hidden="true">
+          {store.logo_url
+            ? <img src={resizedImg(store.logo_url, 400)} alt="" className="sf-co-transition-logo" />
+            : <div className="sf-co-transition-name">{store.name}</div>}
+          <div className="sf-co-transition-bar"><span /></div>
+        </div>
+      )}
+      <StoreShell store={store} products={productsWithCategories} categories={categories ?? []} initialBcvRate={initialBcvRate} initialDeliveryZones={initialDeliveryZones} mapboxToken={mapboxToken} />
+    </>
+  )
 }

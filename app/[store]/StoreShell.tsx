@@ -972,6 +972,63 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
   // Product options modal
   const [modalProduct, setModalProduct]       = useState<Product | null>(null)
+
+  // Swipe from the left screen edge to pull the side menu open (when the
+  // store shows the menu button), following the finger like the product
+  // modal's edge swipe does in reverse. Only touches starting in the edge
+  // strip count, so horizontal product carousels and photo swipes elsewhere
+  // are unaffected; mostly-vertical drags are left to scroll the page.
+  const menuSwipeEnabled = !!store.template_config?.showMenuButton && view === 'catalog' && !modalProduct && !menuOpen && !headerSearchOpen
+  useEffect(() => {
+    if (!menuSwipeEnabled) return
+    let g: { x0: number; y0: number; lastX: number; lastT: number; v: number; locked: boolean; drawer: HTMLElement } | null = null
+    const onStart = (e: TouchEvent) => {
+      const t = e.touches[0]
+      const drawer = document.querySelector<HTMLElement>('.sf-drawer')
+      if (e.touches.length !== 1 || t.clientX > EDGE_SWIPE_ZONE || !drawer) { g = null; return }
+      g = { x0: t.clientX, y0: t.clientY, lastX: t.clientX, lastT: e.timeStamp, v: 0, locked: false, drawer }
+    }
+    const onMove = (e: TouchEvent) => {
+      if (!g) return
+      const t = e.touches[0]
+      const dx = Math.max(0, t.clientX - g.x0)
+      const dy = t.clientY - g.y0
+      if (!g.locked) {
+        if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return
+        if (Math.abs(dy) > Math.abs(dx)) { g = null; return }
+        g.locked = true
+        g.drawer.style.transition = 'none'
+      }
+      e.preventDefault()
+      g.v = (t.clientX - g.lastX) / Math.max(1, e.timeStamp - g.lastT)
+      g.lastX = t.clientX; g.lastT = e.timeStamp
+      const w = g.drawer.offsetWidth
+      g.drawer.style.transform = `translateX(${Math.min(0, dx - w)}px)`
+    }
+    const onEnd = () => {
+      const cur = g
+      g = null
+      if (!cur?.locked) return
+      const w = cur.drawer.offsetWidth
+      const dx = Math.max(0, cur.lastX - cur.x0)
+      const open = dx > w * 0.35 || cur.v > 0.5
+      cur.drawer.style.transition = ''
+      cur.drawer.style.transform = open ? 'translateX(0)' : 'translateX(-100%)'
+      if (open) setMenuOpen(true)
+      // Hand control back to the .sf-drawer-open class once it's settled.
+      setTimeout(() => { cur.drawer.style.transform = '' }, 300)
+    }
+    document.addEventListener('touchstart', onStart, { passive: true })
+    document.addEventListener('touchmove', onMove, { passive: false })
+    document.addEventListener('touchend', onEnd)
+    document.addEventListener('touchcancel', onEnd)
+    return () => {
+      document.removeEventListener('touchstart', onStart)
+      document.removeEventListener('touchmove', onMove)
+      document.removeEventListener('touchend', onEnd)
+      document.removeEventListener('touchcancel', onEnd)
+    }
+  }, [menuSwipeEnabled])
   const [modalVars, setModalVars]             = useState<Record<string, string[]>>({})
   const [modalColor, setModalColor]           = useState<string | undefined>()
   const [modalAdditionals, setModalAdditionals] = useState<Set<number>>(new Set())

@@ -2180,13 +2180,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
             if (g?.locked) { g.wrap.style.transform = ''; if (g.overlay) g.overlay.style.backgroundColor = '' }
           }}
         >
-          <button className={`sf-modal-close${cfgModalFull ? ' sf-modal-close-hero' : ''}`} onClick={() => setModalProduct(null)}>
-            {cfgModalFull ? (
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M15 5l-7 7 7 7" />
-              </svg>
-            ) : '×'}
-          </button>
+          {/* Full-page mode has no button over the photo — it's closed by
+              swiping from the left edge (or the store header/logo). */}
+          {!cfgModalFull && (
+            <button className="sf-modal-close" onClick={() => setModalProduct(null)}>×</button>
+          )}
 
           <div className={`sf-modal-product-head${cfgModalFull ? ' sf-modal-product-head-hero' : ''}`}>
             {modalDisplayImage && (() => {
@@ -2260,7 +2258,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
                       ? <video src={modalDisplayImage} autoPlay muted loop playsInline className="sf-modal-img sf-modal-img-zoom" />
                       : <ProgressiveImg key={modalDisplayImage ?? ''} src={modalDisplayImage ?? ''} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" />
                   )}
-                  {imgs.length > 1 && <div className="sf-modal-img-count">{curIdx + 1}/{imgs.length}</div>}
+                  {imgs.length > 1 && (
+                    <div className="sf-slide-dots sf-modal-img-dots">
+                      {imgs.map((_, i) => <div key={i} className={`sf-slide-dot${i === curIdx ? ' on' : ''}`} />)}
+                    </div>
+                  )}
                 </div>
               )
             })()}
@@ -4306,7 +4308,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
       // of sliding under it and having the search bar covered.
       <div
         className={`sf-search-overlay${topScreenAdHeight > 0 ? ' sf-search-overlay-below-ad' : ''}`}
-        style={topScreenAdHeight > 0 ? { top: `calc(env(safe-area-inset-top, 0px) + ${topScreenAdHeight}px)` } : undefined}
+        style={{
+          ...(topScreenAdHeight > 0 ? { top: `calc(env(safe-area-inset-top, 0px) + ${topScreenAdHeight}px)` } : {}),
+          // A full-page product opened from here shows the store header over
+          // this screen, which would otherwise show the search bar through it.
+          ...(showHeaderAboveModal ? { visibility: 'hidden' as const } : {}),
+        }}
       >
         <div className="sf-search-overlay-top">
           <button type="button" className="sf-search-back" onClick={toggleHeaderSearch} aria-label="Cerrar busqueda">

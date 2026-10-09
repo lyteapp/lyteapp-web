@@ -1539,15 +1539,6 @@ html, body { overflow-x: clip; }
   transition: background 0.15s;
 }
 .sf-modal-close:hover { background: #E2E8F0; }
-/* Sits over the large hero photo in "Pagina completa" — needs contrast
-   against a photo instead of the plain white header background. */
-.sf-modal-close-hero {
-  top: calc(16px + env(safe-area-inset-top, 0px));
-  left: 16px; right: auto;
-  background: rgba(15,23,42,0.45); color: white;
-  backdrop-filter: blur(4px);
-}
-.sf-modal-close-hero:hover { background: rgba(15,23,42,0.65); }
 
 .sf-modal-product-head {
   display: flex; gap: 14px; align-items: flex-start;
@@ -1565,12 +1556,10 @@ html, body { overflow-x: clip; }
   object-fit: cover; flex-shrink: 0; background: #F1F5F9;
 }
 .sf-modal-img-zoom { cursor: zoom-in; }
-.sf-modal-img-count {
-  position: absolute; bottom: 4px; right: 4px;
-  background: rgba(15,23,42,0.65); color: white;
-  font-size: 9px; font-weight: 600; padding: 2px 5px; border-radius: 100px;
-  pointer-events: none;
-}
+/* Photo counter dots over the modal image — a faint ring keeps white dots
+   visible on the white-background product shots most stores use. */
+.sf-modal-img-dots { bottom: 10px; }
+.sf-modal-img-dots .sf-slide-dot { box-shadow: 0 0 0 1px rgba(15,23,42,0.18); }
 /* More than one photo — the head image is a horizontal strip the
    customer can drag between, same mechanics as the color-swatch swipe
    on catalog cards. */

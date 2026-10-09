@@ -4829,19 +4829,6 @@ export default function StoreShell({ store, products, categories = [], initialBc
                     {cat.name}
                   </button>
                 ))}
-                {uncategorized.length > 0 && (
-                  <button
-                    className="sf-drawer-link"
-                    onClick={() => {
-                      setMenuOpen(false)
-                      setModalProduct(null)
-                      setActiveCatId('__other')
-                      setTimeout(() => document.getElementById('cat-other')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
-                    }}
-                  >
-                    {t('store.ourProducts')}
-                  </button>
-                )}
                 {hiddenCatGroups.map(({ cat }) => (
                   <button
                     key={cat.id}

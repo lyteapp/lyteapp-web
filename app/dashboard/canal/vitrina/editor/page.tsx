@@ -348,6 +348,7 @@ export default function EditorPage() {
   const [headerOverBanner, setHeaderOverBanner] = useState(false)
   const [headerSticky, setHeaderSticky] = useState(false)
   const [modalWizard, setModalWizard] = useState(false)
+  const [hideVariableCount, setHideVariableCount] = useState(false)
   const [modalSize, setModalSize] = useState<'full' | 'half'>('full')
   const [variantShape, setVariantShape] = useState<'pill' | 'rounded' | 'square'>('pill')
   const [variantSize, setVariantSize] = useState<'small' | 'medium' | 'large'>('medium')
@@ -539,6 +540,7 @@ export default function EditorPage() {
       if (cfg.headerOverBanner !== undefined) setHeaderOverBanner(cfg.headerOverBanner as boolean)
       if (cfg.headerSticky !== undefined) setHeaderSticky(cfg.headerSticky as boolean)
       if (cfg.modalWizard !== undefined) setModalWizard(cfg.modalWizard as boolean)
+      if (cfg.hideVariableCount !== undefined) setHideVariableCount(cfg.hideVariableCount as boolean)
       if (cfg.modalSize) setModalSize(cfg.modalSize as 'full' | 'half')
       if (cfg.variantShape) setVariantShape(cfg.variantShape as 'pill' | 'rounded' | 'square')
       if (cfg.variantSize) setVariantSize(cfg.variantSize as 'small' | 'medium' | 'large')
@@ -1072,7 +1074,7 @@ export default function EditorPage() {
       priceColor, accentColor, priceFont: priceFont || pageFont, priceSize,
       catTitleFont: catTitleFont || undefined, productNameFont: productNameFont || undefined,
       categoryNavStyle, showCatNav, stickyCatNav, catNavOverBanner, categorySpacing,
-      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, showHeaderSearch, showHeaderCart, headerIconColor: headerIconColor || undefined, headerOverBanner, headerSticky, headerHeightPx, modalWizard, modalSize, variantShape, variantSize, enableReorder, reorderBannerEnabled: enableReorder ? reorderBannerEnabled : undefined, reorderHeaderButton: enableReorder ? reorderHeaderButton : undefined, reorderHeaderHintSeconds: (enableReorder && reorderHeaderButton) ? reorderHeaderHintSeconds : undefined, reorderFloatSeconds: reorderFloatSeconds > 0 ? reorderFloatSeconds : undefined,
+      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, showHeaderSearch, showHeaderCart, headerIconColor: headerIconColor || undefined, headerOverBanner, headerSticky, headerHeightPx, modalWizard, hideVariableCount, modalSize, variantShape, variantSize, enableReorder, reorderBannerEnabled: enableReorder ? reorderBannerEnabled : undefined, reorderHeaderButton: enableReorder ? reorderHeaderButton : undefined, reorderHeaderHintSeconds: (enableReorder && reorderHeaderButton) ? reorderHeaderHintSeconds : undefined, reorderFloatSeconds: reorderFloatSeconds > 0 ? reorderFloatSeconds : undefined,
       reorderPosition: reorderPosition !== 'right' ? reorderPosition : undefined,
       reorderTitle: reorderTitle.trim() || undefined,
       reorderImageUrl: reorderImageUrl || undefined,
@@ -3254,6 +3256,32 @@ export default function EditorPage() {
                 }}>
                   <div style={{
                     position: 'absolute', top: 4, left: modalWizard ? 18 : 4,
+                    width: 14, height: 14, borderRadius: '50%', background: 'white',
+                    transition: 'left 0.2s',
+                  }} />
+                </div>
+              </div>
+            </label>
+
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#F8FAFC', borderRadius: 10, cursor: 'pointer', gap: 12, marginTop: 8 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', lineHeight: 1.2 }}>Ocultar cantidad permitida</div>
+                <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 3 }}>Oculta los numeros que indican cuantas opciones se pueden elegir por variable (como &quot;1/2&quot; o &quot;elige hasta 3&quot;).</div>
+              </div>
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <input
+                  type="checkbox"
+                  checked={hideVariableCount}
+                  onChange={e => setHideVariableCount(e.target.checked)}
+                  style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
+                />
+                <div style={{
+                  width: 38, height: 22, borderRadius: 100,
+                  background: hideVariableCount ? '#7C3AED' : '#D1D5DB',
+                  transition: 'background 0.2s', cursor: 'pointer', position: 'relative',
+                }}>
+                  <div style={{
+                    position: 'absolute', top: 4, left: hideVariableCount ? 18 : 4,
                     width: 14, height: 14, borderRadius: '50%', background: 'white',
                     transition: 'left 0.2s',
                   }} />

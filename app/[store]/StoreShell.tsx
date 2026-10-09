@@ -283,6 +283,7 @@ type TemplateConfig = {
   headerSticky?: boolean
   headerHeightPx?: number
   modalWizard?: boolean
+  hideVariableCount?: boolean
   modalSize?: 'full' | 'half'
   enableReorder?: boolean
   reorderBannerEnabled?: boolean
@@ -1293,6 +1294,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // regardless of current scroll position.
   const adBarCatNavBottom = cfgStickyOffsetPx + catNavOwnHeight
   const cfgModalWizard = !!cfg.modalWizard
+  const cfgHideVariableCount = !!cfg.hideVariableCount
   const cfgModalHalf = cfg.modalSize === 'half'
   // Explicit "full" is a real full-screen takeover — distinct from the
   // unset/legacy default, which keeps today's ~90vh sheet look unchanged.
@@ -2008,10 +2010,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
               </div>
               <div className="sf-modal-wizard-question">
                 {modalWizardStep.kind === 'variable' ? modalWizardStep.group.label : 'Color'}
-                {modalWizardStep.kind === 'variable' && (
+                {modalWizardStep.kind === 'variable' && !cfgHideVariableCount && (
                   <span className={`sf-modal-count${wizardVarMinMax.min > 0 && wizardVarCount < wizardVarMinMax.min ? '' : ' complete'}`}>{wizardVarCount}/{wizardVarMinMax.max}</span>
                 )}
-                {modalWizardStep.kind === 'variable' && wizardVarMinMax.min > 0 && (
+                {modalWizardStep.kind === 'variable' && wizardVarMinMax.min > 0 && !cfgHideVariableCount && (
                   <span className="sf-modal-wizard-hint">Elige {wizardVarMinMax.min === wizardVarMinMax.max ? wizardVarMinMax.min : `${wizardVarMinMax.min}-${wizardVarMinMax.max}`}</span>
                 )}
               </div>
@@ -2094,10 +2096,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   <div key={gi} className="sf-modal-section">
                     <div className="sf-modal-section-title">
                       {g.label}
-                      <span className={`sf-modal-count${min > 0 && count < min ? '' : ' complete'}`}>{count}/{max}</span>
+                      {!cfgHideVariableCount && <span className={`sf-modal-count${min > 0 && count < min ? '' : ' complete'}`}>{count}/{max}</span>}
                       {min > 0
-                        ? <span className="sf-required">requerido{max > 1 ? ` · elige ${min === max ? min : `${min}-${max}`}` : ''}</span>
-                        : max > 1 && <span className="sf-optional">opcional · hasta {max}</span>}
+                        ? <span className="sf-required">requerido{max > 1 && !cfgHideVariableCount ? ` · elige ${min === max ? min : `${min}-${max}`}` : ''}</span>
+                        : max > 1 && !cfgHideVariableCount && <span className="sf-optional">opcional · hasta {max}</span>}
                     </div>
                     <div className="sf-modal-chips">
                       {g.choices.map(normalizeChoice).map(c => (
@@ -2117,7 +2119,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                         </button>
                       ))}
                     </div>
-                    {min > 0 && count < min && <div className="sf-modal-section-hint">Elige al menos {min}</div>}
+                    {min > 0 && count < min && !cfgHideVariableCount && <div className="sf-modal-section-hint">Elige al menos {min}</div>}
                   </div>
                 )
               })}

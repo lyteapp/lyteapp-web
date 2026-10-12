@@ -13,7 +13,7 @@ import {
   Merriweather, Raleway, Nunito, Oswald, Cormorant_Garamond,
   Inter, Roboto, DM_Sans, Work_Sans, Manrope, Outfit,
   Space_Grotesk, Quicksand, Josefin_Sans, Bebas_Neue,
-  Libre_Baskerville, Caveat, Abril_Fatface, Fredoka,
+  Libre_Baskerville, Caveat, Abril_Fatface, Fredoka, Cascadia_Code,
 } from "next/font/google";
 import { LocaleProvider } from "./lib/LocaleProvider";
 import "./globals.css";
@@ -26,6 +26,14 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+// LyteApp brand headings font (2026 rebrand).
+const cascadia = Cascadia_Code({
+  variable: "--font-cascadia",
+  subsets: ["latin", "latin-ext"],
+  style: ["normal", "italic"],
+  display: "swap",
 });
 
 const fraunces = Fraunces({
@@ -92,7 +100,7 @@ export default function RootLayout({
     <html
       lang="es"
       data-scroll-behavior="smooth"
-      className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} ${poppins.variable} ${playfair.variable} ${montserrat.variable} ${lato.variable} ${merriweather.variable} ${raleway.variable} ${nunito.variable} ${oswald.variable} ${cormorant.variable} ${inter.variable} ${roboto.variable} ${dmSans.variable} ${workSans.variable} ${manrope.variable} ${outfit.variable} ${spaceGrotesk.variable} ${quicksand.variable} ${josefinSans.variable} ${bebasNeue.variable} ${libreBaskerville.variable} ${caveat.variable} ${abrilFatface.variable} ${fredoka.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} ${cascadia.variable} ${poppins.variable} ${playfair.variable} ${montserrat.variable} ${lato.variable} ${merriweather.variable} ${raleway.variable} ${nunito.variable} ${oswald.variable} ${cormorant.variable} ${inter.variable} ${roboto.variable} ${dmSans.variable} ${workSans.variable} ${manrope.variable} ${outfit.variable} ${spaceGrotesk.variable} ${quicksand.variable} ${josefinSans.variable} ${bebasNeue.variable} ${libreBaskerville.variable} ${caveat.variable} ${abrilFatface.variable} ${fredoka.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <LocaleProvider>{children}</LocaleProvider>

@@ -239,7 +239,7 @@
 }
 
 .bal-wrap .num {
-  font-family: var(--font-geist-mono), ui-monospace, Menlo, monospace;
+  font-family: var(--lyte-font-heading), ui-monospace, Menlo, monospace;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }
@@ -267,8 +267,7 @@
   letter-spacing: -1px;
   line-height: 1.1;
   color: var(--ink);
-  margin: 3px 0 0;
-}
+  margin: 3px 0 0; font-family: var(--lyte-font-heading); }
 
 .bal-metafields { display: flex; gap: 10px; flex-wrap: wrap; }
 .bal-field {
@@ -619,7 +618,7 @@
    The rail mirrors the sheet's structure so every partida is one click away,
    and carries its own total so it doubles as a running summary. */
 .fz-nav .num {
-  font-family: var(--font-geist-mono), ui-monospace, Menlo, monospace;
+  font-family: var(--lyte-font-heading), ui-monospace, Menlo, monospace;
   font-variant-numeric: tabular-nums;
 }
 
@@ -719,7 +718,7 @@
   background: var(--rule-soft);
   border-radius: 4px;
   padding: 1px 4px;
-  font-family: var(--font-geist-sans), sans-serif;
+  font-family: var(--lyte-font-body), sans-serif;
 }
 
 .bal-open {
@@ -812,7 +811,7 @@
 .bal-loading { color: #97979E; font-size: 13px; }
 
 .bal-missing { max-width: 420px; }
-.bal-missing h1 { font-size: 22px; font-weight: 700; color: #0B0B0C; margin: 0 0 8px; letter-spacing: -0.5px; }
+.bal-missing h1 { font-size: 22px; font-weight: 700; color: #0B0B0C; margin: 0 0 8px; letter-spacing: -0.5px; font-family: var(--lyte-font-heading); }
 .bal-missing p { font-size: 13.5px; color: #5F5F66; margin: 0 0 18px; line-height: 1.6; }
 .bal-missing .bal-act { display: inline-block; text-decoration: none; }
 
@@ -845,7 +844,7 @@ a.bal-act { display: inline-flex; align-items: center; text-decoration: none; }
 @media (max-width: 640px) {
   .fz-topbar { padding: env(safe-area-inset-top) 16px 0; }
   .fz-crumb { font-size: 12px; }
-  .fz-intro-title { font-size: 25px; }
+  .fz-intro-title { font-size: 25px; font-family: var(--lyte-font-heading); }
   .fz-content { padding: 20px 16px 48px; }
 }
 
@@ -854,12 +853,12 @@ a.bal-act { display: inline-flex; align-items: center; text-decoration: none; }
 .bal-chart-svg { width: 100%; height: auto; display: block; overflow: visible; }
 
 .bal-chart-tick {
-  font-family: var(--font-geist-sans), sans-serif;
+  font-family: var(--lyte-font-body), sans-serif;
   font-size: 10.5px;
   fill: var(--ink-faint);
 }
 .bal-chart-serie {
-  font-family: var(--font-geist-sans), sans-serif;
+  font-family: var(--lyte-font-body), sans-serif;
   font-size: 11px;
   font-weight: 600;
 }

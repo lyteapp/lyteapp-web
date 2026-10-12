@@ -33,8 +33,7 @@
   font-size: 22px;
   font-weight: 700;
   color: #0F172A;
-  letter-spacing: -0.04em;
-}
+  letter-spacing: -0.04em; font-family: var(--lyte-font-heading); }
 .login-logo-text span { color: var(--lyte-navy); }
 
 .login-title {
@@ -43,8 +42,7 @@
   color: #0F172A;
   letter-spacing: -0.04em;
   line-height: 1.15;
-  margin-bottom: 8px;
-}
+  margin-bottom: 8px; font-family: var(--lyte-font-heading); }
 .login-sub {
   font-size: 14px;
   color: #64748B;
@@ -69,7 +67,7 @@
   border-radius: 10px;
   padding: 13px 14px;
   font-size: 15px;
-  font-family: var(--font-geist-sans), sans-serif;
+  font-family: var(--lyte-font-body), sans-serif;
   color: #0F172A;
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
@@ -91,7 +89,7 @@
   border-radius: 10px;
   font-size: 15px;
   font-weight: 600;
-  font-family: var(--font-geist-sans), sans-serif;
+  font-family: var(--lyte-font-body), sans-serif;
   transition: background 0.15s, transform 0.15s;
   margin-top: 6px;
 }
@@ -121,7 +119,7 @@
   font-size: 13px;
   color: #94A3B8;
   cursor: pointer;
-  font-family: var(--font-geist-sans), sans-serif;
+  font-family: var(--lyte-font-body), sans-serif;
 }
 .login-back:hover { color: var(--lyte-navy); }
 

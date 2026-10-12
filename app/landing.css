@@ -15,7 +15,7 @@
 html { scroll-behavior: smooth; }
 
 body {
-  font-family: var(--font-geist-sans), -apple-system, sans-serif;
+  font-family: var(--lyte-font-body), -apple-system, sans-serif;
   background: var(--bg);
   color: var(--ink);
   line-height: 1.5;
@@ -25,13 +25,13 @@ body {
 }
 
 .serif {
-  font-family: var(--font-fraunces), serif;
+  font-family: var(--lyte-font-heading), serif;
   font-weight: 400;
   font-style: italic;
   font-variation-settings: "opsz" 144;
 }
 
-.mono { font-family: var(--font-geist-mono), monospace; }
+.mono { font-family: var(--lyte-font-heading), monospace; }
 
 /* NAV — scoped by class: a bare `nav`/`footer` selector here stays loaded
    after client-side navigation away from the landing page and restyles every
@@ -159,11 +159,10 @@ body {
   letter-spacing: -0.045em;
   line-height: 0.95;
   margin-bottom: 32px;
-  animation: fadeInUp 1s ease;
-}
+  animation: fadeInUp 1s ease; font-family: var(--lyte-font-heading); }
 
 .hero h1 .accent {
-  font-family: var(--font-fraunces), serif;
+  font-family: var(--lyte-font-heading), serif;
   font-style: italic;
   font-weight: 400;
   color: var(--violet);
@@ -331,8 +330,7 @@ body {
 .mock-stat-value {
   font-size: 22px;
   font-weight: 700;
-  letter-spacing: -0.02em;
-}
+  letter-spacing: -0.02em; font-family: var(--lyte-font-heading); }
 .mock-stat-value .delta {
   font-size: 11px;
   color: var(--violet);
@@ -363,7 +361,7 @@ body {
 }
 .mock-order-row:last-child { border-bottom: none; }
 .mock-order-num {
-  font-family: var(--font-geist-mono), monospace;
+  font-family: var(--lyte-font-heading), monospace;
   color: var(--ink-muted);
   font-size: 11px;
 }
@@ -468,7 +466,7 @@ body {
   letter-spacing: -0.02em;
   color: var(--ink-soft);
 }
-.trust-logos .lux { font-family: var(--font-fraunces), serif; font-style: italic; font-weight: 600; }
+.trust-logos .lux { font-family: var(--lyte-font-heading), serif; font-style: italic; font-weight: 600; }
 
 /* STATS */
 .stats-section {
@@ -490,11 +488,10 @@ body {
   letter-spacing: -0.04em;
   line-height: 1;
   margin-bottom: 12px;
-  font-feature-settings: "tnum";
-}
-.stat-num .unit { font-size: 32px; color: var(--violet); }
+  font-feature-settings: "tnum"; font-family: var(--lyte-font-heading); }
+.stat-num .unit { font-size: 32px; color: var(--violet); font-family: var(--lyte-font-heading); }
 .stat-num .serif-i {
-  font-family: var(--font-fraunces), serif;
+  font-family: var(--lyte-font-heading), serif;
   font-style: italic;
   font-weight: 400;
   color: var(--violet);
@@ -524,8 +521,7 @@ body {
   font-weight: 700;
   letter-spacing: -0.04em;
   line-height: 1.05;
-  margin-bottom: 20px;
-}
+  margin-bottom: 20px; font-family: var(--lyte-font-heading); }
 .section-subtitle {
   font-size: 18px;
   color: var(--ink-soft);
@@ -582,9 +578,8 @@ body {
   font-weight: 700;
   letter-spacing: -0.025em;
   margin-bottom: 12px;
-  line-height: 1.15;
-}
-.fcard.span-8 .fc-title, .fcard.violet .fc-title { font-size: 36px; }
+  line-height: 1.15; font-family: var(--lyte-font-heading); }
+.fcard.span-8 .fc-title, .fcard.violet .fc-title { font-size: 36px; font-family: var(--lyte-font-heading); }
 .fc-desc { color: var(--ink-soft); font-size: 15px; line-height: 1.55; max-width: 480px; }
 .fcard.dark .fc-desc, .fcard.violet .fc-desc { color: rgba(255, 255, 255, 0.72); }
 .fc-visual { margin-top: auto; padding-top: 32px; }
@@ -617,7 +612,7 @@ body {
 .kds-card.warn { border-left-color: #FEBC2E; }
 .kds-card.urgent { border-left-color: #FF5F57; }
 .kds-num { color: white; font-size: 14px; font-weight: 700; }
-.kds-time { color: rgba(255,255,255,0.5); font-size: 9px; font-family: var(--font-geist-mono), monospace; }
+.kds-time { color: rgba(255,255,255,0.5); font-size: 9px; font-family: var(--lyte-font-heading), monospace; }
 
 .gps-mock {
   background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
@@ -663,7 +658,7 @@ body {
 .currency-row:last-child { border-bottom: none; }
 .currency-label { font-size: 13px; color: var(--ink-muted); }
 .currency-val {
-  font-family: var(--font-geist-mono), monospace;
+  font-family: var(--lyte-font-heading), monospace;
   font-size: 20px;
   font-weight: 600;
   letter-spacing: -0.02em;
@@ -760,7 +755,7 @@ body {
   position: relative;
 }
 .step-num {
-  font-family: var(--font-fraunces), serif;
+  font-family: var(--lyte-font-heading), serif;
   font-style: italic;
   font-weight: 400;
   font-size: 96px;
@@ -770,7 +765,7 @@ body {
   display: block;
   font-variation-settings: "opsz" 144;
 }
-.step-title { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 12px; }
+.step-title { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 12px; font-family: var(--lyte-font-heading); }
 .step-desc { font-size: 15px; color: var(--ink-soft); line-height: 1.55; }
 
 /* PRICING */
@@ -794,7 +789,7 @@ body {
   border: none;
   background: transparent;
   color: var(--ink-soft);
-  font-family: var(--font-geist-sans), sans-serif;
+  font-family: var(--lyte-font-body), sans-serif;
 }
 .toggle-opt.active { background: var(--ink); color: white; }
 .toggle-opt .save { margin-left: 6px; font-size: 11px; color: var(--violet); font-weight: 600; }
@@ -895,7 +890,7 @@ body {
   gap: 20px;
 }
 .test-quote {
-  font-family: var(--font-fraunces), serif;
+  font-family: var(--lyte-font-heading), serif;
   font-size: 19px;
   line-height: 1.45;
   color: var(--ink);
@@ -951,8 +946,7 @@ body {
   font-weight: 600;
   margin-bottom: 28px;
   opacity: 0.5;
-  letter-spacing: -0.01em;
-}
+  letter-spacing: -0.01em; font-family: var(--lyte-font-heading); }
 .compare-card.us .compare-title { opacity: 1; display: flex; align-items: center; gap: 10px; }
 .compare-list { list-style: none; display: flex; flex-direction: column; gap: 16px; position: relative; }
 .compare-list li { display: flex; align-items: start; gap: 14px; font-size: 15px; line-height: 1.45; }
@@ -996,10 +990,9 @@ body {
   font-weight: 700;
   letter-spacing: -0.045em;
   line-height: 0.95;
-  margin-bottom: 24px;
-}
+  margin-bottom: 24px; font-family: var(--lyte-font-heading); }
 .cta-title .em {
-  font-family: var(--font-fraunces), serif;
+  font-family: var(--lyte-font-heading), serif;
   font-style: italic;
   font-weight: 400;
   color: var(--violet);
@@ -1027,7 +1020,7 @@ body {
   padding-bottom: 56px;
   border-bottom: 1px solid rgba(255,255,255,0.08);
 }
-.footer-brand h3 { font-size: 30px; font-weight: 700; margin-bottom: 14px; letter-spacing: -0.025em; }
+.footer-brand h3 { font-size: 30px; font-weight: 700; margin-bottom: 14px; letter-spacing: -0.025em; font-family: var(--lyte-font-heading); }
 .footer-brand h3 .app { color: var(--violet-soft); }
 .footer-brand p { color: rgba(255,255,255,0.5); max-width: 320px; font-size: 14px; line-height: 1.55; }
 .footer-col h4 {
@@ -1127,11 +1120,11 @@ body {
   .nav-links { display: none; }
   .nav-hamburger { display: flex; }
   .hero { padding: 120px 20px 56px; }
-  .hero h1 { font-size: 48px; }
+  .hero h1 { font-size: 48px; font-family: var(--lyte-font-heading); }
   .float-card { display: none; }
   .section, .pagos-section, .how-section, .pricing-section, .testimonials, .comparison, .cta-section, .lp-footer { padding-left: 20px; padding-right: 20px; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 28px; }
-  .stat-num { font-size: 44px; }
+  .stat-num { font-size: 44px; font-family: var(--lyte-font-heading); }
   .features-grid { grid-template-columns: 1fr; }
   .fcard.span-8, .fcard.span-4, .fcard.span-6, .fcard.span-12 { grid-column: span 1; min-height: auto; }
   .steps, .test-grid, .compare-grid, .pricing-grid { grid-template-columns: 1fr; }
@@ -1144,11 +1137,11 @@ body {
 }
 
 @media (max-width: 480px) {
-  .hero h1 { font-size: 36px; line-height: 1.1; }
+  .hero h1 { font-size: 36px; line-height: 1.1; font-family: var(--lyte-font-heading); }
   .hero-subtitle { font-size: 15px; }
   .hero-cta { flex-direction: column; align-items: stretch; }
   .hero-cta .btn-primary, .hero-cta .btn-secondary { text-align: center; }
   .stats-grid { grid-template-columns: 1fr 1fr; }
-  .stat-num { font-size: 36px; }
-  .section-tag, .section-title { font-size: 28px; }
+  .stat-num { font-size: 36px; font-family: var(--lyte-font-heading); }
+  .section-tag, .section-title { font-size: 28px; font-family: var(--lyte-font-heading); }
 }

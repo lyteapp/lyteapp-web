@@ -50,7 +50,7 @@ html, body {
   text-decoration: none;
 }
 .db-sidebar-logo svg { width: 26px; height: 26px; flex-shrink: 0; }
-.db-logo-text { font-size: 16px; font-weight: 700; color: white; letter-spacing: -0.4px; }
+.db-logo-text { font-size: 16px; font-weight: 700; color: white; letter-spacing: -0.4px; font-family: var(--lyte-font-heading); }
 .db-logo-text span { color: var(--lyte-blue-light); }
 
 .db-store-info {
@@ -123,7 +123,7 @@ html, body {
   font-size: 13px; font-weight: 600; flex-shrink: 0;
 }
 .db-store-name { font-size: 13px; font-weight: 600; color: #0F172A; }
-.db-store-url { font-size: 10px; color: #94A3B8; margin-top: 1px; font-family: var(--font-geist-mono), monospace; }
+.db-store-url { font-size: 10px; color: #94A3B8; margin-top: 1px; font-family: var(--lyte-font-heading), monospace; }
 
 .db-store-popover-backdrop { position: fixed; inset: 0; z-index: 40; }
 .db-store-popover {
@@ -180,7 +180,7 @@ html, body {
   color: #475569;
   cursor: pointer; transition: all 0.15s;
   background: none; border: none;
-  font-family: var(--font-geist-sans), sans-serif;
+  font-family: var(--lyte-font-body), sans-serif;
   text-align: left; margin-bottom: 1px;
 }
 .db-canal-toggle:hover { background: #F0EEE8; color: #0F172A; }
@@ -350,8 +350,8 @@ html, body {
   animation: dbPulse 2.5s infinite;
 }
 .db-bcv-pill .lbl { color: #94A3B8; font-weight: 500; font-size: 12px; }
-.db-bcv-pill .value { font-family: var(--font-geist-mono), monospace; font-weight: 600; color: #0F172A; letter-spacing: -0.02em; }
-.db-bcv-pill .delta { font-family: var(--font-geist-mono), monospace; font-size: 11px; color: #16A34A; }
+.db-bcv-pill .value { font-family: var(--lyte-font-heading), monospace; font-weight: 600; color: #0F172A; letter-spacing: -0.02em; }
+.db-bcv-pill .delta { font-family: var(--lyte-font-heading), monospace; font-size: 11px; color: #16A34A; }
 
 .db-icon-btn {
   width: 34px; height: 34px;
@@ -407,7 +407,7 @@ html, body {
   line-height: 1.1;
 }
 .db-welcome-name em {
-  font-family: var(--font-fraunces), serif;
+  font-family: var(--lyte-font-heading), serif;
   font-style: italic;
   color: var(--lyte-blue-light);
   font-weight: 400;
@@ -420,7 +420,7 @@ html, body {
   border-radius: 10px;
   font-size: 13px;
   font-weight: 600;
-  font-family: var(--font-geist-sans), sans-serif;
+  font-family: var(--lyte-font-body), sans-serif;
   cursor: pointer;
   background: rgba(255,255,255,0.08);
   border: 1px solid rgba(255,255,255,0.1);
@@ -437,7 +437,7 @@ html, body {
   border-radius: 10px;
   font-size: 13px;
   font-weight: 600;
-  font-family: var(--font-geist-sans), sans-serif;
+  font-family: var(--lyte-font-body), sans-serif;
   cursor: pointer;
   background: var(--lyte-navy);
   border: none;
@@ -560,9 +560,9 @@ html, body {
   letter-spacing: -0.04em;
   line-height: 1;
   margin-bottom: 8px;
-  font-family: var(--font-geist-mono), monospace;
+  font-family: var(--lyte-font-heading), monospace;
 }
-.db-stat-value .cur { font-size: 16px; font-weight: 500; color: #475569; }
+.db-stat-value .cur { font-size: 16px; font-weight: 500; color: #475569; font-family: var(--lyte-font-heading); }
 .db-stat-delta {
   display: inline-flex;
   align-items: center;
@@ -693,7 +693,7 @@ html, body {
   font-size: 14px;
   font-weight: 700;
   color: #0F172A;
-  font-family: var(--font-geist-mono), monospace;
+  font-family: var(--lyte-font-heading), monospace;
 }
 .db-mini-val.violet { color: var(--lyte-navy); }
 .db-mini-val.muted { color: #94A3B8; }
@@ -766,7 +766,7 @@ html, body {
     font-size: 14px;
     font-weight: 500;
     color: #475569;
-    font-family: var(--font-geist-sans), sans-serif;
+    font-family: var(--lyte-font-body), sans-serif;
     padding: 0;
     margin-left: auto;
     transition: color 0.15s;

@@ -684,7 +684,7 @@
   padding: 18px 22px; border-bottom: 0.5px solid var(--dv-line);
   display: flex; justify-content: space-between; align-items: center;
 }
-.dv-qr-header h3 { font-size: 16px; font-weight: 500; }
+.dv-qr-header h3 { font-size: 16px; font-weight: 500; font-family: var(--lyte-font-heading); }
 .dv-qr-body { padding: 22px; text-align: center; }
 .dv-qr-display {
   width: 240px; height: 240px; margin: 0 auto 16px;

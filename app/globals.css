@@ -15,6 +15,13 @@
   --lyte-lavender: #E9EAFF;
   --lyte-lavender-soft: #F3F4FF;
   --lyte-lavender-faint: #FAFAFF;
+
+  /* Brand type: Cascadia Code for titles/headings; San Francisco for body
+     text. SF can't be web-embedded (Apple's license), so body text asks
+     for the device's system font: SF on iPhone/Mac, the closest native
+     equivalent (Segoe UI / Roboto) elsewhere. */
+  --lyte-font-heading: var(--font-cascadia), ui-monospace, "SF Mono", Menlo, monospace;
+  --lyte-font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 @theme inline {
@@ -38,7 +45,7 @@ html {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--lyte-font-body);
   overflow-x: hidden;
   max-width: 100%;
 }

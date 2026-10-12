@@ -85,7 +85,7 @@ export default function ZonesMap({ zones, placingZone, onMapClick, previewCenter
 
   if (!pos) return (
     <div style={{ ...fill, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#E8EEF4', flexDirection: 'column', gap: 10 }}>
-      <div style={{ width: 24, height: 24, borderRadius: '50%', border: '3px solid rgba(124,58,237,0.15)', borderTopColor: '#7C3AED', animation: 'dbSpin 0.8s linear infinite' }} />
+      <div style={{ width: 24, height: 24, borderRadius: '50%', border: '3px solid rgba(154,183,253,0.375)', borderTopColor: '#1C1B3A', animation: 'dbSpin 0.8s linear infinite' }} />
       <span style={{ fontSize: 12, color: '#9CA3AF' }}>Obteniendo ubicacion...</span>
     </div>
   )
@@ -93,7 +93,7 @@ export default function ZonesMap({ zones, placingZone, onMapClick, previewCenter
   return (
     <div style={fill}>
       {placingZone && (
-        <div style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 10, background: '#4C1D95', color: 'white', padding: '6px 14px', borderRadius: 100, fontSize: 12, fontWeight: 500, pointerEvents: 'none', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(76,29,149,0.4)' }}>
+        <div style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 10, background: '#1C1B3A', color: 'white', padding: '6px 14px', borderRadius: 100, fontSize: 12, fontWeight: 500, pointerEvents: 'none', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(28,27,58,0.4)' }}>
           Toca el mapa para colocar el centro de la zona
         </div>
       )}
@@ -114,14 +114,14 @@ export default function ZonesMap({ zones, placingZone, onMapClick, previewCenter
           onClick={e => { e.stopPropagation(); mapRef.current?.flyTo({ center: [pos[1], pos[0]], zoom: 13, duration: 600 }) }}
           style={{ position: 'absolute', bottom: 80, right: 14, zIndex: 10, width: 32, height: 32, borderRadius: 8, background: 'white', border: '0.5px solid rgba(15,23,42,0.12)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}
         >
-          <svg viewBox="0 0 20 20" fill="#4C1D95" width="14" height="14">
+          <svg viewBox="0 0 20 20" fill="#1C1B3A" width="14" height="14">
             <path fillRule="evenodd" d="M10 2a8 8 0 100 16A8 8 0 0010 2zm0 14a6 6 0 110-12 6 6 0 010 12zm0-9a3 3 0 100 6 3 3 0 000-6z" clipRule="evenodd"/>
           </svg>
         </button>
 
         {/* Store marker */}
         <Marker longitude={pos[1]} latitude={pos[0]} anchor="center">
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: '#4C1D95', border: '2px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(76,29,149,0.4)' }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: '#1C1B3A', border: '2px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(28,27,58,0.4)' }}>
             <svg viewBox="0 0 20 20" fill="white" width="18" height="18"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>
           </div>
         </Marker>

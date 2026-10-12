@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabase'
 import '../login/login.css'
+import LyteLogo from '../components/LyteLogo'
 
 export default function ResetPassword() {
   const router = useRouter()
@@ -43,7 +44,7 @@ export default function ResetPassword() {
     <div className="login-screen">
       <div className="login-card">
         <Link href="/" className="login-logo">
-          <div className="login-logo-text">Lyte<span>app</span></div>
+          <LyteLogo height={32} />
         </Link>
 
         {done ? (

@@ -32,7 +32,7 @@
 .dh-headline em {
   font-family: var(--font-fraunces), serif;
   font-style: italic; font-weight: 300;
-  color: #7C3AED; font-size: 50px;
+  color: var(--lyte-navy); font-size: 50px;
 }
 
 .dh-sub {
@@ -50,7 +50,7 @@
   text-decoration: none; transition: background 0.15s;
   border: 1px solid transparent;
 }
-.dh-btn-primary:hover { background: #4C1D95; }
+.dh-btn-primary:hover { background: var(--lyte-navy); }
 
 .dh-btn-secondary {
   display: inline-flex; align-items: center; gap: 8px;
@@ -81,7 +81,7 @@
 }
 .dh-setup::before {
   content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-  background: linear-gradient(90deg, #7C3AED 0%, #7C3AED 25%, #EDE9FE 25%);
+  background: linear-gradient(90deg, var(--lyte-navy) 0%, var(--lyte-navy) 25%, var(--lyte-lavender) 25%);
 }
 .dh-setup-head {
   display: flex; justify-content: space-between;
@@ -93,7 +93,7 @@
 .dh-progress-num {
   font-family: var(--font-fraunces), serif;
   font-style: italic; font-weight: 300;
-  font-size: 36px; line-height: 1; color: #7C3AED; letter-spacing: -0.04em;
+  font-size: 36px; line-height: 1; color: var(--lyte-navy); letter-spacing: -0.04em;
 }
 .dh-progress-total { color: #94A3B8; font-size: 18px; font-family: var(--font-geist-mono), monospace; }
 .dh-progress-label { font-size: 10px; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
@@ -105,7 +105,7 @@
   cursor: pointer; transition: background 0.15s;
   border: 1px solid transparent; text-decoration: none;
 }
-.dh-step:hover { background: #F5F3FF; border-color: #EDE9FE; }
+.dh-step:hover { background: var(--lyte-lavender-soft); border-color: var(--lyte-lavender); }
 .dh-step-icon {
   width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
@@ -113,13 +113,13 @@
   font-family: var(--font-geist-mono), monospace;
 }
 .dh-step.done .dh-step-icon { background: #DCFCE7; color: #16A34A; }
-.dh-step.todo .dh-step-icon { background: #F5F3FF; color: #7C3AED; border: 1px solid #EDE9FE; }
+.dh-step.todo .dh-step-icon { background: var(--lyte-lavender-soft); color: var(--lyte-navy); border: 1px solid var(--lyte-lavender); }
 .dh-step.next .dh-step-icon { background: #0F172A; color: white; }
 .dh-step-text { flex: 1; font-size: 13px; color: #0F172A; }
 .dh-step.done .dh-step-text { text-decoration: line-through; color: #94A3B8; }
 .dh-step.next .dh-step-text { font-weight: 600; }
 .dh-step-arrow { color: #94A3B8; transition: transform 0.15s, color 0.15s; }
-.dh-step:hover .dh-step-arrow { transform: translateX(2px); color: #7C3AED; }
+.dh-step:hover .dh-step-arrow { transform: translateX(2px); color: var(--lyte-navy); }
 
 /* ── SECTION HEADER ── */
 .dh-section-head {
@@ -129,7 +129,7 @@
 .dh-section-title { font-size: 13px; font-weight: 600; color: #0F172A; letter-spacing: -0.01em; }
 .dh-meta { font-family: var(--font-geist-mono), monospace; font-size: 11px; color: #94A3B8; font-weight: 400; margin-left: 8px; }
 .dh-section-link { font-size: 12px; color: #94A3B8; text-decoration: none; }
-.dh-section-link:hover { color: #7C3AED; }
+.dh-section-link:hover { color: var(--lyte-navy); }
 
 /* ── KPI STRIP ── */
 .dh-kpi-grid {
@@ -146,24 +146,24 @@
   display: flex; flex-direction: column; gap: 12px;
 }
 .dh-kpi:last-child { border-right: 0; }
-.dh-kpi-hero { background: linear-gradient(180deg, #FCFBFF 0%, #F5F2FF 100%); }
+.dh-kpi-hero { background: linear-gradient(180deg, var(--lyte-lavender-faint) 0%, var(--lyte-lavender-soft) 100%); }
 .dh-kpi-head { display: flex; justify-content: space-between; align-items: center; }
 .dh-kpi-label { font-size: 11px; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 500; }
-.dh-kpi-hero .dh-kpi-label { color: #7C3AED; }
+.dh-kpi-hero .dh-kpi-label { color: var(--lyte-navy); }
 .dh-kpi-icon {
   width: 26px; height: 26px; border-radius: 7px;
   background: #F0EEE8; color: #475569;
   display: flex; align-items: center; justify-content: center;
 }
-.dh-kpi-hero .dh-kpi-icon { background: #7C3AED; color: white; }
+.dh-kpi-hero .dh-kpi-icon { background: var(--lyte-navy); color: white; }
 .dh-kpi-value {
   font-size: 32px; font-weight: 500;
   letter-spacing: -0.03em; line-height: 1; color: #0F172A;
 }
-.dh-kpi-hero .dh-kpi-value { color: #4C1D95; font-size: 36px; }
+.dh-kpi-hero .dh-kpi-value { color: var(--lyte-navy); font-size: 36px; }
 .dh-kpi-unit { font-size: 14px; color: #94A3B8; font-family: var(--font-geist-mono), monospace; font-weight: 400; }
 .dh-kpi-foot { display: flex; align-items: center; gap: 8px; }
-.dh-kpi-link { font-size: 11px; color: #7C3AED; text-decoration: none; }
+.dh-kpi-link { font-size: 11px; color: var(--lyte-navy); text-decoration: none; }
 .dh-kpi-link:hover { text-decoration: underline; }
 .dh-delta-flat {
   display: inline-flex; align-items: center; gap: 4px;
@@ -217,7 +217,7 @@
 }
 .dh-order-empty svg { color: #CBD5E1; }
 .dh-order-empty p { font-size: 13px; max-width: 280px; line-height: 1.5; }
-.dh-order-empty a { font-size: 13px; color: #7C3AED; text-decoration: none; font-weight: 500; }
+.dh-order-empty a { font-size: 13px; color: var(--lyte-navy); text-decoration: none; font-weight: 500; }
 .dh-order-empty a:hover { text-decoration: underline; }
 
 /* Side column */
@@ -233,7 +233,7 @@
   justify-content: space-between; align-items: center; font-size: 12px;
 }
 .dh-payments-foot span { color: #94A3B8; }
-.dh-payments-foot a { color: #7C3AED; text-decoration: none; font-weight: 500; }
+.dh-payments-foot a { color: var(--lyte-navy); text-decoration: none; font-weight: 500; }
 .dh-payments-foot a:hover { text-decoration: underline; }
 
 .dh-quick-actions { display: flex; flex-direction: column; gap: 4px; }
@@ -257,7 +257,7 @@
   text-align: center; padding: 28px 16px; gap: 10px;
 }
 .dh-bottom-empty span { font-size: 13px; color: #94A3B8; }
-.dh-bottom-empty a { font-size: 13px; color: #7C3AED; text-decoration: none; font-weight: 500; }
+.dh-bottom-empty a { font-size: 13px; color: var(--lyte-navy); text-decoration: none; font-weight: 500; }
 
 .dh-top-list { display: flex; flex-direction: column; margin-top: 14px; }
 .dh-top-row {
@@ -269,11 +269,11 @@
 .dh-top-rank {
   font-family: var(--font-fraunces), serif;
   font-style: italic; font-weight: 300;
-  font-size: 18px; color: #7C3AED; text-align: center; line-height: 1;
+  font-size: 18px; color: var(--lyte-navy); text-align: center; line-height: 1;
 }
 .dh-top-name { font-size: 13px; font-weight: 500; color: #0F172A; margin-bottom: 4px; }
 .dh-top-bar { height: 4px; background: #F0EEE8; border-radius: 2px; overflow: hidden; }
-.dh-top-fill { height: 100%; background: linear-gradient(90deg, #7C3AED, #4C1D95); border-radius: 2px; }
+.dh-top-fill { height: 100%; background: linear-gradient(90deg, var(--lyte-navy), var(--lyte-navy)); border-radius: 2px; }
 .dh-top-meta { font-family: var(--font-geist-mono), monospace; font-size: 12px; font-weight: 600; text-align: right; color: #0F172A; }
 .dh-top-meta span { font-size: 10px; color: #94A3B8; font-weight: 400; display: block; }
 
@@ -289,7 +289,7 @@
   background: white; border: 2px solid #CBD5E1;
   margin-top: 3px; z-index: 1; position: relative;
 }
-.dh-act-recent .dh-act-dot { border-color: #7C3AED; background: #7C3AED; }
+.dh-act-recent .dh-act-dot { border-color: var(--lyte-navy); background: var(--lyte-navy); }
 .dh-act-text { font-size: 12.5px; color: #475569; line-height: 1.4; }
 .dh-act-text strong { color: #0F172A; font-weight: 600; }
 .dh-act-time { font-family: var(--font-geist-mono), monospace; font-size: 10.5px; color: #94A3B8; margin-top: 2px; display: block; }
@@ -302,7 +302,7 @@
 }
 .dh-link-icon { font-size: 32px; margin-bottom: 4px; }
 .dh-link-title { font-size: 14px; font-weight: 600; color: #0F172A; letter-spacing: -0.01em; }
-.dh-link-url { font-size: 12px; color: #7C3AED; font-family: var(--font-geist-mono), monospace; }
+.dh-link-url { font-size: 12px; color: var(--lyte-navy); font-family: var(--font-geist-mono), monospace; }
 .dh-link-btn {
   display: inline-block; margin-top: 8px;
   background: #0F172A; color: white;
@@ -310,7 +310,7 @@
   padding: 9px 20px; border-radius: 8px;
   text-decoration: none; transition: background 0.15s;
 }
-.dh-link-btn:hover { background: #4C1D95; }
+.dh-link-btn:hover { background: var(--lyte-navy); }
 .dh-link-copy {
   font-size: 12px; color: #94A3B8; background: none; border: none;
   cursor: pointer; font-family: var(--font-geist-sans), sans-serif;

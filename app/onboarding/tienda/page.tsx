@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import PhoneInput from '../../components/PhoneInput'
+import LyteLogo from '../../components/LyteLogo'
 
 const STEPS = 6
 
@@ -137,7 +138,7 @@ export default function TiendaOnboardingPage() {
 
   return (
     <div className="ob-screen">
-      <div className="ob-brand">Lyte<span>app</span></div>
+      <div className="ob-brand"><LyteLogo height={28} /></div>
 
       <div className="ob-progress">
         {Array.from({ length: STEPS }).map((_, i) => (
@@ -185,7 +186,7 @@ export default function TiendaOnboardingPage() {
             />
             {name.trim() && (
               <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 4 }}>
-                Tu URL: <span style={{ color: '#7C3AED', fontWeight: 600 }}>lyte-app.com/{toSlug(name)}</span>
+                Tu URL: <span style={{ color: '#1C1B3A', fontWeight: 600 }}>lyte-app.com/{toSlug(name)}</span>
               </div>
             )}
           </div>
@@ -213,8 +214,8 @@ export default function TiendaOnboardingPage() {
                 onClick={handleDetectLocation}
                 disabled={locLoading}
                 style={{
-                  flexShrink: 0, border: '1.5px solid rgba(124,58,237,0.25)',
-                  borderRadius: 12, background: '#F5F3FF', color: '#7C3AED',
+                  flexShrink: 0, border: '1.5px solid rgba(154,183,253,0.625)',
+                  borderRadius: 12, background: '#F3F4FF', color: '#1C1B3A',
                   padding: '0 14px', cursor: 'pointer', display: 'flex',
                   alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 600,
                   fontFamily: 'inherit',
@@ -222,7 +223,7 @@ export default function TiendaOnboardingPage() {
                 title="Detectar mi ubicacion"
               >
                 {locLoading
-                  ? <span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid #C4B5FD', borderTopColor: '#7C3AED', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                  ? <span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid #BFD0FE', borderTopColor: '#1C1B3A', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
                   : (
                     <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
                       <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />

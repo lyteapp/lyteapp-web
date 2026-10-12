@@ -3,8 +3,8 @@
 }
 .cf-spinner {
   width: 28px; height: 28px;
-  border: 3px solid rgba(124,58,237,0.15);
-  border-top-color: #7C3AED;
+  border: 3px solid rgba(154,183,253,0.375);
+  border-top-color: var(--lyte-navy);
   border-radius: 50%;
   animation: dbSpin 0.8s linear infinite;
 }
@@ -35,9 +35,9 @@
 }
 .cf-section-icon {
   width: 36px; height: 36px; border-radius: 10px;
-  background: #F5F3FF;
+  background: var(--lyte-lavender-soft);
   display: flex; align-items: center; justify-content: center;
-  font-size: 12px; font-weight: 700; color: #7C3AED;
+  font-size: 12px; font-weight: 700; color: var(--lyte-navy);
   letter-spacing: 0.02em; flex-shrink: 0;
 }
 .cf-section-title {
@@ -90,7 +90,7 @@
 .cf-method-icon {
   width: 36px; height: 36px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 700; color: #7C3AED;
+  font-size: 11px; font-weight: 700; color: var(--lyte-navy);
   letter-spacing: 0.02em; flex-shrink: 0;
 }
 
@@ -108,7 +108,7 @@
   transition: background 0.2s; flex-shrink: 0; cursor: pointer;
   border: none; outline: none;
 }
-.cf-toggle.on { background: #7C3AED; }
+.cf-toggle.on { background: var(--lyte-navy); }
 .cf-toggle-knob {
   width: 20px; height: 20px; border-radius: 50%;
   background: white; position: absolute;
@@ -137,7 +137,7 @@
   font-family: var(--font-geist-sans), sans-serif;
   outline: none; transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
 }
-.cf-input:focus { background: white; border-color: rgba(124,58,237,0.4); box-shadow: 0 0 0 3px rgba(124,58,237,0.08); }
+.cf-input:focus { background: white; border-color: rgba(28,27,58,0.4); box-shadow: 0 0 0 3px rgba(154,183,253,0.2); }
 .cf-input::placeholder { color: #CBD5E1; }
 
 .cf-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -147,13 +147,13 @@
   display: flex; align-items: center; gap: 12px;
 }
 .cf-save-btn {
-  background: #7C3AED; color: white; border: none;
+  background: var(--lyte-navy); color: white; border: none;
   cursor: pointer; padding: 11px 28px; border-radius: 10px;
   font-size: 14px; font-weight: 600;
   font-family: var(--font-geist-sans), sans-serif;
   transition: all 0.2s;
 }
-.cf-save-btn:hover:not(:disabled) { background: #6D28D9; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(124,58,237,0.35); }
+.cf-save-btn:hover:not(:disabled) { background: var(--lyte-navy-dark); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(28,27,58,0.35); }
 .cf-save-btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .cf-saved {
@@ -188,10 +188,10 @@
   background: #F8F7F4;
   transition: border-color 0.15s;
 }
-.cf-logo-preview:hover { border-color: #7C3AED; }
+.cf-logo-preview:hover { border-color: var(--lyte-navy); }
 .cf-logo-img { width: 100%; height: 100%; object-fit: cover; }
 .cf-logo-empty {
-  font-size: 26px; font-weight: 700; color: #7C3AED;
+  font-size: 26px; font-weight: 700; color: var(--lyte-navy);
 }
 .cf-logo-overlay {
   position: absolute; inset: 0;
@@ -201,9 +201,9 @@
 }
 .cf-logo-hint { display: flex; flex-direction: column; gap: 6px; }
 .cf-logo-btn {
-  background: #F5F3FF;
-  border: 1px solid rgba(124,58,237,0.2);
-  color: #7C3AED;
+  background: var(--lyte-lavender-soft);
+  border: 1px solid rgba(154,183,253,0.5);
+  color: var(--lyte-navy);
   border-radius: 8px;
   padding: 7px 14px;
   font-size: 13px;
@@ -212,16 +212,16 @@
   transition: background 0.15s;
   align-self: flex-start;
 }
-.cf-logo-btn:hover { background: #EDE9FE; }
+.cf-logo-btn:hover { background: var(--lyte-lavender); }
 .cf-logo-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .cf-logo-tip { font-size: 12px; color: #94A3B8; }
 
 /* ── GROUP LABEL ── */
 .cf-group-label {
   font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
-  text-transform: uppercase; color: #7C3AED;
+  text-transform: uppercase; color: var(--lyte-navy);
   padding-bottom: 4px;
-  border-bottom: 1px solid rgba(124,58,237,0.1);
+  border-bottom: 1px solid rgba(154,183,253,0.25);
 }
 
 /* ── SLUG ── */
@@ -233,8 +233,8 @@
 }
 .cf-slug-wrap:focus-within {
   background: white;
-  border-color: rgba(124,58,237,0.4);
-  box-shadow: 0 0 0 3px rgba(124,58,237,0.08);
+  border-color: rgba(28,27,58,0.4);
+  box-shadow: 0 0 0 3px rgba(154,183,253,0.2);
 }
 .cf-slug-prefix {
   padding: 11px 12px 11px 14px; font-size: 13px;
@@ -274,7 +274,7 @@
 }
 .cf-hours-row.cf-hours-open {
   background: white;
-  border-color: rgba(124,58,237,0.15);
+  border-color: rgba(154,183,253,0.375);
 }
 .cf-hours-day {
   font-size: 13px; font-weight: 600; color: #0F172A;

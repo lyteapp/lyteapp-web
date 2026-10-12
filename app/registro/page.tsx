@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabase'
 import './registro.css'
+import LyteLogo from '../components/LyteLogo'
 
 type Step = 'email' | 'code' | 'password'
 
@@ -113,7 +114,7 @@ export default function Registro() {
     <div className="reg-screen">
       <div className="reg-card">
         <Link href="/" className="reg-logo">
-          <div className="reg-logo-text">Lyte<span>app</span></div>
+          <LyteLogo height={32} />
         </Link>
 
         {/* ── STEP 1: EMAIL ── */}

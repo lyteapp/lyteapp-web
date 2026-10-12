@@ -3,6 +3,18 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* LyteApp brand palette (2026 rebrand). Only for LyteApp's own UI —
+     landing, login, onboarding, dashboard. Stores keep their own colors. */
+  --lyte-navy: #1C1B3A;
+  --lyte-navy-dark: #121130;
+  --lyte-navy-light: #34336B;
+  --lyte-blue: #9AB7FD;
+  --lyte-blue-light: #BFD0FE;
+  --lyte-blue-border: #D3DEFE;
+  --lyte-lavender: #E9EAFF;
+  --lyte-lavender-soft: #F3F4FF;
+  --lyte-lavender-faint: #FAFAFF;
 }
 
 @theme inline {

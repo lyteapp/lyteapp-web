@@ -437,7 +437,7 @@ function ConfiguracionInner() {
                   <div className="cf-toggle-knob" />
                 </button>
                 <span className="cf-hours-day" style={{ flex: 1 }}>{label}</span>
-                <span style={{ fontSize: 11, color: val ? '#7C3AED' : '#94A3B8', fontWeight: 500 }}>
+                <span style={{ fontSize: 11, color: val ? '#1C1B3A' : '#94A3B8', fontWeight: 500 }}>
                   {val ? 'Visible' : 'Oculto'}
                 </span>
               </div>
@@ -464,7 +464,7 @@ function ConfiguracionInner() {
                   <span className="cf-hours-day">Avisarme cuando llegue un pedido</span>
                   <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }}>Notificacion en este dispositivo, aunque no tengas el dashboard abierto</div>
                 </div>
-                <span style={{ fontSize: 11, color: pushEnabled ? '#7C3AED' : '#94A3B8', fontWeight: 500 }}>
+                <span style={{ fontSize: 11, color: pushEnabled ? '#1C1B3A' : '#94A3B8', fontWeight: 500 }}>
                   {pushBusy ? '...' : pushEnabled ? 'Activado' : 'Desactivado'}
                 </span>
               </div>

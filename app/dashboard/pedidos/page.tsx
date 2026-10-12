@@ -599,7 +599,7 @@ export default function PedidosPage() {
             className="pd-timer-settings-btn"
             onClick={() => setShowLockerSettings(true)}
             title="Modo casillero"
-            style={lockerModeEnabled ? { background: '#7C3AED', color: 'white' } : undefined}
+            style={lockerModeEnabled ? { background: '#1C1B3A', color: 'white' } : undefined}
           >
             <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
               <path fillRule="evenodd" d="M4 3a1 1 0 00-1 1v12a1 1 0 001 1h5a1 1 0 001-1V4a1 1 0 00-1-1H4zm7 0a1 1 0 00-1 1v12a1 1 0 001 1h5a1 1 0 001-1V4a1 1 0 00-1-1h-5zM6 9a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd"/>
@@ -990,7 +990,7 @@ export default function PedidosPage() {
                 onClick={() => saveLockerSettings(!lockerModeEnabled, lockerCount || 1)}
                 style={{
                   width: 40, height: 24, borderRadius: 100, border: 'none', cursor: 'pointer', position: 'relative',
-                  background: lockerModeEnabled ? '#7C3AED' : '#D1D5DB', transition: 'background 0.2s', flexShrink: 0,
+                  background: lockerModeEnabled ? '#1C1B3A' : '#D1D5DB', transition: 'background 0.2s', flexShrink: 0,
                 }}
               >
                 <span style={{

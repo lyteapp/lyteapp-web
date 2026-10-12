@@ -5,7 +5,7 @@
   --cx-ink-muted: #94A3B8;
   --cx-line:      rgba(15,23,42,0.08);
   --cx-cream:     #F8F7F4;
-  --cx-violet:    #7C3AED;
+  --cx-violet:    var(--lyte-navy);
   --cx-green:     #059669;
   --cx-red:       #DC2626;
   --cx-amber:     #D97706;
@@ -26,8 +26,8 @@
 .cx-spinner-wrap { display: flex; align-items: center; justify-content: center; height: 100vh; }
 .cx-spinner {
   width: 26px; height: 26px; border-radius: 50%;
-  border: 3px solid rgba(124,58,237,0.15);
-  border-top-color: #7C3AED;
+  border: 3px solid rgba(154,183,253,0.375);
+  border-top-color: var(--lyte-navy);
   animation: cxSpin 0.8s linear infinite;
 }
 @keyframes cxSpin { to { transform: rotate(360deg); } }
@@ -156,7 +156,7 @@
 .cx-proof-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .cx-method-chip {
   font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 100px;
-  background: #EEF2FF; color: #4C1D95;
+  background: #EEF2FF; color: var(--lyte-navy);
 }
 .cx-proof-amount { font-size: 22px; font-weight: 800; color: var(--cx-ink); letter-spacing: -0.5px; }
 .cx-proof-time { font-size: 11px; color: var(--cx-ink-muted); margin-left: auto; }
@@ -299,8 +299,8 @@
   align-self: flex-end;
 }
 .cx-settings-btn:hover { background: #E2E8F0; color: var(--cx-ink); }
-.cx-settings-btn--active { background: #EDE9FE; color: var(--cx-violet); border-color: #C4B5FD; }
-.cx-settings-btn--active:hover { background: #DDD6FE; }
+.cx-settings-btn--active { background: var(--lyte-lavender); color: var(--cx-violet); border-color: var(--lyte-blue-light); }
+.cx-settings-btn--active:hover { background: var(--lyte-blue-border); }
 
 /* ========== CALENDAR ========== */
 .cx-calendar {
@@ -376,9 +376,9 @@
   color: white;
   font-weight: 700;
 }
-.cx-cal-day--sel:hover { background: #6D28D9; }
+.cx-cal-day--sel:hover { background: var(--lyte-navy-dark); }
 .cx-cal-day--in-range {
-  background: #EDE9FE;
+  background: var(--lyte-lavender);
   color: var(--cx-violet);
   font-weight: 500;
 }

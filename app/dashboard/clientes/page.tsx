@@ -31,7 +31,7 @@ const STATUS_LABEL: Record<string, string> = {
   ready: 'Listo', delivered: 'Entregado', cancelled: 'Cancelado', completed: 'Completado',
 }
 const STATUS_COLOR: Record<string, string> = {
-  pending: '#F59E0B', confirmed: '#3B82F6', processing: '#8B5CF6',
+  pending: '#F59E0B', confirmed: '#3B82F6', processing: '#34336B',
   ready: '#10B981', delivered: '#10B981', completed: '#10B981', cancelled: '#EF4444',
 }
 
@@ -173,7 +173,7 @@ export default function ClientesPage() {
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
-      <div style={{ width: 28, height: 28, borderRadius: '50%', border: '3px solid rgba(124,58,237,0.15)', borderTopColor: '#7C3AED', animation: 'dbSpin 0.8s linear infinite' }} />
+      <div style={{ width: 28, height: 28, borderRadius: '50%', border: '3px solid rgba(154,183,253,0.375)', borderTopColor: '#1C1B3A', animation: 'dbSpin 0.8s linear infinite' }} />
     </div>
   )
 
@@ -266,11 +266,11 @@ export default function ClientesPage() {
                 <div
                   key={c.key}
                   onClick={() => openCustomer(c)}
-                  style={{ display: 'grid', gridTemplateColumns: '1fr 150px 90px 120px 70px', padding: '13px 20px', borderBottom: i < filtered.length - 1 ? '1px solid #F1F5F9' : 'none', alignItems: 'center', cursor: 'pointer', background: isActive ? '#F5F3FF' : 'transparent', transition: 'background 0.1s' }}
+                  style={{ display: 'grid', gridTemplateColumns: '1fr 150px 90px 120px 70px', padding: '13px 20px', borderBottom: i < filtered.length - 1 ? '1px solid #F1F5F9' : 'none', alignItems: 'center', cursor: 'pointer', background: isActive ? '#F3F4FF' : 'transparent', transition: 'background 0.1s' }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 34, height: 34, borderRadius: '50%', background: isActive ? '#7C3AED' : '#7C3AED18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'background 0.15s' }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: isActive ? 'white' : '#7C3AED' }}>{(c.name || '?').charAt(0).toUpperCase()}</span>
+                    <div style={{ width: 34, height: 34, borderRadius: '50%', background: isActive ? '#1C1B3A' : '#7C3AED18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'background 0.15s' }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: isActive ? 'white' : '#1C1B3A' }}>{(c.name || '?').charAt(0).toUpperCase()}</span>
                     </div>
                     <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>
                   </div>
@@ -290,13 +290,13 @@ export default function ClientesPage() {
         <div style={{ width: 360, flexShrink: 0, background: 'white', borderRadius: 16, border: '1px solid #E2E8F0', overflow: 'hidden', position: 'sticky', top: 24 }}>
           {/* Panel header */}
           <div style={{ padding: '18px 20px', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#1C1B3A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <span style={{ fontSize: 18, fontWeight: 700, color: 'white' }}>{(selected.name || '?').charAt(0).toUpperCase()}</span>
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 15, fontWeight: 700, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selected.name}</div>
               {selected.phone
-                ? <a href={`tel:${selected.phone}`} style={{ fontSize: 13, color: '#7C3AED', textDecoration: 'none' }}>{selected.phone}</a>
+                ? <a href={`tel:${selected.phone}`} style={{ fontSize: 13, color: '#1C1B3A', textDecoration: 'none' }}>{selected.phone}</a>
                 : <span style={{ fontSize: 13, color: '#CBD5E1' }}>Sin telefono</span>
               }
             </div>
@@ -327,7 +327,7 @@ export default function ClientesPage() {
           <div style={{ maxHeight: 480, overflowY: 'auto', scrollbarWidth: 'none' }}>
             {ordersLoading ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}>
-                <div style={{ width: 22, height: 22, borderRadius: '50%', border: '2px solid rgba(124,58,237,0.15)', borderTopColor: '#7C3AED', animation: 'dbSpin 0.8s linear infinite' }} />
+                <div style={{ width: 22, height: 22, borderRadius: '50%', border: '2px solid rgba(154,183,253,0.375)', borderTopColor: '#1C1B3A', animation: 'dbSpin 0.8s linear infinite' }} />
               </div>
             ) : orders.length === 0 ? (
               <div style={{ padding: '20px', textAlign: 'center', color: '#94A3B8', fontSize: 13 }}>Sin pedidos</div>

@@ -224,7 +224,7 @@ function ResizeHandle({ onDrag }: { onDrag: (delta: number) => void }) {
       onPointerDown={handlePointerDown}
       style={{
         position: 'absolute', right: -9, bottom: -9, width: 16, height: 16,
-        borderRadius: '50%', background: '#7C3AED', border: '2px solid white',
+        borderRadius: '50%', background: '#1C1B3A', border: '2px solid white',
         cursor: 'nwse-resize', boxShadow: '0 2px 6px rgba(0,0,0,0.35)', zIndex: 6,
       }}
     />
@@ -252,7 +252,7 @@ function ResizeHandleXY({ onDrag }: { onDrag: (dx: number, dy: number) => void }
       onPointerDown={handlePointerDown}
       style={{
         position: 'absolute', right: -9, bottom: -9, width: 16, height: 16,
-        borderRadius: '50%', background: '#7C3AED', border: '2px solid white',
+        borderRadius: '50%', background: '#1C1B3A', border: '2px solid white',
         cursor: 'nwse-resize', boxShadow: '0 2px 6px rgba(0,0,0,0.35)', zIndex: 6,
       }}
     />
@@ -309,7 +309,7 @@ function PhotoItem({
       style={{
         position: 'absolute', left: img.x, top: img.y, width: img.width, height: img.height,
         pointerEvents: 'auto', cursor: 'move',
-        outline: selected ? '2px dashed #7C3AED' : 'none', outlineOffset: 3,
+        outline: selected ? '2px dashed #1C1B3A' : 'none', outlineOffset: 3,
       }}
     >
       <img
@@ -367,7 +367,7 @@ function SplashPreview({
   function selectableStyle(id: SelectableId, extraOffset = 4): React.CSSProperties {
     return {
       position: 'relative', display: 'inline-block', cursor: 'pointer',
-      outline: selected === id ? '2px dashed #7C3AED' : 'none',
+      outline: selected === id ? '2px dashed #1C1B3A' : 'none',
       outlineOffset: extraOffset,
       pointerEvents: 'auto',
     }
@@ -503,7 +503,7 @@ function PoweredByBadge({ isLight }: { isLight: boolean }) {
       fontSize: 11, letterSpacing: '0.02em', color: colors.text,
       fontFamily: 'var(--font-geist-sans), sans-serif',
     }}>
-      <img src="/logo.png" alt="" style={{ height: 13, width: 'auto', opacity: 0.9, display: 'block' }} />
+      <span aria-hidden="true" style={{ display: 'block', width: 15, height: 13, opacity: 0.9, background: 'currentColor', WebkitMask: 'url(/brand/lyte-icon-white.png) center / contain no-repeat', mask: 'url(/brand/lyte-icon-white.png) center / contain no-repeat' }} />
       <span>Powered by <strong style={{ color: colors.strong }}>LYTE APP</strong></span>
     </div>
   )
@@ -1064,7 +1064,7 @@ export default function InicioPage() {
                         style={{
                           position: 'relative', width: 56, height: 56, borderRadius: 10, overflow: 'hidden',
                           cursor: 'pointer', flexShrink: 0,
-                          outline: selectedImageId === img.id ? '2px solid #7C3AED' : '1px solid rgba(15,23,42,0.09)',
+                          outline: selectedImageId === img.id ? '2px solid #1C1B3A' : '1px solid rgba(15,23,42,0.09)',
                           outlineOffset: 2,
                         }}
                       >

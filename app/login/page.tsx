@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabase'
 import './login.css'
+import LyteLogo from '../components/LyteLogo'
 
 export default function Login() {
   const router = useRouter()
@@ -57,7 +58,7 @@ export default function Login() {
     <div className="login-screen">
       <div className="login-card">
         <Link href="/" className="login-logo">
-          <div className="login-logo-text">Lyte<span>app</span></div>
+          <LyteLogo height={32} />
         </Link>
 
         {mode === 'login' && (

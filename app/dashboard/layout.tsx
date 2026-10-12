@@ -11,6 +11,7 @@ import { DashboardStoreProvider, useDashboardStore } from '../lib/DashboardStore
 import './dashboard.css'
 
 import type { TranslationKey } from '../lib/i18n'
+import LyteLogo from '../components/LyteLogo'
 
 const navItems: { href: string; tKey: TranslationKey; exact?: boolean; soon?: boolean; icon: React.ReactNode }[] = [
   {
@@ -140,7 +141,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   if (loading || storeLoading) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F8F7F4' }}>
-        <div style={{ width: 32, height: 32, border: '3px solid rgba(124,58,237,0.15)', borderTop: '3px solid #7C3AED', borderRadius: '50%', animation: 'dbSpin 0.8s linear infinite' }} />
+        <div style={{ width: 32, height: 32, border: '3px solid rgba(154,183,253,0.375)', borderTop: '3px solid #1C1B3A', borderRadius: '50%', animation: 'dbSpin 0.8s linear infinite' }} />
       </div>
     )
   }
@@ -187,7 +188,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         {/* Brand + close */}
         <div style={{ display: 'flex', alignItems: 'center', padding: '22px 20px', borderBottom: '1px solid #E8E6DF' }}>
           <Link href="/dashboard" className="db-brand-link" style={{ margin: 0 }} onClick={() => setMobileNav(false)}>
-            <span className="db-brand-lyte">Lyte</span><span className="db-brand-app">app</span>
+            <LyteLogo height={26} />
           </Link>
           <button className="db-sidebar-close" onClick={() => setMobileNav(false)}>
             {t('nav.close')}

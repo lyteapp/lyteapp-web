@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import LyteLogo from '../../components/LyteLogo'
 
 export default function ListoPage() {
   const router = useRouter()
@@ -15,7 +16,7 @@ export default function ListoPage() {
   return (
     <div className="ob-screen" style={{ justifyContent: 'center' }}>
       <div className="ob-brand" style={{ position: 'absolute', top: 48, left: 48 }}>
-        Lyte<span style={{ color: '#7C3AED' }}>app</span>
+        <LyteLogo height={28} />
       </div>
 
       <div className="ob-card" style={{ textAlign: 'center', maxWidth: 480 }}>

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import './terminos.css'
+import LyteLogo from '../components/LyteLogo'
 
 export const metadata = {
   title: 'Términos y Condiciones — LyteApp',
@@ -11,7 +12,7 @@ export default function TerminosPage() {
     <div className="tc-page">
       <div className="tc-card">
         <Link href="/" className="tc-logo">
-          <span className="tc-logo-text">Lyte<span>app</span></span>
+          <LyteLogo height={28} />
         </Link>
 
         <h1 className="tc-title">Términos y Condiciones</h1>

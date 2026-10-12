@@ -1,11 +1,11 @@
 'use client'
 
-import Image from 'next/image'
 import Link from 'next/link'
 import PricingToggle from './components/PricingToggle'
 import NavMobile from './components/NavMobile'
 import { useT } from './lib/LocaleProvider'
 import './landing.css'
+import LyteLogo from './components/LyteLogo'
 
 const CheckIcon = () => (
   <svg className="check" viewBox="0 0 20 20" fill="currentColor">
@@ -21,12 +21,7 @@ export default function Home() {
       {/* NAV */}
       <nav className="lp-nav">
         <Link href="/" className="logo">
-          <span className="logo-mark">
-            <Image src="/logo.png" alt="LyteApp" width={28} height={28} style={{ objectFit: 'contain' }} />
-          </span>
-          <span className="logo-text">
-            <span className="lyte">Lyte</span><span className="app">app</span>
-          </span>
+          <LyteLogo height={30} />
         </Link>
         <ul className="nav-links">
           <li><a href="#features">{t('landing.nav.features')}</a></li>
@@ -270,13 +265,13 @@ export default function Home() {
                 <svg className="gps-route" viewBox="0 0 400 140" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
                   <defs>
                     <linearGradient id="route" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#7C3AED" stopOpacity="0.4" />
-                      <stop offset="100%" stopColor="#7C3AED" stopOpacity="1" />
+                      <stop offset="0%" stopColor="#1C1B3A" stopOpacity="0.4" />
+                      <stop offset="100%" stopColor="#1C1B3A" stopOpacity="1" />
                     </linearGradient>
                   </defs>
                   <path d="M 30 110 Q 100 60, 180 80 T 370 30" stroke="url(#route)" strokeWidth="3" fill="none" strokeDasharray="6 6" strokeLinecap="round" />
                   <circle cx="30" cy="110" r="6" fill="white" />
-                  <circle cx="370" cy="30" r="8" fill="#7C3AED" stroke="white" strokeWidth="3" />
+                  <circle cx="370" cy="30" r="8" fill="#1C1B3A" stroke="white" strokeWidth="3" />
                 </svg>
                 <div className="gps-pin" style={{ top: '50%', left: '50%' }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12 2L4 9l1 11h14l1-11z" /></svg>
@@ -512,7 +507,7 @@ export default function Home() {
         <div className="footer-inner">
           <div className="footer-top">
             <div className="footer-brand">
-              <h3>Lyte<span className="app">app</span></h3>
+              <h3><LyteLogo height={34} tone="white" /></h3>
               <p>{t('landing.footer.tagline')}</p>
             </div>
             <div className="footer-col">

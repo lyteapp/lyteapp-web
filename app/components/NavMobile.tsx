@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useT } from '../lib/LocaleProvider'
+import LyteLogo from './LyteLogo'
 
 export default function NavMobile() {
   const t = useT()
@@ -38,7 +39,7 @@ export default function NavMobile() {
       {open && <div className="nav-backdrop" onClick={() => setOpen(false)} />}
 
       <div className={`nav-drawer${open ? ' open' : ''}`}>
-        <div className="nav-drawer-logo">Lyte<span>app</span></div>
+        <div className="nav-drawer-logo"><LyteLogo height={28} /></div>
         <nav className="nav-drawer-links">
           <a href="#features" onClick={() => setOpen(false)}>{t('landing.nav.features')}</a>
           <a href="#how" onClick={() => setOpen(false)}>{t('landing.nav.how')}</a>

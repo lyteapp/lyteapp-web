@@ -227,7 +227,7 @@
      you, so the page never spends two different reds on the same idea. */
   --activo: #0EA05C;
   --pasivo: #DC2626;
-  --capital: #7C3AED;
+  --capital: var(--lyte-navy);
   --ok: #0EA05C;
   --alert: #DC2626;
   --rule: #E3E3E0;

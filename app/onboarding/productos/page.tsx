@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
+import LyteLogo from '../../components/LyteLogo'
 
 const STEPS = 6
 
@@ -74,7 +75,7 @@ export default function ProductosOnboardingPage() {
 
   return (
     <div className="ob-screen">
-      <div className="ob-brand">Lyte<span>app</span></div>
+      <div className="ob-brand"><LyteLogo height={28} /></div>
 
       <div className="ob-progress">
         {Array.from({ length: STEPS }).map((_, i) => (

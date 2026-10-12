@@ -41,7 +41,7 @@ const PIN_STATUS_LABEL: Record<string, string> = {
 }
 const PIN_STATUS_COLOR: Record<string, string> = {
   pending: '#94A3B8', preparing: '#F59E0B', ready: '#3B82F6',
-  picked_up: '#7C3AED', delivered: '#10B981', cancelled: '#EF4444',
+  picked_up: '#1C1B3A', delivered: '#10B981', cancelled: '#EF4444',
 }
 
 type Props = {
@@ -58,7 +58,7 @@ function initials(name: string) {
 
 const STATUS_COLORS = {
   available: { border: '#15803D', bg: 'white', text: '#15803D', dot: '#15803D' },
-  in_route:  { border: '#7C3AED', bg: 'white', text: '#7C3AED', dot: '#7C3AED' },
+  in_route:  { border: '#1C1B3A', bg: 'white', text: '#1C1B3A', dot: '#1C1B3A' },
   late:      { border: '#B45309', bg: '#FFFBEB', text: '#B45309', dot: '#B45309' },
 }
 
@@ -88,7 +88,7 @@ export default function MapView({ inRoute, driverLocations, drivers, customerPin
 
   if (!pos) return (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#E8EEF4', flexDirection: 'column', gap: 10 }}>
-      <div style={{ width: 24, height: 24, borderRadius: '50%', border: '3px solid rgba(124,58,237,0.15)', borderTopColor: '#7C3AED', animation: 'dbSpin 0.8s linear infinite' }} />
+      <div style={{ width: 24, height: 24, borderRadius: '50%', border: '3px solid rgba(154,183,253,0.375)', borderTopColor: '#1C1B3A', animation: 'dbSpin 0.8s linear infinite' }} />
       <span style={{ fontSize: 12, color: '#9CA3AF' }}>Obteniendo ubicacion...</span>
     </div>
   )
@@ -122,7 +122,7 @@ export default function MapView({ inRoute, driverLocations, drivers, customerPin
           boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
         }}
       >
-        <svg viewBox="0 0 20 20" fill="#4C1D95" width="14" height="14">
+        <svg viewBox="0 0 20 20" fill="#1C1B3A" width="14" height="14">
           <path fillRule="evenodd" d="M10 2a8 8 0 100 16A8 8 0 0010 2zm0 14a6 6 0 110-12 6 6 0 010 12zm0-9a3 3 0 100 6 3 3 0 000-6z" clipRule="evenodd"/>
         </svg>
       </button>
@@ -131,9 +131,9 @@ export default function MapView({ inRoute, driverLocations, drivers, customerPin
       <Marker longitude={pos[1]} latitude={pos[0]} anchor="center">
         <div style={{
           width: 36, height: 36, borderRadius: 10,
-          background: '#4C1D95', border: '2px solid white',
+          background: '#1C1B3A', border: '2px solid white',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 4px 12px rgba(76,29,149,0.4)',
+          boxShadow: '0 4px 12px rgba(28,27,58,0.4)',
           cursor: 'default',
         }}>
           <svg viewBox="0 0 20 20" fill="white" width="18" height="18">
@@ -185,7 +185,7 @@ export default function MapView({ inRoute, driverLocations, drivers, customerPin
                   {delivery ? (
                     <>
                       <div style={{ color: '#6B7280' }}>Cliente: {delivery.customer_name}</div>
-                      <div style={{ color: late ? '#B45309' : '#7C3AED', marginTop: 3, fontWeight: 500 }}>
+                      <div style={{ color: late ? '#B45309' : '#1C1B3A', marginTop: 3, fontWeight: 500 }}>
                         {mins} min en ruta{late ? ' · ATRASADO' : ''}
                       </div>
                     </>
@@ -268,7 +268,7 @@ export default function MapView({ inRoute, driverLocations, drivers, customerPin
                     <div style={{ fontWeight: 700, marginBottom: 4, color: '#0F172A' }}>{name}</div>
                     <div style={{ color: '#6B7280' }}>Cliente: {del.customer_name}</div>
                     {mins !== null && (
-                      <div style={{ color: late ? '#B45309' : '#7C3AED', marginTop: 3, fontWeight: 500 }}>
+                      <div style={{ color: late ? '#B45309' : '#1C1B3A', marginTop: 3, fontWeight: 500 }}>
                         {mins} min en ruta{late ? ' · ATRASADO' : ''}
                       </div>
                     )}

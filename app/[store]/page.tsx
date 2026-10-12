@@ -111,7 +111,7 @@ export default async function StorePage({ params, searchParams }: { params: Prom
             : <div className="sf-co-transition-name">{store.name}</div>}
           <div className="sf-co-transition-bar"><span /></div>
           <div className="sf-powered-by" style={{ color: bootPowered.text }}>
-            <img src="/logo.png" alt="" />
+            <span className="sf-powered-by-mark" aria-hidden="true" />
             <span>Powered by <strong style={{ color: bootPowered.strong }}>LYTE APP</strong></span>
           </div>
         </div>

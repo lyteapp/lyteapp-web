@@ -1,9 +1,9 @@
 /* ── Delivery Module v2 ─────────────────────────────── */
 
 :root {
-  --dv-violet: #7C3AED;
-  --dv-violet-deep: #4C1D95;
-  --dv-violet-soft: #C4B5FD;
+  --dv-violet: var(--lyte-navy);
+  --dv-violet-deep: var(--lyte-navy);
+  --dv-violet-soft: var(--lyte-blue-light);
   --dv-violet-bg: #EEEDFE;
   --dv-ink: #0F172A;
   --dv-ink-soft: #6B7280;
@@ -34,7 +34,7 @@
 .dv-spinner-wrap { display: flex; align-items: center; justify-content: center; height: 100vh; }
 .dv-spinner {
   width: 28px; height: 28px;
-  border: 3px solid rgba(124,58,237,0.15); border-top-color: #7C3AED;
+  border: 3px solid rgba(154,183,253,0.375); border-top-color: var(--lyte-navy);
   border-radius: 50%; animation: dbSpin 0.8s linear infinite;
 }
 
@@ -95,12 +95,12 @@
 .dv-settings-field { display: flex; flex-direction: column; gap: 6px; }
 .dv-settings-field-label { font-size: 12px; font-weight: 600; color: #64748B; text-transform: uppercase; letter-spacing: 0.04em; }
 .dv-settings-input { border: 1px solid rgba(15,23,42,0.12); border-radius: 10px; padding: 10px 13px; font-size: 13px; font-family: inherit; color: #0F172A; outline: none; background: #FAFAFA; transition: border-color 0.15s; width: 100%; box-sizing: border-box; }
-.dv-settings-input:focus { border-color: #7C3AED; background: white; box-shadow: 0 0 0 3px rgba(124,58,237,0.08); }
+.dv-settings-input:focus { border-color: var(--lyte-navy); background: white; box-shadow: 0 0 0 3px rgba(154,183,253,0.2); }
 .dv-settings-textarea { resize: vertical; min-height: 72px; line-height: 1.6; }
 .dv-settings-toggle { display: inline-block; position: relative; width: 40px; height: 22px; flex-shrink: 0; cursor: pointer; vertical-align: middle; }
 .dv-settings-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
 .dv-settings-toggle-track { position: absolute; inset: 0; border-radius: 100px; background: #E2E8F0; transition: background 0.2s; }
-.dv-settings-toggle input:checked + .dv-settings-toggle-track { background: #7C3AED; }
+.dv-settings-toggle input:checked + .dv-settings-toggle-track { background: var(--lyte-navy); }
 .dv-settings-toggle-track::after { content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%; background: white; top: 3px; left: 3px; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
 .dv-settings-toggle input:checked + .dv-settings-toggle-track::after { transform: translateX(18px); }
 .dv-settings-save-row { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
@@ -279,9 +279,9 @@
 .dv-map-bg {
   position: absolute; inset: 0;
   background-image:
-    linear-gradient(rgba(124,58,237,0.05) 0.5px, transparent 0.5px),
-    linear-gradient(90deg, rgba(124,58,237,0.05) 0.5px, transparent 0.5px),
-    radial-gradient(circle at 20% 30%, rgba(196,181,253,0.18) 0, transparent 40%),
+    linear-gradient(rgba(154,183,253,0.125) 0.5px, transparent 0.5px),
+    linear-gradient(90deg, rgba(154,183,253,0.125) 0.5px, transparent 0.5px),
+    radial-gradient(circle at 20% 30%, rgba(154,183,253,0.45) 0, transparent 40%),
     radial-gradient(circle at 75% 65%, rgba(168,240,198,0.18) 0, transparent 40%);
   background-size: 28px 28px, 28px 28px, 100% 100%, 100% 100%;
 }
@@ -338,7 +338,7 @@
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .dv-live-cc-driver {
-  font-size: 10px; color: #7C3AED; font-weight: 500; margin-top: 2px;
+  font-size: 10px; color: var(--lyte-navy); font-weight: 500; margin-top: 2px;
 }
 .dv-live-cc-wa {
   margin-top: 8px;
@@ -473,13 +473,13 @@
   font-size: 13px; color: var(--dv-ink); background: white; outline: none; width: 100%;
   font-family: inherit; transition: border-color 0.2s;
 }
-.dv-input:focus { border-color: rgba(124,58,237,0.4); box-shadow: 0 0 0 3px rgba(124,58,237,0.08); }
+.dv-input:focus { border-color: rgba(28,27,58,0.4); box-shadow: 0 0 0 3px rgba(154,183,253,0.2); }
 .dv-select {
   border: 1px solid rgba(15,23,42,0.1); border-radius: 8px; padding: 8px 12px;
   font-size: 13px; color: var(--dv-ink); background: white; outline: none; width: 100%;
   font-family: inherit; cursor: pointer;
 }
-.dv-select:focus { border-color: rgba(124,58,237,0.4); }
+.dv-select:focus { border-color: rgba(28,27,58,0.4); }
 .dv-form-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .dv-dispatch-btn {
   width: 100%; padding: 10px; border-radius: 8px;
@@ -611,7 +611,7 @@
 
 /* Driver form */
 .dv-driver-form-card {
-  background: white; border: 1px solid rgba(124,58,237,0.2); border-radius: 12px;
+  background: white; border: 1px solid rgba(154,183,253,0.5); border-radius: 12px;
   padding: 16px; margin-bottom: 16px;
   animation: dvFadeIn 0.2s ease;
 }
@@ -714,7 +714,7 @@
   border: 1px solid var(--dv-violet-soft); cursor: pointer;
   font-size: 12px; font-weight: 500; font-family: inherit; transition: background 0.15s;
 }
-.dv-qr-copy-btn:hover { background: #DDD8FB; }
+.dv-qr-copy-btn:hover { background: var(--lyte-blue-border); }
 .dv-qr-wa-btn {
   flex: 1; padding: 10px; border-radius: 8px;
   background: #25D366; color: white; border: none; cursor: pointer;
@@ -807,7 +807,7 @@
 
 .dv-tray-card:not(.done):hover {
   border-color: var(--dv-violet);
-  box-shadow: 0 2px 12px rgba(124,58,237,0.12);
+  box-shadow: 0 2px 12px rgba(154,183,253,0.3);
 }
 
 .dv-tray-card.done {

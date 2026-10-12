@@ -3392,7 +3392,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           )}
         </div>
         <a className="sf-powered-by" href="https://lyte-app.com" target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ color: splashPoweredColors.text }}>
-          <img src="/logo.png" alt="" />
+          <span className="sf-powered-by-mark" aria-hidden="true" />
           <span>Powered by <strong style={{ color: splashPoweredColors.strong }}>LYTE APP</strong></span>
         </a>
       </div>
@@ -3445,7 +3445,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           <button className="sf-reveal-skip" onClick={finishReveal}>{rv.skipLabel || 'Saltar →'}</button>
         )}
         <a className="sf-powered-by" href="https://lyte-app.com" target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ color: revealPoweredColors.text }}>
-          <img src="/logo.png" alt="" />
+          <span className="sf-powered-by-mark" aria-hidden="true" />
           <span>Powered by <strong style={{ color: revealPoweredColors.strong }}>LYTE APP</strong></span>
         </a>
       </div>
@@ -4522,7 +4522,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           const c = poweredByColors(isLightColor(cfg.pageBg || '#FAFAF9'))
           return (
             <div className="sf-powered-by" style={{ color: c.text }}>
-              <img src="/logo.png" alt="" />
+              <span className="sf-powered-by-mark" aria-hidden="true" />
               <span>Powered by <strong style={{ color: c.strong }}>LYTE APP</strong></span>
             </div>
           )

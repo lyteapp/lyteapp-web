@@ -288,7 +288,7 @@ export default function CheckoutPage() {
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A' }}>{m.name}</div>
-                        <div style={{ fontSize: 11, color: m.enabled ? '#7C3AED' : '#94A3B8' }}>{m.enabled ? 'Activo' : 'Inactivo'}</div>
+                        <div style={{ fontSize: 11, color: m.enabled ? '#1C1B3A' : '#94A3B8' }}>{m.enabled ? 'Activo' : 'Inactivo'}</div>
                       </div>
                       <label className="cn-toggle" onClick={e => e.stopPropagation()}>
                         <input type="checkbox" checked={m.enabled} onChange={e => setMethods(prev => prev.map(x => x.id === m.id ? { ...x, enabled: e.target.checked } : x))} />

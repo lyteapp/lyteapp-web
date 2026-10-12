@@ -20,7 +20,7 @@
   text-align: center;
 }
 .pt-logo { font-size: 18px; font-weight: 700; color: white; letter-spacing: -0.03em; margin-bottom: 20px; }
-.pt-logo span { color: #C4B5FD; }
+.pt-logo span { color: var(--lyte-blue-light); }
 .pt-title { font-size: 22px; font-weight: 700; color: white; letter-spacing: -0.03em; margin-bottom: 28px; }
 
 .pt-btn {
@@ -35,7 +35,7 @@
   margin-bottom: 12px;
   border: none;
 }
-.pt-btn-primary { background: #7C3AED; color: white; }
+.pt-btn-primary { background: var(--lyte-navy); color: white; }
 .pt-btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
 .pt-btn-ghost { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.75); border: 1px solid rgba(255,255,255,0.1); }
 .pt-btn-ghost:hover:not(:disabled) { background: rgba(255,255,255,0.1); }
@@ -45,7 +45,7 @@
   font-size: 12.5px; color: rgba(255,255,255,0.45);
   line-height: 1.6; margin-top: 8px;
 }
-.pt-hint a { color: #C4B5FD; text-decoration: none; font-weight: 600; }
+.pt-hint a { color: var(--lyte-blue-light); text-decoration: none; font-weight: 600; }
 .pt-hint a:hover { text-decoration: underline; }
 
 .pt-msg {

@@ -1,13 +1,13 @@
 :root {
   --bg: #fafafa;
   --bg-cream: #f5f3ef;
-  --ink: #0F172A;
+  --ink: var(--lyte-navy);
   --ink-soft: #475569;
   --ink-muted: #94a3b8;
-  --violet: #7C3AED;
-  --violet-deep: #4C1D95;
-  --violet-soft: #C4B5FD;
-  --violet-bg: #F5F3FF;
+  --violet: var(--lyte-navy);
+  --violet-deep: var(--lyte-navy);
+  --violet-soft: var(--lyte-blue-light);
+  --violet-bg: var(--lyte-lavender-soft);
   --line: rgba(15, 23, 42, 0.08);
   --card: #ffffff;
 }
@@ -121,7 +121,7 @@ body {
   transform: translateX(-50%);
   width: 600px;
   height: 600px;
-  background: radial-gradient(circle, rgba(124, 58, 237, 0.08) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(154,183,253,0.2) 0%, transparent 70%);
   pointer-events: none;
   z-index: -1;
 }
@@ -205,7 +205,7 @@ body {
 .btn-primary:hover {
   background: var(--violet);
   transform: translateY(-1px);
-  box-shadow: 0 12px 32px rgba(124, 58, 237, 0.32);
+  box-shadow: 0 12px 32px rgba(28,27,58,0.32);
 }
 
 .btn-secondary {
@@ -242,7 +242,7 @@ body {
   box-shadow:
     0 0 0 1px var(--line),
     0 40px 80px -20px rgba(15, 23, 42, 0.18),
-    0 16px 32px -8px rgba(124, 58, 237, 0.1);
+    0 16px 32px -8px rgba(154,183,253,0.25);
   position: relative;
 }
 
@@ -639,7 +639,7 @@ body {
   justify-content: center;
   color: white;
   border: 3px solid white;
-  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.5);
+  box-shadow: 0 8px 24px rgba(28,27,58,0.5);
   animation: pinPulse 2s ease-in-out infinite;
 }
 @keyframes pinPulse {
@@ -700,7 +700,7 @@ body {
   transform: translateX(-50%);
   width: 800px;
   height: 800px;
-  background: radial-gradient(circle, rgba(124, 58, 237, 0.18) 0%, transparent 60%);
+  background: radial-gradient(circle, rgba(154,183,253,0.45) 0%, transparent 60%);
   pointer-events: none;
 }
 .pagos-inner { max-width: 1280px; margin: 0 auto; position: relative; }
@@ -722,8 +722,8 @@ body {
   transition: all 0.2s;
 }
 .pago-chip:hover {
-  background: rgba(124, 58, 237, 0.12);
-  border-color: rgba(124, 58, 237, 0.3);
+  background: rgba(154,183,253,0.3);
+  border-color: rgba(154,183,253,0.75);
   transform: translateY(-2px);
 }
 .pago-icon {
@@ -944,7 +944,7 @@ body {
   top: -50%; right: -20%;
   width: 400px;
   height: 400px;
-  background: radial-gradient(circle, rgba(124, 58, 237, 0.3) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(154,183,253,0.75) 0%, transparent 70%);
 }
 .compare-title {
   font-size: 22px;
@@ -987,7 +987,7 @@ body {
   transform: translateX(-50%);
   width: 1000px;
   height: 1000px;
-  background: radial-gradient(circle, rgba(124, 58, 237, 0.1) 0%, transparent 60%);
+  background: radial-gradient(circle, rgba(154,183,253,0.25) 0%, transparent 60%);
   pointer-events: none;
 }
 .cta-inner { max-width: 800px; margin: 0 auto; position: relative; }

@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { startRegistration, startAuthentication, browserSupportsWebAuthn } from '@simplewebauthn/browser'
 import { supabase } from '../lib/supabase'
 import './portal.css'
+import LyteLogo from '../components/LyteLogo'
 
 export default function PortalPage() {
   const router = useRouter()
@@ -90,7 +91,7 @@ export default function PortalPage() {
   return (
     <div className="pt-page">
       <div className="pt-card">
-        <div className="pt-logo">Lyte<span>app</span></div>
+        <div className="pt-logo"><LyteLogo height={28} tone="white" /></div>
         <h1 className="pt-title">Acceso privado</h1>
 
         {!supported ? (

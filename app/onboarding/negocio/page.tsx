@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import LyteLogo from '../../components/LyteLogo'
 
 const RUBROS = [
   { id: 'comida', icon: '🍕', label: 'Comida y restaurantes' },
@@ -51,7 +52,7 @@ export default function NegocioPage() {
 
   return (
     <div className="ob-screen">
-      <div className="ob-brand">Lyte<span>app</span></div>
+      <div className="ob-brand"><LyteLogo height={28} /></div>
 
       <div className="ob-progress">
         {Array.from({ length: STEPS }).map((_, i) => (

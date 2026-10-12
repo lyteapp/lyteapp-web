@@ -22,7 +22,7 @@ export type PuntoEvolucion = {
    direct labels and the figures table. */
 const SERIES = [
   { key: 'activos' as const, label: 'Activos', color: '#0EA05C', trazo: undefined as string | undefined },
-  { key: 'capital' as const, label: 'Capital', color: '#7C3AED', trazo: '7 3' },
+  { key: 'capital' as const, label: 'Capital', color: '#1C1B3A', trazo: '7 3' },
   { key: 'pasivos' as const, label: 'Pasivos', color: '#DC2626', trazo: '2 3' },
 ]
 

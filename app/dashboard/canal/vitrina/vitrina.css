@@ -1,8 +1,8 @@
 :root {
-  --vt-violet: #7C3AED;
-  --vt-violet-deep: #4C1D95;
-  --vt-violet-soft: #C4B5FD;
-  --vt-violet-mist: #EDE9FE;
+  --vt-violet: var(--lyte-navy);
+  --vt-violet-deep: var(--lyte-navy);
+  --vt-violet-soft: var(--lyte-blue-light);
+  --vt-violet-mist: var(--lyte-lavender);
   --vt-ink: #0F172A;
   --vt-ink-soft: #475569;
   --vt-ink-muted: #94A3B8;

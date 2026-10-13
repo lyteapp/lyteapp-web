@@ -188,8 +188,8 @@ html, body {
   font-family: var(--lyte-font-body), sans-serif;
   text-align: left; margin-bottom: 1px;
 }
-.db-canal-toggle:hover { background: var(--lyte-lavender); color: var(--lyte-navy); }
-.db-canal-toggle.open { color: var(--lyte-navy); background: var(--lyte-lavender); }
+.db-canal-toggle:hover { background: #F0EEE8; color: #0F172A; }
+.db-canal-toggle.open { color: #0F172A; background: #F0EEE8; }
 .db-canal-toggle svg:first-child { width: 16px; height: 16px; flex-shrink: 0; opacity: 0.7; }
 .db-canal-toggle.open svg:first-child { opacity: 1; }
 
@@ -215,7 +215,7 @@ html, body {
   background: #CBD5E1; flex-shrink: 0;
   transition: background 0.15s;
 }
-.db-canal-item:hover { color: var(--lyte-navy); background: var(--lyte-lavender); }
+.db-canal-item:hover { color: #0F172A; background: #F0EEE8; }
 .db-canal-item:hover::before { background: #475569; }
 .db-canal-item.active { color: var(--lyte-navy); font-weight: 600; }
 .db-canal-item.active::before { background: var(--lyte-navy); }
@@ -243,12 +243,10 @@ html, body {
   text-decoration: none;
   position: relative;
 }
-.db-nav-item:hover { background: var(--lyte-lavender); color: var(--lyte-navy); }
-/* Selected menu item in the brand accent (#9AB7FD in the Lyte theme;
-   follows the user's theme), with dark text/icon for contrast on it. */
-.db-nav-item.active { background: var(--lyte-blue); color: var(--lyte-navy); font-weight: 600; }
+.db-nav-item:hover { background: #F0EEE8; color: #0F172A; }
+.db-nav-item.active { background: #0F172A; color: white; }
 .db-nav-item svg { width: 16px; height: 16px; flex-shrink: 0; opacity: 0.7; }
-.db-nav-item.active svg { opacity: 1; color: var(--lyte-navy); }
+.db-nav-item.active svg { opacity: 1; color: var(--lyte-blue-light); }
 .db-nav-badge {
   margin-left: auto;
   background: var(--lyte-navy);

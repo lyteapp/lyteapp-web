@@ -835,6 +835,21 @@
 .ed-side-bar .ed-tool-btn { color: var(--lyte-blue); }
 .ed-side-bar .ed-tool-btn:hover { background: var(--lyte-lavender-soft); color: var(--lyte-blue); }
 .ed-side-bar .ed-tool-active { background: var(--lyte-lavender) !important; color: var(--lyte-blue) !important; }
+/* Click feedback: the icon squishes while pressed, then pops with a small
+   wiggle when its tool opens (the animation restarts each time the active
+   class is added). */
+.ed-side-bar .ed-tool-btn svg { transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.ed-side-bar .ed-tool-btn:active svg { transform: scale(0.8); }
+.ed-side-bar .ed-tool-active svg { animation: edToolPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes edToolPop {
+  0%   { transform: scale(0.75) rotate(0deg); }
+  45%  { transform: scale(1.22) rotate(-10deg); }
+  70%  { transform: scale(0.95) rotate(6deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ed-side-bar .ed-tool-btn svg, .ed-side-bar .ed-tool-active svg { transition: none; animation: none; }
+}
 .ed-tool-btn svg { width: 18px; height: 18px; }
 .ed-tool-active { background: var(--ed-violet-bg) !important; color: var(--ed-violet) !important; }
 .ed-tool-exit { margin-top: auto; }

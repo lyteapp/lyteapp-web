@@ -312,11 +312,11 @@ html, body {
 }
 
 /* ===== TOPBAR ===== */
+/* Header in the brand lavender (#E9EAFF in the Lyte theme — follows the
+   user's dashboard theme). */
 .db-topbar {
-  background: rgba(250,250,247,0.65);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 1px solid #EEEcE5;
+  background: var(--lyte-lavender);
+  border-bottom: 1px solid rgba(28,27,58,0.06);
   padding: env(safe-area-inset-top) 36px 0;
   min-height: 56px;
   display: flex;
@@ -327,7 +327,7 @@ html, body {
   z-index: 40;
 }
 .db-topbar-left { display: flex; align-items: center; gap: 8px; }
-.db-crumb { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #94A3B8; }
+.db-crumb { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #64748B; }
 .db-crumb-sep { opacity: 0.5; }
 .db-crumb-here { color: #0F172A; font-weight: 500; }
 .db-page-title { font-size: 15px; font-weight: 600; color: #0F172A; letter-spacing: -0.02em; }

@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabase'
 import { useT } from '../lib/LocaleProvider'
 import { DashboardThemeProvider } from '../lib/dashboardTheme'
 import DashboardLoader from './DashboardLoader'
+import AssistantPanel from './AssistantPanel'
 import { useLyteSound } from '../lib/useLyteSound'
 import { DashboardStoreProvider, useDashboardStore } from '../lib/DashboardStoreProvider'
 import './dashboard.css'
@@ -483,6 +484,9 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
               <span className="db-crumb-sep">›</span>
               <span className="db-crumb-here">{pageTitle}</span>
             </div>
+          </div>
+          <div className="db-topbar-right">
+            <AssistantPanel />
           </div>
         </div>
 

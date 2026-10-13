@@ -942,3 +942,83 @@ html, body {
 @media (prefers-reduced-motion: reduce) {
   .lyte-leaf-draw path { animation: none; }
 }
+
+/* ── AI help assistant (header button + slide-in panel) ── */
+.db-assistant-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 34px; padding: 0 12px; border-radius: 100px;
+  border: none; cursor: pointer;
+  background: var(--lyte-blue); color: var(--lyte-navy);
+  font: inherit; font-size: 13px; font-weight: 600;
+  transition: transform 0.15s, background 0.15s;
+}
+.db-assistant-btn:hover { background: var(--lyte-blue-light); transform: translateY(-1px); }
+.db-assistant-btn svg { width: 16px; height: 16px; }
+@media (max-width: 640px) {
+  .db-assistant-btn { width: 34px; padding: 0; justify-content: center; }
+  .db-assistant-btn-label { display: none; }
+}
+.db-assistant-backdrop { position: fixed; inset: 0; z-index: 290; background: rgba(15,23,42,0.25); }
+.db-assistant {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 300;
+  width: min(400px, 100vw);
+  background: white; box-shadow: -8px 0 40px rgba(15,23,42,0.18);
+  display: flex; flex-direction: column;
+  transform: translateX(105%); transition: transform 0.28s cubic-bezier(0.32,0.72,0,1);
+  padding-top: env(safe-area-inset-top);
+}
+.db-assistant.open { transform: translateX(0); }
+.db-assistant-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 16px 18px; background: var(--lyte-navy); color: white;
+}
+.db-assistant-title { font-size: 15px; font-weight: 700; }
+.db-assistant-sub { font-size: 12px; opacity: 0.7; margin-top: 2px; }
+.db-assistant-close {
+  width: 32px; height: 32px; border-radius: 50%; border: none; cursor: pointer;
+  background: rgba(255,255,255,0.12); color: white; display: flex; align-items: center; justify-content: center;
+}
+.db-assistant-close svg { width: 15px; height: 15px; }
+.db-assistant-list {
+  flex: 1; min-height: 0; overflow-y: auto; padding: 16px;
+  display: flex; flex-direction: column; gap: 10px; background: #F8F7F4;
+}
+.db-assistant-empty p { font-size: 14px; color: #0F172A; margin: 4px 2px 12px; }
+.db-assistant-sugs { display: flex; flex-direction: column; gap: 8px; }
+.db-assistant-sug {
+  text-align: left; font: inherit; font-size: 13px; cursor: pointer;
+  padding: 10px 12px; border-radius: 12px;
+  border: 1px solid var(--lyte-blue-border); background: white; color: var(--lyte-navy);
+}
+.db-assistant-sug:hover { background: var(--lyte-lavender-soft); }
+.db-assistant-msg {
+  max-width: 88%; padding: 10px 13px; border-radius: 14px;
+  font-size: 13.5px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word;
+}
+.db-assistant-msg.user { align-self: flex-end; background: var(--lyte-navy); color: white; border-bottom-right-radius: 4px; }
+.db-assistant-msg.assistant { align-self: flex-start; background: white; color: #0F172A; border: 1px solid rgba(15,23,42,0.06); border-bottom-left-radius: 4px; }
+.db-assistant-typing { display: inline-flex; gap: 4px; padding: 4px 0; }
+.db-assistant-typing i {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--lyte-blue);
+  animation: dbTyping 1s ease-in-out infinite;
+}
+.db-assistant-typing i:nth-child(2) { animation-delay: 0.15s; }
+.db-assistant-typing i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes dbTyping { 0%, 100% { opacity: 0.3; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-3px); } }
+.db-assistant-form {
+  display: flex; gap: 8px; align-items: flex-end;
+  padding: 12px; border-top: 1px solid rgba(15,23,42,0.07); background: white;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+.db-assistant-form textarea {
+  flex: 1; resize: none; font: inherit; font-size: 14px; line-height: 1.4;
+  padding: 10px 12px; border-radius: 12px; border: 1px solid #E2E8F0; outline: none;
+  max-height: 120px; field-sizing: content;
+}
+.db-assistant-form textarea:focus { border-color: var(--lyte-blue); }
+.db-assistant-form button {
+  width: 40px; height: 40px; flex-shrink: 0; border-radius: 12px; border: none; cursor: pointer;
+  background: var(--lyte-navy); color: white; display: flex; align-items: center; justify-content: center;
+}
+.db-assistant-form button:disabled { opacity: 0.4; cursor: default; }
+.db-assistant-form button svg { width: 17px; height: 17px; }

@@ -103,8 +103,13 @@
 }
 
 /* ── CANVAS ───────────────────────────────────────────── */
+/* Brand pattern behind the phone preview: lavender leaves on the theme's
+   accent (#9AB7FD in the Lyte theme). The tile is drawn at 2x for retina. */
 .ed-canvas {
-  background: var(--ed-canvas-bg);
+  background-color: var(--lyte-blue);
+  background-image: url(/brand/lyte-pattern.png);
+  background-size: 174px 328px;
+  background-repeat: repeat;
   display: flex;
   flex-direction: column;
   min-width: 0;

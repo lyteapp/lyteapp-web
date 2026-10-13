@@ -326,6 +326,16 @@ html, body {
   top: 0;
   z-index: 40;
 }
+/* Sidebar's logo row: same color and height as the dashboard header, so
+   the two read as one continuous bar across the top. */
+.db-sidebar-head {
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 56px; padding: env(safe-area-inset-top) 20px 0;
+  background: var(--lyte-lavender);
+  border-bottom: 1px solid rgba(28,27,58,0.06);
+  box-sizing: border-box;
+}
 .db-topbar-left { display: flex; align-items: center; gap: 8px; }
 /* Header logo for phones/tablets (shown in the max-width:1024px block below). */
 .db-topbar-logo { display: none; flex-shrink: 0; margin-right: 6px; line-height: 0; }

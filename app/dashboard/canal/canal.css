@@ -2,7 +2,7 @@
 .cn-page { max-width: 680px; }
 
 .cn-header { margin-bottom: 28px; }
-.cn-title { font-size: 22px; font-weight: 700; color: #0F172A; letter-spacing: -0.04em; margin-bottom: 6px; font-family: var(--lyte-font-body); }
+.cn-title { font-size: 22px; font-weight: 700; color: var(--lyte-blue); letter-spacing: -0.04em; margin-bottom: 6px; font-family: var(--lyte-font-body); }
 .cn-desc { font-size: 14px; color: #64748B; line-height: 1.5; }
 
 /* ── CHECKOUT: settings form + phone preview, side by side ── */

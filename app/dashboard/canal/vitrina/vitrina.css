@@ -28,7 +28,7 @@
 .vt-eyebrow::before { content: ''; width: 20px; height: 1px; background: var(--vt-violet); }
 .vt-title {
   font-size: 32px; font-weight: 700; letter-spacing: -0.03em;
-  color: var(--vt-ink); line-height: 1.1; margin-bottom: 10px; font-family: var(--lyte-font-body); }
+  color: var(--lyte-blue); line-height: 1.1; margin-bottom: 10px; font-family: var(--lyte-font-body); }
 .vt-title em {
   font-family: var(--lyte-font-body), serif;
   font-style: italic; font-weight: 400; color: var(--vt-violet);

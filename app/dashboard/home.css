@@ -27,7 +27,7 @@
 .dh-headline {
   font-size: 46px; font-weight: 500;
   letter-spacing: -0.035em; line-height: 1.04;
-  color: #0F172A; margin-bottom: 16px;
+  color: var(--lyte-blue); margin-bottom: 16px;
 }
 .dh-headline em {
   font-family: var(--lyte-font-body), serif;

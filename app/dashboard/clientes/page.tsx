@@ -185,7 +185,7 @@ export default function ClientesPage() {
         {/* Header */}
         <div style={{ marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 16 }}>
-            <h2 style={{ fontSize: 20, fontWeight: 700, color: '#0F172A', margin: 0 }}>Clientes</h2>
+            <h2 className="db-page-heading" style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Clientes</h2>
             <span style={{ fontSize: 13, color: '#94A3B8' }}>{customers.length} registrados</span>
           </div>
 

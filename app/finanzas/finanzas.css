@@ -266,7 +266,7 @@
   font-weight: 800;
   letter-spacing: -1px;
   line-height: 1.1;
-  color: var(--ink);
+  color: var(--lyte-blue);
   margin: 3px 0 0; font-family: var(--lyte-font-body); }
 
 .bal-metafields { display: flex; gap: 10px; flex-wrap: wrap; }

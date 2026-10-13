@@ -869,3 +869,7 @@ html, body {
   flex-shrink: 0;
 }
 .db-toast-close:hover { color: rgba(255,255,255,0.7); }
+
+/* Page titles in the brand accent (#9AB7FD in the Lyte theme; follows the
+   user's dashboard theme). Italic accents inside keep their own color. */
+.db-page-heading { color: var(--lyte-blue); }

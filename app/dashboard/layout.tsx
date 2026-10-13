@@ -7,6 +7,7 @@ import { useAuth, signOut } from '../lib/auth'
 import { supabase } from '../lib/supabase'
 import { useT } from '../lib/LocaleProvider'
 import { DashboardThemeProvider } from '../lib/dashboardTheme'
+import DashboardLoader from './DashboardLoader'
 import { useLyteSound } from '../lib/useLyteSound'
 import { DashboardStoreProvider, useDashboardStore } from '../lib/DashboardStoreProvider'
 import './dashboard.css'
@@ -143,11 +144,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   }, [pathname])
 
   if (loading || storeLoading) {
-    return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F8F7F4' }}>
-        <div style={{ width: 32, height: 32, border: '3px solid rgba(154,183,253,0.375)', borderTop: '3px solid var(--lyte-navy)', borderRadius: '50%', animation: 'dbSpin 0.8s linear infinite' }} />
-      </div>
-    )
+    return <DashboardLoader ready={false} />
   }
 
   if (!user) return null
@@ -186,6 +183,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
       {/* Frosted strip behind the iOS status bar (time/signal/battery) so it
           appears to float above blurred content while scrolling */}
       <div className="db-statusbar-blur" />
+      <DashboardLoader ready />
 
       {/* SIDEBAR */}
       <aside className={`db-sidebar${mobileNav ? ' open' : ''}`}>

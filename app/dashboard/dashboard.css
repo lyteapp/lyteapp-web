@@ -873,3 +873,24 @@ html, body {
 /* Page titles in the brand accent (#9AB7FD in the Lyte theme; follows the
    user's dashboard theme). Italic accents inside keep their own color. */
 .db-page-heading { color: var(--lyte-blue); }
+
+/* ── Initial load: centered logo that then flies into the sidebar ── */
+.db-loader-bg {
+  position: fixed; inset: 0; z-index: 9998;
+  background: #FAFAF7;
+  pointer-events: none;
+}
+.db-loader-center {
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.db-loader-center > div { will-change: transform; transform-origin: center; }
+.db-loader-pulse { animation: dbLoaderPulse 1.4s ease-in-out infinite; }
+@keyframes dbLoaderPulse {
+  0%, 100% { transform: scale(0.94); opacity: 0.75; }
+  50%      { transform: scale(1.04); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .db-loader-pulse { animation: none; }
+}

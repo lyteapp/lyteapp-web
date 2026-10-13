@@ -805,12 +805,12 @@
 }
 
 /* ── SIDE BAR — icon rail ─────────────────────────────── */
-/* Tools bar: white, with icons in the dashboard logo's color (--lyte-blue,
-   #9AB7FD in the Lyte theme; follows the user's theme). */
+/* Tools bar in the dashboard header's navy, with icons in the logo's
+   periwinkle (--lyte-navy / --lyte-blue; both follow the user's theme). */
 .ed-side-bar {
   width: 56px;
-  background: #FFFFFF;
-  border-left: 1px solid var(--ed-line);
+  background: var(--lyte-navy);
+  border-left: 1px solid rgba(255,255,255,0.06);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -833,8 +833,12 @@
 }
 .ed-tool-btn:hover { background: var(--ed-bg); color: var(--ed-ink); }
 .ed-side-bar .ed-tool-btn { color: var(--lyte-blue); }
-.ed-side-bar .ed-tool-btn:hover { background: var(--lyte-lavender-soft); color: var(--lyte-blue); }
-.ed-side-bar .ed-tool-active { background: var(--lyte-lavender) !important; color: var(--lyte-blue) !important; }
+.ed-side-bar .ed-tool-btn:hover { background: rgba(255,255,255,0.08); color: var(--lyte-blue); }
+.ed-side-bar .ed-tool-active { background: rgba(255,255,255,0.14) !important; color: var(--lyte-blue) !important; }
+/* The save button would vanish as dark-on-navy — make it the accent chip. */
+.ed-side-bar .ed-tool-save { background: var(--lyte-blue) !important; color: var(--lyte-navy) !important; }
+.ed-side-bar .ed-tool-save:hover { background: var(--lyte-blue-light) !important; }
+.ed-side-bar .ed-tool-saved { background: #16A34A !important; color: white !important; }
 /* Click feedback: the icon squishes while pressed, then pops with a small
    wiggle when its tool opens (the animation restarts each time the active
    class is added). */

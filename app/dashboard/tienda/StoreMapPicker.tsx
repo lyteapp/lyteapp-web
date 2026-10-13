@@ -62,7 +62,7 @@ export default function StoreMapPicker({ lat, lng, mapboxToken, onLocationChange
           >
             <div style={{
               width: 40, height: 40, borderRadius: '50%',
-              background: '#1C1B3A', border: '3px solid white',
+              background: 'var(--lyte-navy)', border: '3px solid white',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               boxShadow: '0 4px 20px rgba(28,27,58,0.5)',
               cursor: 'grab',

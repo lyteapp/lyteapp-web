@@ -548,7 +548,7 @@ export default function AnaliticsPage() {
             style={{
               padding: '8px 18px', borderRadius: 100, border: 'none', cursor: 'pointer',
               fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0,
-              background: activeTab === t.key ? '#1C1B3A' : '#F1F5F9',
+              background: activeTab === t.key ? 'var(--lyte-navy)' : '#F1F5F9',
               color: activeTab === t.key ? 'white' : '#64748B',
               fontFamily: 'inherit',
             }}
@@ -705,7 +705,7 @@ export default function AnaliticsPage() {
                     style={{
                       flex: 1, minWidth: 0,
                       height: `${Math.max((count / hourMax) * 100, count > 0 ? 8 : 3)}%`,
-                      background: h === peakHour ? '#1C1B3A' : count > 0 ? '#BFD0FE' : '#E2E8F0',
+                      background: h === peakHour ? 'var(--lyte-navy)' : count > 0 ? 'var(--lyte-blue-light)' : '#E2E8F0',
                       borderRadius: '2px 2px 0 0',
                     }}
                   />
@@ -724,10 +724,10 @@ export default function AnaliticsPage() {
                     <div style={{
                       width: '100%',
                       height: `${Math.max((count / dayMax) * 40, count > 0 ? 6 : 2)}px`,
-                      background: d === peakDay ? '#1C1B3A' : count > 0 ? '#BFD0FE' : '#E2E8F0',
+                      background: d === peakDay ? 'var(--lyte-navy)' : count > 0 ? 'var(--lyte-blue-light)' : '#E2E8F0',
                       borderRadius: '3px 3px 0 0',
                     }} />
-                    <div style={{ fontSize: 11, color: d === peakDay ? '#1C1B3A' : '#94A3B8', fontWeight: d === peakDay ? 700 : 400 }}>{DAY_LABELS[d]}</div>
+                    <div style={{ fontSize: 11, color: d === peakDay ? 'var(--lyte-navy)' : '#94A3B8', fontWeight: d === peakDay ? 700 : 400 }}>{DAY_LABELS[d]}</div>
                   </div>
                 ))}
               </div>
@@ -754,7 +754,7 @@ export default function AnaliticsPage() {
                       {zone.name ?? 'Sin nombre'}
                     </div>
                     <div style={{ flex: 1, background: '#F1F5F9', borderRadius: 4, height: 8, overflow: 'hidden' }}>
-                      <div style={{ width: `${pct}%`, height: '100%', background: isOutside ? '#CBD5E1' : '#1C1B3A', borderRadius: 4, transition: 'width 0.4s ease' }} />
+                      <div style={{ width: `${pct}%`, height: '100%', background: isOutside ? '#CBD5E1' : 'var(--lyte-navy)', borderRadius: 4, transition: 'width 0.4s ease' }} />
                     </div>
                     <div style={{ width: 28, fontSize: 12, fontWeight: 600, color: '#0F172A', textAlign: 'right', flexShrink: 0 }}>{count}</div>
                   </div>
@@ -807,7 +807,7 @@ export default function AnaliticsPage() {
                     <div key={b.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{ width: 72, fontSize: 12, color: '#64748B', flexShrink: 0 }}>{b.label}</div>
                       <div style={{ flex: 1, background: '#F1F5F9', borderRadius: 4, height: 8, overflow: 'hidden' }}>
-                        <div style={{ width: `${pct}%`, height: '100%', background: '#1C1B3A', borderRadius: 4, transition: 'width 0.4s ease' }} />
+                        <div style={{ width: `${pct}%`, height: '100%', background: 'var(--lyte-navy)', borderRadius: 4, transition: 'width 0.4s ease' }} />
                       </div>
                       <div style={{ width: 24, fontSize: 12, fontWeight: 600, color: '#0F172A', textAlign: 'right', flexShrink: 0 }}>{count}</div>
                     </div>
@@ -836,7 +836,7 @@ export default function AnaliticsPage() {
                           {fmtDate(d.created_at)} · {fmtTime(d.created_at)} → {fmtTime(d.delivered_at)}
                         </div>
                       </div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: isLong ? '#DC2626' : '#1C1B3A', flexShrink: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: isLong ? '#DC2626' : 'var(--lyte-navy)', flexShrink: 0 }}>
                         {fmtMins(m)}
                       </div>
                     </div>
@@ -864,11 +864,11 @@ export default function AnaliticsPage() {
                   const pct = (p.qty / topProductMax) * 100
                   return (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 20, fontSize: 11, fontWeight: 700, color: i < 3 ? '#1C1B3A' : '#CBD5E1', flexShrink: 0, textAlign: 'right' }}>{i + 1}</div>
+                      <div style={{ width: 20, fontSize: 11, fontWeight: 700, color: i < 3 ? 'var(--lyte-navy)' : '#CBD5E1', flexShrink: 0, textAlign: 'right' }}>{i + 1}</div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 12, fontWeight: 600, color: '#0F172A', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
                         <div style={{ background: '#F1F5F9', borderRadius: 4, height: 6, overflow: 'hidden' }}>
-                          <div style={{ width: `${pct}%`, height: '100%', background: i === 0 ? '#1C1B3A' : '#BFD0FE', borderRadius: 4 }} />
+                          <div style={{ width: `${pct}%`, height: '100%', background: i === 0 ? 'var(--lyte-navy)' : 'var(--lyte-blue-light)', borderRadius: 4 }} />
                         </div>
                       </div>
                       <div style={{ flexShrink: 0, textAlign: 'right' }}>
@@ -930,7 +930,7 @@ export default function AnaliticsPage() {
                         <div key={m.name} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <div style={{ flex: 1, minWidth: 0, fontSize: 12, color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</div>
                           <div style={{ width: 90, background: '#F1F5F9', borderRadius: 4, height: 7, overflow: 'hidden', flexShrink: 0 }}>
-                            <div style={{ width: `${pct}%`, height: '100%', background: '#1C1B3A', borderRadius: 4 }} />
+                            <div style={{ width: `${pct}%`, height: '100%', background: 'var(--lyte-navy)', borderRadius: 4 }} />
                           </div>
                           <div style={{ width: 32, fontSize: 12, fontWeight: 600, color: '#0F172A', textAlign: 'right', flexShrink: 0 }}>{m.count}</div>
                         </div>
@@ -955,7 +955,7 @@ export default function AnaliticsPage() {
                         <div key={r.name} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <div style={{ width: 100, fontSize: 12, color: '#64748B', flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
                           <div style={{ flex: 1, background: '#F1F5F9', borderRadius: 4, height: 8, overflow: 'hidden' }}>
-                            <div style={{ width: `${pct}%`, height: '100%', background: '#1C1B3A', borderRadius: 4, transition: 'width 0.4s ease' }} />
+                            <div style={{ width: `${pct}%`, height: '100%', background: 'var(--lyte-navy)', borderRadius: 4, transition: 'width 0.4s ease' }} />
                           </div>
                           <div style={{ width: 42, fontSize: 11, color: '#94A3B8', textAlign: 'right', flexShrink: 0 }}>{share.toFixed(0)}%</div>
                           <div style={{ width: 56, fontSize: 12, fontWeight: 600, color: '#0F172A', textAlign: 'right', flexShrink: 0 }}>${r.revenue.toFixed(0)}</div>

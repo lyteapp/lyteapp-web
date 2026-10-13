@@ -297,3 +297,24 @@
   .cf-hours-times { width: 100%; }
   .cf-time-input { width: 100px !important; }
 }
+
+/* ── Tema del panel ── */
+.cf-theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 12px; }
+.cf-theme-opt {
+  display: flex; flex-direction: column; gap: 8px; padding: 8px;
+  background: white; border: 2px solid #E2E8F0; border-radius: 14px;
+  cursor: pointer; text-align: left; font: inherit; transition: border-color 0.15s, transform 0.15s;
+}
+.cf-theme-opt:hover { transform: translateY(-1px); }
+.cf-theme-opt.active { border-color: var(--t-main); }
+.cf-theme-preview {
+  display: flex; height: 64px; border-radius: 9px; overflow: hidden;
+  background: var(--t-soft); border: 1px solid rgba(15,23,42,0.06);
+}
+.cf-theme-bar { width: 26%; background: var(--t-main); }
+.cf-theme-body { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 8px; padding: 0 10px; }
+.cf-theme-line { height: 6px; width: 70%; border-radius: 4px; background: var(--t-accent); }
+.cf-theme-pill { height: 14px; width: 48%; border-radius: 100px; background: var(--t-main); }
+.cf-theme-name { display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 600; color: #0F172A; padding: 0 2px; }
+.cf-theme-name svg { color: var(--t-main); }
+.cf-theme-note { margin-top: 14px; font-size: 12px; color: #94A3B8; }

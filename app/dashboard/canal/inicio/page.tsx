@@ -224,7 +224,7 @@ function ResizeHandle({ onDrag }: { onDrag: (delta: number) => void }) {
       onPointerDown={handlePointerDown}
       style={{
         position: 'absolute', right: -9, bottom: -9, width: 16, height: 16,
-        borderRadius: '50%', background: '#1C1B3A', border: '2px solid white',
+        borderRadius: '50%', background: 'var(--lyte-navy)', border: '2px solid white',
         cursor: 'nwse-resize', boxShadow: '0 2px 6px rgba(0,0,0,0.35)', zIndex: 6,
       }}
     />
@@ -252,7 +252,7 @@ function ResizeHandleXY({ onDrag }: { onDrag: (dx: number, dy: number) => void }
       onPointerDown={handlePointerDown}
       style={{
         position: 'absolute', right: -9, bottom: -9, width: 16, height: 16,
-        borderRadius: '50%', background: '#1C1B3A', border: '2px solid white',
+        borderRadius: '50%', background: 'var(--lyte-navy)', border: '2px solid white',
         cursor: 'nwse-resize', boxShadow: '0 2px 6px rgba(0,0,0,0.35)', zIndex: 6,
       }}
     />
@@ -309,7 +309,7 @@ function PhotoItem({
       style={{
         position: 'absolute', left: img.x, top: img.y, width: img.width, height: img.height,
         pointerEvents: 'auto', cursor: 'move',
-        outline: selected ? '2px dashed #1C1B3A' : 'none', outlineOffset: 3,
+        outline: selected ? '2px dashed var(--lyte-navy)' : 'none', outlineOffset: 3,
       }}
     >
       <img
@@ -367,7 +367,7 @@ function SplashPreview({
   function selectableStyle(id: SelectableId, extraOffset = 4): React.CSSProperties {
     return {
       position: 'relative', display: 'inline-block', cursor: 'pointer',
-      outline: selected === id ? '2px dashed #1C1B3A' : 'none',
+      outline: selected === id ? '2px dashed var(--lyte-navy)' : 'none',
       outlineOffset: extraOffset,
       pointerEvents: 'auto',
     }
@@ -1064,7 +1064,7 @@ export default function InicioPage() {
                         style={{
                           position: 'relative', width: 56, height: 56, borderRadius: 10, overflow: 'hidden',
                           cursor: 'pointer', flexShrink: 0,
-                          outline: selectedImageId === img.id ? '2px solid #1C1B3A' : '1px solid rgba(15,23,42,0.09)',
+                          outline: selectedImageId === img.id ? '2px solid var(--lyte-navy)' : '1px solid rgba(15,23,42,0.09)',
                           outlineOffset: 2,
                         }}
                       >

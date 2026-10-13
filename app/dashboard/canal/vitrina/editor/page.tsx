@@ -401,7 +401,7 @@ export default function EditorPage() {
           <button
             type="button"
             onClick={() => clearSizeOverride(key)}
-            style={{ border: 'none', background: 'none', color: '#1C1B3A', fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: 0 }}
+            style={{ border: 'none', background: 'none', color: 'var(--lyte-navy)', fontSize: 11, fontWeight: 600, cursor: 'pointer', padding: 0 }}
           >
             Restablecer
           </button>
@@ -798,7 +798,7 @@ export default function EditorPage() {
         draft.id = 'ed-draft-block'
         Object.assign(draft.style, {
           position: 'fixed', top: '12px', left: '12px', right: '12px', zIndex: '999999',
-          padding: '10px 14px', background: 'white', border: '2px dashed #1C1B3A', borderRadius: '10px',
+          padding: '10px 14px', background: 'white', border: '2px dashed var(--lyte-navy)', borderRadius: '10px',
           whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: '1.5',
           boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
         })
@@ -1315,7 +1315,7 @@ export default function EditorPage() {
 
   function renderBlockItemRow(b: ContentBlock) {
     return (
-      <div className="ed-block-item" style={editingBlockId === b.id ? { outline: '2px solid #1C1B3A', outlineOffset: 2 } : undefined}>
+      <div className="ed-block-item" style={editingBlockId === b.id ? { outline: '2px solid var(--lyte-navy)', outlineOffset: 2 } : undefined}>
         <div className="ed-block-item-head">
           <span className="ed-block-item-type">{b.type === 'text' ? 'Texto' : b.type === 'image' ? 'Imagen' : b.type === 'video' ? 'Video' : 'Botones'}</span>
           <span className="ed-block-item-pos" />
@@ -1468,7 +1468,7 @@ export default function EditorPage() {
                     <div key={unit.group.id} className="ed-block-group">
                       <div className="ed-block-group-head">
                         {renderOrderArrows(afterId, catPosition, index, count)}
-                        <span className="ed-block-item-type" style={{ background: '#E9EAFF', color: '#1C1B3A' }}>Grupo · {unit.members.length} bloques</span>
+                        <span className="ed-block-item-type" style={{ background: 'var(--lyte-lavender)', color: 'var(--lyte-navy)' }}>Grupo · {unit.members.length} bloques</span>
                         <button
                           onClick={() => ungroupBlocks(unit.group.id)}
                           style={{ marginLeft: 'auto', padding: '4px 10px', borderRadius: 7, border: 'none', background: '#FEF2F2', color: '#DC2626', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}
@@ -1511,9 +1511,9 @@ export default function EditorPage() {
                               onClick={() => updateBlockGroup(unit.group.id, { direction: dir })}
                               style={{
                                 flex: 1, padding: '6px 4px', borderRadius: 7,
-                                border: `1.5px solid ${(unit.group.direction ?? 'column') === dir ? '#1C1B3A' : '#E2E8F0'}`,
-                                background: (unit.group.direction ?? 'column') === dir ? '#F3F4FF' : 'white',
-                                color: (unit.group.direction ?? 'column') === dir ? '#1C1B3A' : '#64748B',
+                                border: `1.5px solid ${(unit.group.direction ?? 'column') === dir ? 'var(--lyte-navy)' : '#E2E8F0'}`,
+                                background: (unit.group.direction ?? 'column') === dir ? 'var(--lyte-lavender-soft)' : 'white',
+                                color: (unit.group.direction ?? 'column') === dir ? 'var(--lyte-navy)' : '#64748B',
                                 fontSize: 10, fontWeight: 600, cursor: 'pointer',
                               }}
                             >
@@ -1608,9 +1608,9 @@ export default function EditorPage() {
                                   onClick={() => updateBlockGroup(sub.id, { direction: dir })}
                                   style={{
                                     flex: 1, padding: '6px 4px', borderRadius: 7,
-                                    border: `1.5px solid ${(sub.direction ?? 'column') === dir ? '#1C1B3A' : '#E2E8F0'}`,
-                                    background: (sub.direction ?? 'column') === dir ? '#F3F4FF' : 'white',
-                                    color: (sub.direction ?? 'column') === dir ? '#1C1B3A' : '#64748B',
+                                    border: `1.5px solid ${(sub.direction ?? 'column') === dir ? 'var(--lyte-navy)' : '#E2E8F0'}`,
+                                    background: (sub.direction ?? 'column') === dir ? 'var(--lyte-lavender-soft)' : 'white',
+                                    color: (sub.direction ?? 'column') === dir ? 'var(--lyte-navy)' : '#64748B',
                                     fontSize: 10, fontWeight: 600, cursor: 'pointer',
                                   }}
                                 >
@@ -2372,7 +2372,7 @@ export default function EditorPage() {
                   preview: (
                     <div style={{ display: 'flex', gap: 5, padding: '8px 10px' }}>
                       {['Todo', 'Comida', 'Bebidas'].map((l, i) => (
-                        <div key={l} style={{ padding: '5px 10px', borderRadius: 100, fontSize: 9, fontWeight: i === 0 ? 700 : 500, background: i === 0 ? '#1C1B3A' : 'transparent', color: i === 0 ? 'white' : '#94A3B8', whiteSpace: 'nowrap' as const }}>{l}</div>
+                        <div key={l} style={{ padding: '5px 10px', borderRadius: 100, fontSize: 9, fontWeight: i === 0 ? 700 : 500, background: i === 0 ? 'var(--lyte-navy)' : 'transparent', color: i === 0 ? 'white' : '#94A3B8', whiteSpace: 'nowrap' as const }}>{l}</div>
                       ))}
                     </div>
                   ),
@@ -2383,7 +2383,7 @@ export default function EditorPage() {
                   preview: (
                     <div style={{ display: 'flex', gap: 5, padding: '8px 10px' }}>
                       {['Todo', 'Comida', 'Bebidas'].map((l, i) => (
-                        <div key={l} style={{ padding: '4px 9px', borderRadius: 100, fontSize: 9, fontWeight: i === 0 ? 700 : 500, border: `1.5px solid ${i === 0 ? '#1C1B3A' : '#E2E8F0'}`, color: i === 0 ? '#1C1B3A' : '#94A3B8', whiteSpace: 'nowrap' as const }}>{l}</div>
+                        <div key={l} style={{ padding: '4px 9px', borderRadius: 100, fontSize: 9, fontWeight: i === 0 ? 700 : 500, border: `1.5px solid ${i === 0 ? 'var(--lyte-navy)' : '#E2E8F0'}`, color: i === 0 ? 'var(--lyte-navy)' : '#94A3B8', whiteSpace: 'nowrap' as const }}>{l}</div>
                       ))}
                     </div>
                   ),
@@ -2394,7 +2394,7 @@ export default function EditorPage() {
                   preview: (
                     <div style={{ display: 'flex', borderBottom: '2px solid #E2E8F0', padding: '0 10px' }}>
                       {['Todo', 'Comida', 'Bebidas'].map((l, i) => (
-                        <div key={l} style={{ padding: '8px 10px', fontSize: 9, fontWeight: i === 0 ? 700 : 500, borderBottom: `2px solid ${i === 0 ? '#1C1B3A' : 'transparent'}`, marginBottom: -2, color: i === 0 ? '#1C1B3A' : '#94A3B8', whiteSpace: 'nowrap' as const }}>{l}</div>
+                        <div key={l} style={{ padding: '8px 10px', fontSize: 9, fontWeight: i === 0 ? 700 : 500, borderBottom: `2px solid ${i === 0 ? 'var(--lyte-navy)' : 'transparent'}`, marginBottom: -2, color: i === 0 ? 'var(--lyte-navy)' : '#94A3B8', whiteSpace: 'nowrap' as const }}>{l}</div>
                       ))}
                     </div>
                   ),
@@ -2405,7 +2405,7 @@ export default function EditorPage() {
                   preview: (
                     <div style={{ display: 'flex', gap: 5, padding: '8px 10px' }}>
                       {['Todo', 'Comida', 'Bebidas'].map((l, i) => (
-                        <div key={l} style={{ padding: '5px 10px', borderRadius: 6, fontSize: 9, fontWeight: i === 0 ? 700 : 500, background: i === 0 ? '#1C1B3A' : 'rgba(15,23,42,0.05)', color: i === 0 ? 'white' : '#94A3B8', whiteSpace: 'nowrap' as const }}>{l}</div>
+                        <div key={l} style={{ padding: '5px 10px', borderRadius: 6, fontSize: 9, fontWeight: i === 0 ? 700 : 500, background: i === 0 ? 'var(--lyte-navy)' : 'rgba(15,23,42,0.05)', color: i === 0 ? 'white' : '#94A3B8', whiteSpace: 'nowrap' as const }}>{l}</div>
                       ))}
                     </div>
                   ),
@@ -2445,7 +2445,7 @@ export default function EditorPage() {
                   onChange={e => setShowCatNav(e.target.checked)}
                   style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
                 />
-                <div style={{ width: 38, height: 22, borderRadius: 100, background: showCatNav ? '#1C1B3A' : '#D1D5DB', transition: 'background 0.2s', cursor: 'pointer', position: 'relative' }}>
+                <div style={{ width: 38, height: 22, borderRadius: 100, background: showCatNav ? 'var(--lyte-navy)' : '#D1D5DB', transition: 'background 0.2s', cursor: 'pointer', position: 'relative' }}>
                   <div style={{ position: 'absolute', top: 4, left: showCatNav ? 18 : 4, width: 14, height: 14, borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
                 </div>
               </div>
@@ -2462,7 +2462,7 @@ export default function EditorPage() {
                   onChange={e => setStickyCatNav(e.target.checked)}
                   style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
                 />
-                <div style={{ width: 38, height: 22, borderRadius: 100, background: stickyCatNav ? '#1C1B3A' : '#D1D5DB', transition: 'background 0.2s', cursor: 'pointer', position: 'relative' }}>
+                <div style={{ width: 38, height: 22, borderRadius: 100, background: stickyCatNav ? 'var(--lyte-navy)' : '#D1D5DB', transition: 'background 0.2s', cursor: 'pointer', position: 'relative' }}>
                   <div style={{ position: 'absolute', top: 4, left: stickyCatNav ? 18 : 4, width: 14, height: 14, borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
                 </div>
               </div>
@@ -2479,7 +2479,7 @@ export default function EditorPage() {
                   onChange={e => setCatNavOverBanner(e.target.checked)}
                   style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
                 />
-                <div style={{ width: 38, height: 22, borderRadius: 100, background: catNavOverBanner ? '#1C1B3A' : '#D1D5DB', transition: 'background 0.2s', cursor: 'pointer', position: 'relative' }}>
+                <div style={{ width: 38, height: 22, borderRadius: 100, background: catNavOverBanner ? 'var(--lyte-navy)' : '#D1D5DB', transition: 'background 0.2s', cursor: 'pointer', position: 'relative' }}>
                   <div style={{ position: 'absolute', top: 4, left: catNavOverBanner ? 18 : 4, width: 14, height: 14, borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
                 </div>
               </div>
@@ -2553,10 +2553,10 @@ export default function EditorPage() {
                             onChange={e => handleCategoryHidden(cat.id, e.target.checked)}
                             style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
                           />
-                          <div style={{ width: 34, height: 20, borderRadius: 100, background: hidden ? '#1C1B3A' : '#D1D5DB', transition: 'background 0.2s', position: 'relative' }}>
+                          <div style={{ width: 34, height: 20, borderRadius: 100, background: hidden ? 'var(--lyte-navy)' : '#D1D5DB', transition: 'background 0.2s', position: 'relative' }}>
                             <div style={{ position: 'absolute', top: 3, left: hidden ? 17 : 3, width: 14, height: 14, borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
                           </div>
-                          <span style={{ fontSize: 11, fontWeight: 600, color: hidden ? '#1C1B3A' : '#94A3B8' }}>{hidden ? 'Oculta' : 'Visible'}</span>
+                          <span style={{ fontSize: 11, fontWeight: 600, color: hidden ? 'var(--lyte-navy)' : '#94A3B8' }}>{hidden ? 'Oculta' : 'Visible'}</span>
                         </label>
                       </div>
                     )
@@ -2588,9 +2588,9 @@ export default function EditorPage() {
                   onClick={() => handleLogoPosition(o.id)}
                   style={{
                     flex: 1, padding: '8px 4px', borderRadius: 8, fontSize: 10, fontWeight: 600, cursor: 'pointer',
-                    border: `2px solid ${logoPosition === o.id ? '#1C1B3A' : '#E2E8F0'}`,
-                    background: logoPosition === o.id ? '#F3F4FF' : 'white',
-                    color: logoPosition === o.id ? '#1C1B3A' : '#64748B',
+                    border: `2px solid ${logoPosition === o.id ? 'var(--lyte-navy)' : '#E2E8F0'}`,
+                    background: logoPosition === o.id ? 'var(--lyte-lavender-soft)' : 'white',
+                    color: logoPosition === o.id ? 'var(--lyte-navy)' : '#64748B',
                   }}
                 >
                   {o.label}
@@ -2611,9 +2611,9 @@ export default function EditorPage() {
                   onClick={() => handleNamePosition(o.id)}
                   style={{
                     flex: 1, padding: '8px 4px', borderRadius: 8, fontSize: 10, fontWeight: 600, cursor: 'pointer',
-                    border: `2px solid ${namePosition === o.id ? '#1C1B3A' : '#E2E8F0'}`,
-                    background: namePosition === o.id ? '#F3F4FF' : 'white',
-                    color: namePosition === o.id ? '#1C1B3A' : '#64748B',
+                    border: `2px solid ${namePosition === o.id ? 'var(--lyte-navy)' : '#E2E8F0'}`,
+                    background: namePosition === o.id ? 'var(--lyte-lavender-soft)' : 'white',
+                    color: namePosition === o.id ? 'var(--lyte-navy)' : '#64748B',
                   }}
                 >
                   {o.label}
@@ -2633,12 +2633,12 @@ export default function EditorPage() {
                   onClick={() => setLogoShape(s.id)}
                   style={{
                     flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                    padding: '10px 6px', borderRadius: 10, border: `2px solid ${logoShape === s.id ? '#1C1B3A' : '#E2E8F0'}`,
-                    background: logoShape === s.id ? '#F3F4FF' : 'white', cursor: 'pointer',
+                    padding: '10px 6px', borderRadius: 10, border: `2px solid ${logoShape === s.id ? 'var(--lyte-navy)' : '#E2E8F0'}`,
+                    background: logoShape === s.id ? 'var(--lyte-lavender-soft)' : 'white', cursor: 'pointer',
                   }}
                 >
-                  <div style={{ width: 28, height: 28, borderRadius: s.radius, background: logoShape === s.id ? '#1C1B3A' : '#E2E8F0' }} />
-                  <span style={{ fontSize: 10, fontWeight: 600, color: logoShape === s.id ? '#1C1B3A' : '#64748B' }}>{s.label}</span>
+                  <div style={{ width: 28, height: 28, borderRadius: s.radius, background: logoShape === s.id ? 'var(--lyte-navy)' : '#E2E8F0' }} />
+                  <span style={{ fontSize: 10, fontWeight: 600, color: logoShape === s.id ? 'var(--lyte-navy)' : '#64748B' }}>{s.label}</span>
                 </button>
               ))}
             </div>
@@ -2694,7 +2694,7 @@ export default function EditorPage() {
                 />
                 <div style={{
                   width: 38, height: 22, borderRadius: 100,
-                  background: showMenuButton ? '#1C1B3A' : '#D1D5DB',
+                  background: showMenuButton ? 'var(--lyte-navy)' : '#D1D5DB',
                   transition: 'background 0.2s', cursor: 'pointer', position: 'relative',
                 }}>
                   <div style={{
@@ -2721,7 +2721,7 @@ export default function EditorPage() {
                 />
                 <div style={{
                   width: 38, height: 22, borderRadius: 100,
-                  background: showHeaderSearch ? '#1C1B3A' : '#D1D5DB',
+                  background: showHeaderSearch ? 'var(--lyte-navy)' : '#D1D5DB',
                   transition: 'background 0.2s', cursor: 'pointer', position: 'relative',
                 }}>
                   <div style={{
@@ -2746,7 +2746,7 @@ export default function EditorPage() {
                 />
                 <div style={{
                   width: 38, height: 22, borderRadius: 100,
-                  background: showHeaderCart ? '#1C1B3A' : '#D1D5DB',
+                  background: showHeaderCart ? 'var(--lyte-navy)' : '#D1D5DB',
                   transition: 'background 0.2s', cursor: 'pointer', position: 'relative',
                 }}>
                   <div style={{
@@ -2810,7 +2810,7 @@ export default function EditorPage() {
                 />
                 <div style={{
                   width: 38, height: 22, borderRadius: 100,
-                  background: headerOverBanner ? '#1C1B3A' : '#D1D5DB',
+                  background: headerOverBanner ? 'var(--lyte-navy)' : '#D1D5DB',
                   transition: 'background 0.2s', cursor: 'pointer', position: 'relative',
                 }}>
                   <div style={{
@@ -2837,7 +2837,7 @@ export default function EditorPage() {
                 />
                 <div style={{
                   width: 38, height: 22, borderRadius: 100,
-                  background: headerSticky ? '#1C1B3A' : '#D1D5DB',
+                  background: headerSticky ? 'var(--lyte-navy)' : '#D1D5DB',
                   transition: 'background 0.2s', cursor: 'pointer', position: 'relative',
                 }}>
                   <div style={{
@@ -2867,7 +2867,7 @@ export default function EditorPage() {
                       <button
                         onClick={groupSelectedBlocks}
                         disabled={selectedForGroup.size < 2}
-                        style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: selectedForGroup.size < 2 ? '#E2E8F0' : '#1C1B3A', color: selectedForGroup.size < 2 ? '#94A3B8' : 'white', fontSize: 11, fontWeight: 600, cursor: selectedForGroup.size < 2 ? 'default' : 'pointer' }}
+                        style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: selectedForGroup.size < 2 ? '#E2E8F0' : 'var(--lyte-navy)', color: selectedForGroup.size < 2 ? '#94A3B8' : 'white', fontSize: 11, fontWeight: 600, cursor: selectedForGroup.size < 2 ? 'default' : 'pointer' }}
                       >
                         Encerrar seleccionados ({selectedForGroup.size})
                       </button>
@@ -2881,7 +2881,7 @@ export default function EditorPage() {
                   ) : (
                     <button
                       onClick={() => setGroupMode(true)}
-                      style={{ padding: '6px 12px', borderRadius: 8, border: '1.5px solid #E2E8F0', background: 'white', color: '#1C1B3A', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+                      style={{ padding: '6px 12px', borderRadius: 8, border: '1.5px solid #E2E8F0', background: 'white', color: 'var(--lyte-navy)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
                     >
                       Encerrar bloques en un grupo
                     </button>
@@ -2897,8 +2897,8 @@ export default function EditorPage() {
                     <div key={sec.key} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       <div style={{ fontSize: 11, fontWeight: 700, color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: 4 }}>{sec.title}</div>
                       {sec.buckets.map(bk => (
-                        <div key={bk.key} style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingLeft: bk.label ? 10 : 0, borderLeft: bk.label ? '2px solid #E9EAFF' : undefined }}>
-                          {bk.label && <div style={{ fontSize: 10, fontWeight: 600, color: '#1C1B3A' }}>{bk.label}</div>}
+                        <div key={bk.key} style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingLeft: bk.label ? 10 : 0, borderLeft: bk.label ? '2px solid var(--lyte-lavender)' : undefined }}>
+                          {bk.label && <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--lyte-navy)' }}>{bk.label}</div>}
                           {bk.units.map(renderDisplayUnit)}
                         </div>
                       ))}
@@ -2960,9 +2960,9 @@ export default function EditorPage() {
                     onClick={() => setNewBlockType(tp)}
                     style={{
                       flex: 1, padding: '8px 4px', borderRadius: 8,
-                      border: `2px solid ${newBlockType === tp ? '#1C1B3A' : '#E2E8F0'}`,
-                      background: newBlockType === tp ? '#F3F4FF' : 'white',
-                      color: newBlockType === tp ? '#1C1B3A' : '#64748B',
+                      border: `2px solid ${newBlockType === tp ? 'var(--lyte-navy)' : '#E2E8F0'}`,
+                      background: newBlockType === tp ? 'var(--lyte-lavender-soft)' : 'white',
+                      color: newBlockType === tp ? 'var(--lyte-navy)' : '#64748B',
                       fontSize: 11, fontWeight: 600, cursor: 'pointer',
                     }}
                   >
@@ -3034,9 +3034,9 @@ export default function EditorPage() {
                         onClick={() => setNewBlockAlign(al)}
                         style={{
                           flex: 1, padding: '7px 4px', borderRadius: 8,
-                          border: `2px solid ${newBlockAlign === al ? '#1C1B3A' : '#E2E8F0'}`,
-                          background: newBlockAlign === al ? '#F3F4FF' : 'white',
-                          color: newBlockAlign === al ? '#1C1B3A' : '#64748B',
+                          border: `2px solid ${newBlockAlign === al ? 'var(--lyte-navy)' : '#E2E8F0'}`,
+                          background: newBlockAlign === al ? 'var(--lyte-lavender-soft)' : 'white',
+                          color: newBlockAlign === al ? 'var(--lyte-navy)' : '#64748B',
                           fontSize: 11, fontWeight: 600, cursor: 'pointer',
                         }}
                       >
@@ -3092,7 +3092,7 @@ export default function EditorPage() {
                   ))}
                   <button
                     onClick={() => setNewBlockButtons(prev => [...prev, { id: crypto.randomUUID(), label: '', target: 'category', targetId: '' }])}
-                    style={{ padding: '7px 12px', borderRadius: 8, border: '1.5px dashed #E2E8F0', background: 'white', color: '#1C1B3A', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                    style={{ padding: '7px 12px', borderRadius: 8, border: '1.5px dashed #E2E8F0', background: 'white', color: 'var(--lyte-navy)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                   >
                     + Agregar boton
                   </button>
@@ -3105,9 +3105,9 @@ export default function EditorPage() {
                           onClick={() => setNewBlockButtonStyle(st)}
                           style={{
                             flex: 1, padding: '8px 4px', borderRadius: 8,
-                            border: `2px solid ${newBlockButtonStyle === st ? '#1C1B3A' : '#E2E8F0'}`,
-                            background: newBlockButtonStyle === st ? '#F3F4FF' : 'white',
-                            color: newBlockButtonStyle === st ? '#1C1B3A' : '#64748B',
+                            border: `2px solid ${newBlockButtonStyle === st ? 'var(--lyte-navy)' : '#E2E8F0'}`,
+                            background: newBlockButtonStyle === st ? 'var(--lyte-lavender-soft)' : 'white',
+                            color: newBlockButtonStyle === st ? 'var(--lyte-navy)' : '#64748B',
                             fontSize: 11, fontWeight: 600, cursor: 'pointer',
                           }}
                         >
@@ -3167,7 +3167,7 @@ export default function EditorPage() {
                           </span>
                         )}
                         {blockImgUploading && (
-                          <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: '#1C1B3A' }}>
+                          <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: 'var(--lyte-navy)' }}>
                             Subiendo...
                           </div>
                         )}
@@ -3225,9 +3225,9 @@ export default function EditorPage() {
                             onClick={() => setNewBlockLinkTarget(tg)}
                             style={{
                               flex: 1, padding: '8px 4px', borderRadius: 8,
-                              border: `2px solid ${newBlockLinkTarget === tg ? '#1C1B3A' : '#E2E8F0'}`,
-                              background: newBlockLinkTarget === tg ? '#F3F4FF' : 'white',
-                              color: newBlockLinkTarget === tg ? '#1C1B3A' : '#64748B',
+                              border: `2px solid ${newBlockLinkTarget === tg ? 'var(--lyte-navy)' : '#E2E8F0'}`,
+                              background: newBlockLinkTarget === tg ? 'var(--lyte-lavender-soft)' : 'white',
+                              color: newBlockLinkTarget === tg ? 'var(--lyte-navy)' : '#64748B',
                               fontSize: 11, fontWeight: 600, cursor: 'pointer',
                             }}
                           >
@@ -3340,7 +3340,7 @@ export default function EditorPage() {
                   }}
                   style={{
                     flex: 1, padding: '9px 16px', borderRadius: 8,
-                    background: '#1C1B3A', color: 'white',
+                    background: 'var(--lyte-navy)', color: 'white',
                     border: 'none', fontSize: 13, fontWeight: 600,
                     cursor: 'pointer',
                   }}
@@ -3388,7 +3388,7 @@ export default function EditorPage() {
                 />
                 <div style={{
                   width: 38, height: 22, borderRadius: 100,
-                  background: modalWizard ? '#1C1B3A' : '#D1D5DB',
+                  background: modalWizard ? 'var(--lyte-navy)' : '#D1D5DB',
                   transition: 'background 0.2s', cursor: 'pointer', position: 'relative',
                 }}>
                   <div style={{
@@ -3414,7 +3414,7 @@ export default function EditorPage() {
                 />
                 <div style={{
                   width: 38, height: 22, borderRadius: 100,
-                  background: hideVariableCount ? '#1C1B3A' : '#D1D5DB',
+                  background: hideVariableCount ? 'var(--lyte-navy)' : '#D1D5DB',
                   transition: 'background 0.2s', cursor: 'pointer', position: 'relative',
                 }}>
                   <div style={{
@@ -3440,7 +3440,7 @@ export default function EditorPage() {
                 />
                 <div style={{
                   width: 38, height: 22, borderRadius: 100,
-                  background: showMinHint ? '#1C1B3A' : '#D1D5DB',
+                  background: showMinHint ? 'var(--lyte-navy)' : '#D1D5DB',
                   transition: 'background 0.2s', cursor: 'pointer', position: 'relative',
                 }}>
                   <div style={{
@@ -3539,7 +3539,7 @@ export default function EditorPage() {
                 />
                 <div style={{
                   width: 38, height: 22, borderRadius: 100,
-                  background: enableReorder ? '#1C1B3A' : '#D1D5DB',
+                  background: enableReorder ? 'var(--lyte-navy)' : '#D1D5DB',
                   transition: 'background 0.2s', cursor: 'pointer', position: 'relative',
                 }}>
                   <div style={{
@@ -3566,7 +3566,7 @@ export default function EditorPage() {
                   />
                   <div style={{
                     width: 38, height: 22, borderRadius: 100,
-                    background: reorderBannerEnabled ? '#1C1B3A' : '#D1D5DB',
+                    background: reorderBannerEnabled ? 'var(--lyte-navy)' : '#D1D5DB',
                     transition: 'background 0.2s', cursor: 'pointer', position: 'relative',
                   }}>
                     <div style={{
@@ -3594,7 +3594,7 @@ export default function EditorPage() {
                   />
                   <div style={{
                     width: 38, height: 22, borderRadius: 100,
-                    background: reorderHeaderButton ? '#1C1B3A' : '#D1D5DB',
+                    background: reorderHeaderButton ? 'var(--lyte-navy)' : '#D1D5DB',
                     transition: 'background 0.2s', cursor: 'pointer', position: 'relative',
                   }}>
                     <div style={{
@@ -3611,7 +3611,7 @@ export default function EditorPage() {
               <div style={{ padding: '12px 14px', background: '#F8FAFC', borderRadius: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: '#0F172A' }}>Segundos que dura el globo del boton</span>
-                  <span style={{ fontSize: 12, color: '#1C1B3A', fontWeight: 600 }}>{reorderHeaderHintSeconds}s</span>
+                  <span style={{ fontSize: 12, color: 'var(--lyte-navy)', fontWeight: 600 }}>{reorderHeaderHintSeconds}s</span>
                 </div>
                 <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 8 }}>
                   Cuanto tiempo se muestra el globo, tanto el que invita a repetir el pedido como el de “no hay pedidos recientes”.
@@ -3632,7 +3632,7 @@ export default function EditorPage() {
               <div style={{ padding: '12px 14px', background: '#F8FAFC', borderRadius: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: '#0F172A' }}>Segundos flotando</span>
-                  <span style={{ fontSize: 12, color: '#1C1B3A', fontWeight: 600 }}>
+                  <span style={{ fontSize: 12, color: 'var(--lyte-navy)', fontWeight: 600 }}>
                     {reorderFloatSeconds > 0 ? `${reorderFloatSeconds}s` : 'No se oculta'}
                   </span>
                 </div>
@@ -3662,9 +3662,9 @@ export default function EditorPage() {
                         onClick={() => setReorderPosition(pos)}
                         style={{
                           flex: 1, padding: '8px 4px', borderRadius: 8,
-                          border: `2px solid ${reorderPosition === pos ? '#1C1B3A' : '#E2E8F0'}`,
-                          background: reorderPosition === pos ? '#F3F4FF' : 'white',
-                          color: reorderPosition === pos ? '#1C1B3A' : '#64748B',
+                          border: `2px solid ${reorderPosition === pos ? 'var(--lyte-navy)' : '#E2E8F0'}`,
+                          background: reorderPosition === pos ? 'var(--lyte-lavender-soft)' : 'white',
+                          color: reorderPosition === pos ? 'var(--lyte-navy)' : '#64748B',
                           fontSize: 11, fontWeight: 600, cursor: 'pointer',
                         }}
                       >
@@ -3707,7 +3707,7 @@ export default function EditorPage() {
                       </span>
                     )}
                     {reorderImgUploading && (
-                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: '#1C1B3A' }}>
+                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: 'var(--lyte-navy)' }}>
                         Subiendo...
                       </div>
                     )}
@@ -3786,9 +3786,9 @@ export default function EditorPage() {
                         onClick={() => setReorderButtonStyle(st)}
                         style={{
                           flex: 1, padding: '8px 4px', borderRadius: 8,
-                          border: `2px solid ${reorderButtonStyle === st ? '#1C1B3A' : '#E2E8F0'}`,
-                          background: reorderButtonStyle === st ? '#F3F4FF' : 'white',
-                          color: reorderButtonStyle === st ? '#1C1B3A' : '#64748B',
+                          border: `2px solid ${reorderButtonStyle === st ? 'var(--lyte-navy)' : '#E2E8F0'}`,
+                          background: reorderButtonStyle === st ? 'var(--lyte-lavender-soft)' : 'white',
+                          color: reorderButtonStyle === st ? 'var(--lyte-navy)' : '#64748B',
                           fontSize: 11, fontWeight: 600, cursor: 'pointer',
                         }}
                       >
@@ -3873,7 +3873,7 @@ export default function EditorPage() {
                       />
                       <div style={{
                         width: 34, height: 20, borderRadius: 100,
-                        background: ad.enabled !== false ? '#1C1B3A' : '#D1D5DB',
+                        background: ad.enabled !== false ? 'var(--lyte-navy)' : '#D1D5DB',
                         transition: 'background 0.2s', cursor: 'pointer', position: 'relative',
                       }}>
                         <div style={{
@@ -3903,9 +3903,9 @@ export default function EditorPage() {
                         onClick={() => updateAd(ad.id, { placement: pl })}
                         style={{
                           flex: 1, padding: '7px 3px', borderRadius: 8,
-                          border: `2px solid ${ad.placement === pl ? '#1C1B3A' : '#E2E8F0'}`,
-                          background: ad.placement === pl ? '#F3F4FF' : 'white',
-                          color: ad.placement === pl ? '#1C1B3A' : '#64748B',
+                          border: `2px solid ${ad.placement === pl ? 'var(--lyte-navy)' : '#E2E8F0'}`,
+                          background: ad.placement === pl ? 'var(--lyte-lavender-soft)' : 'white',
+                          color: ad.placement === pl ? 'var(--lyte-navy)' : '#64748B',
                           fontSize: 10, fontWeight: 600, cursor: 'pointer',
                         }}
                       >
@@ -3953,9 +3953,9 @@ export default function EditorPage() {
                           onClick={() => updateAd(ad.id, { barStyle: bs })}
                           style={{
                             flex: 1, padding: '7px 3px', borderRadius: 8,
-                            border: `2px solid ${(ad.barStyle ?? 'static') === bs ? '#1C1B3A' : '#E2E8F0'}`,
-                            background: (ad.barStyle ?? 'static') === bs ? '#F3F4FF' : 'white',
-                            color: (ad.barStyle ?? 'static') === bs ? '#1C1B3A' : '#64748B',
+                            border: `2px solid ${(ad.barStyle ?? 'static') === bs ? 'var(--lyte-navy)' : '#E2E8F0'}`,
+                            background: (ad.barStyle ?? 'static') === bs ? 'var(--lyte-lavender-soft)' : 'white',
+                            color: (ad.barStyle ?? 'static') === bs ? 'var(--lyte-navy)' : '#64748B',
                             fontSize: 10, fontWeight: 600, cursor: 'pointer',
                           }}
                         >
@@ -3974,9 +3974,9 @@ export default function EditorPage() {
                               onClick={() => updateAd(ad.id, { topAnchor: an })}
                               style={{
                                 flex: 1, padding: '7px 3px', borderRadius: 8,
-                                border: `2px solid ${(ad.topAnchor ?? 'screen') === an ? '#1C1B3A' : '#E2E8F0'}`,
-                                background: (ad.topAnchor ?? 'screen') === an ? '#F3F4FF' : 'white',
-                                color: (ad.topAnchor ?? 'screen') === an ? '#1C1B3A' : '#64748B',
+                                border: `2px solid ${(ad.topAnchor ?? 'screen') === an ? 'var(--lyte-navy)' : '#E2E8F0'}`,
+                                background: (ad.topAnchor ?? 'screen') === an ? 'var(--lyte-lavender-soft)' : 'white',
+                                color: (ad.topAnchor ?? 'screen') === an ? 'var(--lyte-navy)' : '#64748B',
                                 fontSize: 10, fontWeight: 600, cursor: 'pointer',
                               }}
                             >
@@ -4025,7 +4025,7 @@ export default function EditorPage() {
                         ))}
                         <button
                           onClick={() => updateAd(ad.id, { messages: [...(ad.messages ?? []), ''] })}
-                          style={{ padding: '7px 12px', borderRadius: 8, border: '1.5px dashed #E2E8F0', background: 'white', color: '#1C1B3A', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                          style={{ padding: '7px 12px', borderRadius: 8, border: '1.5px dashed #E2E8F0', background: 'white', color: 'var(--lyte-navy)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                         >
                           + Agregar mensaje
                         </button>
@@ -4063,7 +4063,7 @@ export default function EditorPage() {
                         </span>
                       )}
                       {adImgUploadingId === ad.id && (
-                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: '#1C1B3A' }}>
+                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: 'var(--lyte-navy)' }}>
                           Subiendo...
                         </div>
                       )}
@@ -4179,9 +4179,9 @@ export default function EditorPage() {
                         onClick={() => updateAd(ad.id, { buttonStyle: st })}
                         style={{
                           flex: 1, padding: '7px 3px', borderRadius: 8,
-                          border: `2px solid ${(ad.buttonStyle ?? 'solid') === st ? '#1C1B3A' : '#E2E8F0'}`,
-                          background: (ad.buttonStyle ?? 'solid') === st ? '#F3F4FF' : 'white',
-                          color: (ad.buttonStyle ?? 'solid') === st ? '#1C1B3A' : '#64748B',
+                          border: `2px solid ${(ad.buttonStyle ?? 'solid') === st ? 'var(--lyte-navy)' : '#E2E8F0'}`,
+                          background: (ad.buttonStyle ?? 'solid') === st ? 'var(--lyte-lavender-soft)' : 'white',
+                          color: (ad.buttonStyle ?? 'solid') === st ? 'var(--lyte-navy)' : '#64748B',
                           fontSize: 10, fontWeight: 600, cursor: 'pointer',
                         }}
                       >
@@ -4219,9 +4219,9 @@ export default function EditorPage() {
                             onClick={() => updateAd(ad.id, { position: pos })}
                             style={{
                               flex: 1, padding: '7px 3px', borderRadius: 8,
-                              border: `2px solid ${(ad.position ?? 'right') === pos ? '#1C1B3A' : '#E2E8F0'}`,
-                              background: (ad.position ?? 'right') === pos ? '#F3F4FF' : 'white',
-                              color: (ad.position ?? 'right') === pos ? '#1C1B3A' : '#64748B',
+                              border: `2px solid ${(ad.position ?? 'right') === pos ? 'var(--lyte-navy)' : '#E2E8F0'}`,
+                              background: (ad.position ?? 'right') === pos ? 'var(--lyte-lavender-soft)' : 'white',
+                              color: (ad.position ?? 'right') === pos ? 'var(--lyte-navy)' : '#64748B',
                               fontSize: 10, fontWeight: 600, cursor: 'pointer',
                             }}
                           >
@@ -4287,7 +4287,7 @@ export default function EditorPage() {
                     />
                     <div style={{
                       width: 34, height: 20, borderRadius: 100,
-                      background: ad.onceOnly ? '#1C1B3A' : '#D1D5DB',
+                      background: ad.onceOnly ? 'var(--lyte-navy)' : '#D1D5DB',
                       transition: 'background 0.2s', cursor: 'pointer', position: 'relative',
                     }}>
                       <div style={{
@@ -4321,7 +4321,7 @@ export default function EditorPage() {
 
             <button
               onClick={() => setAds(prev => [...prev, newAd()])}
-              style={{ padding: '9px 12px', borderRadius: 8, border: '1.5px dashed #E2E8F0', background: 'white', color: '#1C1B3A', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+              style={{ padding: '9px 12px', borderRadius: 8, border: '1.5px dashed #E2E8F0', background: 'white', color: 'var(--lyte-navy)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
             >
               + Nuevo anuncio
             </button>

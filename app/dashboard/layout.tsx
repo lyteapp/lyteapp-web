@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useAuth, signOut } from '../lib/auth'
 import { supabase } from '../lib/supabase'
 import { useT } from '../lib/LocaleProvider'
+import { DashboardThemeProvider } from '../lib/dashboardTheme'
 import { useLyteSound } from '../lib/useLyteSound'
 import { DashboardStoreProvider, useDashboardStore } from '../lib/DashboardStoreProvider'
 import './dashboard.css'
@@ -49,12 +50,15 @@ const canalSubItems: { href: string; tKey: TranslationKey }[] = [
 
 const settingsSubItems: { href: string; tKey: TranslationKey }[] = [
   { href: '/dashboard/configuracion?section=general', tKey: 'nav.general' },
+  { href: '/dashboard/configuracion?section=tema',    tKey: 'nav.theme' },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <DashboardStoreProvider>
-      <DashboardShell>{children}</DashboardShell>
+      <DashboardThemeProvider>
+        <DashboardShell>{children}</DashboardShell>
+      </DashboardThemeProvider>
     </DashboardStoreProvider>
   )
 }
@@ -141,7 +145,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   if (loading || storeLoading) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F8F7F4' }}>
-        <div style={{ width: 32, height: 32, border: '3px solid rgba(154,183,253,0.375)', borderTop: '3px solid #1C1B3A', borderRadius: '50%', animation: 'dbSpin 0.8s linear infinite' }} />
+        <div style={{ width: 32, height: 32, border: '3px solid rgba(154,183,253,0.375)', borderTop: '3px solid var(--lyte-navy)', borderRadius: '50%', animation: 'dbSpin 0.8s linear infinite' }} />
       </div>
     )
   }

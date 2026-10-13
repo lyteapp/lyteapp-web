@@ -10,7 +10,7 @@ const MapView = dynamic(() => import('./MapView'), {
   ssr: false,
   loading: () => (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#E8EEF4', flexDirection: 'column', gap: 10 }}>
-      <div style={{ width: 24, height: 24, borderRadius: '50%', border: '3px solid rgba(154,183,253,0.375)', borderTopColor: '#1C1B3A', animation: 'dbSpin 0.8s linear infinite' }} />
+      <div style={{ width: 24, height: 24, borderRadius: '50%', border: '3px solid rgba(154,183,253,0.375)', borderTopColor: 'var(--lyte-navy)', animation: 'dbSpin 0.8s linear infinite' }} />
       <span style={{ fontSize: 12, color: '#9CA3AF' }}>Cargando mapa...</span>
     </div>
   ),
@@ -20,7 +20,7 @@ const ZonesMap = dynamic(() => import('./ZonesMap'), {
   ssr: false,
   loading: () => (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#E8EEF4', flexDirection: 'column', gap: 10 }}>
-      <div style={{ width: 24, height: 24, borderRadius: '50%', border: '3px solid rgba(154,183,253,0.375)', borderTopColor: '#1C1B3A', animation: 'dbSpin 0.8s linear infinite' }} />
+      <div style={{ width: 24, height: 24, borderRadius: '50%', border: '3px solid rgba(154,183,253,0.375)', borderTopColor: 'var(--lyte-navy)', animation: 'dbSpin 0.8s linear infinite' }} />
       <span style={{ fontSize: 12, color: '#9CA3AF' }}>Cargando mapa...</span>
     </div>
   ),
@@ -375,7 +375,7 @@ export default function DeliveryPage() {
   if (!storeId) return (
     <div style={{ padding: 40, textAlign: 'center', color: '#94A3B8' }}>
       <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 8, color: '#0F172A' }}>No tienes una tienda aun</div>
-      <a href="/dashboard/tienda" style={{ color: '#1C1B3A' }}>Crear tienda</a>
+      <a href="/dashboard/tienda" style={{ color: 'var(--lyte-navy)' }}>Crear tienda</a>
     </div>
   )
 
@@ -832,9 +832,9 @@ export default function DeliveryPage() {
                         onClick={() => setZRadius(r.value)}
                         style={{
                           padding: '5px 10px', borderRadius: 7, fontSize: 11, fontWeight: 500,
-                          border: `1px solid ${zRadius === r.value ? '#1C1B3A' : 'rgba(15,23,42,0.1)'}`,
+                          border: `1px solid ${zRadius === r.value ? 'var(--lyte-navy)' : 'rgba(15,23,42,0.1)'}`,
                           background: zRadius === r.value ? '#EEF2FF' : 'white',
-                          color: zRadius === r.value ? '#1C1B3A' : 'var(--dv-ink-soft)',
+                          color: zRadius === r.value ? 'var(--lyte-navy)' : 'var(--dv-ink-soft)',
                           cursor: 'pointer', fontFamily: 'inherit',
                         }}
                       >

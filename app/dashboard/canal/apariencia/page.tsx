@@ -1195,8 +1195,8 @@ export default function Apariencia() {
                 flex: 1, padding: '14px 0', border: 'none',
                 background: 'transparent', cursor: 'pointer',
                 fontSize: 14, fontWeight: 600,
-                color: mobileTab === tab.id ? '#1C1B3A' : '#94A3B8',
-                borderBottom: `2px solid ${mobileTab === tab.id ? '#1C1B3A' : 'transparent'}`,
+                color: mobileTab === tab.id ? 'var(--lyte-navy)' : '#94A3B8',
+                borderBottom: `2px solid ${mobileTab === tab.id ? 'var(--lyte-navy)' : 'transparent'}`,
                 fontFamily: 'var(--font-geist-sans), sans-serif',
                 transition: 'color 0.15s',
               }}

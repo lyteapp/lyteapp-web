@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 import { useDashboardStore } from '../../lib/DashboardStoreProvider'
 import PhoneInput from '../../components/PhoneInput'
+import { DASHBOARD_THEMES, useDashboardTheme } from '../../lib/dashboardTheme'
 import './configuracion.css'
 
 // ── SECTION HEADER ─────────────────────────────────────────────
@@ -46,6 +47,45 @@ function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   const arr = new Uint8Array(raw.length)
   for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i)
   return arr.buffer
+}
+
+// ── THEME (per user, not per store) ───────────────────────────
+function ThemeCard({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+  const { theme, setTheme } = useDashboardTheme()
+  return (
+    <div className="cf-card">
+      <SectionHeader title="Tema del panel" desc="Elige los colores de tu panel. Solo cambia cómo lo ves tú, no tu tienda." open={open} onToggle={onToggle} />
+      {open && (
+        <div className="cf-card-body">
+          <div className="cf-theme-grid">
+            {DASHBOARD_THEMES.map(t => (
+              <button
+                key={t.id}
+                type="button"
+                className={`cf-theme-opt${theme === t.id ? ' active' : ''}`}
+                onClick={() => setTheme(t.id)}
+                style={{ '--t-main': t.palette.navy, '--t-accent': t.palette.blue, '--t-soft': t.palette.lavender } as React.CSSProperties}
+                aria-pressed={theme === t.id}
+              >
+                <span className="cf-theme-preview">
+                  <span className="cf-theme-bar" />
+                  <span className="cf-theme-body">
+                    <span className="cf-theme-line" />
+                    <span className="cf-theme-pill" />
+                  </span>
+                </span>
+                <span className="cf-theme-name">
+                  {t.name}
+                  {theme === t.id && <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fillRule="evenodd" d="M16.7 5.3a1 1 0 010 1.4l-8 8a1 1 0 01-1.4 0l-4-4a1 1 0 111.4-1.4L8 12.6l7.3-7.3a1 1 0 011.4 0z" clipRule="evenodd" /></svg>}
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="cf-theme-note">Se guarda en tu cuenta y se aplica al instante en todos tus dispositivos.</div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 // ── MAIN PAGE ──────────────────────────────────────────────────
@@ -437,7 +477,7 @@ function ConfiguracionInner() {
                   <div className="cf-toggle-knob" />
                 </button>
                 <span className="cf-hours-day" style={{ flex: 1 }}>{label}</span>
-                <span style={{ fontSize: 11, color: val ? '#1C1B3A' : '#94A3B8', fontWeight: 500 }}>
+                <span style={{ fontSize: 11, color: val ? 'var(--lyte-navy)' : '#94A3B8', fontWeight: 500 }}>
                   {val ? 'Visible' : 'Oculto'}
                 </span>
               </div>
@@ -464,7 +504,7 @@ function ConfiguracionInner() {
                   <span className="cf-hours-day">Avisarme cuando llegue un pedido</span>
                   <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }}>Notificacion en este dispositivo, aunque no tengas el dashboard abierto</div>
                 </div>
-                <span style={{ fontSize: 11, color: pushEnabled ? '#1C1B3A' : '#94A3B8', fontWeight: 500 }}>
+                <span style={{ fontSize: 11, color: pushEnabled ? 'var(--lyte-navy)' : '#94A3B8', fontWeight: 500 }}>
                   {pushBusy ? '...' : pushEnabled ? 'Activado' : 'Desactivado'}
                 </span>
               </div>
@@ -493,6 +533,8 @@ function ConfiguracionInner() {
           </div>
         )}
       </div>
+
+      <ThemeCard open={openSection === 'tema'} onToggle={() => toggleSection('tema')} />
 
     </div>
   )

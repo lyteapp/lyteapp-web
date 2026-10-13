@@ -88,7 +88,7 @@ export default function MapView({ inRoute, driverLocations, drivers, customerPin
 
   if (!pos) return (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#E8EEF4', flexDirection: 'column', gap: 10 }}>
-      <div style={{ width: 24, height: 24, borderRadius: '50%', border: '3px solid rgba(154,183,253,0.375)', borderTopColor: '#1C1B3A', animation: 'dbSpin 0.8s linear infinite' }} />
+      <div style={{ width: 24, height: 24, borderRadius: '50%', border: '3px solid rgba(154,183,253,0.375)', borderTopColor: 'var(--lyte-navy)', animation: 'dbSpin 0.8s linear infinite' }} />
       <span style={{ fontSize: 12, color: '#9CA3AF' }}>Obteniendo ubicacion...</span>
     </div>
   )
@@ -131,7 +131,7 @@ export default function MapView({ inRoute, driverLocations, drivers, customerPin
       <Marker longitude={pos[1]} latitude={pos[0]} anchor="center">
         <div style={{
           width: 36, height: 36, borderRadius: 10,
-          background: '#1C1B3A', border: '2px solid white',
+          background: 'var(--lyte-navy)', border: '2px solid white',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           boxShadow: '0 4px 12px rgba(28,27,58,0.4)',
           cursor: 'default',
@@ -185,7 +185,7 @@ export default function MapView({ inRoute, driverLocations, drivers, customerPin
                   {delivery ? (
                     <>
                       <div style={{ color: '#6B7280' }}>Cliente: {delivery.customer_name}</div>
-                      <div style={{ color: late ? '#B45309' : '#1C1B3A', marginTop: 3, fontWeight: 500 }}>
+                      <div style={{ color: late ? '#B45309' : 'var(--lyte-navy)', marginTop: 3, fontWeight: 500 }}>
                         {mins} min en ruta{late ? ' · ATRASADO' : ''}
                       </div>
                     </>
@@ -268,7 +268,7 @@ export default function MapView({ inRoute, driverLocations, drivers, customerPin
                     <div style={{ fontWeight: 700, marginBottom: 4, color: '#0F172A' }}>{name}</div>
                     <div style={{ color: '#6B7280' }}>Cliente: {del.customer_name}</div>
                     {mins !== null && (
-                      <div style={{ color: late ? '#B45309' : '#1C1B3A', marginTop: 3, fontWeight: 500 }}>
+                      <div style={{ color: late ? '#B45309' : 'var(--lyte-navy)', marginTop: 3, fontWeight: 500 }}>
                         {mins} min en ruta{late ? ' · ATRASADO' : ''}
                       </div>
                     )}

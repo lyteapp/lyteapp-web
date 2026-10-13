@@ -245,7 +245,7 @@ export default function Dashboard() {
                   <span style={{ fontSize: 28, fontWeight: 800, color: '#0F172A', letterSpacing: '-1px', lineHeight: 1 }}>
                     {stat.value !== null ? stat.value : '—'}
                   </span>
-                  {stat.value !== null && <span style={{ fontSize: 13, fontWeight: 600, color: '#1C1B3A' }}>min</span>}
+                  {stat.value !== null && <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--lyte-navy)' }}>min</span>}
                 </div>
                 <div style={{ fontSize: 10, color: '#94A3B8' }}>{stat.sub}</div>
                 <div style={{ fontSize: 10, color: '#CBD5E1', marginTop: 2 }}>{stat.count} entregas</div>
@@ -263,7 +263,7 @@ export default function Dashboard() {
                   <div key={b.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{ width: 76, fontSize: 11, color: '#64748B', flexShrink: 0 }}>{b.label}</div>
                     <div style={{ flex: 1, background: '#F1F5F9', borderRadius: 4, height: 7, overflow: 'hidden' }}>
-                      <div style={{ width: `${pct}%`, height: '100%', background: '#1C1B3A', borderRadius: 4, transition: 'width 0.4s ease' }} />
+                      <div style={{ width: `${pct}%`, height: '100%', background: 'var(--lyte-navy)', borderRadius: 4, transition: 'width 0.4s ease' }} />
                     </div>
                     <div style={{ width: 20, fontSize: 11, fontWeight: 600, color: '#475569', textAlign: 'right', flexShrink: 0 }}>{count}</div>
                   </div>

@@ -410,7 +410,7 @@ export default function CajaPage() {
                 <div style={{ fontSize: 13, color: '#64748B' }}>Comparte este link con tus cajeros o escanea el QR desde el dispositivo de caja.</div>
                 <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#475569', fontFamily: 'monospace', wordBreak: 'break-all' }}>{cajeroUrl}</div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={copyCajeroLink} style={{ flex: 1, background: copied ? '#10B981' : '#1C1B3A', color: 'white', border: 'none', borderRadius: 8, padding: '9px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'background 0.2s' }}>
+                  <button onClick={copyCajeroLink} style={{ flex: 1, background: copied ? '#10B981' : 'var(--lyte-navy)', color: 'white', border: 'none', borderRadius: 8, padding: '9px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'background 0.2s' }}>
                     {copied ? 'Copiado' : 'Copiar link'}
                   </button>
                   <button onClick={() => setShowQr(true)} style={{ background: '#F1F5F9', color: '#0F172A', border: '1px solid #E2E8F0', borderRadius: 8, padding: '9px 12px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center' }}>
@@ -455,7 +455,7 @@ export default function CajaPage() {
                     <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', marginBottom: 5 }}>PIN</div>
                     <input type="password" inputMode="numeric" placeholder="1234" value={newPin} onChange={e => setNewPin(e.target.value)} onKeyDown={e => e.key === 'Enter' && addCajera()} style={{ width: '100%', boxSizing: 'border-box', border: '1.5px solid #E2E8F0', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'inherit', background: '#F8FAFC' }} />
                   </div>
-                  <button onClick={addCajera} disabled={cajerasSaving || !newName.trim() || !newPin.trim()} style={{ background: '#1C1B3A', color: 'white', border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: cajerasSaving ? 0.6 : 1, flexShrink: 0 }}>Agregar</button>
+                  <button onClick={addCajera} disabled={cajerasSaving || !newName.trim() || !newPin.trim()} style={{ background: 'var(--lyte-navy)', color: 'white', border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: cajerasSaving ? 0.6 : 1, flexShrink: 0 }}>Agregar</button>
                 </div>
               </div>
             </div>

@@ -58,7 +58,7 @@ export default function PlanPage() {
 
   return (
     <div className="ob-screen">
-      <div className="ob-brand"><LyteLogo height={28} /></div>
+      <div className="ob-brand"><LyteLogo height={40} /></div>
 
       <div className="ob-progress">
         {Array.from({ length: STEPS }).map((_, i) => (

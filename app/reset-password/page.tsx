@@ -44,7 +44,7 @@ export default function ResetPassword() {
     <div className="login-screen">
       <div className="login-card">
         <Link href="/" className="login-logo">
-          <LyteLogo height={32} />
+          <LyteLogo height={46} />
         </Link>
 
         {done ? (

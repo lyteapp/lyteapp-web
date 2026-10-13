@@ -16,7 +16,7 @@ export default function ListoPage() {
   return (
     <div className="ob-screen" style={{ justifyContent: 'center' }}>
       <div className="ob-brand" style={{ position: 'absolute', top: 48, left: 48 }}>
-        <LyteLogo height={28} />
+        <LyteLogo height={40} />
       </div>
 
       <div className="ob-card" style={{ textAlign: 'center', maxWidth: 480 }}>

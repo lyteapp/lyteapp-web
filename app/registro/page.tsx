@@ -114,7 +114,7 @@ export default function Registro() {
     <div className="reg-screen">
       <div className="reg-card">
         <Link href="/" className="reg-logo">
-          <LyteLogo height={32} />
+          <LyteLogo height={46} />
         </Link>
 
         {/* ── STEP 1: EMAIL ── */}

@@ -188,7 +188,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         {/* Brand + close */}
         <div style={{ display: 'flex', alignItems: 'center', padding: '22px 20px', borderBottom: '1px solid #E8E6DF' }}>
           <Link href="/dashboard" className="db-brand-link" style={{ margin: 0 }} onClick={() => setMobileNav(false)}>
-            <LyteLogo height={26} />
+            <LyteLogo height={38} />
           </Link>
           <button className="db-sidebar-close" onClick={() => setMobileNav(false)}>
             {t('nav.close')}

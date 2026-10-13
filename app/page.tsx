@@ -21,7 +21,7 @@ export default function Home() {
       {/* NAV */}
       <nav className="lp-nav">
         <Link href="/" className="logo">
-          <LyteLogo height={30} />
+          <LyteLogo height={44} />
         </Link>
         <ul className="nav-links">
           <li><a href="#features">{t('landing.nav.features')}</a></li>
@@ -507,7 +507,7 @@ export default function Home() {
         <div className="footer-inner">
           <div className="footer-top">
             <div className="footer-brand">
-              <h3><LyteLogo height={34} tone="white" /></h3>
+              <h3><LyteLogo height={50} tone="white" /></h3>
               <p>{t('landing.footer.tagline')}</p>
             </div>
             <div className="footer-col">

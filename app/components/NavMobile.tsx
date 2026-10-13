@@ -39,7 +39,7 @@ export default function NavMobile() {
       {open && <div className="nav-backdrop" onClick={() => setOpen(false)} />}
 
       <div className={`nav-drawer${open ? ' open' : ''}`}>
-        <div className="nav-drawer-logo"><LyteLogo height={28} /></div>
+        <div className="nav-drawer-logo"><LyteLogo height={40} /></div>
         <nav className="nav-drawer-links">
           <a href="#features" onClick={() => setOpen(false)}>{t('landing.nav.features')}</a>
           <a href="#how" onClick={() => setOpen(false)}>{t('landing.nav.how')}</a>

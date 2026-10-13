@@ -91,7 +91,7 @@ export default function PortalPage() {
   return (
     <div className="pt-page">
       <div className="pt-card">
-        <div className="pt-logo"><LyteLogo height={28} tone="white" /></div>
+        <div className="pt-logo"><LyteLogo height={40} tone="white" /></div>
         <h1 className="pt-title">Acceso privado</h1>
 
         {!supported ? (

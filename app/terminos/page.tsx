@@ -12,7 +12,7 @@ export default function TerminosPage() {
     <div className="tc-page">
       <div className="tc-card">
         <Link href="/" className="tc-logo">
-          <LyteLogo height={28} />
+          <LyteLogo height={40} />
         </Link>
 
         <h1 className="tc-title">Términos y Condiciones</h1>

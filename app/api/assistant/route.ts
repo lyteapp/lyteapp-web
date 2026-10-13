@@ -30,6 +30,8 @@ Reglas:
 
 const MAX_MESSAGES = 30
 const MAX_CHARS = 4000
+// Questions each user can ask per day (UTC), counted in assistant_usage.
+const DAILY_LIMIT = 30
 
 export async function POST(req: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -49,7 +51,7 @@ export async function POST(req: NextRequest) {
 
   let body: { messages?: { role: string; content: string }[]; page?: string }
   try { body = await req.json() } catch { return new Response('Solicitud inválida', { status: 400 }) }
-  const messages: Anthropic.Beta.BetaMessageParam[] = (body.messages ?? [])
+  const messages: Anthropic.MessageParam[] = (body.messages ?? [])
     .filter(m => (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' && m.content.trim())
     .slice(-MAX_MESSAGES)
     .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content.slice(0, MAX_CHARS) }))
@@ -63,12 +65,23 @@ export async function POST(req: NextRequest) {
     last.content = `${last.content}\n\n(Página abierta en el panel: ${body.page.slice(0, 120)})`
   }
 
+  // Count this question against today's limit (service key: the table is
+  // closed to clients by RLS).
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_KEY!,
+    { auth: { persistSession: false } },
+  )
+  const { data: used, error: usageError } = await admin.rpc('assistant_bump', { p_user: user.id })
+  if (usageError) return new Response('No pude responder ahora. Intenta de nuevo.', { status: 500 })
+  if (typeof used === 'number' && used > DAILY_LIMIT) {
+    return new Response(`Llegaste al límite de ${DAILY_LIMIT} preguntas por hoy. Vuelve mañana y con gusto te ayudo.`, { status: 429 })
+  }
+
   const client = new Anthropic()
-  const stream = client.beta.messages.stream({
-    model: 'claude-opus-5-5',
+  const stream = client.messages.stream({
+    model: 'claude-haiku-5-5',
     max_tokens: 4000,
-    betas: ['server-side-fallback-2026-07-01'],
-    fallbacks: 'default',
     output_config: { effort: 'low' },
     system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
     messages,

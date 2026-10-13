@@ -64,7 +64,9 @@ export default function AssistantPanel() {
         signal: ctrl.signal,
       })
       if (!res.ok || !res.body) {
-        append(res.status === 503 ? 'El asistente todavía no está disponible.' : 'No pude responder ahora. Intenta de nuevo.')
+        append(res.status === 503 ? 'El asistente todavía no está disponible.'
+          : res.status === 429 ? await res.text()
+          : 'No pude responder ahora. Intenta de nuevo.')
         return
       }
       const reader = res.body.getReader()

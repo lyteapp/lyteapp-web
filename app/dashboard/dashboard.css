@@ -920,21 +920,25 @@ html, body {
 }
 
 
-/* Every 10s a light line traces around the logo's leaf isotype, then fades. */
-.lyte-leaf-trace {
-  position: absolute; inset: 0; pointer-events: none; overflow: visible;
+/* Every 10s the logo's leaf isotype fades away and draws itself back in,
+   in the logo's color (see LyteLogo traceLeaf). Fully drawn by default, so
+   it's whole before the first cycle and for reduced-motion users. */
+.lyte-leaf-draw {
+  position: absolute; inset: 0; pointer-events: none;
 }
-.lyte-leaf-trace path {
-  fill: none; stroke: #FFFFFF; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round;
-  stroke-dasharray: 1; stroke-dashoffset: 1; opacity: 0;
-  animation: lyteLeafTrace 10s ease-in-out 1.5s infinite;
+.lyte-leaf-draw path {
+  fill: none; stroke: var(--lyte-blue); stroke-width: 46; stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 1; stroke-dashoffset: 0;
+  animation: lyteLeafDraw 10s ease-in-out 2s infinite;
 }
-@keyframes lyteLeafTrace {
-  0%   { stroke-dashoffset: 1; opacity: 1; }
-  18%  { stroke-dashoffset: 0; opacity: 1; }
-  26%  { stroke-dashoffset: 0; opacity: 0; }
-  100% { stroke-dashoffset: 0; opacity: 0; }
+@keyframes lyteLeafDraw {
+  0%   { stroke-dashoffset: 0; opacity: 1; }
+  8%   { stroke-dashoffset: 0; opacity: 0; }
+  10%  { stroke-dashoffset: 1; opacity: 0; }
+  11%  { stroke-dashoffset: 1; opacity: 1; }
+  30%  { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .lyte-leaf-trace path { animation: none; }
+  .lyte-leaf-draw path { animation: none; }
 }

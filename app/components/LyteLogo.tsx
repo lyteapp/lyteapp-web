@@ -6,8 +6,8 @@ import { LYTE_LEAF_OUTLINE } from './lyteLeafPath'
 // leaf wordmark or just the leaf icon.
 export default function LyteLogo({ height = 24, tone = 'navy', kind = 'wordmark', className, traceLeaf = false }: {
   height?: number
-  // Every 10s a line traces around the leaf isotype's silhouette (wordmark
-  // + 'accent' tone only — used on the dashboard's logo).
+  // Every 10s the leaf isotype disappears and draws itself back in, in the
+  // logo's color (wordmark + 'accent' tone only — the dashboard's logo).
   traceLeaf?: boolean
   tone?: 'navy' | 'white' | 'blue' | 'accent'
   kind?: 'wordmark' | 'icon'
@@ -26,11 +26,17 @@ export default function LyteLogo({ height = 24, tone = 'navy', kind = 'wordmark'
       />
     )
     if (!traceLeaf || kind !== 'wordmark') return logo
+    // The leaf is drawn separately so it can disappear and re-draw itself:
+    // the base logo is clipped to just "lyte app" (the leaf starts at x≈300
+    // of the 534px-wide artwork), and the leaf is a very thick stroke run
+    // along its own outline and clipped to its own shape, so as the stroke
+    // advances it fills the leaf in, in the logo's color.
     return (
       <span className={className} style={{ position: 'relative', display: 'block', height, width: w }}>
-        {logo}
-        <svg className="lyte-leaf-trace" viewBox="0 0 534 254" width={w} height={height} aria-hidden="true">
-          <path d={LYTE_LEAF_OUTLINE} pathLength={1} />
+        <span style={{ display: 'block', clipPath: `inset(0 ${(100 * (534 - 292) / 534).toFixed(2)}% 0 0)` }}>{logo}</span>
+        <svg className="lyte-leaf-draw" viewBox="0 0 534 254" width={w} height={height} aria-hidden="true">
+          <defs><clipPath id="lyte-leaf-clip"><path d={LYTE_LEAF_OUTLINE} /></clipPath></defs>
+          <path d={LYTE_LEAF_OUTLINE} pathLength={1} clipPath="url(#lyte-leaf-clip)" />
         </svg>
       </span>
     )

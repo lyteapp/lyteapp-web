@@ -4182,6 +4182,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
         </button>
       </div>
 
+      <footer className="sf-footer">
+        <Link href="/registro" className="sf-footer-link sf-footer-made">
+          <span>{t('store.footerCreatedWith')}</span>
+          <span className="sf-footer-logo" role="img" aria-label="Lyte app" />
+          <span className="sf-footer-cta">{t('store.footerCreateYours')}</span>
+        </Link>
+      </footer>
+
       {/* Modal inside checkout too */}
       {renderProductModal()}
 

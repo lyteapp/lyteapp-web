@@ -45,7 +45,8 @@ const en = {
   'store.iosHint1': 'Tap',
   'store.iosHint2': 'then',
   'store.iosHint3': '"Add to Home Screen"',
-  'store.footerLink': 'Store powered by LyteApp · Create yours free →',
+  'store.footerCreatedWith': 'Store created with',
+  'store.footerCreateYours': 'Create yours free →',
 
   // ── Store page – checkout ───────────────────────────────────
   'store.back': 'Back',
@@ -397,7 +398,8 @@ const es: Record<Key, string> = {
   'store.iosHint1': 'Toca',
   'store.iosHint2': 'y luego',
   'store.iosHint3': '"Añadir a pantalla de inicio"',
-  'store.footerLink': 'Tienda creada con LyteApp · Crea la tuya gratis →',
+  'store.footerCreatedWith': 'Tienda creada con',
+  'store.footerCreateYours': 'Crea la tuya gratis →',
 
   // ── Store page – checkout ───────────────────────────────────
   'store.back': 'Volver',

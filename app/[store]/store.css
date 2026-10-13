@@ -1256,6 +1256,19 @@ html, body { overflow-x: clip; }
 .sf-footer-link { font-size: 10.5px; color: #94A3B8; text-decoration: none; transition: color 0.15s; }
 .sf-footer-link:hover { color: var(--sf-accent-color, #7C3AED); }
 .sf-footer-link strong { color: var(--sf-accent-color, #7C3AED); font-weight: 700; }
+/* "Store created with [lyte app logo] · Create yours free →" */
+.sf-footer-made {
+  display: inline-flex; align-items: center; justify-content: center;
+  flex-wrap: wrap; gap: 6px 8px; font-size: 12px; color: #64748B;
+}
+.sf-footer-logo {
+  display: block; width: 46px; height: 22px; flex-shrink: 0;
+  background: #1C1B3A;
+  -webkit-mask: url(/brand/lyte-wordmark-white.png) center / contain no-repeat;
+  mask: url(/brand/lyte-wordmark-white.png) center / contain no-repeat;
+}
+.sf-footer-cta { font-weight: 700; color: #1C1B3A; }
+.sf-footer-made:hover .sf-footer-cta { text-decoration: underline; }
 
 /* ── INSTALL BUTTON ── */
 .sf-install-wrap { margin-bottom: 16px; }

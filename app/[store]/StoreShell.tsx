@@ -5309,7 +5309,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
             )}
           </div>
         )}
-        <Link href="/" className="sf-footer-link">{t('store.footerLink')}</Link>
+        <Link href="/registro" className="sf-footer-link sf-footer-made">
+          <span>{t('store.footerCreatedWith')}</span>
+          <span className="sf-footer-logo" role="img" aria-label="Lyte app" />
+          <span className="sf-footer-cta">{t('store.footerCreateYours')}</span>
+        </Link>
       </footer>
 
       {renderProductModal()}

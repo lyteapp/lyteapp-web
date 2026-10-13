@@ -317,11 +317,11 @@ html, body {
 }
 
 /* ===== TOPBAR ===== */
-/* Header in the brand lavender (#E9EAFF in the Lyte theme — follows the
-   user's dashboard theme). */
+/* Header in the brand navy (#1C1B3A in the Lyte theme — follows the
+   user's dashboard theme), with light text and icons on it. */
 .db-topbar {
-  background: var(--lyte-lavender);
-  border-bottom: 1px solid rgba(28,27,58,0.06);
+  background: var(--lyte-navy);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
   padding: env(safe-area-inset-top) 36px 0;
   min-height: 56px;
   display: flex;
@@ -337,16 +337,16 @@ html, body {
   position: relative;
   display: flex; align-items: center; justify-content: center;
   min-height: 56px; padding: env(safe-area-inset-top) 20px 0;
-  background: var(--lyte-lavender);
-  border-bottom: 1px solid rgba(28,27,58,0.06);
+  background: var(--lyte-navy);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
   box-sizing: border-box;
 }
 .db-topbar-left { display: flex; align-items: center; gap: 8px; }
 /* Header logo for phones/tablets (shown in the max-width:1024px block below). */
 .db-topbar-logo { display: none; flex-shrink: 0; margin-right: 6px; line-height: 0; }
-.db-crumb { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #64748B; }
+.db-crumb { display: flex; align-items: center; gap: 8px; font-size: 13px; color: rgba(255,255,255,0.6); }
 .db-crumb-sep { opacity: 0.5; }
-.db-crumb-here { color: #0F172A; font-weight: 500; }
+.db-crumb-here { color: #FFFFFF; font-weight: 500; }
 .db-page-title { font-size: 15px; font-weight: 600; color: #0F172A; letter-spacing: -0.02em; }
 .db-page-date { font-size: 12px; color: #94A3B8; }
 .db-topbar-right { display: flex; align-items: center; gap: 10px; }
@@ -373,7 +373,7 @@ html, body {
 .db-icon-btn {
   width: 34px; height: 34px;
   border-radius: 8px;
-  border: 1px solid #E2E0D9;
+  border: 1px solid rgba(255,255,255,0.15);
   background: white;
   display: flex;
   align-items: center;
@@ -738,10 +738,10 @@ html, body {
   align-items: center; justify-content: center;
   width: 36px; height: 36px; border-radius: 8px;
   border: none; background: transparent;
-  color: #475569; cursor: pointer; transition: color 0.15s;
+  color: #FFFFFF; cursor: pointer; transition: opacity 0.15s;
   flex-shrink: 0;
 }
-.db-hamburger:hover { color: #0F172A; }
+.db-hamburger:hover { opacity: 0.75; }
 .db-hamburger svg { width: 22px; height: 22px; }
 
 /* ── SIDEBAR BACKDROP ── */
@@ -785,13 +785,13 @@ html, body {
     cursor: pointer;
     font-size: 14px;
     font-weight: 500;
-    color: #475569;
+    color: rgba(255,255,255,0.8);
     font-family: var(--lyte-font-body), sans-serif;
     padding: 0;
     margin-left: auto;
     transition: color 0.15s;
   }
-  .db-sidebar-close:hover { color: #0F172A; }
+  .db-sidebar-close:hover { color: #FFFFFF; }
   .db-sidebar-close svg { width: 18px; height: 18px; }
 
   .db-main { margin-left: 0; }

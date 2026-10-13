@@ -805,10 +805,13 @@
 }
 
 /* ── SIDE BAR — icon rail ─────────────────────────────── */
+/* Tools bar in the brand accent, same as the dashboard logo (#9AB7FD in
+   the Lyte theme; follows the user's theme). Icons switch to the theme's
+   main color since the default muted gray doesn't read on it. */
 .ed-side-bar {
   width: 56px;
-  background: var(--ed-surface);
-  border-left: 1px solid var(--ed-line);
+  background: var(--lyte-blue);
+  border-left: 1px solid rgba(28,27,58,0.08);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -830,6 +833,9 @@
   flex-shrink: 0;
 }
 .ed-tool-btn:hover { background: var(--ed-bg); color: var(--ed-ink); }
+.ed-side-bar .ed-tool-btn { color: var(--lyte-navy); }
+.ed-side-bar .ed-tool-btn:hover { background: rgba(255,255,255,0.35); color: var(--lyte-navy); }
+.ed-side-bar .ed-tool-active { background: white !important; color: var(--lyte-navy) !important; }
 .ed-tool-btn svg { width: 18px; height: 18px; }
 .ed-tool-active { background: var(--ed-violet-bg) !important; color: var(--ed-violet) !important; }
 .ed-tool-exit { margin-top: auto; }

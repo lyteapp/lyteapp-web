@@ -474,6 +474,10 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                 }
               </svg>
             </button>
+            {/* Phone/tablet only — the sidebar (with its own logo) is tucked away there. */}
+            <Link href="/dashboard" className="db-topbar-logo" aria-label="Inicio">
+              <LyteLogo height={30} tone="accent" />
+            </Link>
             <div className="db-crumb">
               <span>{storeName || t('nav.myStore')}</span>
               <span className="db-crumb-sep">›</span>

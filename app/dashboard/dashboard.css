@@ -327,6 +327,8 @@ html, body {
   z-index: 40;
 }
 .db-topbar-left { display: flex; align-items: center; gap: 8px; }
+/* Header logo for phones/tablets (shown in the max-width:1024px block below). */
+.db-topbar-logo { display: none; flex-shrink: 0; margin-right: 6px; line-height: 0; }
 .db-crumb { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #64748B; }
 .db-crumb-sep { opacity: 0.5; }
 .db-crumb-here { color: #0F172A; font-weight: 500; }
@@ -743,6 +745,7 @@ html, body {
 /* ── RESPONSIVE ── */
 @media (max-width: 1024px) {
   .db-hamburger { display: flex; }
+  .db-topbar-logo { display: block; }
   .db-sidebar-backdrop { display: none; }
 
   .db-sidebar {
@@ -784,6 +787,8 @@ html, body {
 @media (max-width: 640px) {
   .db-topbar { padding: env(safe-area-inset-top) 16px 0; }
   .db-crumb { font-size: 12px; }
+  /* Room for the logo: on phones the breadcrumb keeps only the page name. */
+  .db-crumb > span:not(.db-crumb-here) { display: none; }
   .db-bcv-pill .delta { display: none; }
   .dh-hero { grid-template-columns: 1fr; }
   .dh-headline { font-size: 32px; }
@@ -894,3 +899,4 @@ html, body {
 @media (prefers-reduced-motion: reduce) {
   .db-loader-pulse { animation: none; }
 }
+

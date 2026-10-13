@@ -24,7 +24,10 @@ export default function DashboardLoader({ ready }: { ready: boolean }) {
     const logo = logoRef.current, bg = bgRef.current
     if (!logo || !bg) return
     let cancelled = false
-    const target = document.querySelector<HTMLElement>('.db-brand-link > *')
+    // Fly into whichever LyteApp logo is actually on screen: the sidebar's
+    // on desktop, the header's on phones (where the sidebar is tucked away).
+    const target = Array.from(document.querySelectorAll<HTMLElement>('.db-brand-link > *, .db-topbar-logo > *'))
+      .find(el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.right > 0 && r.left < window.innerWidth }) ?? null
 
     const fly = () => {
       if (cancelled) return

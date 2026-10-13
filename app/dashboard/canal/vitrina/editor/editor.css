@@ -805,13 +805,12 @@
 }
 
 /* ── SIDE BAR — icon rail ─────────────────────────────── */
-/* Tools bar in the brand accent, same as the dashboard logo (#9AB7FD in
-   the Lyte theme; follows the user's theme). Icons switch to the theme's
-   main color since the default muted gray doesn't read on it. */
+/* Tools bar: white, with icons in the dashboard logo's color (--lyte-blue,
+   #9AB7FD in the Lyte theme; follows the user's theme). */
 .ed-side-bar {
   width: 56px;
-  background: var(--lyte-blue);
-  border-left: 1px solid rgba(28,27,58,0.08);
+  background: #FFFFFF;
+  border-left: 1px solid var(--ed-line);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -833,9 +832,9 @@
   flex-shrink: 0;
 }
 .ed-tool-btn:hover { background: var(--ed-bg); color: var(--ed-ink); }
-.ed-side-bar .ed-tool-btn { color: var(--lyte-navy); }
-.ed-side-bar .ed-tool-btn:hover { background: rgba(255,255,255,0.35); color: var(--lyte-navy); }
-.ed-side-bar .ed-tool-active { background: white !important; color: var(--lyte-navy) !important; }
+.ed-side-bar .ed-tool-btn { color: var(--lyte-blue); }
+.ed-side-bar .ed-tool-btn:hover { background: var(--lyte-lavender-soft); color: var(--lyte-blue); }
+.ed-side-bar .ed-tool-active { background: var(--lyte-lavender) !important; color: var(--lyte-blue) !important; }
 .ed-tool-btn svg { width: 18px; height: 18px; }
 .ed-tool-active { background: var(--ed-violet-bg) !important; color: var(--ed-violet) !important; }
 .ed-tool-exit { margin-top: auto; }

@@ -190,7 +190,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         {/* Brand + close */}
         <div className="db-sidebar-head">
           <Link href="/dashboard" className="db-brand-link" style={{ margin: 0 }} onClick={() => setMobileNav(false)}>
-            <LyteLogo height={38} tone="accent" />
+            <LyteLogo height={38} tone="accent" traceLeaf />
           </Link>
           <button className="db-sidebar-close" onClick={() => setMobileNav(false)}>
             {t('nav.close')}
@@ -476,7 +476,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             </button>
             {/* Phone/tablet only — the sidebar (with its own logo) is tucked away there. */}
             <Link href="/dashboard" className="db-topbar-logo" aria-label="Inicio">
-              <LyteLogo height={30} tone="accent" />
+              <LyteLogo height={30} tone="accent" traceLeaf />
             </Link>
             <div className="db-crumb">
               <span>{storeName || t('nav.myStore')}</span>

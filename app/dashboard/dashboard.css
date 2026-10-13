@@ -165,10 +165,10 @@ html, body {
 .db-nav-item.soon { opacity: 0.65; }
 
 .db-nav { flex: 1; padding: 8px; overflow-y: auto; }
-/* Sidebar menu text in Cascadia Code (the brand's heading font), set
-   explicitly on every element so nothing inherits another font. */
+/* Sidebar menu text in San Francisco (the system font on Apple devices),
+   set explicitly on every element so nothing inherits another font. */
 .db-sidebar, .db-sidebar a, .db-sidebar button, .db-sidebar span, .db-sidebar div {
-  font-family: var(--lyte-font-heading);
+  font-family: var(--lyte-font-body);
 }
 
 .db-nav-section {

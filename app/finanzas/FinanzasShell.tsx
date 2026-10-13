@@ -8,6 +8,7 @@ import { useDashboardStore } from '../lib/DashboardStoreProvider'
 import BalanceProvider, { useBalance } from './BalanceProvider'
 import FlujoProvider from './FlujoProvider'
 import { SECCIONES, buscarPartida, money, montoPartida, tasasDe, totalSeccion, type Corte, type SeccionId } from './balance'
+import LyteLeafLoader from '../components/LyteLeafLoader'
 
 export default function FinanzasShell({ children }: { children: React.ReactNode }) {
   return (
@@ -37,7 +38,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <div className="fz-boot">
-        <div className="fz-spinner" />
+        <LyteLeafLoader size={56} />
       </div>
     )
   }

@@ -8,6 +8,7 @@ import { useDashboardStore } from '../../lib/DashboardStoreProvider'
 import { useT } from '../../lib/LocaleProvider'
 import { isLightColor as isLightHex } from '../../lib/colorContrast'
 import './productos.css'
+import LyteLeafLoader from '../../components/LyteLeafLoader'
 
 type VariableChoice = { value: string; price: number; calories?: number; fat?: number; protein?: number; carbs?: number }
 type VariableGroup  = { label: string; choices: VariableChoice[]; min?: number; max?: number }
@@ -506,7 +507,7 @@ export default function ProductosPage() {
     setPendingToggles(prev => { const n = { ...prev }; delete n[p.id]; return n })
   }
 
-  if (loading) return <div className="pr-spinner-wrap"><div className="pr-spinner" /></div>
+  if (loading) return <div className="pr-spinner-wrap"><LyteLeafLoader size={48} /></div>
 
   if (!storeId) return (
     <div className="db-panel" style={{ maxWidth: 480 }}>

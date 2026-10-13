@@ -1,0 +1,20 @@
+/* LyteLeafLoader — the leaf isotype redrawing itself on a loop. A faint
+   copy of the leaf sits underneath so its shape reads while it draws. */
+.lyte-leaf-loader { display: block; overflow: visible; }
+.lyte-leaf-loader-ghost { fill: var(--lyte-blue); opacity: 0.18; }
+.lyte-leaf-loader-ink {
+  fill: none; stroke: var(--lyte-blue); stroke-width: 46;
+  stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 1; stroke-dashoffset: 1;
+  animation: lyteLeafLoad 1.6s ease-in-out infinite;
+}
+@keyframes lyteLeafLoad {
+  0%   { stroke-dashoffset: 1; opacity: 1; }
+  60%  { stroke-dashoffset: 0; opacity: 1; }
+  82%  { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
+}
+@keyframes lyteLeafPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .lyte-leaf-loader-ink { animation: lyteLeafPulse 1.6s ease-in-out infinite; stroke-dashoffset: 0; }
+}

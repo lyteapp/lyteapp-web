@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { supabase } from '../../../lib/supabase'
 import { useDashboardStore } from '../../../lib/DashboardStoreProvider'
 import '../productos.css'
+import LyteLeafLoader from '../../../components/LyteLeafLoader'
 
 type Category = { id: string; store_id: string; name: string; position: number }
 type Product = { id: string; name: string; image_url: string | null; is_active: boolean; position: number | null; category_ids: string[] }
@@ -133,7 +134,7 @@ export default function CategoriasPage() {
     ])
   }
 
-  if (loading) return <div className="pr-spinner-wrap"><div className="pr-spinner" /></div>
+  if (loading) return <div className="pr-spinner-wrap"><LyteLeafLoader size={48} /></div>
 
   return (
     <div style={{ maxWidth: 680 }}>

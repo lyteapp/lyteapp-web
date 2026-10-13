@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useDashboardStore } from '../../lib/DashboardStoreProvider'
+import LyteLeafLoader from '../../components/LyteLeafLoader'
 
 interface Customer {
   key: string
@@ -173,7 +174,7 @@ export default function ClientesPage() {
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
-      <div style={{ width: 28, height: 28, borderRadius: '50%', border: '3px solid rgba(154,183,253,0.375)', borderTopColor: 'var(--lyte-navy)', animation: 'dbSpin 0.8s linear infinite' }} />
+      <LyteLeafLoader size={40} />
     </div>
   )
 
@@ -327,7 +328,7 @@ export default function ClientesPage() {
           <div style={{ maxHeight: 480, overflowY: 'auto', scrollbarWidth: 'none' }}>
             {ordersLoading ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}>
-                <div style={{ width: 22, height: 22, borderRadius: '50%', border: '2px solid rgba(154,183,253,0.375)', borderTopColor: 'var(--lyte-navy)', animation: 'dbSpin 0.8s linear infinite' }} />
+                <LyteLeafLoader size={36} />
               </div>
             ) : orders.length === 0 ? (
               <div style={{ padding: '20px', textAlign: 'center', color: '#94A3B8', fontSize: 13 }}>Sin pedidos</div>

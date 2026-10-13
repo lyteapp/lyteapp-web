@@ -9,6 +9,7 @@ import { useAuth } from '../../lib/auth'
 import { useDashboardStore } from '../../lib/DashboardStoreProvider'
 import PhoneInput from '../../components/PhoneInput'
 import './tienda.css'
+import LyteLeafLoader from '../../components/LyteLeafLoader'
 
 const StoreMapPicker = dynamic(() => import('./StoreMapPicker'), { ssr: false })
 
@@ -335,7 +336,7 @@ export default function TiendaPage() {
   }
 
   if (pageLoading) return (
-    <div className="ts-spinner-wrap"><div className="ts-spinner" /></div>
+    <div className="ts-spinner-wrap"><LyteLeafLoader size={48} /></div>
   )
 
   return (

@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react'
 import MapGL, { Marker, NavigationControl, Source, Layer } from 'react-map-gl'
 import type { MapRef, MapMouseEvent } from 'react-map-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
+import LyteLeafLoader from '../../components/LyteLeafLoader'
 
 export type DeliveryZone = {
   id: string
@@ -85,7 +86,7 @@ export default function ZonesMap({ zones, placingZone, onMapClick, previewCenter
 
   if (!pos) return (
     <div style={{ ...fill, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#E8EEF4', flexDirection: 'column', gap: 10 }}>
-      <div style={{ width: 24, height: 24, borderRadius: '50%', border: '3px solid rgba(154,183,253,0.375)', borderTopColor: 'var(--lyte-navy)', animation: 'dbSpin 0.8s linear infinite' }} />
+      <LyteLeafLoader size={36} />
       <span style={{ fontSize: 12, color: '#9CA3AF' }}>Obteniendo ubicacion...</span>
     </div>
   )

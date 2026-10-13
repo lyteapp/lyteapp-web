@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { useDashboardStore } from '../../lib/DashboardStoreProvider'
 import '../home.css'
 import './analitics.css'
+import LyteLeafLoader from '../../components/LyteLeafLoader'
 
 // ── Types ──
 type SaleOrder = {
@@ -584,7 +585,7 @@ export default function AnaliticsPage() {
               style={{ border: 'none', outline: 'none', fontSize: 12, color: '#0F172A', background: 'transparent', fontFamily: 'inherit', cursor: 'pointer' }}
             />
           </div>
-          {salesLoading && <div className="an-spinner" />}
+          {salesLoading && <LyteLeafLoader size={28} />}
         </div>
       )}
 

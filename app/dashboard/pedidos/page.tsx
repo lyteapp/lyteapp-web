@@ -7,6 +7,7 @@ import { useDashboardStore } from '../../lib/DashboardStoreProvider'
 import { useT } from '../../lib/LocaleProvider'
 import type { TranslationKey } from '../../lib/i18n'
 import './pedidos.css'
+import LyteLeafLoader from '../../components/LyteLeafLoader'
 
 type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'ready' | 'delivered' | 'cancelled'
 
@@ -501,7 +502,7 @@ export default function PedidosPage() {
   if (loading) {
     return (
       <div className="pd-spinner-wrap">
-        <div className="pd-spinner" />
+        <LyteLeafLoader size={44} />
       </div>
     )
   }
@@ -625,7 +626,7 @@ export default function PedidosPage() {
             <button className="pd-display-close" onClick={() => setDisplayMode(false)}>Cerrar</button>
           </div>
           {displayLoading ? (
-            <div className="pd-display-loading"><div className="pd-spinner" /></div>
+            <div className="pd-display-loading"><LyteLeafLoader size={44} /></div>
           ) : displayOrders.length === 0 ? (
             <div className="pd-display-empty">Sin comandas activas</div>
           ) : (() => {
@@ -817,7 +818,7 @@ export default function PedidosPage() {
                   <div className="pd-card-body">
                     {order.items === undefined ? (
                       <div className="pd-spinner-wrap" style={{ minHeight: 60 }}>
-                        <div className="pd-spinner" />
+                        <LyteLeafLoader size={44} />
                       </div>
                     ) : (
                       <>

@@ -7,6 +7,7 @@ import { useDashboardStore } from '../../lib/DashboardStoreProvider'
 import PhoneInput from '../../components/PhoneInput'
 import { DASHBOARD_THEMES, useDashboardTheme } from '../../lib/dashboardTheme'
 import './configuracion.css'
+import LyteLeafLoader from '../../components/LyteLeafLoader'
 
 // ── SECTION HEADER ─────────────────────────────────────────────
 function SectionHeader({ title, desc, open, onToggle, saved }: {
@@ -292,7 +293,7 @@ function ConfiguracionInner() {
 
   function toggleSection(s: string) { setOpenSection(prev => prev === s ? '' : s) }
 
-  if (loading) return <div className="cf-spinner-wrap"><div className="cf-spinner" /></div>
+  if (loading) return <div className="cf-spinner-wrap"><LyteLeafLoader size={48} /></div>
   if (!storeId) return (
     <div className="cf-spinner-wrap" style={{ flexDirection: 'column', gap: 12 }}>
       <div style={{ fontSize: 32, color: '#94A3B8' }}>—</div>

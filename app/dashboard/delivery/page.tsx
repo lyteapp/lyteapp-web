@@ -5,12 +5,13 @@ import dynamic from 'next/dynamic'
 import { supabase } from '../../lib/supabase'
 import { useDashboardStore } from '../../lib/DashboardStoreProvider'
 import './delivery.css'
+import LyteLeafLoader from '../../components/LyteLeafLoader'
 
 const MapView = dynamic(() => import('./MapView'), {
   ssr: false,
   loading: () => (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#E8EEF4', flexDirection: 'column', gap: 10 }}>
-      <div style={{ width: 24, height: 24, borderRadius: '50%', border: '3px solid rgba(154,183,253,0.375)', borderTopColor: 'var(--lyte-navy)', animation: 'dbSpin 0.8s linear infinite' }} />
+      <LyteLeafLoader size={36} />
       <span style={{ fontSize: 12, color: '#9CA3AF' }}>Cargando mapa...</span>
     </div>
   ),
@@ -20,7 +21,7 @@ const ZonesMap = dynamic(() => import('./ZonesMap'), {
   ssr: false,
   loading: () => (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#E8EEF4', flexDirection: 'column', gap: 10 }}>
-      <div style={{ width: 24, height: 24, borderRadius: '50%', border: '3px solid rgba(154,183,253,0.375)', borderTopColor: 'var(--lyte-navy)', animation: 'dbSpin 0.8s linear infinite' }} />
+      <LyteLeafLoader size={36} />
       <span style={{ fontSize: 12, color: '#9CA3AF' }}>Cargando mapa...</span>
     </div>
   ),
@@ -370,7 +371,7 @@ export default function DeliveryPage() {
   )
 
 
-  if (loading) return <div className="dv-spinner-wrap"><div className="dv-spinner" /></div>
+  if (loading) return <div className="dv-spinner-wrap"><LyteLeafLoader size={48} /></div>
 
   if (!storeId) return (
     <div style={{ padding: 40, textAlign: 'center', color: '#94A3B8' }}>

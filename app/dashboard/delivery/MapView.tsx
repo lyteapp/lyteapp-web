@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import MapGL, { Marker, NavigationControl } from 'react-map-gl'
 import type { MapRef } from 'react-map-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
+import LyteLeafLoader from '../../components/LyteLeafLoader'
 
 type InRouteDelivery = {
   id: string
@@ -88,7 +89,7 @@ export default function MapView({ inRoute, driverLocations, drivers, customerPin
 
   if (!pos) return (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#E8EEF4', flexDirection: 'column', gap: 10 }}>
-      <div style={{ width: 24, height: 24, borderRadius: '50%', border: '3px solid rgba(154,183,253,0.375)', borderTopColor: 'var(--lyte-navy)', animation: 'dbSpin 0.8s linear infinite' }} />
+      <LyteLeafLoader size={36} />
       <span style={{ fontSize: 12, color: '#9CA3AF' }}>Obteniendo ubicacion...</span>
     </div>
   )

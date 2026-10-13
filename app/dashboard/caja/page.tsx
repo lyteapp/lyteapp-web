@@ -5,6 +5,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import { supabase } from '../../lib/supabase'
 import { useDashboardStore } from '../../lib/DashboardStoreProvider'
 import './caja.css'
+import LyteLeafLoader from '../../components/LyteLeafLoader'
 
 type Order = {
   id: string
@@ -262,7 +263,7 @@ export default function CajaPage() {
     }, {} as Record<string, { label: string; currency: string; symbol: string; total: number }>)
   )
 
-  if (loading) return <div className="cx-spinner-wrap"><div className="cx-spinner" /></div>
+  if (loading) return <div className="cx-spinner-wrap"><LyteLeafLoader size={48} /></div>
 
   return (
     <div className="cx-root">

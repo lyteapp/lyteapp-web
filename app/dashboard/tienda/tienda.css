@@ -110,14 +110,14 @@
 .ts-slug-base {
   font-size: 13px; color: #94A3B8;
   padding: 8px 0 8px 12px;
-  font-family: var(--lyte-font-heading), monospace;
+  font-family: var(--lyte-font-body), monospace;
   white-space: nowrap;
 }
 .ts-slug-input {
   font-size: 13px; font-weight: 600; color: var(--lyte-navy);
   border: none; outline: none; background: transparent;
   padding: 8px 12px 8px 0;
-  font-family: var(--lyte-font-heading), monospace;
+  font-family: var(--lyte-font-body), monospace;
   min-width: 110px;
 }
 

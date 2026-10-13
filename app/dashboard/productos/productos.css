@@ -95,7 +95,7 @@
   transition: background 0.15s;
 }
 .pr-back-btn:hover { background: var(--lyte-lavender); }
-.pr-form-title { font-size: 20px; font-weight: 700; color: #0F172A; letter-spacing: -0.03em; font-family: var(--lyte-font-heading); }
+.pr-form-title { font-size: 20px; font-weight: 700; color: #0F172A; letter-spacing: -0.03em; font-family: var(--lyte-font-body); }
 
 .pr-form-card {
   display: grid;
@@ -573,7 +573,7 @@
   justify-content: space-between; gap: 16px;
   margin-bottom: 24px;
 }
-.pr-page-title { font-size: 20px; font-weight: 700; color: #0F172A; letter-spacing: -0.03em; margin-bottom: 4px; font-family: var(--lyte-font-heading); }
+.pr-page-title { font-size: 20px; font-weight: 700; color: #0F172A; letter-spacing: -0.03em; margin-bottom: 4px; font-family: var(--lyte-font-body); }
 .pr-page-sub   { font-size: 13px; color: #94A3B8; line-height: 1.5; max-width: 480px; }
 
 .cat-add-bar {
@@ -711,7 +711,7 @@
   font-size: 1.1em; font-weight: 700; color: #0F172A;
   letter-spacing: -0.02em; margin-bottom: 16px;
   padding-bottom: 10px;
-  border-bottom: 2px solid rgba(15,23,42,0.07); font-family: var(--lyte-font-heading); }
+  border-bottom: 2px solid rgba(15,23,42,0.07); font-family: var(--lyte-font-body); }
 
 @media (max-width: 640px) {
   .pr-form-card { grid-template-columns: 1fr; }

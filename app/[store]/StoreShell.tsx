@@ -3392,8 +3392,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
           )}
         </div>
         <a className="sf-powered-by" href="https://lyte-app.com" target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ color: splashPoweredColors.text }}>
-          <span className="sf-powered-by-mark" aria-hidden="true" />
-          <span>Powered by <strong style={{ color: splashPoweredColors.strong }}>LYTE APP</strong></span>
+          <span>Powered by</span>
+          <span className="sf-powered-by-logo" role="img" aria-label="Lyte app" style={{ color: splashPoweredColors.strong }} />
         </a>
       </div>
       </>
@@ -3445,8 +3445,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
           <button className="sf-reveal-skip" onClick={finishReveal}>{rv.skipLabel || 'Saltar →'}</button>
         )}
         <a className="sf-powered-by" href="https://lyte-app.com" target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ color: revealPoweredColors.text }}>
-          <span className="sf-powered-by-mark" aria-hidden="true" />
-          <span>Powered by <strong style={{ color: revealPoweredColors.strong }}>LYTE APP</strong></span>
+          <span>Powered by</span>
+          <span className="sf-powered-by-logo" role="img" aria-label="Lyte app" style={{ color: revealPoweredColors.strong }} />
         </a>
       </div>
     )
@@ -4522,8 +4522,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
           const c = poweredByColors(isLightColor(cfg.pageBg || '#FAFAF9'))
           return (
             <div className="sf-powered-by" style={{ color: c.text }}>
-              <span className="sf-powered-by-mark" aria-hidden="true" />
-              <span>Powered by <strong style={{ color: c.strong }}>LYTE APP</strong></span>
+              <span>Powered by</span>
+              <span className="sf-powered-by-logo" role="img" aria-label="Lyte app" style={{ color: c.strong }} />
             </div>
           )
         })()}

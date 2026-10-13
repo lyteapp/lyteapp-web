@@ -1189,13 +1189,13 @@ html, body { overflow-x: clip; }
   color: rgba(255,255,255,0.85);
   transition: color 0.15s, opacity 0.15s;
 }
-/* The LyteApp leaf, tinted to the surrounding text color via a mask so it
-   works on both light and dark backgrounds. */
-.sf-powered-by-mark {
-  display: block; width: 15px; height: 13px; flex-shrink: 0; opacity: 0.9;
+/* The LyteApp "lyte app" logo, tinted via a mask with its own `color`
+   (the strong powered-by color), so it works on light and dark backgrounds. */
+.sf-powered-by-logo {
+  display: block; width: 46px; height: 22px; flex-shrink: 0;
   background: currentColor;
-  -webkit-mask: url(/brand/lyte-icon-white.png) center / contain no-repeat;
-  mask: url(/brand/lyte-icon-white.png) center / contain no-repeat;
+  -webkit-mask: url(/brand/lyte-wordmark-white.png) center / contain no-repeat;
+  mask: url(/brand/lyte-wordmark-white.png) center / contain no-repeat;
 }
 .sf-powered-by strong { color: rgba(255,255,255,1); font-weight: 700; transition: color 0.15s; }
 .sf-powered-by:hover { opacity: 0.8; }

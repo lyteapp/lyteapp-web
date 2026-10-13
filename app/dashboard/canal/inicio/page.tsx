@@ -503,8 +503,8 @@ function PoweredByBadge({ isLight }: { isLight: boolean }) {
       fontSize: 11, letterSpacing: '0.02em', color: colors.text,
       fontFamily: 'var(--font-geist-sans), sans-serif',
     }}>
-      <span aria-hidden="true" style={{ display: 'block', width: 15, height: 13, opacity: 0.9, background: 'currentColor', WebkitMask: 'url(/brand/lyte-icon-white.png) center / contain no-repeat', mask: 'url(/brand/lyte-icon-white.png) center / contain no-repeat' }} />
-      <span>Powered by <strong style={{ color: colors.strong }}>LYTE APP</strong></span>
+      <span>Powered by</span>
+      <span role="img" aria-label="Lyte app" style={{ display: 'block', width: 46, height: 22, background: colors.strong, WebkitMask: 'url(/brand/lyte-wordmark-white.png) center / contain no-repeat', mask: 'url(/brand/lyte-wordmark-white.png) center / contain no-repeat' }} />
     </div>
   )
 }

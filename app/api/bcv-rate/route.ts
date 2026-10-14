@@ -58,6 +58,12 @@ async function fetchRates(): Promise<{ USD: number | null; EUR: number | null }>
   return { USD: usd, EUR: eur }
 }
 
+function effectiveCustomRate(cs: unknown): number | null {
+  const s = (cs ?? {}) as { rateMode?: string; customRate?: unknown }
+  const r = Number(s.customRate)
+  return s.rateMode === 'custom' && r > 0 ? r : null
+}
+
 // GET — cron actualiza tasas; público devuelve todas las tasas actuales
 export async function GET(req: Request) {
   const auth = req.headers.get('authorization') ?? ''
@@ -80,6 +86,15 @@ export async function GET(req: Request) {
   for (const row of data ?? []) {
     rates[row.currency] = Number(row.rate)
     updatedAt[row.currency] = row.updated_at
+  }
+  // ?store=<id>: also the rate that store uses (its custom rate, if it set
+  // one, otherwise BCV for its currency).
+  const storeId = new URL(req.url).searchParams.get('store')
+  if (storeId) {
+    const { data: store } = await supa.from('stores').select('store_currency, checkout_settings').eq('id', storeId).maybeSingle()
+    const currency = store?.store_currency ?? 'USD'
+    const custom = effectiveCustomRate(store?.checkout_settings)
+    return Response.json({ rates, updatedAt, rate: custom ?? rates[currency] ?? null, custom: custom !== null })
   }
   return Response.json({ rates, updatedAt })
 }

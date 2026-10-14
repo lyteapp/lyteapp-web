@@ -199,11 +199,12 @@ export default function CajaPage() {
 
   // BCV rate
   useEffect(() => {
-    fetch('/api/bcv-rate')
+    if (!storeId) return
+    fetch(`/api/bcv-rate?store=${storeId}`)
       .then(r => r.json())
-      .then(d => { if (d.rates?.USD > 0) setBcvRate(d.rates.USD) })
+      .then(d => { const r = d.rate ?? d.rates?.USD; if (r > 0) setBcvRate(r) })
       .catch(() => {})
-  }, [])
+  }, [storeId])
 
   // Cajera actions
   async function addCajera() {

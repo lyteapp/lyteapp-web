@@ -70,7 +70,10 @@ export default async function StorePage({ params, searchParams }: { params: Prom
     supabaseService.from('delivery_zones').select('*').eq('store_id', store.id),
   ])
 
-  const initialBcvRate       = rateRow?.rate ? Number(rateRow.rate) : null
+  // The store's own rate when it set one in Ajustes, otherwise today's BCV.
+  const cs = (store.checkout_settings ?? {}) as { rateMode?: string; customRate?: unknown }
+  const customRate = cs.rateMode === 'custom' && Number(cs.customRate) > 0 ? Number(cs.customRate) : null
+  const initialBcvRate       = customRate ?? (rateRow?.rate ? Number(rateRow.rate) : null)
   const initialDeliveryZones = zones ?? []
   const mapboxToken          = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''
 

@@ -461,6 +461,7 @@ type Store = {
     requirePaymentMethod?: boolean; requirePaymentProof?: boolean
     whatsappFloating?: boolean
     showBcvInSummary?: boolean
+    rateMode?: 'bcv' | 'custom'
     showLocationLink?: boolean
     orderTitle?: string
     // Set from app/dashboard/configuracion, not this file's own settings page.
@@ -1393,6 +1394,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
   // ── Checkout settings ──
   const cs                   = store.checkout_settings ?? {}
+  const rateLabel            = cs.rateMode === 'custom' ? 'Tasa' : 'BCV'
   // Checkout's own accent, falling back to the store's general accent (and
   // finally the hardcoded default) when the merchant hasn't set one here —
   // used for the checkout-only inline styles below that can't reach the
@@ -2788,7 +2790,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
         '', `*Subtotal: ${currencySymbol}${cartTotal.toFixed(2)}*`,
         ...(deliveryFeeAmt > 0 ? [`*Envio: ${currencySymbol}${deliveryFeeAmt.toFixed(2)}${matchedZone ? ` (${matchedZone.name})` : ''}*`] : []),
         `*Total: ${currencySymbol}${orderTotal.toFixed(2)}*`,
-        ...(vesAmount ? [`*Total Bs: ${vesAmount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (BCV ${bcvRate!.toFixed(4)})*`] : []),
+        ...(vesAmount ? [`*Total Bs: ${vesAmount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${rateLabel} ${bcvRate!.toFixed(4)})*`] : []),
         ...(proofUrl ? ['', `*Comprobante:* ${proofUrl}`] : []),
         ...(customerNotes ? ['', `*Notas:* ${customerNotes}`] : []),
         ...(cs.showTrackBtn !== false && newDeliveryId ? ['', 'Rastrea tu pedido en tiempo real:', `https://lyte-app.com/delivery/${newDeliveryId}`] : []),
@@ -3640,7 +3642,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           </div>
           {bcvRate && cs.showBcvInSummary !== false && (
             <div className="sf-co-total" style={{ borderTop: 'none', paddingTop: 0, fontSize: 13, color: '#64748B', fontWeight: 400 }}>
-              <span>Total Bs (BCV)</span>
+              <span>{cs.rateMode === 'custom' ? 'Total Bs' : 'Total Bs (BCV)'}</span>
               <span>Bs {(orderTotal * bcvRate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
           )}

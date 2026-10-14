@@ -107,6 +107,10 @@ function ConfiguracionInner() {
   const [country, setCountry] = useState('')
   const [storeLanguage, setStoreLanguage] = useState('default')
   const [storeCurrency, setStoreCurrency] = useState('USD')
+  // Bs exchange rate: the daily BCV rate, or one the merchant sets.
+  const [rateMode, setRateMode] = useState<'bcv' | 'custom'>('bcv')
+  const [customRate, setCustomRate] = useState('')
+  const [bcvRates, setBcvRates] = useState<Record<string, number>>({})
   const [operatingHours, setOperatingHours] = useState<Record<string, { open: boolean; start: string; end: string }>>(() => {
     const days = ['mon','tue','wed','thu','fri','sat','sun']
     return Object.fromEntries(days.map(d => [d, { open: false, start: '09:00', end: '18:00' }]))
@@ -141,10 +145,14 @@ function ConfiguracionInner() {
   }, [searchParams])
 
   useEffect(() => {
+    fetch('/api/bcv-rate').then(r => r.json()).then(d => setBcvRates(d.rates ?? {})).catch(() => {})
+  }, [])
+
+  useEffect(() => {
     if (!storeId) return
     async function load() {
       const { data: store, error: storeErr } = await supabase
-        .from('stores').select('id,name,slug,city,email,map_url,whatsapp,whatsapp2,country,store_language,operating_hours,social_links,checkout_settings')
+        .from('stores').select('id,name,slug,city,email,map_url,whatsapp,whatsapp2,country,store_language,store_currency,operating_hours,social_links,checkout_settings')
         .eq('id', storeId!).maybeSingle()
 
       if (storeErr) { setError(storeErr.message); setLoading(false); return }
@@ -169,6 +177,8 @@ function ConfiguracionInner() {
         setShowWhatsappBtn(cs.showWhatsappBtn !== false)
         setShowTrackBtn(cs.showTrackBtn !== false)
         setShowMapBtn(Boolean(cs.showMapBtn))
+        setRateMode(cs.rateMode === 'custom' ? 'custom' : 'bcv')
+        setCustomRate(Number(cs.customRate) > 0 ? String(cs.customRate) : '')
       }
       setLoading(false)
     }
@@ -284,6 +294,8 @@ function ConfiguracionInner() {
         showWhatsappBtn,
         showTrackBtn,
         showMapBtn,
+        rateMode: rateMode === 'custom' && Number(customRate.replace(',', '.')) > 0 ? 'custom' : 'bcv',
+        customRate: Number(customRate.replace(',', '.')) > 0 ? Number(customRate.replace(',', '.')) : null,
       },
     }).eq('id', storeId)
     setSavingGeneral(false)
@@ -389,7 +401,30 @@ function ConfiguracionInner() {
                   <option value="EUR">Euro (EUR €)</option>
                 </select>
                 <span style={{ fontSize: 11, color: '#94A3B8', marginTop: 4 }}>
-                  Los precios de la tienda se muestran en esta moneda. En el checkout se muestra la equivalencia en Bs según la tasa BCV del dia.
+                  Los precios de la tienda se muestran en esta moneda. En el checkout se muestra la equivalencia en Bs según la tasa elegida.
+                </span>
+              </div>
+              <div className="cf-field">
+                <label className="cf-label">Tasa de cambio a Bs</label>
+                <select className="cf-input cf-select" value={rateMode} onChange={e => setRateMode(e.target.value as 'bcv' | 'custom')}>
+                  <option value="bcv">Tasa BCV del día (automática)</option>
+                  <option value="custom">Tasa personalizada</option>
+                </select>
+                {rateMode === 'custom' && (
+                  <input
+                    className="cf-input"
+                    style={{ marginTop: 8 }}
+                    inputMode="decimal"
+                    value={customRate}
+                    onChange={e => setCustomRate(e.target.value.replace(/[^0-9.,]/g, ''))}
+                    placeholder={`Bs por 1 ${storeCurrency}`}
+                  />
+                )}
+                <span style={{ fontSize: 11, color: '#94A3B8', marginTop: 4 }}>
+                  {rateMode === 'custom'
+                    ? `Bs por cada 1 ${storeCurrency}. Se usa en el checkout, la caja y el enlace del cajero.`
+                    : 'Se actualiza sola cada día.'}
+                  {bcvRates[storeCurrency] ? ` BCV hoy: Bs ${bcvRates[storeCurrency].toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}` : ''}
                 </span>
               </div>
             </div>

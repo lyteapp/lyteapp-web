@@ -1333,8 +1333,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
       const measure = () => {
         const cardWidth = cards[0].getBoundingClientRect().width
         if (cardWidth <= 0) return
-        const rowWidth = row.getBoundingClientRect().width
         const styles = getComputedStyle(row)
+        const rowWidth = row.clientWidth - (parseFloat(styles.paddingLeft) || 0) - (parseFloat(styles.paddingRight) || 0)
         const gapPx = parseFloat(styles.columnGap || styles.gap || '0') || 0
         perPage = Math.max(1, Math.round((rowWidth + gapPx) / (cardWidth + gapPx)))
         pageCount = Math.max(1, Math.ceil(cards.length / perPage))

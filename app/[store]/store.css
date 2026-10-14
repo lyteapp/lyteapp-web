@@ -361,22 +361,31 @@ html, body { overflow-x: clip; }
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  gap: 14px; padding-bottom: 4px;
+  gap: var(--sf-hc-gap); padding-bottom: 4px;
+  /* At rest the row lines up with the regular grid: same side margins
+     (the section's own inset, since the wrap is full-bleed) and two cards
+     sized like the grid's columns. Swiping still runs edge to edge. */
+  padding-inline: var(--sf-hc-inset);
+  scroll-padding-inline: var(--sf-hc-inset);
 }
 .sf-grid-horizontal::-webkit-scrollbar { display: none; }
 .sf-grid-horizontal .sf-card {
-  flex: 0 0 46%; min-width: 120px; scroll-snap-align: start;
+  flex: 0 0 calc((100% - var(--sf-hc-gap)) / 2); min-width: 120px; scroll-snap-align: start;
 }
 
 /* Breaks out of .sf-section-inner's padding/max-width to reach the true
    viewport edges, regardless of how much side padding the page has at any
    breakpoint — the standard "100vw + centered translateX" full-bleed trick. */
 .sf-hcarousel-wrap {
+  /* .sf-section-inner's content edge: its padding plus the centering
+     margin once the viewport is wider than its max-width */
+  --sf-hc-inset: calc(max(0px, (100vw - 1100px) / 2) + 24px);
+  --sf-hc-gap: 18px;
   position: relative;
   width: 100vw; margin-left: 50%; transform: translateX(-50%);
 }
 .sf-hcarousel-hint {
-  position: absolute; bottom: 16px; right: 18px;
+  position: absolute; bottom: 16px; right: calc(var(--sf-hc-inset) + 2px);
   display: flex; align-items: center; gap: 5px;
   background: var(--sf-accent-color, #7C3AED); color: white;
   font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
@@ -1294,6 +1303,7 @@ html, body { overflow-x: clip; }
   .sf-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .sf-store-name { font-size: 1.33em; }
   .sf-header-inner, .sf-section-inner { padding: 16px; }
+  .sf-hcarousel-wrap { --sf-hc-inset: 16px; --sf-hc-gap: 12px; }
   .sf-logo-wrap { width: 60px; height: 60px; border-radius: 12px; }
   .sf-nav-name { display: none; }
 }

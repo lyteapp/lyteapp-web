@@ -1019,6 +1019,7 @@
   top: calc(var(--dv-bar, 0px) + 72px) !important; bottom: auto !important;
   right: 18px !important; width: 40px !important; height: 40px !important;
   border-radius: 50% !important; box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+  z-index: 12 !important; /* above the header's top fade (z 10) */
 }
 .dv-map-fullscreen .dv-map-recenter svg { width: 18px; height: 18px; }
 

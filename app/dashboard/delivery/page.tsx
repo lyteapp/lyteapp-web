@@ -143,6 +143,7 @@ export default function DeliveryPage() {
   // Mobile fullscreen map
   const [showMap, setShowMap] = useState(false)
   const [mapFocus, setMapFocus] = useState<string | null>(null)
+  const [mapListOpen, setMapListOpen] = useState(true)
 
   // QR modals
   const [qrDel, setQrDel]       = useState<Delivery | null>(null)
@@ -377,6 +378,61 @@ export default function DeliveryPage() {
 
   if (loading) return <div className="dv-spinner-wrap"><LyteLeafLoader size={48} /></div>
 
+  // Small floating list over the live map: orders ready to be picked up and
+  // orders on their way to the customer. Tapping one focuses it on the map.
+  const readyDels = todayDels.filter(d => d.status === 'ready')
+  function renderMapOrderList(extraClass = '') {
+    if (readyDels.length === 0 && inRoute.length === 0) return null
+    const row = (del: Delivery) => {
+      const onMap = del.customer_lat != null && del.customer_lng != null
+      const driverName = (del.driver as Driver | null)?.name
+      const mins = del.status === 'picked_up' && del.picked_up_at
+        ? Math.max(0, Math.floor((Date.now() - new Date(del.picked_up_at).getTime()) / 60000))
+        : null
+      const sub = del.status === 'picked_up'
+        ? `${driverName ?? 'Despachador'}${mins !== null ? ` · ${mins} min` : ''}`
+        : driverName ? `Asignado a ${driverName}` : 'Esperando despachador'
+      return (
+        <button
+          key={del.id}
+          className={`dv-mol-row${mapFocus === del.id ? ' focused' : ''}${mins !== null && mins > 30 ? ' late' : ''}`}
+          onClick={() => onMap && setMapFocus(f => f === del.id ? null : del.id)}
+          disabled={!onMap}
+        >
+          <span className="dv-mol-dot" style={{ background: PIN_STATUS_COLOR[del.status] }} />
+          <span className="dv-mol-text">
+            <span className="dv-mol-name">{del.customer_name}</span>
+            <span className="dv-mol-sub">{sub}{!onMap ? ' · sin ubicación' : ''}</span>
+          </span>
+        </button>
+      )
+    }
+    return (
+      <div className={`dv-mol${mapListOpen ? '' : ' closed'}${extraClass ? ` ${extraClass}` : ''}`}>
+        <button className="dv-mol-head" onClick={() => setMapListOpen(o => !o)} aria-expanded={mapListOpen}>
+          <span><strong>{readyDels.length}</strong> por recoger · <strong>{inRoute.length}</strong> en camino</span>
+          <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" /></svg>
+        </button>
+        {mapListOpen && (
+          <div className="dv-mol-body">
+            {readyDels.length > 0 && (
+              <>
+                <div className="dv-mol-group">Listos para recoger</div>
+                {readyDels.map(row)}
+              </>
+            )}
+            {inRoute.length > 0 && (
+              <>
+                <div className="dv-mol-group">En camino al cliente</div>
+                {inRoute.map(row)}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   if (!storeId) return (
     <div style={{ padding: 40, textAlign: 'center', color: '#94A3B8' }}>
       <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 8, color: '#0F172A' }}>No tienes una tienda aun</div>
@@ -473,6 +529,8 @@ export default function DeliveryPage() {
               </button>
             </div>
 
+            {renderMapOrderList('dv-mol-phone')}
+
             {mapActive.length > 0 && (
               <div className="dv-live-strip">
                 {mapActive.map(del => {
@@ -507,12 +565,14 @@ export default function DeliveryPage() {
 
         {/* Map — full width */}
         <div className="dv-panel dv-map-panel" style={{ position: 'relative', flex: 1, border: 'none' }}>
-          {/* Floating order counter */}
-          <div className="dv-map-badge">
-            <span className="dv-live-dot" />
-            <span style={{ fontWeight: 700, color: '#0F172A' }}>{inRoute.length}</span>
-            <span style={{ color: '#64748B' }}>{inRoute.length === 1 ? 'pedido en proceso' : 'pedidos en proceso'}</span>
-          </div>
+          {/* Floating list: ready to pick up / on the way (counter when empty) */}
+          {renderMapOrderList() ?? (
+            <div className="dv-map-badge">
+              <span className="dv-live-dot" />
+              <span style={{ fontWeight: 700, color: '#0F172A' }}>{inRoute.length}</span>
+              <span style={{ color: '#64748B' }}>{inRoute.length === 1 ? 'pedido en proceso' : 'pedidos en proceso'}</span>
+            </div>
+          )}
 
           {/* Floating customer cards at bottom */}
           {inRoute.length > 0 && (
@@ -551,6 +611,7 @@ export default function DeliveryPage() {
               customer_lat: d.customer_lat!,
               customer_lng: d.customer_lng!,
             }))}
+            focusId={showMap ? null : mapFocus}
             mapboxToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
           />
         </div>

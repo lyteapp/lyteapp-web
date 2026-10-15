@@ -964,9 +964,9 @@ html, body {
 }
 @keyframes dbAsstFade { from { opacity: 0; } }
 .db-assistant {
-  /* top follows the iPhone keyboard (set from JS, instant — no transition);
-     transform is only the slide in/out */
-  position: fixed; top: var(--db-vv-top, 0px); right: 0; z-index: 300;
+  /* height follows the iPhone keyboard (set from JS); transform is only
+     the slide in/out */
+  position: fixed; top: 0; right: 0; z-index: 300;
   height: 100vh; height: 100dvh;
   width: min(420px, 100vw);
   background: #EFEAE2; box-shadow: -8px 0 40px rgba(15,23,42,0.18);

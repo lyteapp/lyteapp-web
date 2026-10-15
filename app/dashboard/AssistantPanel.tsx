@@ -118,33 +118,31 @@ export default function AssistantPanel() {
     }
   }, [open])
 
-  // Phones: size the chat to the area the keyboard leaves visible, once per
-  // frame and with no transition, so it tracks the keyboard instead of
-  // lagging behind it.
+  // Phones: the chat stays pinned to the top of the screen and only its
+  // height follows the keyboard. iPhone tries to scroll the page up to make
+  // room for the keyboard; that's undone right away (the chat is already
+  // short enough for the input to sit just above the keyboard).
   useEffect(() => {
     if (!open || !window.matchMedia('(max-width: 640px)').matches) return
     const vv = window.visualViewport
     const el = panelRef.current
-    let frame = 0
+    if (!vv || !el) return
     const fit = () => {
-      cancelAnimationFrame(frame)
-      frame = requestAnimationFrame(() => {
-        if (!vv || !el) return
-        const list = listRef.current
-        const atEnd = !!list && list.scrollHeight - list.scrollTop - list.clientHeight < 40
-        el.style.height = `${vv.height}px`
-        el.style.setProperty('--db-vv-top', `${vv.offsetTop}px`)
-        if (atEnd) scrollToEnd()
-      })
+      if (window.scrollY !== 0 || vv.offsetTop !== 0) window.scrollTo(0, 0)
+      const list = listRef.current
+      const atEnd = !!list && list.scrollHeight - list.scrollTop - list.clientHeight < 40
+      el.style.height = `${vv.height}px`
+      if (atEnd) scrollToEnd()
     }
     fit()
-    vv?.addEventListener('resize', fit)
-    vv?.addEventListener('scroll', fit)
+    vv.addEventListener('resize', fit)
+    vv.addEventListener('scroll', fit)
+    window.addEventListener('scroll', fit)
     return () => {
-      cancelAnimationFrame(frame)
-      vv?.removeEventListener('resize', fit)
-      vv?.removeEventListener('scroll', fit)
-      if (el) { el.style.height = ''; el.style.removeProperty('--db-vv-top') }
+      vv.removeEventListener('resize', fit)
+      vv.removeEventListener('scroll', fit)
+      window.removeEventListener('scroll', fit)
+      el.style.height = ''
     }
   }, [open])
 
@@ -267,6 +265,14 @@ export default function AssistantPanel() {
               ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
+              onTouchEnd={e => {
+                // First tap: focus without letting iPhone scroll the page
+                // (taps after that place the cursor as usual).
+                if (document.activeElement !== e.currentTarget) {
+                  e.preventDefault()
+                  e.currentTarget.focus({ preventScroll: true })
+                }
+              }}
               onKeyDown={e => {
                 // Enter sends on desktop; on phones Enter is a new line and
                 // the send button sends, as in WhatsApp.

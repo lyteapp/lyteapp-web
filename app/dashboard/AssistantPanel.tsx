@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { usePathname } from 'next/navigation'
 import { supabase } from '../lib/supabase'
 
@@ -34,12 +35,37 @@ export default function AssistantPanel() {
   const listRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight })
   }, [messages, open])
   useEffect(() => { if (open) inputRef.current?.focus() }, [open])
+
+  // Fit the panel to the part of the screen the phone keyboard leaves
+  // visible, so the header and the input both stay in view while typing.
+  const panelRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    const vv = window.visualViewport
+    const el = panelRef.current
+    if (!open || !vv || !el) return
+    const fit = () => {
+      el.style.height = `${vv.height}px`
+      el.style.top = `${vv.offsetTop}px`
+    }
+    fit()
+    vv.addEventListener('resize', fit)
+    vv.addEventListener('scroll', fit)
+    return () => {
+      vv.removeEventListener('resize', fit)
+      vv.removeEventListener('scroll', fit)
+      el.style.height = ''
+      el.style.top = ''
+    }
+  }, [open, mounted])
   useEffect(() => () => abortRef.current?.abort(), [])
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- portal target exists only on the client
+  useEffect(() => setMounted(true), [])
 
   async function send(text: string) {
     const q = text.trim()
@@ -94,8 +120,11 @@ export default function AssistantPanel() {
         <span className="db-assistant-btn-label">Asistente</span>
       </button>
 
+      {/* Portaled to <body>: inside the sticky header it was trapped in the
+          header's stacking context, under the sidebar and other overlays. */}
+      {mounted && createPortal(<>
       {open && <div className="db-assistant-backdrop" onClick={() => setOpen(false)} />}
-      <aside className={`db-assistant${open ? ' open' : ''}`} aria-hidden={!open}>
+      <aside ref={panelRef} className={`db-assistant${open ? ' open' : ''}`} aria-hidden={!open}>
         <div className="db-assistant-head">
           <div>
             <div className="db-assistant-title">Asistente LyteApp</div>
@@ -140,6 +169,7 @@ export default function AssistantPanel() {
           </button>
         </form>
       </aside>
+      </>, document.body)}
     </>
   )
 }

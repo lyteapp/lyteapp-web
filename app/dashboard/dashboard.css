@@ -960,7 +960,8 @@ html, body {
 }
 .db-assistant-backdrop { position: fixed; inset: 0; z-index: 290; background: rgba(15,23,42,0.25); }
 .db-assistant {
-  position: fixed; top: 0; right: 0; bottom: 0; z-index: 300;
+  position: fixed; top: 0; right: 0; z-index: 300;
+  height: 100vh; height: 100dvh;
   width: min(400px, 100vw);
   background: white; box-shadow: -8px 0 40px rgba(15,23,42,0.18);
   display: flex; flex-direction: column;
@@ -1022,3 +1023,7 @@ html, body {
 }
 .db-assistant-form button:disabled { opacity: 0.4; cursor: default; }
 .db-assistant-form button svg { width: 17px; height: 17px; }
+/* 16px+ so iOS doesn't zoom the page in when the box is focused */
+@media (max-width: 640px) {
+  .db-assistant-form textarea { font-size: 16px; }
+}

@@ -145,6 +145,14 @@ export default function DeliveryPage() {
   const [showMap, setShowMap] = useState(false)
   const [mapFocus, setMapFocus] = useState<string | null>(null)
   const [mapListOpen, setMapListOpen] = useState(true)
+  // Where the fullscreen map starts: right under the dashboard header,
+  // measured (its height depends on the phone's notch).
+  const [mapTop, setMapTop] = useState<number | null>(null)
+  function openMap() {
+    const bar = document.querySelector('.db-topbar')
+    setMapTop(bar ? Math.round(bar.getBoundingClientRect().bottom) : null)
+    setShowMap(true)
+  }
 
   // QR modals
   const [qrDel, setQrDel]       = useState<Delivery | null>(null)
@@ -478,7 +486,7 @@ export default function DeliveryPage() {
       <div className={`dv-view${tab === 'live' ? ' active' : ''}`}>
 
         {/* Mobile map button */}
-        <button className="dv-map-mobile-btn" onClick={() => setShowMap(true)}>
+        <button className="dv-map-mobile-btn" onClick={openMap}>
           <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15">
             <path fillRule="evenodd" d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM17.707 5.293L14 1.586v12.828l2.293 2.293A1 1 0 0018 16V6a1 1 0 00-.293-.707z" clipRule="evenodd"/>
           </svg>
@@ -491,7 +499,7 @@ export default function DeliveryPage() {
         {/* Portaled to <body>: the dashboard content's fade-in animation
             would otherwise trap this fixed overlay under the header. */}
         {showMap && createPortal(
-          <div className="dv-map-fullscreen">
+          <div className="dv-map-fullscreen" style={{ top: mapTop ?? undefined }}>
             <div className="dv-map-fullscreen-map">
               <MapView
                 inRoute={inRoute.map(del => ({

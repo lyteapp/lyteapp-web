@@ -1023,7 +1023,14 @@ html, body {
 }
 .db-assistant-form button:disabled { opacity: 0.4; cursor: default; }
 .db-assistant-form button svg { width: 17px; height: 17px; }
-/* 16px+ so iOS doesn't zoom the page in when the box is focused */
+/* Phones: full screen. 16px+ input text so iOS doesn't zoom the page in
+   when the box is focused. */
 @media (max-width: 640px) {
+  .db-assistant { width: 100%; left: 0; box-shadow: none; }
+  .db-assistant-backdrop { display: none; }
+  .db-assistant-head { padding: 14px 16px; }
+  .db-assistant-msg { max-width: 85%; font-size: 15px; }
+  .db-assistant-sug { font-size: 14.5px; padding: 12px 14px; }
+  .db-assistant-empty p { font-size: 15px; }
   .db-assistant-form textarea { font-size: 16px; }
 }

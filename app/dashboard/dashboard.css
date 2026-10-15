@@ -973,6 +973,7 @@ html, body {
   transition: transform 0.32s cubic-bezier(0.32,0.72,0,1);
   will-change: transform;
   visibility: hidden;
+  overscroll-behavior: none;
 }
 .db-assistant.open { transform: translate3d(0, var(--db-vv-top, 0px), 0); visibility: visible; }
 .db-assistant:not(.open) { transition: transform 0.32s cubic-bezier(0.32,0.72,0,1), visibility 0s 0.32s; }
@@ -982,6 +983,7 @@ html, body {
   display: flex; align-items: center; gap: 10px;
   padding: calc(10px + env(safe-area-inset-top)) 12px 10px 8px;
   background: var(--lyte-navy); color: white; flex-shrink: 0;
+  touch-action: none; /* dragging the header mustn't move the page */
 }
 .db-assistant-back, .db-assistant-close {
   width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; border: none; cursor: pointer;
@@ -1003,6 +1005,7 @@ html, body {
 .db-assistant-list {
   position: relative; flex: 1; min-height: 0; overflow-y: auto;
   overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   padding: 10px 12px 12px;
   display: flex; flex-direction: column; gap: 2px;
   background:

@@ -79,9 +79,13 @@ export default function AssistantPanel() {
   // transform (not top), so the keyboard opening doesn't make it jump.
   useEffect(() => {
     if (!open || !window.matchMedia('(max-width: 640px)').matches) return
-    const html = document.documentElement
-    const prevOverflow = html.style.overflow
-    html.style.overflow = 'hidden'
+    // iOS ignores overflow:hidden for touch scrolling, so pin the body in
+    // place instead; otherwise dragging the chat drags the page behind it
+    // (and the keyboard-fit below chases that movement).
+    const body = document.body
+    const scrollY = window.scrollY
+    const prevBody = body.getAttribute('style') ?? ''
+    Object.assign(body.style, { position: 'fixed', top: `-${scrollY}px`, left: '0', right: '0', overflow: 'hidden' })
     const vv = window.visualViewport
     const el = panelRef.current
     let frame = 0
@@ -103,7 +107,8 @@ export default function AssistantPanel() {
       cancelAnimationFrame(frame)
       vv?.removeEventListener('resize', fit)
       vv?.removeEventListener('scroll', fit)
-      html.style.overflow = prevOverflow
+      body.setAttribute('style', prevBody)
+      window.scrollTo(0, scrollY)
       if (el) { el.style.height = ''; el.style.removeProperty('--db-vv-top') }
     }
   }, [open])

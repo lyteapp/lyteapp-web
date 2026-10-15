@@ -118,9 +118,9 @@ export default function AssistantPanel() {
     }
   }, [open])
 
-  // Phones: size the chat to the area the keyboard leaves visible. Updated
-  // once per frame, and moved with a transform (not top), so the keyboard
-  // opening doesn't make it jump.
+  // Phones: size the chat to the area the keyboard leaves visible, once per
+  // frame and with no transition, so it tracks the keyboard instead of
+  // lagging behind it.
   useEffect(() => {
     if (!open || !window.matchMedia('(max-width: 640px)').matches) return
     const vv = window.visualViewport

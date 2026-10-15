@@ -958,78 +958,146 @@ html, body {
   .db-assistant-btn { width: 34px; padding: 0; justify-content: center; }
   .db-assistant-btn-label { display: none; }
 }
-.db-assistant-backdrop { position: fixed; inset: 0; z-index: 290; background: rgba(15,23,42,0.25); }
+.db-assistant-backdrop {
+  position: fixed; inset: 0; z-index: 290; background: rgba(15,23,42,0.25);
+  animation: dbAsstFade 0.2s ease;
+}
+@keyframes dbAsstFade { from { opacity: 0; } }
 .db-assistant {
   position: fixed; top: 0; right: 0; z-index: 300;
   height: 100vh; height: 100dvh;
-  width: min(400px, 100vw);
-  background: white; box-shadow: -8px 0 40px rgba(15,23,42,0.18);
+  width: min(420px, 100vw);
+  background: #EFEAE2; box-shadow: -8px 0 40px rgba(15,23,42,0.18);
   display: flex; flex-direction: column;
-  transform: translateX(105%); transition: transform 0.28s cubic-bezier(0.32,0.72,0,1);
+  transform: translate3d(105%, var(--db-vv-top, 0px), 0);
+  transition: transform 0.32s cubic-bezier(0.32,0.72,0,1);
+  will-change: transform;
+  visibility: hidden;
 }
-.db-assistant.open { transform: translateX(0); }
+.db-assistant.open { transform: translate3d(0, var(--db-vv-top, 0px), 0); visibility: visible; }
+.db-assistant:not(.open) { transition: transform 0.32s cubic-bezier(0.32,0.72,0,1), visibility 0s 0.32s; }
+
+/* header — WhatsApp layout (back, avatar, name + status), brand navy */
 .db-assistant-head {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: calc(16px + env(safe-area-inset-top)) 18px 16px; background: var(--lyte-navy); color: white;
+  display: flex; align-items: center; gap: 10px;
+  padding: calc(10px + env(safe-area-inset-top)) 12px 10px 8px;
+  background: var(--lyte-navy); color: white; flex-shrink: 0;
 }
-.db-assistant-title { font-size: 15px; font-weight: 700; }
-.db-assistant-sub { font-size: 12px; opacity: 0.7; margin-top: 2px; }
-.db-assistant-close {
-  width: 32px; height: 32px; border-radius: 50%; border: none; cursor: pointer;
-  background: rgba(255,255,255,0.12); color: white; display: flex; align-items: center; justify-content: center;
+.db-assistant-back, .db-assistant-close {
+  width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; border: none; cursor: pointer;
+  background: none; color: white; display: flex; align-items: center; justify-content: center;
 }
-.db-assistant-close svg { width: 15px; height: 15px; }
+.db-assistant-back svg { width: 22px; height: 22px; }
+.db-assistant-close svg { width: 16px; height: 16px; }
+.db-assistant-close { margin-left: auto; background: rgba(255,255,255,0.12); }
+.db-assistant-back { display: none; }
+.db-assistant-avatar {
+  width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+  background: var(--lyte-blue) url(/brand/lyte-icon-navy.png) center / 62% no-repeat;
+}
+.db-assistant-who { min-width: 0; }
+.db-assistant-title { font-size: 15.5px; font-weight: 600; line-height: 1.2; }
+.db-assistant-sub { font-size: 12.5px; opacity: 0.75; margin-top: 1px; }
+
+/* conversation — WhatsApp wallpaper with the Lyte leaf pattern */
 .db-assistant-list {
-  flex: 1; min-height: 0; overflow-y: auto; padding: 16px;
-  display: flex; flex-direction: column; gap: 10px; background: #F8F7F4;
+  position: relative; flex: 1; min-height: 0; overflow-y: auto;
+  overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  padding: 10px 12px 12px;
+  display: flex; flex-direction: column; gap: 2px;
+  background:
+    linear-gradient(rgba(239,234,226,0.92), rgba(239,234,226,0.92)),
+    url(/brand/lyte-pattern.png) center / 320px repeat;
 }
-.db-assistant-empty p { font-size: 14px; color: #0F172A; margin: 4px 2px 12px; }
-.db-assistant-sugs { display: flex; flex-direction: column; gap: 8px; }
+.db-assistant-day {
+  align-self: center; margin: 4px 0 10px;
+  font-size: 12px; font-weight: 500; color: #54656F;
+  background: white; padding: 5px 12px; border-radius: 8px;
+  box-shadow: 0 1px 0.5px rgba(11,20,26,0.13);
+}
+.db-assistant-msg {
+  max-width: 82%; padding: 6px 9px 8px; border-radius: 8px;
+  font-size: 14.2px; line-height: 1.42; color: #111B21;
+  white-space: pre-wrap; word-wrap: break-word;
+  box-shadow: 0 1px 0.5px rgba(11,20,26,0.13);
+  position: relative;
+  animation: dbMsgIn 0.22s cubic-bezier(0.32,0.72,0,1);
+}
+@keyframes dbMsgIn { from { opacity: 0; transform: translateY(6px) scale(0.98); } }
+.db-assistant-msg.tail { margin-top: 8px; }
+.db-assistant-msg.user { align-self: flex-end; background: #D9FDD3; }
+.db-assistant-msg.assistant { align-self: flex-start; background: white; }
+/* the little bubble tails on the first message of each run */
+.db-assistant-msg.tail.user { border-top-right-radius: 0; }
+.db-assistant-msg.tail.assistant { border-top-left-radius: 0; }
+.db-assistant-msg.tail::before {
+  content: ''; position: absolute; top: 0; width: 8px; height: 13px;
+}
+.db-assistant-msg.tail.user::before { right: -8px; background: #D9FDD3; clip-path: polygon(0 0, 100% 0, 0 100%); }
+.db-assistant-msg.tail.assistant::before { left: -8px; background: white; clip-path: polygon(0 0, 100% 0, 100% 100%); }
+/* time (+ ticks) floats in the bubble's last line, like WhatsApp */
+.db-assistant-meta {
+  float: right; display: inline-flex; align-items: center; gap: 3px;
+  margin: 8px 0 -6px 10px; font-size: 11px; color: #667781; line-height: 1;
+  white-space: nowrap;
+}
+.db-assistant-ticks { width: 16px; height: 11px; color: #8696A0; }
+.db-assistant-ticks.read { color: #53BDEB; }
+
+.db-assistant-sugs { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-top: 10px; }
 .db-assistant-sug {
-  text-align: left; font: inherit; font-size: 13px; cursor: pointer;
-  padding: 10px 12px; border-radius: 12px;
+  text-align: left; font: inherit; font-size: 13.5px; cursor: pointer;
+  padding: 8px 14px; border-radius: 18px;
   border: 1px solid var(--lyte-blue-border); background: white; color: var(--lyte-navy);
+  box-shadow: 0 1px 0.5px rgba(11,20,26,0.08);
+  transition: background 0.15s, transform 0.15s;
 }
 .db-assistant-sug:hover { background: var(--lyte-lavender-soft); }
-.db-assistant-msg {
-  max-width: 88%; padding: 10px 13px; border-radius: 14px;
-  font-size: 13.5px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word;
-}
-.db-assistant-msg.user { align-self: flex-end; background: var(--lyte-navy); color: white; border-bottom-right-radius: 4px; }
-.db-assistant-msg.assistant { align-self: flex-start; background: white; color: #0F172A; border: 1px solid rgba(15,23,42,0.06); border-bottom-left-radius: 4px; }
-.db-assistant-typing { display: inline-flex; gap: 4px; padding: 4px 0; }
+.db-assistant-sug:active { transform: scale(0.97); }
+
+.db-assistant-typing-bubble { padding: 10px 14px; }
+.db-assistant-typing { display: inline-flex; gap: 4px; padding: 2px 0; }
 .db-assistant-typing i {
-  width: 6px; height: 6px; border-radius: 50%; background: var(--lyte-blue);
+  width: 7px; height: 7px; border-radius: 50%; background: #8696A0;
   animation: dbTyping 1s ease-in-out infinite;
 }
 .db-assistant-typing i:nth-child(2) { animation-delay: 0.15s; }
 .db-assistant-typing i:nth-child(3) { animation-delay: 0.3s; }
-@keyframes dbTyping { 0%, 100% { opacity: 0.3; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-3px); } }
+@keyframes dbTyping { 0%, 100% { opacity: 0.35; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-3px); } }
+
+/* input bar — rounded field + round send button */
 .db-assistant-form {
-  display: flex; gap: 8px; align-items: flex-end;
-  padding: 12px; border-top: 1px solid rgba(15,23,42,0.07); background: white;
-  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0;
+  padding: 8px 10px; background: #F0F2F5;
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
 }
 .db-assistant-form textarea {
-  flex: 1; resize: none; font: inherit; font-size: 14px; line-height: 1.4;
-  padding: 10px 12px; border-radius: 12px; border: 1px solid #E2E8F0; outline: none;
+  flex: 1; min-width: 0; resize: none; font: inherit; font-size: 15px; line-height: 1.35;
+  padding: 11px 16px; border-radius: 22px; border: none; outline: none;
+  background: white; color: #111B21;
   max-height: 120px; field-sizing: content;
+  box-shadow: 0 1px 0.5px rgba(11,20,26,0.08);
 }
-.db-assistant-form textarea:focus { border-color: var(--lyte-blue); }
+.db-assistant-form textarea::placeholder { color: #8696A0; }
 .db-assistant-form button {
-  width: 40px; height: 40px; flex-shrink: 0; border-radius: 12px; border: none; cursor: pointer;
+  width: 44px; height: 44px; flex-shrink: 0; border-radius: 50%; border: none; cursor: pointer;
   background: var(--lyte-navy); color: white; display: flex; align-items: center; justify-content: center;
+  transition: transform 0.15s, opacity 0.15s;
 }
-.db-assistant-form button:disabled { opacity: 0.4; cursor: default; }
-.db-assistant-form button svg { width: 17px; height: 17px; }
-/* Phones: full screen. 16px+ input text so iOS doesn't zoom the page in
-   when the box is focused. */
+.db-assistant-form button:active:not(:disabled) { transform: scale(0.92); }
+.db-assistant-form button:disabled { opacity: 0.45; cursor: default; }
+.db-assistant-form button svg { width: 20px; height: 20px; margin-left: 2px; }
+
+/* Phones: full screen with a back arrow, like opening a WhatsApp chat.
+   16px+ input text so iOS doesn't zoom the page in when it's focused. */
 @media (max-width: 640px) {
   .db-assistant { width: 100%; left: 0; box-shadow: none; }
   .db-assistant-backdrop { display: none; }
-  .db-assistant-head { padding: calc(14px + env(safe-area-inset-top)) 16px 14px; }
+  .db-assistant-back { display: flex; }
+  .db-assistant-close { display: none; }
   .db-assistant-msg { max-width: 85%; font-size: 15px; }
-  .db-assistant-sug { font-size: 14.5px; padding: 12px 14px; }
-  .db-assistant-empty p { font-size: 15px; }
   .db-assistant-form textarea { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .db-assistant, .db-assistant-msg { transition: none; animation: none; }
 }

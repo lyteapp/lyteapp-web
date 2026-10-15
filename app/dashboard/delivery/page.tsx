@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import dynamic from 'next/dynamic'
+import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
 import { useDashboardStore } from '../../lib/DashboardStoreProvider'
 import './delivery.css'
@@ -487,7 +488,9 @@ export default function DeliveryPage() {
         {/* Fullscreen map overlay (mobile): the map fills the screen, every
             active order has a labeled pin, and the cards along the bottom
             list them — tapping one flies the map to it. */}
-        {showMap && (
+        {/* Portaled to <body>: the dashboard content's fade-in animation
+            would otherwise trap this fixed overlay under the header. */}
+        {showMap && createPortal(
           <div className="dv-map-fullscreen">
             <div className="dv-map-fullscreen-map">
               <MapView
@@ -560,7 +563,8 @@ export default function DeliveryPage() {
                 })}
               </div>
             )}
-          </div>
+          </div>,
+          document.body,
         )}
 
         {/* Map — full width */}

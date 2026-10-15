@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
@@ -148,11 +148,15 @@ export default function DeliveryPage() {
   // Height of the dashboard header over the fullscreen map (depends on the
   // phone's notch): the map's own header and overlays start below it.
   const [mapTop, setMapTop] = useState<number | null>(null)
-  function openMap() {
+  // Measured whenever the map opens (button, or automatically on the live
+  // tab on phones), before it paints.
+  useLayoutEffect(() => {
+    if (!showMap) return
     const bar = document.querySelector('.db-topbar')
-    setMapTop(bar ? Math.round(bar.getBoundingClientRect().bottom) : null)
-    setShowMap(true)
-  }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- layout measurement
+    setMapTop(bar ? Math.round(bar.getBoundingClientRect().bottom) : 0)
+  }, [showMap])
+  const openMap = () => setShowMap(true)
 
   // QR modals
   const [qrDel, setQrDel]       = useState<Delivery | null>(null)
@@ -499,7 +503,7 @@ export default function DeliveryPage() {
         {/* Portaled to <body>: the dashboard content's fade-in animation
             would otherwise trap this fixed overlay under the header. */}
         {showMap && createPortal(
-          <div className="dv-map-fullscreen" style={{ '--dv-bar': `${mapTop ?? 0}px` } as React.CSSProperties}>
+          <div className="dv-map-fullscreen" style={{ '--dv-bar': `${mapTop ?? 0}px`, visibility: mapTop === null ? 'hidden' : undefined } as React.CSSProperties}>
             <div className="dv-map-fullscreen-map">
               <MapView
                 inRoute={inRoute.map(del => ({

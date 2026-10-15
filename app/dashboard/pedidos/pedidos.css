@@ -229,6 +229,8 @@
   font-size: 11px; color: #94A3B8;
 }
 
+.pd-header-actions { display: flex; align-items: center; gap: 8px; }
+
 /* ── DISPLAY BUTTON ── */
 .pd-display-btn {
   display: inline-flex; align-items: center; gap: 6px;
@@ -542,8 +544,15 @@
     padding: 8px 16px;
     font-size: 13px;
   }
+  /* one row of equal-height buttons: the two square icon buttons, then
+     Display filling the rest */
+  .pd-header-actions { align-items: stretch; }
+  .pd-header-actions .pd-timer-settings-btn {
+    width: 48px; height: auto; border-radius: 12px;
+  }
+  .pd-header-actions .pd-timer-settings-btn svg { width: 18px; height: 18px; }
   .pd-display-btn {
-    width: 100%;
+    flex: 1;
     justify-content: center;
     padding: 14px;
     border-radius: 12px;

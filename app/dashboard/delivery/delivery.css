@@ -935,7 +935,13 @@
   position: absolute; top: 0; left: 0; right: 0; z-index: 10;
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   padding: calc(env(safe-area-inset-top) + 10px) 14px 18px;
-  background: linear-gradient(to bottom, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 100%);
+  /* fades down from the dashboard header's color (follows the theme) */
+  background: linear-gradient(to bottom,
+    var(--lyte-navy) 0%,
+    color-mix(in srgb, var(--lyte-navy) 85%, transparent) calc(env(safe-area-inset-top) + 20px),
+    color-mix(in srgb, var(--lyte-navy) 40%, transparent) 70%,
+    transparent 100%);
+  padding-bottom: 34px;
   pointer-events: none;
 }
 .dv-map-fullscreen-title {

@@ -411,7 +411,7 @@
 .dv-mol-row.late .dv-mol-sub { color: #B45309; font-weight: 600; }
 /* phone fullscreen: under the header, clear of the recenter button */
 .dv-mol-phone {
-  top: 72px; right: 70px; left: 14px;
+  top: calc(var(--dv-bar, 0px) + 72px); right: 70px; left: 14px;
   width: auto; max-height: 34vh;
 }
 
@@ -969,11 +969,11 @@
   display: none;
 }
 .dv-map-fullscreen {
-  /* starts right under the dashboard header (56px + notch), so the header
-     stays visible and the top fade reads as the header continuing; z-index
-     under the header (40) and the phone menu, over the page content */
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 39;
-  top: calc(56px + env(safe-area-inset-top));
+  /* full screen, but one layer under the dashboard header (z 40) and the
+     phone menu: the header stays visible on top of the map, with no seam
+     where the page could show through. --dv-bar (set from JS) is the
+     header's height; the overlays below start there. */
+  position: fixed; inset: 0; z-index: 39;
   background: #E8EEF4;
   overflow: hidden;
   overscroll-behavior: none;
@@ -983,7 +983,7 @@
 .dv-map-fullscreen-map > * { flex: 1; }
 .dv-map-fullscreen .mapboxgl-map { width: 100%; height: 100%; }
 .dv-map-fullscreen-header {
-  position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+  position: absolute; top: var(--dv-bar, 0px); left: 0; right: 0; z-index: 10;
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   padding: 10px 14px 18px;
   /* fades down from the dashboard header's color (follows the theme) */
@@ -1016,7 +1016,7 @@
 .dv-map-fullscreen-close:active { transform: scale(0.94); }
 /* recenter: under the close X, clear of the order cards */
 .dv-map-fullscreen .dv-map-recenter {
-  top: 72px !important; bottom: auto !important;
+  top: calc(var(--dv-bar, 0px) + 72px) !important; bottom: auto !important;
   right: 18px !important; width: 40px !important; height: 40px !important;
   border-radius: 50% !important; box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
 }

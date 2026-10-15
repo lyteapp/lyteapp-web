@@ -145,8 +145,8 @@ export default function DeliveryPage() {
   const [showMap, setShowMap] = useState(false)
   const [mapFocus, setMapFocus] = useState<string | null>(null)
   const [mapListOpen, setMapListOpen] = useState(true)
-  // Where the fullscreen map starts: right under the dashboard header,
-  // measured (its height depends on the phone's notch).
+  // Height of the dashboard header over the fullscreen map (depends on the
+  // phone's notch): the map's own header and overlays start below it.
   const [mapTop, setMapTop] = useState<number | null>(null)
   function openMap() {
     const bar = document.querySelector('.db-topbar')
@@ -499,7 +499,7 @@ export default function DeliveryPage() {
         {/* Portaled to <body>: the dashboard content's fade-in animation
             would otherwise trap this fixed overlay under the header. */}
         {showMap && createPortal(
-          <div className="dv-map-fullscreen" style={{ top: mapTop ?? undefined }}>
+          <div className="dv-map-fullscreen" style={{ '--dv-bar': `${mapTop ?? 0}px` } as React.CSSProperties}>
             <div className="dv-map-fullscreen-map">
               <MapView
                 inRoute={inRoute.map(del => ({
@@ -513,7 +513,7 @@ export default function DeliveryPage() {
                 drivers={drivers.map(d => ({ id: d.id, name: d.name }))}
                 labeled
                 focusId={mapFocus}
-                framePadding={{ top: 76, bottom: mapActive.length > 0 ? 190 : 0 }}
+                framePadding={{ top: (mapTop ?? 0) + 76, bottom: mapActive.length > 0 ? 190 : 0 }}
                 customerPins={todayDels.filter(d => d.customer_lat != null && d.customer_lng != null).map(d => ({
                   id: d.id,
                   customer_name: d.customer_name,

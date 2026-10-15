@@ -964,12 +964,13 @@ html, body {
 }
 @keyframes dbAsstFade { from { opacity: 0; } }
 .db-assistant {
-  /* height follows the iPhone keyboard (set from JS); transform is only
-     the slide in/out */
+  /* always full height; --db-kb (set from JS) is the iPhone keyboard's
+     height, which lifts the input bar. transform is only the slide in/out */
   position: fixed; top: 0; right: 0; z-index: 300;
+  padding-bottom: var(--db-kb, 0px);
   height: 100vh; height: 100dvh;
   width: min(420px, 100vw);
-  background: #EFEAE2; box-shadow: -8px 0 40px rgba(15,23,42,0.18);
+  background: #F0F2F5; box-shadow: -8px 0 40px rgba(15,23,42,0.18);
   display: flex; flex-direction: column;
   transform: translate3d(105%, 0, 0);
   transition: transform 0.32s cubic-bezier(0.32,0.72,0,1);
@@ -1076,6 +1077,9 @@ html, body {
   padding: 8px 10px; background: #F0F2F5;
   padding-bottom: max(8px, env(safe-area-inset-bottom));
 }
+/* keyboard open: the home-bar inset is under the keyboard, not the bar */
+.db-assistant[data-kb] .db-assistant-form { padding-bottom: 8px; }
+
 .db-assistant-form textarea {
   flex: 1; min-width: 0; resize: none; font: inherit; font-size: 15px; line-height: 1.35;
   padding: 11px 16px; border-radius: 22px; border: none; outline: none;

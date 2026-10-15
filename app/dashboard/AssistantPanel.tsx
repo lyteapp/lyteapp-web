@@ -118,10 +118,11 @@ export default function AssistantPanel() {
     }
   }, [open])
 
-  // Phones: the chat stays pinned to the top of the screen and only its
-  // height follows the keyboard. iPhone tries to scroll the page up to make
-  // room for the keyboard; that's undone right away (the chat is already
-  // short enough for the input to sit just above the keyboard).
+  // Phones: the chat always covers the whole screen (the iPhone keyboard is
+  // see-through, so a shorter panel showed the page behind it). The keyboard
+  // only lifts the input bar, by padding the panel's bottom with the space
+  // it takes; that padding has the input bar's color. iPhone's own page
+  // scroll to make room for the keyboard is undone right away.
   useEffect(() => {
     if (!open || !window.matchMedia('(max-width: 640px)').matches) return
     const vv = window.visualViewport
@@ -131,7 +132,9 @@ export default function AssistantPanel() {
       if (window.scrollY !== 0 || vv.offsetTop !== 0) window.scrollTo(0, 0)
       const list = listRef.current
       const atEnd = !!list && list.scrollHeight - list.scrollTop - list.clientHeight < 40
-      el.style.height = `${vv.height}px`
+      const keyboard = Math.max(0, Math.round(el.getBoundingClientRect().height - vv.height))
+      el.style.setProperty('--db-kb', `${keyboard}px`)
+      el.toggleAttribute('data-kb', keyboard > 0)
       if (atEnd) scrollToEnd()
     }
     fit()
@@ -142,7 +145,8 @@ export default function AssistantPanel() {
       vv.removeEventListener('resize', fit)
       vv.removeEventListener('scroll', fit)
       window.removeEventListener('scroll', fit)
-      el.style.height = ''
+      el.style.removeProperty('--db-kb')
+      el.removeAttribute('data-kb')
     }
   }, [open])
 

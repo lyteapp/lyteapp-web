@@ -74,18 +74,47 @@ export default function AssistantPanel() {
     setOpen(false)
   }
 
-  // Phones: keep the page behind still, and size the chat to the area the
-  // keyboard leaves visible. Updated once per frame, and moved with a
-  // transform (not top), so the keyboard opening doesn't make it jump.
+  // While the chat is open nothing scrolls but the conversation itself (and
+  // only when it's longer than the screen): the page behind stays put.
   useEffect(() => {
-    if (!open || !window.matchMedia('(max-width: 640px)').matches) return
-    // iOS ignores overflow:hidden for touch scrolling, so pin the body in
-    // place instead; otherwise dragging the chat drags the page behind it
-    // (and the keyboard-fit below chases that movement).
+    if (!open) return
+    const html = document.documentElement
     const body = document.body
     const scrollY = window.scrollY
+    const prevHtml = html.style.overflow
     const prevBody = body.getAttribute('style') ?? ''
-    Object.assign(body.style, { position: 'fixed', top: `-${scrollY}px`, left: '0', right: '0', overflow: 'hidden' })
+    html.style.overflow = 'hidden'
+    // iOS ignores overflow:hidden for touch scrolling, so pin the body too
+    // (touch screens only: on desktop it'd just shift the layout).
+    if (window.matchMedia('(pointer: coarse)').matches) {
+      Object.assign(body.style, { position: 'fixed', top: `-${scrollY}px`, left: '0', right: '0', overflow: 'hidden' })
+    }
+    // …and block any touch drag that isn't scrolling the messages or a
+    // long message being typed.
+    const scrollable = (el: HTMLElement | null) => !!el && el.scrollHeight > el.clientHeight + 1
+    const onTouchMove = (e: TouchEvent) => {
+      const t = e.target as HTMLElement
+      const list = t.closest<HTMLElement>('.db-assistant-list')
+      const field = t.closest<HTMLElement>('.db-assistant-form textarea')
+      if ((list && scrollable(list)) || (field && scrollable(field))) return
+      e.preventDefault()
+    }
+    document.addEventListener('touchmove', onTouchMove, { passive: false })
+    return () => {
+      document.removeEventListener('touchmove', onTouchMove)
+      html.style.overflow = prevHtml
+      if (body.getAttribute('style') !== prevBody) {
+        body.setAttribute('style', prevBody)
+        window.scrollTo(0, scrollY)
+      }
+    }
+  }, [open])
+
+  // Phones: size the chat to the area the keyboard leaves visible. Updated
+  // once per frame, and moved with a transform (not top), so the keyboard
+  // opening doesn't make it jump.
+  useEffect(() => {
+    if (!open || !window.matchMedia('(max-width: 640px)').matches) return
     const vv = window.visualViewport
     const el = panelRef.current
     let frame = 0
@@ -107,8 +136,6 @@ export default function AssistantPanel() {
       cancelAnimationFrame(frame)
       vv?.removeEventListener('resize', fit)
       vv?.removeEventListener('scroll', fit)
-      body.setAttribute('style', prevBody)
-      window.scrollTo(0, scrollY)
       if (el) { el.style.height = ''; el.style.removeProperty('--db-vv-top') }
     }
   }, [open])

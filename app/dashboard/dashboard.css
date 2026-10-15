@@ -1004,7 +1004,7 @@ html, body {
 /* conversation — WhatsApp wallpaper with the Lyte leaf pattern */
 .db-assistant-list {
   position: relative; flex: 1; min-height: 0; overflow-y: auto;
-  overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  overscroll-behavior: none; -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
   padding: 10px 12px 12px;
   display: flex; flex-direction: column; gap: 2px;

@@ -41,6 +41,7 @@ export default function AssistantPanel() {
   const listRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const portalRef = useRef<HTMLDivElement>(null)
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- portal target exists only on the client
   useEffect(() => setMounted(true), [])
@@ -100,7 +101,14 @@ export default function AssistantPanel() {
       e.preventDefault()
     }
     document.addEventListener('touchmove', onTouchMove, { passive: false })
+    // Everything outside the chat goes inert: iPhone's keyboard bar arrows
+    // then have no other field to jump to (and screen readers stay inside).
+    const inerted = Array.from(body.children).filter(
+      (el): el is HTMLElement => el instanceof HTMLElement && el !== portalRef.current && !el.inert,
+    )
+    inerted.forEach(el => { el.inert = true })
     return () => {
+      inerted.forEach(el => { el.inert = false })
       document.removeEventListener('touchmove', onTouchMove)
       html.style.overflow = prevHtml
       if (body.getAttribute('style') !== prevBody) {
@@ -199,7 +207,7 @@ export default function AssistantPanel() {
 
       {/* Portaled to <body>: inside the sticky header it was trapped in the
           header's stacking context, under the sidebar and other overlays. */}
-      {mounted && createPortal(<>
+      {mounted && createPortal(<div ref={portalRef}>
         {open && <div className="db-assistant-backdrop" onClick={closePanel} />}
         <aside ref={panelRef} className={`db-assistant${open ? ' open' : ''}`} aria-hidden={!open}>
           <div className="db-assistant-head">
@@ -275,7 +283,7 @@ export default function AssistantPanel() {
             </button>
           </form>
         </aside>
-      </>, document.body)}
+      </div>, document.body)}
     </>
   )
 }

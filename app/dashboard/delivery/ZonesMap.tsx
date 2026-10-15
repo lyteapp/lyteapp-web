@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useRef, useState, useCallback } from 'react'
-import MapGL, { Marker, NavigationControl, Source, Layer } from 'react-map-gl'
+import MapGL, { Marker, Source, Layer } from 'react-map-gl'
 import type { MapRef, MapMouseEvent } from 'react-map-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import LyteLeafLoader from '../../components/LyteLeafLoader'
@@ -108,7 +108,6 @@ export default function ZonesMap({ zones, placingZone, onMapClick, previewCenter
         attributionControl={false}
         onClick={handleClick}
       >
-        <NavigationControl position="bottom-right" showCompass={false} />
 
         {/* Recenter */}
         <button

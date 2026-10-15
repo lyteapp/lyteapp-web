@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import MapGL, { Marker, NavigationControl } from 'react-map-gl'
+import MapGL, { Marker } from 'react-map-gl'
 import type { MapRef } from 'react-map-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import LyteLeafLoader from '../../components/LyteLeafLoader'
@@ -133,7 +133,6 @@ export default function MapView({ inRoute, driverLocations, drivers, customerPin
       onClick={() => setPopup(null)}
       onLoad={frameOrders}
     >
-      {!labeled && <NavigationControl position="bottom-right" showCompass={false} />}
 
       {/* Recenter button */}
       <button

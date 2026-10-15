@@ -66,6 +66,7 @@ export default function ProductosPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading]   = useState(true)
   const [mode, setMode]         = useState<'list' | 'form'>('list')
+  const [search, setSearch]     = useState('')
   // Set when the form was opened from Categorias (?edit=<id>&from=<catId>):
   // leaving the form goes back there, with that category reopened.
   const [returnToCat, setReturnToCat] = useState<string | null>(null)
@@ -1100,6 +1101,16 @@ export default function ProductosPage() {
       ? t('prod.count.one')
       : t('prod.count.many', { n: String(products.length) })
 
+  // Case- and accent-insensitive match on name, description and category.
+  const fold = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  const q = fold(search.trim())
+  const shown = q
+    ? products.filter(p => fold([
+        p.name, p.description ?? '',
+        ...(p.category_ids ?? []).map(id => categories.find(c => c.id === id)?.name ?? ''),
+      ].join(' ')).includes(q))
+    : products
+
   return (
     <div>
       <div className="pr-list-header">
@@ -1109,6 +1120,28 @@ export default function ProductosPage() {
         </div>
         <button className="pr-add-btn" onClick={openAdd}>{t('prod.addBtn')}</button>
       </div>
+
+      {products.length > 0 && (
+        <div className="pr-search">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="9" cy="9" r="6" /><path d="M13.5 13.5L17 17" /></svg>
+          <input
+            type="search"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder={t('prod.search.placeholder')}
+            aria-label={t('prod.search.placeholder')}
+          />
+          {search && (
+            <button onClick={() => setSearch('')} aria-label="Limpiar">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M14 6L6 14M6 6l8 8" /></svg>
+            </button>
+          )}
+        </div>
+      )}
+
+      {products.length > 0 && shown.length === 0 && (
+        <div className="pr-search-none">{t('prod.search.none', { q: search.trim() })}</div>
+      )}
 
       {products.length === 0 ? (
         <div className="db-panel">
@@ -1125,7 +1158,7 @@ export default function ProductosPage() {
         </div>
       ) : (
         <div className="pr-list">
-          {products.map(p => {
+          {shown.map(p => {
             const hasOpts = !!(p.options?.variables?.length || p.options?.colors?.length || p.options?.additionals?.length || p.options?.allowNotes || p.options?.nutrition?.enabled)
             const hasPending = p.id in pendingToggles
             const displayActive = hasPending ? pendingToggles[p.id] : p.is_active

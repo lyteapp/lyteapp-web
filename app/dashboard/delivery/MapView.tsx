@@ -5,6 +5,7 @@ import MapGL, { Marker, NavigationControl } from 'react-map-gl'
 import type { MapRef } from 'react-map-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import LyteLeafLoader from '../../components/LyteLeafLoader'
+import { PIN_STATUS_COLOR, PIN_STATUS_LABEL, isActiveStatus } from './deliveryStatus'
 
 type InRouteDelivery = {
   id: string
@@ -36,21 +37,19 @@ type CustomerPin = {
   customer_lng: number
 }
 
-const PIN_STATUS_LABEL: Record<string, string> = {
-  pending: 'Pendiente', preparing: 'Preparando', ready: 'Listo',
-  picked_up: 'En ruta', delivered: 'Entregado', cancelled: 'Cancelado',
-}
-const PIN_STATUS_COLOR: Record<string, string> = {
-  pending: '#94A3B8', preparing: '#F59E0B', ready: '#3B82F6',
-  picked_up: '#1C1B3A', delivered: '#10B981', cancelled: '#EF4444',
-}
-
 type Props = {
   inRoute: InRouteDelivery[]
   driverLocations: DriverLocation[]
   drivers: Driver[]
   customerPins: CustomerPin[]
   mapboxToken: string
+  /** Phone fullscreen map: bigger pins with the customer's name on each
+      active order, and the view framed around them. */
+  labeled?: boolean
+  /** Order to fly to and open (from the order cards over the map). */
+  focusId?: string | null
+  /** Extra space kept clear at the top/bottom when framing (overlays). */
+  framePadding?: { top: number; bottom: number }
 }
 
 function initials(name: string) {
@@ -63,11 +62,34 @@ const STATUS_COLORS = {
   late:      { border: '#B45309', bg: '#FFFBEB', text: '#B45309', dot: '#B45309' },
 }
 
-export default function MapView({ inRoute, driverLocations, drivers, customerPins, mapboxToken }: Props) {
+export default function MapView({ inRoute, driverLocations, drivers, customerPins, mapboxToken, labeled = false, focusId = null, framePadding }: Props) {
   const mapRef = useRef<MapRef>(null)
   const [pos, setPos]     = useState<[number, number] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [popup, setPopup] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!focusId) return
+    const pin = customerPins.find(p => p.id === focusId)
+    if (pin) {
+      mapRef.current?.flyTo({ center: [pin.customer_lng, pin.customer_lat], zoom: 15.5, duration: 700, padding: { top: framePadding?.top ?? 0, bottom: framePadding?.bottom ?? 0, left: 0, right: 0 } })
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- opening the popup is the point of focusing
+    setPopup(focusId)
+  }, [focusId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Labeled map: once loaded, frame the store and every active order.
+  function frameOrders() {
+    if (!labeled || !pos) return
+    const pts = customerPins.filter(p => isActiveStatus(p.status)).map(p => [p.customer_lng, p.customer_lat] as [number, number])
+    if (pts.length === 0) return
+    pts.push([pos[1], pos[0]])
+    const lngs = pts.map(p => p[0]), lats = pts.map(p => p[1])
+    mapRef.current?.fitBounds(
+      [[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]],
+      { padding: { top: (framePadding?.top ?? 0) + 40, bottom: (framePadding?.bottom ?? 0) + 30, left: 50, right: 90 }, maxZoom: 15.5, duration: 0 },
+    )
+  }
 
   useEffect(() => {
     if (!navigator.geolocation) { setError('Geolocalización no disponible'); return }
@@ -109,11 +131,14 @@ export default function MapView({ inRoute, driverLocations, drivers, customerPin
       mapboxAccessToken={mapboxToken}
       attributionControl={false}
       onClick={() => setPopup(null)}
+      onLoad={frameOrders}
     >
-      <NavigationControl position="bottom-right" showCompass={false} />
+      {!labeled && <NavigationControl position="bottom-right" showCompass={false} />}
 
       {/* Recenter button */}
       <button
+        className="dv-map-recenter"
+        aria-label="Centrar en la tienda"
         onClick={e => { e.stopPropagation(); mapRef.current?.flyTo({ center: [pos[1], pos[0]], zoom: 14, duration: 600 }) }}
         style={{
           position: 'absolute', bottom: 80, right: 14, zIndex: 10,
@@ -205,25 +230,30 @@ export default function MapView({ inRoute, driverLocations, drivers, customerPin
       {customerPins.map(pin => {
         const statusColor = PIN_STATUS_COLOR[pin.status] ?? '#94A3B8'
         const statusLabel = PIN_STATUS_LABEL[pin.status] ?? pin.status
+        const active = isActiveStatus(pin.status)
+        const big = labeled && active
         return (
-          <Marker key={pin.id} longitude={pin.customer_lng} latitude={pin.customer_lat} anchor="bottom">
-            <div style={{ position: 'relative', cursor: 'pointer' }} onClick={e => { e.stopPropagation(); setPopup(p => p === pin.id ? null : pin.id) }}>
-              <svg viewBox="0 0 24 32" width="18" height="24" style={{ filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.28))', display: 'block' }}>
+          <Marker key={pin.id} longitude={pin.customer_lng} latitude={pin.customer_lat} anchor="bottom" style={{ zIndex: popup === pin.id ? 30 : big ? 2 : 1 }}>
+            <div style={{ position: 'relative', cursor: 'pointer', opacity: labeled && !active ? 0.5 : 1 }} onClick={e => { e.stopPropagation(); setPopup(p => p === pin.id ? null : pin.id) }}>
+              <svg viewBox="0 0 24 32" width={big ? 28 : 18} height={big ? 37 : 24} style={{ filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.28))', display: 'block' }}>
                 <path d="M12 0C5.373 0 0 5.373 0 12c0 9 12 20 12 20S24 21 24 12C24 5.373 18.627 0 12 0z" fill={statusColor}/>
                 <circle cx="12" cy="11" r="5" fill="white"/>
               </svg>
+              {big && popup !== pin.id && (
+                <div className="dv-pin-label" style={{ borderLeftColor: statusColor }}>{pin.customer_name}</div>
+              )}
               {popup === pin.id && (
                 <div style={{
-                  position: 'absolute', bottom: 30, left: '50%', transform: 'translateX(-50%)',
+                  position: 'absolute', bottom: big ? 42 : 30, left: '50%', transform: 'translateX(-50%)',
                   background: 'white', borderRadius: 10, padding: '10px 14px',
                   boxShadow: '0 4px 20px rgba(0,0,0,0.16)', minWidth: 170,
-                  fontSize: 12, zIndex: 20, whiteSpace: 'nowrap',
+                  fontSize: big ? 14 : 12, zIndex: 20, whiteSpace: 'nowrap',
                 }}>
                   <div style={{ fontWeight: 700, marginBottom: 4, color: '#0F172A' }}>{pin.customer_name}</div>
                   {pin.delivery_address && (
-                    <div style={{ color: '#6B7280', maxWidth: 200, whiteSpace: 'normal', lineHeight: 1.4, marginBottom: 4 }}>{pin.delivery_address}</div>
+                    <div style={{ color: '#6B7280', maxWidth: 220, whiteSpace: 'normal', lineHeight: 1.4, marginBottom: 6 }}>{pin.delivery_address}</div>
                   )}
-                  <div style={{ display: 'inline-block', background: statusColor, color: 'white', borderRadius: 6, padding: '2px 7px', fontSize: 10, fontWeight: 600 }}>
+                  <div style={{ display: 'inline-block', background: statusColor, color: 'white', borderRadius: 6, padding: '2px 8px', fontSize: big ? 12 : 10, fontWeight: 600 }}>
                     {statusLabel}
                   </div>
                 </div>

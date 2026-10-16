@@ -397,6 +397,7 @@ export default function TrackingClient({
             storeLat={storeLat}
             storeLng={storeLng}
             storeLogo={storeLogo}
+            driverAvatar={driver?.avatar_url ?? null}
             customerLat={delivery.customer_lat}
             customerLng={delivery.customer_lng}
             height="100%"
@@ -613,6 +614,7 @@ export default function TrackingClient({
             storeLat={storeLat}
             storeLng={storeLng}
             storeLogo={storeLogo}
+            driverAvatar={driver?.avatar_url ?? null}
             customerLat={delivery.customer_lat}
             customerLng={delivery.customer_lng}
             mapboxToken={mapboxToken}

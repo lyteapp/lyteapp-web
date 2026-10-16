@@ -13,6 +13,8 @@ interface Props {
   storeLat?:   number | null
   storeLng?:   number | null
   storeLogo?:  string | null
+  /** Driver's profile photo for their marker (truck icon without one) */
+  driverAvatar?: string | null
   height?:     number | string
   mapboxToken: string
   mapStyle?:   string
@@ -27,6 +29,7 @@ export default function TrackingMap({
   driverLat, driverLng,
   customerLat, customerLng,
   storeLat, storeLng, storeLogo,
+  driverAvatar = null,
   height = 260,
   mapboxToken,
   mapStyle = 'mapbox://styles/mapbox/standard',
@@ -154,19 +157,24 @@ export default function TrackingMap({
           </Marker>
         )}
 
-        {/* Driver pin */}
+        {/* Driver pin — their profile photo */}
         {hasDriver && (
-          <Marker longitude={driverLng!} latitude={driverLat!} anchor="center">
+          <Marker longitude={driverLng!} latitude={driverLat!} anchor="center" style={{ zIndex: 3 }}>
             <div style={{
-              width: 42, height: 42, borderRadius: '50%',
-              background: accent, border: '3px solid white',
+              width: driverAvatar ? 50 : 42, height: driverAvatar ? 50 : 42, borderRadius: '50%',
+              background: accent, border: `3px solid ${driverAvatar ? accent : 'white'}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: `0 4px 16px ${accent}55`,
+              boxShadow: `0 4px 16px ${accent}66`, overflow: 'hidden',
             }}>
-              <svg viewBox="0 0 20 20" fill="white" width={18} height={18}>
-                <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
-                <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1v-1h1a1 1 0 00.9-.561l2-4A1 1 0 0014 9h-3V5a1 1 0 00-1-1H3z"/>
-              </svg>
+              {driverAvatar ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={driverAvatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', border: '2px solid white', display: 'block' }} />
+              ) : (
+                <svg viewBox="0 0 20 20" fill="white" width={18} height={18}>
+                  <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
+                  <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1v-1h1a1 1 0 00.9-.561l2-4A1 1 0 0014 9h-3V5a1 1 0 00-1-1H3z"/>
+                </svg>
+              )}
             </div>
           </Marker>
         )}

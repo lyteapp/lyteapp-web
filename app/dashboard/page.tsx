@@ -177,9 +177,11 @@ export default function Dashboard() {
               </linearGradient>
             </defs>
           </svg>
-          <div className="dh-kpi-foot">
-            <span className="dh-delta-flat">{t('dash.kpi.noSales')}</span>
-          </div>
+          {totalSales <= 0 && (
+            <div className="dh-kpi-foot">
+              <span className="dh-delta-flat">{t('dash.kpi.noSales')}</span>
+            </div>
+          )}
         </div>
 
         <div className="dh-kpi">

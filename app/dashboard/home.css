@@ -326,7 +326,24 @@
 @media (max-width: 720px) {
   .dh-content { padding: 20px 16px 48px; display: flex; flex-direction: column; }
   .dh-headline { font-size: 32px; }
-  .dh-kpi-grid { grid-template-columns: 1fr; }
+  /* Summary fits on one phone screen: sales across the top, the other
+     three side by side underneath, all compact. */
+  .dh-kpi-grid { grid-template-columns: repeat(3, 1fr); margin-bottom: 28px; border-radius: 16px; }
+  .dh-kpi { padding: 12px 12px 14px; gap: 6px; border-bottom: 0; border-right: 1px solid #E2E0D9; min-width: 0; }
+  .dh-kpi:last-child { border-right: 0; }
+  .dh-kpi-hero {
+    grid-column: 1 / -1; border-right: 0; border-bottom: 1px solid #E2E0D9;
+    padding: 14px 16px; display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 6px 12px;
+  }
+  .dh-kpi-hero .dh-kpi-head { grid-column: 1 / -1; }
+  .dh-kpi-hero .dh-kpi-value { font-size: 30px; }
+  .dh-kpi-hero .dh-spark { grid-column: 1 / -1; grid-row: 3; height: 20px; }
+  .dh-kpi-hero .dh-kpi-foot { grid-column: 2; grid-row: 2; align-self: center; }
+  .dh-kpi:not(.dh-kpi-hero) .dh-kpi-icon { display: none; }
+  .dh-kpi-label { font-size: 10px; letter-spacing: 0.05em; line-height: 1.25; }
+  .dh-kpi:not(.dh-kpi-hero) .dh-kpi-head { min-height: 25px; align-items: flex-start; }
+  .dh-kpi-value { font-size: 22px; }
+  .dh-kpi:not(.dh-kpi-hero) .dh-kpi-foot .dh-delta-flat { font-size: 10px; padding: 1px 6px; }
   .dh-pipeline { grid-template-columns: repeat(2, 1fr); }
 
   /* Ocultar setup card en móvil */

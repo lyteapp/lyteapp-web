@@ -26,6 +26,12 @@ type Props = {
   onUserPos?: (lat: number, lng: number) => void
   mapboxToken: string
   resizeTrigger?: number
+  /** Frame this circle (phone: tapping a zone, or opening the zone form). */
+  focus?: { lat: number; lng: number; radius: number; key: string | number } | null
+  /** Space kept clear at the bottom when framing (panels over the map). */
+  focusPaddingBottom?: number
+  /** Phone layout draws its own tap-to-place hint. */
+  hidePlacingHint?: boolean
 }
 
 function circlePolygon(lat: number, lng: number, radiusM: number, steps = 64): GeoJSON.Feature<GeoJSON.Polygon> {
@@ -40,7 +46,7 @@ function circlePolygon(lat: number, lng: number, radiusM: number, steps = 64): G
   return { type: 'Feature', geometry: { type: 'Polygon', coordinates: [coords] }, properties: {} }
 }
 
-export default function ZonesMap({ zones, placingZone, onMapClick, previewCenter, previewRadius, previewColor, onUserPos, mapboxToken, resizeTrigger }: Props) {
+export default function ZonesMap({ zones, placingZone, onMapClick, previewCenter, previewRadius, previewColor, onUserPos, mapboxToken, resizeTrigger, focus, focusPaddingBottom = 0, hidePlacingHint = false }: Props) {
   const mapRef = useRef<MapRef>(null)
   const reportedPos = useRef(false)
   const [pos, setPos]     = useState<[number, number] | null>(null)
@@ -65,6 +71,17 @@ export default function ZonesMap({ zones, placingZone, onMapClick, previewCenter
     )
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    if (!focus) return
+    const R = 6371000
+    const dLat = (focus.radius / R) * (180 / Math.PI)
+    const dLng = dLat / Math.cos((focus.lat * Math.PI) / 180)
+    mapRef.current?.fitBounds(
+      [[focus.lng - dLng, focus.lat - dLat], [focus.lng + dLng, focus.lat + dLat]],
+      { padding: { top: 90, bottom: focusPaddingBottom + 30, left: 30, right: 30 }, duration: 600, maxZoom: 16 },
+    )
+  }, [focus?.key]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const canvas = mapRef.current?.getCanvas()
@@ -93,7 +110,7 @@ export default function ZonesMap({ zones, placingZone, onMapClick, previewCenter
 
   return (
     <div style={fill}>
-      {placingZone && (
+      {placingZone && !hidePlacingHint && (
         <div style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 10, background: 'var(--lyte-navy)', color: 'white', padding: '6px 14px', borderRadius: 100, fontSize: 12, fontWeight: 500, pointerEvents: 'none', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(28,27,58,0.4)' }}>
           Toca el mapa para colocar el centro de la zona
         </div>
@@ -111,6 +128,8 @@ export default function ZonesMap({ zones, placingZone, onMapClick, previewCenter
 
         {/* Recenter */}
         <button
+          className="dv-zm-recenter"
+          aria-label="Centrar en mi ubicación"
           onClick={e => { e.stopPropagation(); mapRef.current?.flyTo({ center: [pos[1], pos[0]], zoom: 13, duration: 600 }) }}
           style={{ position: 'absolute', bottom: 80, right: 14, zIndex: 10, width: 32, height: 32, borderRadius: 8, background: 'white', border: '0.5px solid rgba(15,23,42,0.12)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}
         >

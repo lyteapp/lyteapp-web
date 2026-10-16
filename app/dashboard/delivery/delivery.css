@@ -1031,8 +1031,10 @@
   .dv-panel:last-child { display: none; }
   .dv-summary-grid { grid-template-columns: repeat(2, 1fr); }
   .dv-settle-summary { grid-template-columns: repeat(2, 1fr); }
-  .dv-zones-wrap { grid-template-columns: 1fr; }
-  .dv-zones-map { display: none; }
+  /* phones: the zones map fills the tab; tools float over it (.dv-zm-*) */
+  .dv-zones-wrap { display: block; position: relative; }
+  .dv-zones-list { display: none; }
+  .dv-zones-map { position: absolute; inset: 0; }
   .dv-tray-grid { grid-template-columns: 1fr; }
   .dv-map-mobile-btn {
     display: flex; align-items: center; gap: 7px;
@@ -1086,3 +1088,110 @@
   border-radius: 10px; padding: 10px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
 }
 .dv-tc-action.done { background: #1D9E75; border-color: #1D9E75; color: white; }
+
+/* ── Zones map tools (phones) ── */
+.dv-zm-ui { display: none; }
+@media (max-width: 900px) {
+  .dv-zm-ui { display: contents; }
+  .dv-zones-map .dv-zm-recenter {
+    top: 66px !important; bottom: auto !important; right: 14px !important;
+    width: 40px !important; height: 40px !important; border-radius: 50% !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+  }
+}
+.dv-zm-top {
+  position: absolute; top: 12px; left: 12px; right: 12px; z-index: 20;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  pointer-events: none;
+}
+.dv-zm-count, .dv-zm-add { pointer-events: auto; box-shadow: 0 2px 10px rgba(15,23,42,0.15); }
+.dv-zm-count {
+  background: white; border-radius: 12px; padding: 10px 14px;
+  font-size: 14px; color: #475569;
+}
+.dv-zm-count strong { color: #0F172A; }
+.dv-zm-add {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--lyte-navy); color: white; border: none; cursor: pointer;
+  border-radius: 12px; padding: 11px 16px; font: inherit; font-size: 14px; font-weight: 600;
+}
+.dv-zm-add:active { transform: scale(0.97); }
+.dv-zm-hint {
+  position: absolute; top: 118px; left: 50%; transform: translateX(-50%); z-index: 20;
+  background: var(--lyte-navy); color: white; border-radius: 100px;
+  padding: 8px 16px; font-size: 13px; font-weight: 600; white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(28,27,58,0.35); pointer-events: none;
+}
+.dv-zm-chips {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 20;
+  display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none;
+  padding: 24px 12px max(14px, env(safe-area-inset-bottom));
+  background: linear-gradient(to top, rgba(15,23,42,0.25), transparent);
+}
+.dv-zm-chips::-webkit-scrollbar { display: none; }
+.dv-zm-chip {
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 7px;
+  background: white; border: 2px solid transparent; border-radius: 100px;
+  padding: 9px 14px; font: inherit; font-size: 14px; font-weight: 600; color: #0F172A; cursor: pointer;
+  box-shadow: 0 2px 10px rgba(15,23,42,0.15);
+}
+.dv-zm-chip.on { border-color: var(--lyte-navy); }
+.dv-zm-chip-fee { color: #64748B; font-weight: 500; }
+.dv-zm-card {
+  position: absolute; left: 12px; right: 12px; bottom: calc(72px + env(safe-area-inset-bottom)); z-index: 21;
+  background: white; border-radius: 16px; border-top: 4px solid;
+  padding: 14px 16px; box-shadow: 0 6px 24px rgba(15,23,42,0.2);
+  animation: dvZmUp 0.22s cubic-bezier(0.32,0.72,0,1);
+}
+@keyframes dvZmUp { from { opacity: 0; transform: translateY(12px); } }
+.dv-zm-card-head { display: flex; align-items: center; gap: 8px; font-size: 16px; }
+.dv-zm-card-x {
+  margin-left: auto; width: 30px; height: 30px; border-radius: 50%; border: none; cursor: pointer;
+  background: #F1F5F9; color: #475569; display: flex; align-items: center; justify-content: center;
+}
+.dv-zm-card-x svg { width: 14px; height: 14px; }
+.dv-zm-card-meta { display: flex; justify-content: space-between; margin: 6px 0 12px; font-size: 13px; color: #64748B; }
+.dv-zm-card-fee { font-size: 16px; font-weight: 700; color: #0F172A; }
+.dv-zm-card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.dv-zm-card-actions button {
+  border: 1px solid var(--dv-line); background: white; border-radius: 10px; padding: 10px;
+  font: inherit; font-size: 14px; font-weight: 600; color: var(--lyte-navy); cursor: pointer;
+}
+.dv-zm-card-actions button.danger { color: #DC2626; border-color: #FECACA; }
+.dv-zm-empty {
+  position: absolute; left: 12px; right: 12px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 20;
+  background: white; border-radius: 14px; padding: 14px 16px; font-size: 13px; color: #64748B; line-height: 1.4;
+  box-shadow: 0 4px 16px rgba(15,23,42,0.15);
+}
+.dv-zm-empty strong { display: block; color: #0F172A; font-size: 15px; margin-bottom: 2px; }
+.dv-zm-sheet {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 22;
+  background: white; border-radius: 20px 20px 0 0;
+  padding: 16px 16px max(16px, env(safe-area-inset-bottom));
+  box-shadow: 0 -6px 30px rgba(15,23,42,0.18);
+  display: flex; flex-direction: column; gap: 12px;
+  animation: dvZmUp 0.25s cubic-bezier(0.32,0.72,0,1);
+}
+.dv-zm-sheet-title { font-size: 17px; font-weight: 700; color: #0F172A; }
+.dv-zm-row { display: grid; grid-template-columns: 1fr 110px; gap: 8px; }
+.dv-zm-sheet .dv-input { font-size: 16px; padding: 11px 12px; width: 100%; }
+.dv-zm-fee { position: relative; }
+.dv-zm-fee span { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94A3B8; font-size: 16px; }
+.dv-zm-fee .dv-input { padding-left: 26px; }
+.dv-zm-radius { display: flex; align-items: center; gap: 12px; font-size: 14px; color: #475569; }
+.dv-zm-radius input { flex: 1; accent-color: var(--lyte-navy); height: 28px; }
+.dv-zm-radius strong { color: #0F172A; min-width: 58px; text-align: right; }
+.dv-zm-colors { display: flex; gap: 10px; flex-wrap: wrap; }
+.dv-zm-colors button {
+  width: 30px; height: 30px; border-radius: 50%; border: 3px solid white; cursor: pointer;
+  box-shadow: 0 0 0 1px rgba(15,23,42,0.12);
+}
+.dv-zm-colors button.on { box-shadow: 0 0 0 2px var(--lyte-navy); }
+.dv-zm-error { padding: 8px 10px; background: #FEF2F2; border: 1px solid #FCA5A5; border-radius: 8px; font-size: 13px; color: #DC2626; }
+.dv-zm-actions { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; }
+.dv-zm-cancel, .dv-zm-save {
+  border-radius: 12px; padding: 13px; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+}
+.dv-zm-cancel { background: #F1F5F9; color: #475569; border: none; }
+.dv-zm-save { background: var(--lyte-navy); color: white; border: none; }
+.dv-zm-save:disabled { opacity: 0.45; cursor: default; }

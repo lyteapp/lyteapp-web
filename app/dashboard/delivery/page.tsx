@@ -128,6 +128,17 @@ export default function DeliveryPage() {
   const [zUserPos, setZUserPos]         = useState<[number, number] | null>(null)
   const [zSaving, setZSaving]           = useState(false)
   const [zError, setZError]             = useState('')
+  // Phone zones map: selected zone card + where the map should fly to
+  const [zSel, setZSel]                 = useState<string | null>(null)
+  const [zFocus, setZFocus]             = useState<{ lat: number; lng: number; radius: number; key: number } | null>(null)
+  const [isPhone, setIsPhone]           = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 900px)')
+    const sync = () => setIsPhone(mq.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
 
   // Couriers tab
   const [showDriverForm, setShowDriverForm] = useState(false)
@@ -315,6 +326,13 @@ export default function DeliveryPage() {
       setZRadius(2000); setZCenter(zUserPos)
     }
     setZError(''); setShowZoneForm(true)
+    const c = zone ? [zone.center_lat, zone.center_lng] : zUserPos
+    if (c) setZFocus(f => ({ lat: c[0], lng: c[1], radius: zone?.radius_m ?? 2000, key: (f?.key ?? 0) + 1 }))
+  }
+
+  function selectZone(z: Zone) {
+    setZSel(s => s === z.id ? null : z.id)
+    setZFocus(f => ({ lat: z.center_lat, lng: z.center_lng, radius: z.radius_m, key: (f?.key ?? 0) + 1 }))
   }
 
   async function saveZone() {
@@ -340,6 +358,7 @@ export default function DeliveryPage() {
     if (!confirm('Eliminar zona?')) return
     await supabase.from('delivery_zones').delete().eq('id', id)
     setZones(p => p.filter(z => z.id !== id))
+    setZSel(s => s === id ? null : s)
     showToast('Zona eliminada')
   }
 
@@ -1098,7 +1117,101 @@ export default function DeliveryPage() {
               onUserPos={(lat, lng) => setZUserPos([lat, lng])}
               mapboxToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
               resizeTrigger={zonesResizeTrigger}
+              focus={zFocus}
+              focusPaddingBottom={isPhone ? (showZoneForm ? 330 : 150) : 0}
+              hidePlacingHint={isPhone}
             />
+
+            {/* Phone: tools over the map (desktop uses the list on the left) */}
+            <div className="dv-zm-ui">
+              <div className="dv-zm-top">
+                <div className="dv-zm-count">
+                  <strong>{zones.length}</strong> {zones.length === 1 ? 'zona' : 'zonas'}
+                </div>
+                {!showZoneForm && (
+                  <button className="dv-zm-add" onClick={() => { setZSel(null); openZoneForm() }}>
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" /></svg>
+                    Nueva zona
+                  </button>
+                )}
+              </div>
+
+              {showZoneForm && (
+                <div className="dv-zm-hint">{zCenter ? 'Toca el mapa para mover el centro' : 'Toca el mapa para colocar el centro'}</div>
+              )}
+
+              {!showZoneForm && (() => {
+                const z = zones.find(x => x.id === zSel)
+                return z ? (
+                  <div className="dv-zm-card" style={{ borderTopColor: z.color }}>
+                    <div className="dv-zm-card-head">
+                      <span className="dv-zone-color-dot" style={{ background: z.color }} />
+                      <strong>{z.name ?? 'Sin nombre'}</strong>
+                      <button className="dv-zm-card-x" onClick={() => setZSel(null)} aria-label="Cerrar">
+                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 5L5 15M5 5l10 10" /></svg>
+                      </button>
+                    </div>
+                    <div className="dv-zm-card-meta">
+                      <span>{(z.radius_m / 1000).toFixed(1)} km de radio</span>
+                      <span className="dv-zm-card-fee">${(z.fee ?? 0).toFixed(2)}</span>
+                    </div>
+                    <div className="dv-zm-card-actions">
+                      <button onClick={() => openZoneForm(z)}>Editar</button>
+                      <button className="danger" onClick={() => deleteZone(z.id)}>Eliminar</button>
+                    </div>
+                  </div>
+                ) : null
+              })()}
+
+              {!showZoneForm && zones.length > 0 && (
+                <div className="dv-zm-chips">
+                  {zones.map(z => (
+                    <button key={z.id} className={`dv-zm-chip${zSel === z.id ? ' on' : ''}`} onClick={() => selectZone(z)}>
+                      <span className="dv-zone-color-dot" style={{ background: z.color }} />
+                      {z.name ?? 'Sin nombre'}
+                      <span className="dv-zm-chip-fee">${(z.fee ?? 0).toFixed(2)}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {!showZoneForm && zones.length === 0 && (
+                <div className="dv-zm-empty">
+                  <strong>Sin zonas todavía</strong>
+                  Crea zonas con su tarifa para cobrar el delivery automáticamente.
+                </div>
+              )}
+
+              {showZoneForm && (
+                <div className="dv-zm-sheet">
+                  <div className="dv-zm-sheet-title">{editZone ? 'Editar zona' : 'Nueva zona'}</div>
+                  <div className="dv-zm-row">
+                    <input className="dv-input" value={zName} onChange={e => setZName(e.target.value)} placeholder="Nombre (ej. Centro)" />
+                    <div className="dv-zm-fee">
+                      <span>$</span>
+                      <input className="dv-input" value={zFee} onChange={e => setZFee(e.target.value)} type="number" inputMode="decimal" min="0" step="0.50" placeholder="0.00" />
+                    </div>
+                  </div>
+                  <div className="dv-zm-radius">
+                    <span>Radio</span>
+                    <input type="range" min="300" max="10000" step="100" value={zRadius} onChange={e => setZRadius(Number(e.target.value))} />
+                    <strong>{zRadius >= 1000 ? `${(zRadius / 1000).toFixed(1)} km` : `${zRadius} m`}</strong>
+                  </div>
+                  <div className="dv-zm-colors">
+                    {ZONE_COLORS.map(c => (
+                      <button key={c} className={zColor === c ? 'on' : ''} style={{ background: c }} onClick={() => setZColor(c)} aria-label={`Color ${c}`} />
+                    ))}
+                  </div>
+                  {zError && <div className="dv-zm-error">{zError}</div>}
+                  <div className="dv-zm-actions">
+                    <button className="dv-zm-cancel" onClick={() => { setShowZoneForm(false); setZError('') }}>Cancelar</button>
+                    <button className="dv-zm-save" onClick={saveZone} disabled={zSaving || !zName.trim()}>
+                      {zSaving ? 'Guardando…' : editZone ? 'Guardar cambios' : 'Crear zona'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
         </div>

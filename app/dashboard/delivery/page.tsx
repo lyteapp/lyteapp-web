@@ -355,7 +355,7 @@ export default function DeliveryPage() {
     setZSaving(true); setZError('')
     const payload = {
       store_id: storeId, name: zName.trim(),
-      fee: parseFloat(zFee) || 0, color: zColor,
+      fee: parseFloat(zFee.replace(',', '.')) || 0, color: zColor,
       radius_m: zRadius, center_lat: center[0], center_lng: center[1],
     }
     const { error } = editZone
@@ -997,7 +997,7 @@ export default function DeliveryPage() {
                   </div>
                   <div className="dv-form-field">
                     <label className="dv-form-label">Tarifa ($)</label>
-                    <input className="dv-input" value={zFee} onChange={e => setZFee(e.target.value)} type="number" min="0" step="0.50" placeholder="0.00" />
+                    <input className="dv-input" value={zFee} onChange={e => setZFee(e.target.value.replace(/[^0-9.,]/g, ''))} type="text" inputMode="decimal" placeholder="0,00" />
                   </div>
                 </div>
 
@@ -1202,7 +1202,7 @@ export default function DeliveryPage() {
                     <input className="dv-input" value={zName} onChange={e => setZName(e.target.value)} placeholder="Nombre (ej. Centro)" />
                     <div className="dv-zm-fee">
                       <span>$</span>
-                      <input className="dv-input" value={zFee} onChange={e => setZFee(e.target.value)} type="number" inputMode="decimal" min="0" step="0.50" placeholder="0.00" />
+                      <input className="dv-input" value={zFee} onChange={e => setZFee(e.target.value.replace(/[^0-9.,]/g, ''))} type="text" inputMode="decimal" placeholder="0,00" />
                     </div>
                   </div>
                   <div className="dv-zm-radius">

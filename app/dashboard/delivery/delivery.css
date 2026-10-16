@@ -1024,7 +1024,7 @@
 .dv-map-fullscreen .dv-map-recenter svg { width: 18px; height: 18px; }
 
 @media (max-width: 900px) {
-  .dv-root { margin: -20px; height: calc(100vh - 56px); }
+  .dv-root { margin: -20px; height: calc(100vh - var(--dv-top, 56px)); height: calc(100dvh - var(--dv-top, 56px)); }
   .dv-kpi-bar { grid-template-columns: repeat(3, 1fr); }
   .dv-live-grid { grid-template-columns: 1fr; grid-template-rows: auto auto; }
   .dv-map-panel { display: none; }

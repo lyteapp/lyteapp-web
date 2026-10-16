@@ -166,6 +166,19 @@ export default function DeliveryPage() {
   // Height of the dashboard header over the fullscreen map (depends on the
   // phone's notch): the map's own header and overlays start below it.
   const [mapTop, setMapTop] = useState<number | null>(null)
+  // On phones the section fills exactly the visible screen under the
+  // dashboard header (its height depends on the notch), so the bottom of
+  // the zones map and lists isn't cut off.
+  const rootRef = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const fit = () => {
+      const bar = document.querySelector('.db-topbar')
+      if (bar && rootRef.current) rootRef.current.style.setProperty('--dv-top', `${Math.round(bar.getBoundingClientRect().height)}px`)
+    }
+    fit()
+    window.addEventListener('resize', fit)
+    return () => window.removeEventListener('resize', fit)
+  }, [])
   // Measured whenever the map opens (button, or automatically on the live
   // tab on phones), before it paints.
   useLayoutEffect(() => {
@@ -480,7 +493,7 @@ export default function DeliveryPage() {
   )
 
   return (
-    <div className="dv-root">
+    <div className="dv-root" ref={rootRef}>
 
       {/* ── TABS ── */}
       <nav className="dv-tabs">

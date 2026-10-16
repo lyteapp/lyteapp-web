@@ -280,6 +280,49 @@ export default function DeliveryPage() {
     return () => { if (qrTimer.current) clearInterval(qrTimer.current) }
   }, [qrDel])
 
+  // ── Liquidaciones: daily closes per driver ──
+  type DayClose = { id: string; driver_id: string; day: string; deliveries: number; fees: number; paid_at: string | null }
+  const [closes, setCloses] = useState<DayClose[]>([])
+  const [closesLoading, setClosesLoading] = useState(false)
+  const [payingDriver, setPayingDriver] = useState<string | null>(null)
+  const [paidSince, setPaidSince] = useState('')
+  const loadCloses = useCallback(async (sid: string) => {
+    setClosesLoading(true)
+    // Close any finished day the nightly job hasn't closed yet
+    const { data: { session } } = await supabase.auth.getSession()
+    await fetch('/api/delivery-close', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token ?? ''}` },
+      body: JSON.stringify({ storeId: sid }),
+    }).catch(() => null)
+    const since = new Date(Date.now() - 90 * 86400_000).toISOString().slice(0, 10)
+    const { data } = await supabase.from('delivery_day_closes')
+      .select('id, driver_id, day, deliveries, fees, paid_at')
+      .eq('store_id', sid)
+      .or(`paid_at.is.null,day.gte.${since}`)
+      .order('day', { ascending: false })
+    setCloses(((data ?? []) as DayClose[]).map(c => ({ ...c, fees: Number(c.fees) || 0 })))
+    setPaidSince(new Date(Date.now() - 30 * 86400_000).toISOString())
+    setClosesLoading(false)
+  }, [])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on opening the tab
+    if (tab === 'settlements' && storeId) loadCloses(storeId)
+  }, [tab, storeId, loadCloses])
+  async function markDriverPaid(driverId: string, amount: number) {
+    const name = drivers.find(d => d.id === driverId)?.name ?? 'este despachador'
+    if (!storeId || !confirm(`¿Marcar como pagados $${amount.toFixed(2)} a ${name}?`)) return
+    setPayingDriver(driverId)
+    const paidAt = new Date().toISOString()
+    const { error } = await supabase.from('delivery_day_closes')
+      .update({ paid_at: paidAt })
+      .eq('store_id', storeId).eq('driver_id', driverId).is('paid_at', null)
+    setPayingDriver(null)
+    if (error) { showToast('No se pudo guardar el pago'); return }
+    setCloses(prev => prev.map(c => c.driver_id === driverId && !c.paid_at ? { ...c, paid_at: paidAt } : c))
+    showToast(`Pago registrado · ${name}`)
+  }
+
   useEffect(() => {
     if (tab === 'zones') setZonesResizeTrigger(n => n + 1)
     if (tab === 'live' && window.innerWidth <= 900) setShowMap(true)
@@ -1246,6 +1289,110 @@ export default function DeliveryPage() {
       ══════════════════════════════════════════════ */}
       <div className={`dv-view${tab === 'settlements' ? ' active' : ''}`}>
         <div className="dv-settle-wrap">
+          {(() => {
+            const money = (n: number) => `$${n.toFixed(2)}`
+            const driverOf = (id: string) => drivers.find(d => d.id === id)
+            const unpaid = closes.filter(c => !c.paid_at)
+            const unpaidTotal = unpaid.reduce((s, c) => s + c.fees, 0)
+            const unpaidCount = unpaid.reduce((s, c) => s + c.deliveries, 0)
+            const paid30 = closes.filter(c => c.paid_at && c.paid_at >= paidSince).reduce((s, c) => s + c.fees, 0)
+            // Today is still open: what each driver has earned so far
+            const todayDone = todayDels.filter(d => d.status === 'delivered' && d.driver_id)
+            const todayFee = (d: Delivery) => Number((zoneForCoords(d.customer_lat, d.customer_lng, zones) ?? d.zone)?.fee ?? d.driver_fee) || 0
+            const todayTotal = todayDone.reduce((s, d) => s + todayFee(d), 0)
+
+            const perDriver = Object.values(unpaid.reduce<Record<string, { driver_id: string; days: number; deliveries: number; fees: number }>>((acc, c) => {
+              const a = acc[c.driver_id] ??= { driver_id: c.driver_id, days: 0, deliveries: 0, fees: 0 }
+              a.days++; a.deliveries += c.deliveries; a.fees += c.fees
+              return acc
+            }, {})).sort((a, b) => b.fees - a.fees)
+
+            const byDay = closes.reduce<Record<string, DayClose[]>>((acc, c) => { (acc[c.day] ??= []).push(c); return acc }, {})
+            const dayLabel = (day: string) => new Date(`${day}T12:00:00`).toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'short' })
+
+            return (
+              <>
+                <div className="dv-settle-summary">
+                  <div className="dv-settle-card featured">
+                    <div className="dv-sc-label">Por pagar</div>
+                    <div className="dv-sc-val">{money(unpaidTotal)}</div>
+                  </div>
+                  <div className="dv-settle-card">
+                    <div className="dv-sc-label">Entregas por pagar</div>
+                    <div className="dv-sc-val">{unpaidCount}</div>
+                  </div>
+                  <div className="dv-settle-card">
+                    <div className="dv-sc-label">Hoy · en curso</div>
+                    <div className="dv-sc-val">{money(todayTotal)}</div>
+                  </div>
+                  <div className="dv-settle-card">
+                    <div className="dv-sc-label">Pagado · 30 días</div>
+                    <div className="dv-sc-val">{money(paid30)}</div>
+                  </div>
+                </div>
+
+                <div className="dv-settle-note">
+                  Cada día a las 12:00 de la noche se cierran las entregas del día y se suman aquí. Hoy sigue abierto hasta medianoche.
+                </div>
+
+                <div className="dv-settle-section">
+                  <div className="dv-settle-section-title">Pendiente por despachador</div>
+                  {closesLoading && closes.length === 0 ? (
+                    <div className="dv-settle-empty"><LyteLeafLoader size={32} /></div>
+                  ) : perDriver.length === 0 ? (
+                    <div className="dv-settle-empty">No hay nada pendiente por pagar.</div>
+                  ) : perDriver.map(p => {
+                    const drv = driverOf(p.driver_id)
+                    return (
+                      <div key={p.driver_id} className="dv-settle-driver">
+                        <div className="dv-settle-av">
+                          {drv?.avatar_url
+                            // eslint-disable-next-line @next/next/no-img-element
+                            ? <img src={drv.avatar_url} alt="" />
+                            : (drv?.name?.[0] ?? '?').toUpperCase()}
+                        </div>
+                        <div className="dv-settle-driver-info">
+                          <div className="dv-settle-driver-name">{drv?.name ?? 'Despachador eliminado'}</div>
+                          <div className="dv-settle-driver-meta">{p.deliveries} {p.deliveries === 1 ? 'entrega' : 'entregas'} · {p.days} {p.days === 1 ? 'día' : 'días'}</div>
+                        </div>
+                        <div className="dv-settle-driver-total">{money(p.fees)}</div>
+                        <button className="dv-settle-pay" onClick={() => markDriverPaid(p.driver_id, p.fees)} disabled={payingDriver === p.driver_id}>
+                          {payingDriver === p.driver_id ? 'Guardando…' : 'Marcar pagado'}
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div className="dv-settle-section">
+                  <div className="dv-settle-section-title">Cierres diarios</div>
+                  {Object.keys(byDay).length === 0 ? (
+                    <div className="dv-settle-empty">Todavía no hay días cerrados. El primer cierre se hace esta medianoche.</div>
+                  ) : Object.entries(byDay).map(([day, list]) => {
+                    const total = list.reduce((s, c) => s + c.fees, 0)
+                    const count = list.reduce((s, c) => s + c.deliveries, 0)
+                    return (
+                      <div key={day} className="dv-settle-day">
+                        <div className="dv-settle-day-head">
+                          <span className="dv-settle-day-date">{dayLabel(day)}</span>
+                          <span className="dv-settle-day-sum">{count} {count === 1 ? 'entrega' : 'entregas'} · <strong>{money(total)}</strong></span>
+                        </div>
+                        {list.map(c => (
+                          <div key={c.id} className="dv-settle-day-row">
+                            <span>{driverOf(c.driver_id)?.name ?? 'Despachador eliminado'} <span className="dv-settle-muted">· {c.deliveries}</span></span>
+                            <span className="dv-settle-day-right">
+                              {money(c.fees)}
+                              <span className={`dv-chip ${c.paid_at ? 'delivered' : 'ongoing'}`}>{c.paid_at ? 'Pagado' : 'Pendiente'}</span>
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
+            )
+          })()}
         </div>
       </div>
 

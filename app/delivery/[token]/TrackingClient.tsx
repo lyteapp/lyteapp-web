@@ -160,7 +160,7 @@ export default function TrackingClient({
   token,
   trackingConfig,
   mapboxToken = '',
-  driver,
+  driver: initialDriver,
   storeLat = null,
   storeLng = null,
   storeLogo = null,
@@ -175,6 +175,18 @@ export default function TrackingClient({
   storeLogo?: string | null
 }) {
   const [delivery, setDelivery] = useState<Delivery | null>(initialDelivery)
+  // The driver is usually assigned after this page was opened: load their
+  // details as soon as the delivery gets (or changes) a driver, instead of
+  // only on the server render.
+  const [driver, setDriver] = useState<DriverInfo | null>(initialDriver ?? null)
+  const driverLoadedFor = useRef<string | null>(initialDriver ? (initialDelivery?.driver_id ?? null) : null)
+  const driverId = delivery?.driver_id ?? null
+  useEffect(() => {
+    if (!driverId || driverLoadedFor.current === driverId) return
+    driverLoadedFor.current = driverId
+    supabase.from('delivery_drivers').select('name,phone,vehicle,rating,avatar_url').eq('id', driverId).maybeSingle()
+      .then(({ data }) => { if (data) setDriver(data as DriverInfo) })
+  }, [driverId])
   const [driverLoc, setDriverLoc] = useState<{ lat: number; lng: number } | null>(null)
   const sheetRef  = useRef<HTMLDivElement>(null)
   const dragRef   = useRef<{ startY: number; startTranslate: number } | null>(null)

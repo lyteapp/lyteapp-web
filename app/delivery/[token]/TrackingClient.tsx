@@ -189,6 +189,22 @@ export default function TrackingClient({
   }, [driverId])
   const [driverLoc, setDriverLoc] = useState<{ lat: number; lng: number } | null>(null)
   const sheetRef  = useRef<HTMLDivElement>(null)
+  // Fullscreen layout: how much of the map the header and the bottom sheet
+  // cover, so the map frames the store / driver / customer in between.
+  const headerRef = useRef<HTMLDivElement>(null)
+  const [overlay, setOverlay] = useState({ header: 160, sheet: 0 })
+  useEffect(() => {
+    const measure = () => setOverlay(o => {
+      const header = headerRef.current?.offsetHeight ?? o.header
+      const sheet = sheetRef.current?.offsetHeight ?? o.sheet
+      return header === o.header && sheet === o.sheet ? o : { header, sheet }
+    })
+    measure()
+    const ro = new ResizeObserver(measure)
+    if (headerRef.current) ro.observe(headerRef.current)
+    if (sheetRef.current) ro.observe(sheetRef.current)
+    return () => ro.disconnect()
+  })
   const dragRef   = useRef<{ startY: number; startTranslate: number } | null>(null)
   const [sheetTranslateY, setSheetTranslateY] = useState(0)
   const [sheetAnimate,    setSheetAnimate]    = useState(false)
@@ -378,12 +394,13 @@ export default function TrackingClient({
           <TrackingMap
             driverLat={delivery.status === 'picked_up' ? (driverLoc?.lat ?? delivery.driver_lat) : null}
             driverLng={delivery.status === 'picked_up' ? (driverLoc?.lng ?? delivery.driver_lng) : null}
-            storeLat={delivery.status !== 'picked_up' ? storeLat : null}
-            storeLng={delivery.status !== 'picked_up' ? storeLng : null}
+            storeLat={storeLat}
+            storeLng={storeLng}
             storeLogo={storeLogo}
             customerLat={delivery.customer_lat}
             customerLng={delivery.customer_lng}
             height="100%"
+            framePadding={{ top: overlay.header - 30, bottom: Math.max(0, overlay.sheet - sheetTranslateY) }}
             mapboxToken={mapboxToken}
             mapStyle={trackingConfig?.mapStyle}
             accent={accent}
@@ -391,7 +408,7 @@ export default function TrackingClient({
         </div>
 
         {/* Header gradient */}
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '48px 20px 40px', background: `linear-gradient(180deg, ${accent}F2 0%, ${accent}B3 60%, transparent 100%)`, zIndex: 5 }}>
+        <div ref={headerRef} style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '48px 20px 40px', background: `linear-gradient(180deg, ${accent}F2 0%, ${accent}B3 60%, transparent 100%)`, zIndex: 5 }}>
           <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 400, marginBottom: 4 }}>Tu pedido</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 1 }}>
             <span style={{ fontSize: 12, color: 'white', fontWeight: 700, background: 'rgba(255,255,255,0.18)', borderRadius: 6, padding: '2px 8px', letterSpacing: '0.04em', flexShrink: 0 }}>
@@ -593,8 +610,8 @@ export default function TrackingClient({
           <TrackingMap
             driverLat={delivery.status === 'picked_up' ? (driverLoc?.lat ?? delivery.driver_lat) : null}
             driverLng={delivery.status === 'picked_up' ? (driverLoc?.lng ?? delivery.driver_lng) : null}
-            storeLat={delivery.status !== 'picked_up' ? storeLat : null}
-            storeLng={delivery.status !== 'picked_up' ? storeLng : null}
+            storeLat={storeLat}
+            storeLng={storeLng}
             storeLogo={storeLogo}
             customerLat={delivery.customer_lat}
             customerLng={delivery.customer_lng}

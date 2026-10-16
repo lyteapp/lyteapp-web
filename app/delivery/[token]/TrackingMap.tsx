@@ -18,15 +18,9 @@ interface Props {
   mapStyle?:   string
   accent?:     string
   locked?:     boolean
-}
-
-function pad(
-  lats: number[], lngs: number[], p = 0.002
-): [[number, number], [number, number]] {
-  return [
-    [Math.min(...lngs) - p, Math.min(...lats) - p],
-    [Math.max(...lngs) + p, Math.max(...lats) + p],
-  ]
+  /** Screen space covered by overlays (header, bottom sheet): the store,
+      driver and customer are framed inside what's left. */
+  framePadding?: { top: number; bottom: number; left?: number; right?: number }
 }
 
 export default function TrackingMap({
@@ -38,6 +32,7 @@ export default function TrackingMap({
   mapStyle = 'mapbox://styles/mapbox/standard',
   accent = '#7C3AED',
   locked = false,
+  framePadding,
 }: Props) {
   const mapRef  = useRef<MapRef>(null)
   const loaded  = useRef(false)
@@ -46,36 +41,52 @@ export default function TrackingMap({
   const hasCustomer = customerLat != null && customerLng != null
   const hasStore    = storeLat    != null && storeLng    != null
 
-  // ── Initial camera on map load ──────────────────────────────────────────
-  function fitInitial() {
+  // ── Keep the store, the driver and the customer all in view ─────────────
+  // Framed inside the visible part of the map (framePadding), with room for
+  // the markers themselves (the store pin is tall and anchored at its base).
+  function frame(duration: number) {
     const map = mapRef.current
     if (!map) return
-
-    if (hasDriver && hasCustomer) {
-      map.fitBounds(pad([driverLat!, customerLat!], [driverLng!, customerLng!]),
-        { padding: 64, maxZoom: 16, duration: 800 })
-    } else if (hasStore && hasCustomer) {
-      map.fitBounds(pad([storeLat!, customerLat!], [storeLng!, customerLng!]),
-        { padding: 64, maxZoom: 14, duration: 800 })
-    } else if (hasStore) {
-      map.flyTo({ center: [storeLng!, storeLat!], zoom: 15, duration: 600 })
-    } else if (hasCustomer) {
-      map.flyTo({ center: [customerLng!, customerLat!], zoom: 15, duration: 600 })
+    const pts: [number, number][] = []
+    if (hasStore)    pts.push([storeLng!, storeLat!])
+    if (hasDriver)   pts.push([driverLng!, driverLat!])
+    if (hasCustomer) pts.push([customerLng!, customerLat!])
+    if (pts.length === 0) return
+    const box = map.getContainer().getBoundingClientRect()
+    const fp = framePadding ?? { top: 0, bottom: 0 }
+    const padding = {
+      top:    Math.round(fp.top + (hasStore ? 86 : 34)),
+      bottom: Math.round(fp.bottom + 34),
+      left:   Math.round((fp.left ?? 0) + 40),
+      right:  Math.round((fp.right ?? 0) + 40),
     }
+    // Never ask for more padding than the map has (Mapbox would bail out)
+    if (padding.top + padding.bottom > box.height - 40) {
+      const scale = (box.height - 40) / (padding.top + padding.bottom)
+      padding.top = Math.floor(padding.top * scale); padding.bottom = Math.floor(padding.bottom * scale)
+    }
+    if (pts.length === 1) {
+      map.easeTo({ center: pts[0], zoom: 15, padding, duration })
+      return
+    }
+    const lngs = pts.map(p => p[0]), lats = pts.map(p => p[1])
+    map.fitBounds(
+      [[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]],
+      { padding, maxZoom: 16, duration },
+    )
   }
 
-  // ── Follow driver when GPS updates ─────────────────────────────────────
+  // Re-frame when anyone moves or the visible area changes (sheet dragged)
+  const frameKey = [
+    driverLat, driverLng, storeLat, storeLng, customerLat, customerLng,
+    Math.round((framePadding?.top ?? 0) / 8), Math.round((framePadding?.bottom ?? 0) / 8),
+  ].join(',')
   useEffect(() => {
-    if (!loaded.current || !mapRef.current || !hasDriver) return
-    const map = mapRef.current
-    if (hasCustomer) {
-      map.fitBounds(pad([driverLat!, customerLat!], [driverLng!, customerLng!]),
-        { padding: 64, maxZoom: 16, duration: 900 })
-    } else {
-      map.flyTo({ center: [driverLng!, driverLat!], zoom: 15, duration: 700 })
-    }
+    if (!loaded.current) return
+    const t = setTimeout(() => frame(800), 120)
+    return () => clearTimeout(t)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [driverLat, driverLng])
+  }, [frameKey])
 
   // Default center fallback
   const initLng = driverLng ?? storeLng ?? customerLng ?? -66.9
@@ -95,11 +106,11 @@ export default function TrackingMap({
         dragPan={!locked}
         dragRotate={false}
         attributionControl={false}
-        onLoad={() => { loaded.current = true; fitInitial() }}
+        onLoad={() => { loaded.current = true; frame(0) }}
       >
 
-        {/* Store marker — 3D building with logo, shown while driver not yet assigned */}
-        {hasStore && !hasDriver && (
+        {/* Store marker — 3D building with logo */}
+        {hasStore && (
           <Marker longitude={storeLng!} latitude={storeLat!} anchor="bottom">
             <div style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center',

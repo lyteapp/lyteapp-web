@@ -97,7 +97,6 @@ export default function TrackingMap({
         attributionControl={false}
         onLoad={() => { loaded.current = true; fitInitial() }}
       >
-        {!locked && <NavigationControl position="top-right" showCompass={false} />}
 
         {/* Store marker — 3D building with logo, shown while driver not yet assigned */}
         {hasStore && !hasDriver && (

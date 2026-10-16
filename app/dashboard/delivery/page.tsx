@@ -167,17 +167,28 @@ export default function DeliveryPage() {
   // phone's notch): the map's own header and overlays start below it.
   const [mapTop, setMapTop] = useState<number | null>(null)
   // On phones the section fills exactly the visible screen under the
-  // dashboard header (its height depends on the notch), so the bottom of
-  // the zones map and lists isn't cut off.
+  // dashboard header, measured in pixels: CSS viewport units aren't
+  // reliable on iPhone (Safari's bar, and the app saved to the home screen
+  // counts the status bar differently), which cut off the bottom of the
+  // zones map.
   const rootRef = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
+    const vv = window.visualViewport
     const fit = () => {
+      const root = rootRef.current
       const bar = document.querySelector('.db-topbar')
-      if (bar && rootRef.current) rootRef.current.style.setProperty('--dv-top', `${Math.round(bar.getBoundingClientRect().height)}px`)
+      if (!root || !bar) return
+      if (!window.matchMedia('(max-width: 900px)').matches) { root.style.height = ''; return }
+      const visible = vv?.height ?? window.innerHeight
+      root.style.height = `${Math.max(320, Math.floor(visible - bar.getBoundingClientRect().bottom))}px`
     }
     fit()
     window.addEventListener('resize', fit)
-    return () => window.removeEventListener('resize', fit)
+    vv?.addEventListener('resize', fit)
+    return () => {
+      window.removeEventListener('resize', fit)
+      vv?.removeEventListener('resize', fit)
+    }
   }, [])
   // Measured whenever the map opens (button, or automatically on the live
   // tab on phones), before it paints.

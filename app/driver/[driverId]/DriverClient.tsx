@@ -219,18 +219,38 @@ export default function DriverClient({
   }
 
   // ── GPS ──────────────────────────────────────────────────────────
-  const sendLocation = useCallback(async (lat: number, lng: number) => {
-    setDriverPos([lat, lng])
-    const now = Date.now()
-    if (now - lastSentAt.current < 3000) return
-    lastSentAt.current = now
+  // Positions go out at most every 2 s, but the latest one is never dropped:
+  // a fix that arrives inside the window is sent when the window ends (the
+  // old throttle discarded it, so the maps could sit on a stale point for up
+  // to 15 s — e.g. the spot where the driver stopped never got sent).
+  // Coarse fixes (cell/wifi, often hundreds of meters off) are ignored while
+  // real GPS fixes keep coming, so the marker doesn't jump around.
+  const pendingFix  = useRef<{ lat: number; lng: number; acc: number | null } | null>(null)
+  const sendTimer   = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastGoodFix = useRef(0)
+  const flushLocation = useCallback(async () => {
+    if (sendTimer.current) { clearTimeout(sendTimer.current); sendTimer.current = null }
+    const fix = pendingFix.current
+    if (!fix) return
+    pendingFix.current = null
+    lastSentAt.current = Date.now()
     await supabase.from('driver_locations').upsert({
       driver_id: driverId, store_id: storeId,
-      lat, lng, is_sharing: true,
+      lat: fix.lat, lng: fix.lng, accuracy: fix.acc, is_sharing: true,
       updated_at: new Date().toISOString(),
     })
     setLastUpdate(new Date())
   }, [driverId, storeId])
+  const sendLocation = useCallback((lat: number, lng: number, acc: number | null = null) => {
+    const precise = acc == null || acc <= 60
+    if (!precise && Date.now() - lastGoodFix.current < 30_000) return
+    if (precise) lastGoodFix.current = Date.now()
+    setDriverPos([lat, lng])
+    pendingFix.current = { lat, lng, acc }
+    const wait = 2000 - (Date.now() - lastSentAt.current)
+    if (wait <= 0) flushLocation()
+    else if (!sendTimer.current) sendTimer.current = setTimeout(flushLocation, wait)
+  }, [flushLocation])
 
   const startGps = useCallback(async () => {
     if (!navigator.geolocation) { setGpsStatus('error'); return }
@@ -266,7 +286,7 @@ export default function DriverClient({
 
     watchId.current = navigator.geolocation.watchPosition(
       pos => {
-        sendLocation(pos.coords.latitude, pos.coords.longitude)
+        sendLocation(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy)
         setGpsStatus('active')
         if (!compassActive && pos.coords.heading != null && !Number.isNaN(pos.coords.heading)) {
           setHeading(pos.coords.heading)
@@ -281,8 +301,8 @@ export default function DriverClient({
       if (Date.now() - lastSentAt.current < 14000) return
       navigator.geolocation.getCurrentPosition(
         pos => {
-          sendLocation(pos.coords.latitude, pos.coords.longitude)
-            setGpsStatus('active')
+          sendLocation(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy)
+          setGpsStatus('active')
         },
         () => {},
         opts
@@ -293,6 +313,8 @@ export default function DriverClient({
   const stopGps = useCallback(async () => {
     if (watchId.current !== null) { navigator.geolocation.clearWatch(watchId.current); watchId.current = null }
     if (fallbackInterval.current) { clearInterval(fallbackInterval.current); fallbackInterval.current = null }
+    if (sendTimer.current) { clearTimeout(sendTimer.current); sendTimer.current = null }
+    pendingFix.current = null
     lockRelease.current?.(); lockRelease.current = null
     try { audioEl.current?.pause(); audioEl.current = null } catch { /* ignore */ }
     try { await wakeLock.current?.release() } catch { /* ignore */ }
@@ -378,6 +400,13 @@ export default function DriverClient({
   useEffect(() => {
     const onVisible = async () => {
       if (document.visibilityState === 'visible' && gpsStatus === 'active') {
+        // Back from another app (iOS pauses the page meanwhile): send a
+        // fresh fix right away instead of waiting for the next movement.
+        navigator.geolocation.getCurrentPosition(
+          pos => sendLocation(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy),
+          () => {},
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+        )
         try {
           if ('wakeLock' in navigator && (!wakeLock.current || wakeLock.current.released))
             wakeLock.current = await (navigator as Navigator & { wakeLock: { request(t: string): Promise<WakeLockSentinel> } }).wakeLock.request('screen')
@@ -386,7 +415,7 @@ export default function DriverClient({
     }
     document.addEventListener('visibilitychange', onVisible)
     return () => document.removeEventListener('visibilitychange', onVisible)
-  }, [gpsStatus])
+  }, [gpsStatus, sendLocation])
 
   useEffect(() => () => {
     if (watchId.current !== null) navigator.geolocation.clearWatch(watchId.current)

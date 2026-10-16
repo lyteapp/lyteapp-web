@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Map, { Marker } from 'react-map-gl'
 import type { MapRef } from 'react-map-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
@@ -25,6 +25,32 @@ interface Props {
   framePadding?: { top: number; bottom: number; left?: number; right?: number }
 }
 
+// Glides a marker from its previous position to the new one (~1 s) so the
+// driver moves smoothly between GPS updates instead of jumping.
+function useGlide(lat: number | null, lng: number | null): [number | null, number | null] {
+  const [pos, setPos] = useState<[number, number] | null>(lat != null && lng != null ? [lat, lng] : null)
+  const posRef = useRef(pos)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- animation state follows the prop
+    if (lat == null || lng == null) { posRef.current = null; setPos(null); return }
+    const from = posRef.current
+    if (!from) { posRef.current = [lat, lng]; setPos([lat, lng]); return }
+    const start = performance.now(), dur = 1000
+    let raf = 0
+    const step = (t: number) => {
+      const k = Math.min(1, (t - start) / dur)
+      const e = 1 - Math.pow(1 - k, 3)
+      const next: [number, number] = [from[0] + (lat - from[0]) * e, from[1] + (lng - from[1]) * e]
+      posRef.current = next
+      setPos(next)
+      if (k < 1) raf = requestAnimationFrame(step)
+    }
+    raf = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(raf)
+  }, [lat, lng])
+  return pos ? pos : [null, null]
+}
+
 export default function TrackingMap({
   driverLat, driverLng,
   customerLat, customerLng,
@@ -41,6 +67,7 @@ export default function TrackingMap({
   const loaded  = useRef(false)
 
   const hasDriver   = driverLat   != null && driverLng   != null
+  const [glideLat, glideLng] = useGlide(driverLat, driverLng)
   const hasCustomer = customerLat != null && customerLng != null
   const hasStore    = storeLat    != null && storeLng    != null
 
@@ -158,8 +185,8 @@ export default function TrackingMap({
         )}
 
         {/* Driver pin — their profile photo */}
-        {hasDriver && (
-          <Marker longitude={driverLng!} latitude={driverLat!} anchor="center" style={{ zIndex: 3 }}>
+        {hasDriver && glideLat != null && glideLng != null && (
+          <Marker longitude={glideLng} latitude={glideLat} anchor="center" style={{ zIndex: 3 }}>
             <div style={{
               width: driverAvatar ? 50 : 42, height: driverAvatar ? 50 : 42, borderRadius: '50%',
               background: accent, border: `3px solid ${driverAvatar ? accent : 'white'}`,

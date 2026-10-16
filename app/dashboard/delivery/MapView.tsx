@@ -125,8 +125,12 @@ export default function MapView({ inRoute, driverLocations, drivers, customerPin
     </div>
   )
 
+  // Every driver's last real GPS position (up to 30 min old). Markers older
+  // than 2 min are drawn faded with how long ago they were seen — never at a
+  // made-up spot (in-route drivers without GPS used to be scattered around
+  // the store as an "estimated position", which read as a wrong location).
   const activeGps = driverLocations.filter(
-    d => d.is_sharing && (Date.now() - new Date(d.updated_at).getTime()) < 300_000,
+    d => d.is_sharing && (d.lat !== 0 || d.lng !== 0) && (Date.now() - new Date(d.updated_at).getTime()) < 30 * 60_000,
   )
   const inRouteByDriver: Record<string, InRouteDelivery> = {}
   for (const d of inRoute) { if (d.driver_id) inRouteByDriver[d.driver_id] = d }
@@ -191,10 +195,11 @@ export default function MapView({ inRoute, driverLocations, drivers, customerPin
         const c = STATUS_COLORS[status]
         const secsAgo = Math.floor((Date.now() - new Date(loc.updated_at).getTime()) / 1000)
         const freshLabel = secsAgo < 60 ? `Hace ${secsAgo}s` : `Hace ${Math.floor(secsAgo / 60)} min`
+        const stale = secsAgo > 120
 
         return (
           <Marker key={loc.driver_id} longitude={loc.lng} latitude={loc.lat} anchor="center">
-            <div style={{ position: 'relative' }} onClick={e => { e.stopPropagation(); setPopup(p => p === loc.driver_id ? null : loc.driver_id) }}>
+            <div style={{ position: 'relative', opacity: stale ? 0.55 : 1, filter: stale ? 'grayscale(0.6)' : undefined }} onClick={e => { e.stopPropagation(); setPopup(p => p === loc.driver_id ? null : loc.driver_id) }}>
               <div style={{
                 width: avatar ? 42 : 36, height: avatar ? 42 : 36, borderRadius: '50%',
                 background: c.bg, border: `2.5px solid ${c.border}`,
@@ -226,7 +231,9 @@ export default function MapView({ inRoute, driverLocations, drivers, customerPin
                   ) : (
                     <div style={{ color: '#15803D', fontWeight: 500 }}>Disponible</div>
                   )}
-                  <div style={{ color: '#9CA3AF', marginTop: 4, fontSize: 11 }}>GPS · {freshLabel}</div>
+                  <div style={{ color: stale ? '#B45309' : '#9CA3AF', marginTop: 4, fontSize: 11 }}>
+                    {stale ? `Última ubicación · ${freshLabel.toLowerCase()}` : `GPS · ${freshLabel}`}
+                  </div>
                 </div>
               )}
             </div>
@@ -271,54 +278,6 @@ export default function MapView({ inRoute, driverLocations, drivers, customerPin
         )
       })}
 
-      {/* Drivers without GPS but in route */}
-      {inRoute
-        .filter(del => del.driver_id && !activeGps.find(g => g.driver_id === del.driver_id))
-        .map((del, i) => {
-          const mins = del.picked_up_at
-            ? Math.floor((Date.now() - new Date(del.picked_up_at).getTime()) / 60000)
-            : null
-          const late = mins !== null && mins > 30
-          const name = del.driver_name ?? '?'
-          const avatar = drivers.find(d => d.id === del.driver_id)?.avatar_url
-          const c = STATUS_COLORS[late ? 'late' : 'in_route']
-          const angle = (i / Math.max(inRoute.length, 1)) * 2 * Math.PI
-          const approxLng = pos[1] + Math.sin(angle) * 0.008
-          const approxLat = pos[0] + Math.cos(angle) * 0.006
-
-          return (
-            <Marker key={del.id} longitude={approxLng} latitude={approxLat} anchor="center">
-              <div style={{ position: 'relative', opacity: 0.75 }} onClick={e => { e.stopPropagation(); setPopup(p => p === del.id ? null : del.id) }}>
-                <div style={{
-                  width: avatar ? 42 : 36, height: avatar ? 42 : 36, borderRadius: '50%',
-                  background: c.bg, border: `2.5px dashed ${c.border}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 11, fontWeight: 700, color: c.text,
-                  boxShadow: '0 2px 10px rgba(0,0,0,0.12)', cursor: 'pointer',
-                  fontFamily: 'system-ui', overflow: 'hidden', padding: avatar ? 1.5 : 0,
-                }}><DriverFace name={name} avatar={avatar} /></div>
-                {popup === del.id && (
-                  <div style={{
-                    position: 'absolute', bottom: 46, left: '50%', transform: 'translateX(-50%)',
-                    background: 'white', borderRadius: 10, padding: '10px 14px',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.16)', minWidth: 160,
-                    fontSize: 12, zIndex: 20, whiteSpace: 'nowrap',
-                  }}>
-                    <div style={{ fontWeight: 700, marginBottom: 4, color: '#0F172A' }}>{name}</div>
-                    <div style={{ color: '#6B7280' }}>Cliente: {del.customer_name}</div>
-                    {mins !== null && (
-                      <div style={{ color: late ? '#B45309' : 'var(--lyte-navy)', marginTop: 3, fontWeight: 500 }}>
-                        {mins} min en ruta{late ? ' · ATRASADO' : ''}
-                      </div>
-                    )}
-                    <div style={{ color: '#9CA3AF', marginTop: 4, fontSize: 11 }}>Sin GPS · posicion estimada</div>
-                  </div>
-                )}
-              </div>
-            </Marker>
-          )
-        })
-      }
     </MapGL>
   )
 }

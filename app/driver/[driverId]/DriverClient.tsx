@@ -132,6 +132,18 @@ function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   return arr.buffer
 }
 
+// What the driver did today, from /api/driver-stats
+type DaySheet = {
+  currency: string
+  deliveries: number
+  collected: number
+  earned: number
+  byMethod: { method: string; count: number; total: number }[]
+  list: { id: string; customer_name: string; delivered_at: string; total: number; method: string; fee: number }[]
+}
+const money = (n: number, currency: string) =>
+  `${currency === 'EUR' ? '€' : '$'}${n.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
 export default function DriverClient({
   driverId, driverName, driverAvatar, storeId, storeName,
   initialDelivery, mapboxToken,
@@ -157,6 +169,8 @@ export default function DriverClient({
   const [newDeliveryFlash, setNewDeliveryFlash] = useState(false)
   const [showProof, setShowProof] = useState(false)
   const [orders, setOrders] = useState<AvailableOrder[]>([])
+  const [day, setDay] = useState<DaySheet | null>(null)
+  const [showDay, setShowDay] = useState(false)
   const watchId              = useRef<number | null>(null)
   const fallbackInterval = useRef<ReturnType<typeof setInterval> | null>(null)
   const lastSentAt       = useRef<number>(0)
@@ -384,6 +398,27 @@ export default function DriverClient({
     try { audioEl.current?.pause() } catch { /* ignore */ }
     wakeLock.current?.release().catch(() => {})
   }, [])
+
+  // ── Today's tally (collected from customers + own earnings) ──────
+  const loadDay = useCallback(async () => {
+    const midnight = new Date(); midnight.setHours(0, 0, 0, 0)
+    const res = await fetch(`/api/driver-stats?driverId=${driverId}&todayStart=${encodeURIComponent(midnight.toISOString())}`, { cache: 'no-store' }).catch(() => null)
+    const json = res?.ok ? await res.json().catch(() => null) : null
+    if (json?.today) setDay(json.today as DaySheet)
+  }, [driverId])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch
+    loadDay()
+    const onVisible = () => { if (document.visibilityState === 'visible') loadDay() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [loadDay])
+  // Refresh when a delivery finishes (from this phone or the dashboard)
+  const hadDelivery = useRef(!!initialDelivery)
+  useEffect(() => {
+    if (hadDelivery.current && !delivery) loadDay()
+    hadDelivery.current = !!delivery
+  }, [delivery, loadDay])
 
   // ── Load available orders ─────────────────────────────────────────
   const loadOrders = useCallback(async () => {
@@ -635,7 +670,79 @@ export default function DriverClient({
                 : <span className="dsp-badge-offline">offline</span>
           }
         </div>
+        <button className="dsp-day-bar" onClick={() => { setShowDay(true); loadDay() }}>
+          <span className="dsp-day-bar-lbl">Cobrado hoy</span>
+          <span className="dsp-day-bar-val">{day ? money(day.collected, day.currency) : '—'}</span>
+          <span className="dsp-day-bar-sub">
+            {day ? `${day.deliveries} ${day.deliveries === 1 ? 'entrega' : 'entregas'}` : ''}
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" /></svg>
+          </span>
+        </button>
       </div>
+
+      {/* Today's sheet */}
+      {showDay && (
+        <div className="dsp-day-overlay" onClick={() => setShowDay(false)}>
+          <div className="dsp-day-sheet" onClick={e => e.stopPropagation()} role="dialog" aria-label="Tu día">
+            <div className="dsp-day-grip" />
+            <div className="dsp-day-head">
+              <div>
+                <div className="dsp-day-title">Tu día</div>
+                <div className="dsp-day-date">{new Date().toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
+              </div>
+              <button className="dsp-day-close" onClick={() => setShowDay(false)} aria-label="Cerrar">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 5L5 15M5 5l10 10" /></svg>
+              </button>
+            </div>
+
+            {!day ? (
+              <div className="dsp-day-empty">Cargando…</div>
+            ) : (
+              <div className="dsp-day-body">
+                <div className="dsp-day-total">
+                  <div className="dsp-day-total-lbl">Cobrado a clientes</div>
+                  <div className="dsp-day-total-val">{money(day.collected, day.currency)}</div>
+                  <div className="dsp-day-total-sub">{day.deliveries} {day.deliveries === 1 ? 'entrega' : 'entregas'} hoy</div>
+                </div>
+
+                {day.byMethod.length > 0 && (
+                  <div className="dsp-day-section">
+                    <div className="dsp-day-section-title">Por método de pago</div>
+                    {day.byMethod.map(m => (
+                      <div key={m.method} className="dsp-day-row">
+                        <span className="dsp-day-row-name">{m.method} <span className="dsp-day-row-count">· {m.count}</span></span>
+                        <span className="dsp-day-row-val">{money(m.total, day.currency)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="dsp-day-earned">
+                  <span>Tus ganancias por delivery</span>
+                  <strong>{money(day.earned, day.currency)}</strong>
+                </div>
+
+                <div className="dsp-day-section">
+                  <div className="dsp-day-section-title">Entregas</div>
+                  {day.list.length === 0 ? (
+                    <div className="dsp-day-empty">Todavía no tienes entregas hoy.</div>
+                  ) : day.list.map(d => (
+                    <div key={d.id} className="dsp-day-row">
+                      <span className="dsp-day-row-main">
+                        <span className="dsp-day-row-name">{d.customer_name}</span>
+                        <span className="dsp-day-row-meta">
+                          {new Date(d.delivered_at).toLocaleTimeString('es', { hour: 'numeric', minute: '2-digit' })} · {d.method}
+                        </span>
+                      </span>
+                      <span className="dsp-day-row-val">{money(d.total, day.currency)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Install banner */}
       {installState === 'android' && (

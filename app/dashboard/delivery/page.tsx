@@ -72,6 +72,13 @@ function fmtTime(iso: string | null) {
   if (!iso) return '—'
   return new Date(iso).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })
 }
+// Compact "8:52 pm" for the phone cards, where four times share one row
+function fmtTimeShort(iso: string | null) {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  const h = d.getHours()
+  return `${h % 12 || 12}:${String(d.getMinutes()).padStart(2, '0')} ${h < 12 ? 'am' : 'pm'}`
+}
 
 function deliveryMinutes(del: Delivery) {
   if (!del.picked_up_at || !del.delivered_at) return null
@@ -667,7 +674,50 @@ export default function DeliveryPage() {
               Sin entregas para este filtro
             </div>
           ) : (
-            <table className="dv-data-table">
+            <>
+            {/* Phones: one card per delivery instead of the wide table */}
+            <div className="dv-today-cards">
+              {todayFiltered.map(del => {
+                const drv = del.driver as Driver | null
+                const mins = deliveryMinutes(del)
+                const status = del.status === 'delivered' ? 'delivered' : del.status === 'cancelled' ? 'cancelled' : 'ongoing'
+                const statusLabel = { delivered: 'Entregado', cancelled: 'Cancelado', ongoing: 'En curso' }[status]
+                const displayZone = zoneForCoords(del.customer_lat, del.customer_lng, zones) ?? del.zone
+                return (
+                  <div key={del.id} className="dv-tc">
+                    <div className="dv-tc-top">
+                      <div className="dv-tc-name">{del.customer_name}</div>
+                      <span className={`dv-chip ${status}`}>{statusLabel}</span>
+                    </div>
+                    {del.delivery_address && <div className="dv-tc-addr">{del.delivery_address}</div>}
+                    <div className="dv-tc-meta">
+                      <span className="dv-tc-driver">
+                        {drv ? <><span className="dv-mini-av">{drv.name[0]}</span>{drv.name}</> : <span className="dv-tc-muted">Sin despachador</span>}
+                      </span>
+                      {displayZone && (
+                        <span className="dv-tc-zone">
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: displayZone.color, flexShrink: 0 }} />
+                          {displayZone.name} · ${Number(displayZone.fee).toFixed(2)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="dv-tc-times">
+                      <div><span>Listo</span><strong>{fmtTimeShort(del.created_at)}</strong></div>
+                      <div><span>Recogido</span><strong>{fmtTimeShort(del.picked_up_at)}</strong></div>
+                      <div><span>Entregado</span><strong>{fmtTimeShort(del.delivered_at)}</strong></div>
+                      <div><span>Tiempo</span><strong>{mins !== null ? `${mins} min` : '—'}</strong></div>
+                    </div>
+                    {del.status === 'ready' && (
+                      <button className="dv-tc-action" onClick={() => setQrDel(del)}>Mostrar QR</button>
+                    )}
+                    {del.status === 'picked_up' && (
+                      <button className="dv-tc-action done" onClick={() => updateStatus(del, 'delivered')}>Marcar entregado</button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+            <table className="dv-data-table dv-today-table">
               <thead>
                 <tr>
                   <th>Cliente</th>
@@ -729,6 +779,7 @@ export default function DeliveryPage() {
                 })}
               </tbody>
             </table>
+            </>
           )}
         </div>
       </div>

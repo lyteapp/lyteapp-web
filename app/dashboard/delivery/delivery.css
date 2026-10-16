@@ -1250,3 +1250,23 @@
   .dv-settle-driver { flex-wrap: wrap; }
   .dv-settle-pay { width: 100%; padding: 10px; font-size: 14px; }
 }
+
+/* ── Tabs on phones: all six visible, a centered 3 × 2 grid of buttons ── */
+@media (max-width: 720px) {
+  .dv-tabs {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+    padding: 8px 10px;
+  }
+  .dv-tab {
+    justify-content: center; gap: 5px;
+    padding: 9px 4px; margin: 0;
+    border: 1px solid var(--dv-line); border-radius: 10px;
+    font-size: 12.5px; background: white;
+    min-width: 0;
+  }
+  .dv-tab.active {
+    background: var(--lyte-navy); border-color: var(--lyte-navy); color: white;
+  }
+  .dv-tab.active .dv-tab-count { background: white; color: var(--lyte-navy); }
+  .dv-tab-settings { margin-left: 0; }
+}

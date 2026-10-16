@@ -1411,15 +1411,8 @@
 .dsp-day-row:last-child { border-bottom: none; }
 .dsp-day-row-main { display: flex; flex-direction: column; min-width: 0; }
 .dsp-day-row-name { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dsp-day-row-count { color: #94A3B8; font-weight: 500; }
 .dsp-day-row-meta { font-size: 12.5px; color: #64748B; margin-top: 1px; }
 .dsp-day-row-val { font-size: 15px; font-weight: 700; flex-shrink: 0; }
-.dsp-day-earned {
-  display: flex; align-items: center; justify-content: space-between;
-  background: #E9EAFF; color: #1C1B3A; border-radius: 12px;
-  padding: 12px 14px; font-size: 14px; margin-bottom: 14px;
-}
-.dsp-day-earned strong { font-size: 16px; }
 .dsp-day-empty { font-size: 14px; color: #94A3B8; padding: 10px 0; }
 @media (prefers-color-scheme: dark) {
   .dsp-day-sheet { background: #1E293B; color: #F1F5F9; }
@@ -1427,5 +1420,4 @@
   .dsp-day-close { background: #334155; color: #F1F5F9; }
   .dsp-day-row { border-bottom-color: #334155; }
   .dsp-day-date, .dsp-day-row-meta { color: #94A3B8; }
-  .dsp-day-earned { background: #2A2955; color: #E9EAFF; }
 }

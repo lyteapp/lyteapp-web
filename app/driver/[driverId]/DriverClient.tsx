@@ -136,10 +136,8 @@ function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
 type DaySheet = {
   currency: string
   deliveries: number
-  collected: number
   earned: number
-  byMethod: { method: string; count: number; total: number }[]
-  list: { id: string; customer_name: string; delivered_at: string; total: number; method: string; fee: number }[]
+  list: { id: string; customer_name: string; delivered_at: string; fee: number; zone: string | null }[]
 }
 const money = (n: number, currency: string) =>
   `${currency === 'EUR' ? '€' : '$'}${n.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -399,7 +397,7 @@ export default function DriverClient({
     wakeLock.current?.release().catch(() => {})
   }, [])
 
-  // ── Today's tally (collected from customers + own earnings) ──────
+  // ── Today's tally (the driver's own delivery earnings) ───────────
   const loadDay = useCallback(async () => {
     const midnight = new Date(); midnight.setHours(0, 0, 0, 0)
     const res = await fetch(`/api/driver-stats?driverId=${driverId}&todayStart=${encodeURIComponent(midnight.toISOString())}`, { cache: 'no-store' }).catch(() => null)
@@ -671,8 +669,8 @@ export default function DriverClient({
           }
         </div>
         <button className="dsp-day-bar" onClick={() => { setShowDay(true); loadDay() }}>
-          <span className="dsp-day-bar-lbl">Cobrado hoy</span>
-          <span className="dsp-day-bar-val">{day ? money(day.collected, day.currency) : '—'}</span>
+          <span className="dsp-day-bar-lbl">Ganancias hoy</span>
+          <span className="dsp-day-bar-val">{day ? money(day.earned, day.currency) : '—'}</span>
           <span className="dsp-day-bar-sub">
             {day ? `${day.deliveries} ${day.deliveries === 1 ? 'entrega' : 'entregas'}` : ''}
             <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" /></svg>
@@ -700,26 +698,9 @@ export default function DriverClient({
             ) : (
               <div className="dsp-day-body">
                 <div className="dsp-day-total">
-                  <div className="dsp-day-total-lbl">Cobrado a clientes</div>
-                  <div className="dsp-day-total-val">{money(day.collected, day.currency)}</div>
+                  <div className="dsp-day-total-lbl">Ganancias por delivery</div>
+                  <div className="dsp-day-total-val">{money(day.earned, day.currency)}</div>
                   <div className="dsp-day-total-sub">{day.deliveries} {day.deliveries === 1 ? 'entrega' : 'entregas'} hoy</div>
-                </div>
-
-                {day.byMethod.length > 0 && (
-                  <div className="dsp-day-section">
-                    <div className="dsp-day-section-title">Por método de pago</div>
-                    {day.byMethod.map(m => (
-                      <div key={m.method} className="dsp-day-row">
-                        <span className="dsp-day-row-name">{m.method} <span className="dsp-day-row-count">· {m.count}</span></span>
-                        <span className="dsp-day-row-val">{money(m.total, day.currency)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="dsp-day-earned">
-                  <span>Tus ganancias por delivery</span>
-                  <strong>{money(day.earned, day.currency)}</strong>
                 </div>
 
                 <div className="dsp-day-section">
@@ -731,10 +712,10 @@ export default function DriverClient({
                       <span className="dsp-day-row-main">
                         <span className="dsp-day-row-name">{d.customer_name}</span>
                         <span className="dsp-day-row-meta">
-                          {new Date(d.delivered_at).toLocaleTimeString('es', { hour: 'numeric', minute: '2-digit' })} · {d.method}
+                          {new Date(d.delivered_at).toLocaleTimeString('es', { hour: 'numeric', minute: '2-digit' })}{d.zone ? ` · ${d.zone}` : ''}
                         </span>
                       </span>
-                      <span className="dsp-day-row-val">{money(d.total, day.currency)}</span>
+                      <span className="dsp-day-row-val">{money(d.fee, day.currency)}</span>
                     </div>
                   ))}
                 </div>

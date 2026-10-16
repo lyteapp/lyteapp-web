@@ -76,10 +76,9 @@ export async function GET(req: Request) {
       .select('id', { count: 'exact', head: true })
       .eq('driver_id', driverId)
       .neq('status', 'cancelled'),
-    // Today's day sheet: what was collected from customers on each delivery
-    // completed since the driver's local midnight
+    // Today's day sheet: deliveries completed since the driver's local midnight
     supa.from('deliveries')
-      .select('id, customer_name, delivered_at, driver_fee, created_at, customer_lat, customer_lng, zone_id, orders(total, payment_method)')
+      .select('id, customer_name, delivered_at, driver_fee, created_at, customer_lat, customer_lng, zone_id')
       .eq('driver_id', driverId)
       .eq('status', 'delivered')
       .gte('delivered_at', todayStart.toISOString())
@@ -139,37 +138,19 @@ export async function GET(req: Request) {
     .filter(z => z.totalCount > 0)
     .sort((a, b) => b.totalCount - a.totalCount)
 
-  // ── Day sheet ──
-  type DayRow = DeliveryRow & {
-    id: string; customer_name: string; delivered_at: string
-    orders: { total: number | null; payment_method: string | null } | null
-  }
-  const byMethod: Record<string, { method: string; count: number; total: number }> = {}
-  let collected = 0
+  // ── Day sheet: only the driver's own earnings (no order totals) ──
+  type DayRow = DeliveryRow & { id: string; customer_name: string; delivered_at: string }
   let earned = 0
   const day = ((deliveredToday ?? []) as unknown as DayRow[]).map(d => {
-    const total = Number(d.orders?.total ?? 0) || 0
-    const method = d.orders?.payment_method?.trim() || 'Sin método'
-    const fee = feeForDelivery(d, matchZone(d, zonesArr), zoneFeesMap) || 0
-    collected += total
+    const zone = matchZone(d, zonesArr)
+    const fee = feeForDelivery(d, zone, zoneFeesMap) || 0
     earned += fee
-    const key = method.toLowerCase()
-    byMethod[key] ??= { method, count: 0, total: 0 }
-    byMethod[key].count++
-    byMethod[key].total += total
-    return { id: d.id, customer_name: d.customer_name, delivered_at: d.delivered_at, total, method, fee }
+    return { id: d.id, customer_name: d.customer_name, delivered_at: d.delivered_at, fee, zone: zone?.name ?? null }
   })
   const currency = (driver.stores as unknown as { store_currency: string | null } | null)?.store_currency ?? 'USD'
 
   return Response.json({
     todayCount, totalCount: count ?? 0, todayZoneFee, totalZoneFee, zoneBreakdown,
-    today: {
-      currency,
-      deliveries: day.length,
-      collected,
-      earned,
-      byMethod: Object.values(byMethod).sort((a, b) => b.total - a.total),
-      list: day,
-    },
+    today: { currency, deliveries: day.length, earned, list: day },
   }, { headers: { 'Cache-Control': 'no-store' } })
 }

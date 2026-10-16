@@ -564,7 +564,7 @@ export default function DeliveryPage() {
                   picked_up_at: del.picked_up_at,
                 }))}
                 driverLocations={driverLocations}
-                drivers={drivers.map(d => ({ id: d.id, name: d.name }))}
+                drivers={drivers.map(d => ({ id: d.id, name: d.name, avatar_url: d.avatar_url }))}
                 labeled
                 focusId={mapFocus}
                 framePadding={{ top: (mapTop ?? 0) + 76, bottom: mapActive.length > 0 ? 190 : 0 }}
@@ -668,7 +668,7 @@ export default function DeliveryPage() {
               picked_up_at: del.picked_up_at,
             }))}
             driverLocations={driverLocations}
-            drivers={drivers.map(d => ({ id: d.id, name: d.name }))}
+            drivers={drivers.map(d => ({ id: d.id, name: d.name, avatar_url: d.avatar_url }))}
             customerPins={todayDels.filter(d => d.customer_lat != null && d.customer_lng != null).map(d => ({
               id: d.id,
               customer_name: d.customer_name,

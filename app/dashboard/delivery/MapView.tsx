@@ -26,6 +26,7 @@ type DriverLocation = {
 type Driver = {
   id: string
   name: string
+  avatar_url?: string | null
 }
 
 type CustomerPin = {
@@ -50,6 +51,14 @@ type Props = {
   focusId?: string | null
   /** Extra space kept clear at the top/bottom when framing (overlays). */
   framePadding?: { top: number; bottom: number }
+}
+
+// Driver's profile photo inside the marker circle (initials without one)
+function DriverFace({ name, avatar }: { name: string; avatar?: string | null }) {
+  return avatar
+    // eslint-disable-next-line @next/next/no-img-element
+    ? <img src={avatar} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%', display: 'block' }} />
+    : <>{initials(name)}</>
 }
 
 function initials(name: string) {
@@ -172,7 +181,7 @@ export default function MapView({ inRoute, driverLocations, drivers, customerPin
       {activeGps.map(loc => {
         const driver = drivers.find(d => d.id === loc.driver_id)
         const name = driver?.name ?? 'Despachador'
-        const init = initials(name)
+        const avatar = driver?.avatar_url
         const delivery = loc.driver_id ? inRouteByDriver[loc.driver_id] : undefined
         const mins = delivery?.picked_up_at
           ? Math.floor((Date.now() - new Date(delivery.picked_up_at).getTime()) / 60000)
@@ -187,13 +196,13 @@ export default function MapView({ inRoute, driverLocations, drivers, customerPin
           <Marker key={loc.driver_id} longitude={loc.lng} latitude={loc.lat} anchor="center">
             <div style={{ position: 'relative' }} onClick={e => { e.stopPropagation(); setPopup(p => p === loc.driver_id ? null : loc.driver_id) }}>
               <div style={{
-                width: 36, height: 36, borderRadius: '50%',
+                width: avatar ? 42 : 36, height: avatar ? 42 : 36, borderRadius: '50%',
                 background: c.bg, border: `2.5px solid ${c.border}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 11, fontWeight: 700, color: c.text,
                 boxShadow: '0 2px 10px rgba(0,0,0,0.18)', cursor: 'pointer',
-                fontFamily: 'system-ui',
-              }}>{init}</div>
+                fontFamily: 'system-ui', overflow: 'hidden', padding: avatar ? 1.5 : 0,
+              }}><DriverFace name={name} avatar={avatar} /></div>
               <span style={{
                 position: 'absolute', top: 0, right: 0,
                 width: 9, height: 9, borderRadius: '50%',
@@ -271,7 +280,7 @@ export default function MapView({ inRoute, driverLocations, drivers, customerPin
             : null
           const late = mins !== null && mins > 30
           const name = del.driver_name ?? '?'
-          const init = initials(name)
+          const avatar = drivers.find(d => d.id === del.driver_id)?.avatar_url
           const c = STATUS_COLORS[late ? 'late' : 'in_route']
           const angle = (i / Math.max(inRoute.length, 1)) * 2 * Math.PI
           const approxLng = pos[1] + Math.sin(angle) * 0.008
@@ -281,13 +290,13 @@ export default function MapView({ inRoute, driverLocations, drivers, customerPin
             <Marker key={del.id} longitude={approxLng} latitude={approxLat} anchor="center">
               <div style={{ position: 'relative', opacity: 0.75 }} onClick={e => { e.stopPropagation(); setPopup(p => p === del.id ? null : del.id) }}>
                 <div style={{
-                  width: 36, height: 36, borderRadius: '50%',
+                  width: avatar ? 42 : 36, height: avatar ? 42 : 36, borderRadius: '50%',
                   background: c.bg, border: `2.5px dashed ${c.border}`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 11, fontWeight: 700, color: c.text,
                   boxShadow: '0 2px 10px rgba(0,0,0,0.12)', cursor: 'pointer',
-                  fontFamily: 'system-ui',
-                }}>{init}</div>
+                  fontFamily: 'system-ui', overflow: 'hidden', padding: avatar ? 1.5 : 0,
+                }}><DriverFace name={name} avatar={avatar} /></div>
                 {popup === del.id && (
                   <div style={{
                     position: 'absolute', bottom: 46, left: '50%', transform: 'translateX(-50%)',

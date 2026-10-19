@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { commissionPct, splitFee } from '../../lib/deliveryFees'
 
 const supa = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -54,7 +55,7 @@ export async function GET(req: Request) {
 
   const { data: driver } = await supa
     .from('delivery_drivers')
-    .select('store_id, stores(store_currency)')
+    .select('store_id, stores(store_currency, checkout_settings)')
     .eq('id', driverId)
     .maybeSingle()
   if (!driver) return Response.json({ error: 'Driver not found' }, { status: 404 })
@@ -138,19 +139,22 @@ export async function GET(req: Request) {
     .filter(z => z.totalCount > 0)
     .sort((a, b) => b.totalCount - a.totalCount)
 
-  // ── Day sheet: only the driver's own earnings (no order totals) ──
+  // ── Day sheet: only the driver's own earnings (no order totals), net of
+  // the store's commission on delivery fees ──
+  const pct = commissionPct((driver.stores as unknown as { checkout_settings: unknown } | null)?.checkout_settings)
   type DayRow = DeliveryRow & { id: string; customer_name: string; delivered_at: string }
   let earned = 0
   const day = ((deliveredToday ?? []) as unknown as DayRow[]).map(d => {
     const zone = matchZone(d, zonesArr)
-    const fee = feeForDelivery(d, zone, zoneFeesMap) || 0
+    const fee = splitFee(feeForDelivery(d, zone, zoneFeesMap) || 0, pct).driver
     earned += fee
     return { id: d.id, customer_name: d.customer_name, delivered_at: d.delivered_at, fee, zone: zone?.name ?? null }
   })
   const currency = (driver.stores as unknown as { store_currency: string | null } | null)?.store_currency ?? 'USD'
 
+
   return Response.json({
     todayCount, totalCount: count ?? 0, todayZoneFee, totalZoneFee, zoneBreakdown,
-    today: { currency, deliveries: day.length, earned, list: day },
+    today: { currency, deliveries: day.length, earned: Math.round(earned * 100) / 100, list: day },
   }, { headers: { 'Cache-Control': 'no-store' } })
 }

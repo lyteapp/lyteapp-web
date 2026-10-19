@@ -37,3 +37,15 @@ export function feeForDelivery(d: FeeDelivery, zone: FeeZone | null, zones: FeeZ
 export function localDay(at: Date | string, timeZone: string) {
   return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(at))
 }
+
+/** The store's commission on delivery fees, 0–100 (Delivery → Ajustes) */
+export function commissionPct(checkoutSettings: unknown): number {
+  const v = Number((checkoutSettings as { deliveryCommissionPct?: unknown } | null)?.deliveryCommissionPct)
+  return Number.isFinite(v) ? Math.min(100, Math.max(0, v)) : 0
+}
+
+/** Split a delivery fee into the driver's share and the store's commission */
+export function splitFee(fee: number, pct: number) {
+  const commission = Math.round(fee * pct) / 100
+  return { driver: Math.round((fee - commission) * 100) / 100, commission }
+}

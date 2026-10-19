@@ -8,6 +8,7 @@ import { useDashboardStore } from '../../lib/DashboardStoreProvider'
 import './delivery.css'
 import LyteLeafLoader from '../../components/LyteLeafLoader'
 import { PIN_STATUS_COLOR, PIN_STATUS_LABEL, isActiveStatus } from './deliveryStatus'
+import { splitFee } from '../../lib/deliveryFees'
 
 const MapView = dynamic(() => import('./MapView'), {
   ssr: false,
@@ -153,6 +154,8 @@ export default function DeliveryPage() {
   // Settings tab
   const [stDeliveryEnabled, setStDeliveryEnabled] = useState(false)
   const [stDeliveryFee,     setStDeliveryFee]     = useState('')
+  // Store's cut of each delivery fee; drivers are credited the rest
+  const [stCommission,      setStCommission]      = useState('')
   const [stDeliveryTime,    setStDeliveryTime]     = useState('')
   const [stDeliveryZone,    setStDeliveryZone]     = useState('')
   const [stAutoAssign,      setStAutoAssign]        = useState(false)
@@ -236,6 +239,7 @@ export default function DeliveryPage() {
     const cs = (storeRow as { checkout_settings?: Record<string, unknown> } | null)?.checkout_settings ?? {}
     setStDeliveryEnabled(Boolean(cs.deliveryEnabled))
     setStDeliveryFee(cs.deliveryFee ? String(cs.deliveryFee) : '')
+    setStCommission(Number(cs.deliveryCommissionPct) > 0 ? String(cs.deliveryCommissionPct) : '')
     setStDeliveryTime(typeof cs.deliveryTime === 'string' ? cs.deliveryTime : '')
     setStDeliveryZone(typeof cs.deliveryZone === 'string' ? cs.deliveryZone : '')
     setStAutoAssign(Boolean(cs.autoAssign))
@@ -281,7 +285,7 @@ export default function DeliveryPage() {
   }, [qrDel])
 
   // ── Liquidaciones: daily closes per driver ──
-  type DayClose = { id: string; driver_id: string; day: string; deliveries: number; fees: number; paid_at: string | null }
+  type DayClose = { id: string; driver_id: string; day: string; deliveries: number; fees: number; commission: number; paid_at: string | null }
   const [closes, setCloses] = useState<DayClose[]>([])
   const [closesLoading, setClosesLoading] = useState(false)
   const [payingDriver, setPayingDriver] = useState<string | null>(null)
@@ -297,11 +301,11 @@ export default function DeliveryPage() {
     }).catch(() => null)
     const since = new Date(Date.now() - 90 * 86400_000).toISOString().slice(0, 10)
     const { data } = await supabase.from('delivery_day_closes')
-      .select('id, driver_id, day, deliveries, fees, paid_at')
+      .select('id, driver_id, day, deliveries, fees, commission, paid_at')
       .eq('store_id', sid)
       .or(`paid_at.is.null,day.gte.${since}`)
       .order('day', { ascending: false })
-    setCloses(((data ?? []) as DayClose[]).map(c => ({ ...c, fees: Number(c.fees) || 0 })))
+    setCloses(((data ?? []) as DayClose[]).map(c => ({ ...c, fees: Number(c.fees) || 0, commission: Number(c.commission) || 0 })))
     setPaidSince(new Date(Date.now() - 30 * 86400_000).toISOString())
     setClosesLoading(false)
   }, [])
@@ -453,6 +457,7 @@ export default function DeliveryPage() {
       deliveryTime: stDeliveryTime.trim() || null,
       deliveryZone: stDeliveryZone.trim() || null,
       autoAssign: stAutoAssign,
+      deliveryCommissionPct: Math.min(100, Math.max(0, parseFloat(stCommission.replace(',', '.')) || 0)),
     }
     await supabase.from('stores').update({ checkout_settings: merged }).eq('id', storeId)
     setSavingSettings(false)
@@ -461,6 +466,8 @@ export default function DeliveryPage() {
   }
 
   // Derived data
+  const commissionPctNum = Math.min(100, Math.max(0, parseFloat(stCommission.replace(',', '.')) || 0))
+  const driverShare = (fee: number) => splitFee(fee, commissionPctNum).driver
   const inRoute       = deliveries.filter(d => d.status === 'picked_up')
   const activeDrivers = drivers.filter(d => d.is_active !== false)
   const todayDels = deliveries.filter(d => isToday(d.created_at))
@@ -954,7 +961,7 @@ export default function DeliveryPage() {
                 const todayDrv = dDels.filter(d => isToday(d.created_at) && d.status === 'delivered')
                 const todayZoneFeeTotal = todayDrv.reduce((s, d) => {
                   const z = zoneForCoords(d.customer_lat, d.customer_lng, zones) ?? d.zone
-                  return s + Number(z?.fee ?? d.driver_fee)
+                  return s + driverShare(Number(z?.fee ?? d.driver_fee) || 0)
                 }, 0)
                 const busy = inRoute.find(d => d.driver_id === drv.id)
                 const loc = driverLocations.find(d => d.driver_id === drv.id)
@@ -1298,7 +1305,7 @@ export default function DeliveryPage() {
             const paid30 = closes.filter(c => c.paid_at && c.paid_at >= paidSince).reduce((s, c) => s + c.fees, 0)
             // Today is still open: what each driver has earned so far
             const todayDone = todayDels.filter(d => d.status === 'delivered' && d.driver_id)
-            const todayFee = (d: Delivery) => Number((zoneForCoords(d.customer_lat, d.customer_lng, zones) ?? d.zone)?.fee ?? d.driver_fee) || 0
+            const todayFee = (d: Delivery) => driverShare(Number((zoneForCoords(d.customer_lat, d.customer_lng, zones) ?? d.zone)?.fee ?? d.driver_fee) || 0)
             const todayTotal = todayDone.reduce((s, d) => s + todayFee(d), 0)
 
             const perDriver = Object.values(unpaid.reduce<Record<string, { driver_id: string; days: number; deliveries: number; fees: number }>>((acc, c) => {
@@ -1333,6 +1340,7 @@ export default function DeliveryPage() {
 
                 <div className="dv-settle-note">
                   Cada día a las 12:00 de la noche se cierran las entregas del día y se suman aquí. Hoy sigue abierto hasta medianoche.
+                  {commissionPctNum > 0 && ` Los montos son lo que le toca a cada despachador, ya sin la comisión de la tienda (${commissionPctNum}%).`}
                 </div>
 
                 <div className="dv-settle-section">
@@ -1371,11 +1379,12 @@ export default function DeliveryPage() {
                   ) : Object.entries(byDay).map(([day, list]) => {
                     const total = list.reduce((s, c) => s + c.fees, 0)
                     const count = list.reduce((s, c) => s + c.deliveries, 0)
+                    const cut = list.reduce((s, c) => s + c.commission, 0)
                     return (
                       <div key={day} className="dv-settle-day">
                         <div className="dv-settle-day-head">
                           <span className="dv-settle-day-date">{dayLabel(day)}</span>
-                          <span className="dv-settle-day-sum">{count} {count === 1 ? 'entrega' : 'entregas'} · <strong>{money(total)}</strong></span>
+                          <span className="dv-settle-day-sum">{count} {count === 1 ? 'entrega' : 'entregas'} · <strong>{money(total)}</strong>{cut > 0 && <> · tienda {money(cut)}</>}</span>
                         </div>
                         {list.map(c => (
                           <div key={c.id} className="dv-settle-day-row">
@@ -1443,6 +1452,23 @@ export default function DeliveryPage() {
                     onChange={e => setStDeliveryFee(e.target.value)}
                     placeholder="0.00"
                   />
+                </div>
+
+                <div className="dv-settings-field">
+                  <div className="dv-settings-field-label">Comisión de la tienda por delivery (%)</div>
+                  <input
+                    className="dv-settings-input"
+                    type="text"
+                    inputMode="decimal"
+                    value={stCommission}
+                    onChange={e => setStCommission(e.target.value.replace(/[^0-9.,]/g, ''))}
+                    placeholder="0"
+                  />
+                  <div className="dv-settings-toggle-hint">
+                    {commissionPctNum > 0
+                      ? `Ejemplo: en una zona de $2,00 la tienda se queda $${splitFee(2, commissionPctNum).commission.toFixed(2)} y al despachador se le suman $${splitFee(2, commissionPctNum).driver.toFixed(2)}. Aplica desde el próximo cierre diario.`
+                      : 'Parte de la tarifa de cada delivery que se queda la tienda. Al despachador se le suma solo el resto.'}
+                  </div>
                 </div>
 
                 <div className="dv-settings-field">

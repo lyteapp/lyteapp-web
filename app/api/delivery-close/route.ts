@@ -1,14 +1,16 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest } from 'next/server'
-import { feeForDelivery, localDay, matchZone, type FeeZone } from '../../lib/deliveryFees'
+import { commissionPct, feeForDelivery, localDay, matchZone, splitFee, type FeeZone } from '../../lib/deliveryFees'
 
 // Daily close of delivery earnings (Liquidaciones).
 // GET  — Vercel cron, just after midnight: closes every store's past days.
 // POST — the dashboard (store owner), when opening Liquidaciones: catches up
 //        its own store in case the cron hasn't run yet.
-// Closing a day freezes each delivered delivery's fee (deliveries.driver_fee,
-// from its zone at that moment), stamps closed_on, and stores the totals per
-// driver and day in delivery_day_closes. Today (still open) is never closed.
+// Closing a day freezes each delivered delivery's fee (from its zone at that
+// moment) split into the driver's share (deliveries.driver_fee) and the
+// store's commission (deliveries.store_commission, Delivery → Ajustes),
+// stamps closed_on, and stores the totals per driver and day in
+// delivery_day_closes (fees = what the driver is owed). Today (still open) is never closed.
 
 // Stores are in Venezuela for now; days close at local midnight.
 const TIME_ZONE = 'America/Caracas'
@@ -48,6 +50,9 @@ async function closeDays(storeId?: string) {
     .select('id, store_id, name, fee, color, center_lat, center_lng, radius_m')
     .in('store_id', storeIds)
   if (zErr) throw new Error(zErr.message)
+  const { data: storeRows } = await supa.from('stores').select('id, checkout_settings').in('id', storeIds)
+  const pctByStore: Record<string, number> = {}
+  for (const st of (storeRows ?? []) as { id: string; checkout_settings: unknown }[]) pctByStore[st.id] = commissionPct(st.checkout_settings)
   const zonesByStore: Record<string, FeeZone[]> = {}
   for (const z of (zoneRows ?? []) as (FeeZone & { store_id: string })[]) (zonesByStore[z.store_id] ??= []).push(z)
 
@@ -57,9 +62,10 @@ async function closeDays(storeId?: string) {
     await Promise.all(rows.slice(i, i + 25).map(async d => {
       const zones = zonesByStore[d.store_id] ?? []
       const fee = feeForDelivery(d, matchZone(d, zones), zones)
+      const { driver, commission } = splitFee(fee, pctByStore[d.store_id] ?? 0)
       const day = localDay(d.delivered_at, TIME_ZONE)
       const { error: uErr } = await supa.from('deliveries')
-        .update({ driver_fee: fee, closed_on: day })
+        .update({ driver_fee: driver, store_commission: commission, closed_on: day })
         .eq('id', d.id)
       if (!uErr) touched.add(`${d.store_id}|${d.driver_id}|${day}`)
     }))
@@ -70,13 +76,16 @@ async function closeDays(storeId?: string) {
   for (const key of touched) {
     const [store_id, driver_id, day] = key.split('|')
     const { data: dayRows } = await supa.from('deliveries')
-      .select('driver_fee')
+      .select('driver_fee, store_commission')
       .eq('store_id', store_id).eq('driver_id', driver_id).eq('closed_on', day).eq('status', 'delivered')
-    const list = (dayRows ?? []) as { driver_fee: number | null }[]
+    const list = (dayRows ?? []) as { driver_fee: number | null; store_commission: number | null }[]
+    const sum = (k: 'driver_fee' | 'store_commission') => Math.round(list.reduce((s, r) => s + (Number(r[k]) || 0), 0) * 100) / 100
     await supa.from('delivery_day_closes').upsert({
       store_id, driver_id, day,
       deliveries: list.length,
-      fees: Math.round(list.reduce((s, r) => s + (Number(r.driver_fee) || 0), 0) * 100) / 100,
+      fees: sum('driver_fee'),
+      commission: sum('store_commission'),
+      gross: Math.round((sum('driver_fee') + sum('store_commission')) * 100) / 100,
       closed_at: new Date().toISOString(),
     }, { onConflict: 'store_id,driver_id,day' })
   }

@@ -10,7 +10,7 @@ import { isLightColor as isLightHex } from '../../lib/colorContrast'
 import './productos.css'
 import LyteLeafLoader from '../../components/LyteLeafLoader'
 
-type VariableChoice = { value: string; price: number; calories?: number; fat?: number; protein?: number; carbs?: number }
+type VariableChoice = { value: string; price: number; calories?: number; fat?: number; protein?: number; carbs?: number; diets?: string[] }
 type VariableGroup  = { label: string; choices: VariableChoice[]; min?: number; max?: number }
 function normalizeChoice(c: VariableChoice | string): VariableChoice {
   return typeof c === 'string'
@@ -262,6 +262,16 @@ export default function ProductosPage() {
   function updateChoiceNutrition(gi: number, ci: number, field: 'calories' | 'fat' | 'protein' | 'carbs', value: number) {
     setOptVariables(v => v.map((g, i) => i === gi
       ? { ...g, choices: g.choices.map((c, j) => j === ci ? { ...c, [field]: value } : c) } : g))
+    setIsDirty(true)
+  }
+  function toggleChoiceDiet(gi: number, ci: number, code: string) {
+    setOptVariables(v => v.map((g, i) => i === gi
+      ? { ...g, choices: g.choices.map((c, j) => {
+          if (j !== ci) return c
+          const cur = c.diets ?? []
+          const next = cur.includes(code) ? cur.filter(d => d !== code) : DIETS.map(d => d.code).filter(d => d === code || cur.includes(d))
+          return { ...c, diets: next.length ? next : undefined }
+        }) } : g))
     setIsDirty(true)
   }
   function removeVarGroup(i: number) {
@@ -822,6 +832,21 @@ export default function ProductosPage() {
                                 value={choice.carbs ?? ''}
                                 onChange={e => updateChoiceNutrition(gi, ci, 'carbs', parseFloat(e.target.value) || 0)}
                               />
+                              <div className="pr-opt-choice-diets">
+                                {DIETS.map(d => {
+                                  const on = choice.diets?.includes(d.code) ?? false
+                                  return (
+                                    <button
+                                      key={d.code}
+                                      type="button"
+                                      className={`pr-diet-dot pr-diet-${d.code}${on ? ' on' : ''}`}
+                                      onClick={() => toggleChoiceDiet(gi, ci, d.code)}
+                                      title={d.label}
+                                      aria-pressed={on}
+                                    >{d.code}</button>
+                                  )
+                                })}
+                              </div>
                             </div>
                           )}
                         </div>

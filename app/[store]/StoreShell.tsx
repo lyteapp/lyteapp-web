@@ -16,7 +16,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
 )
 
-type VariableChoice = { value: string; price: number; calories?: number; fat?: number; protein?: number; carbs?: number }
+type VariableChoice = { value: string; price: number; calories?: number; fat?: number; protein?: number; carbs?: number; diets?: string[] }
 type VariableGroup  = { label: string; choices: VariableChoice[]; min?: number; max?: number }
 function normalizeChoice(c: VariableChoice | string): VariableChoice {
   return typeof c === 'string'
@@ -2380,6 +2380,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
                     >
                       {c.value}
                       {modalNutritionEnabled && choiceHasNutrition(c) && <span className="sf-modal-chip-nutrition-dot" />}
+                      {modalNutritionEnabled && (c.diets ?? []).some(d => DIET_LABELS[d]) && (
+                        <span className="sf-chip-diets">
+                          {c.diets!.filter(d => DIET_LABELS[d]).map(d => <span key={d} className={`sf-diet sf-diet-${d}`} title={DIET_LABELS[d]}>{d}</span>)}
+                        </span>
+                      )}
                       {c.price > 0 && <span className="sf-modal-chip-price">+{currencySymbol}{c.price.toFixed(2)}</span>}
                     </button>
                   ))}
@@ -2460,6 +2465,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
                         >
                           {c.value}
                           {modalNutritionEnabled && choiceHasNutrition(c) && <span className="sf-modal-chip-nutrition-dot" />}
+                      {modalNutritionEnabled && (c.diets ?? []).some(d => DIET_LABELS[d]) && (
+                        <span className="sf-chip-diets">
+                          {c.diets!.filter(d => DIET_LABELS[d]).map(d => <span key={d} className={`sf-diet sf-diet-${d}`} title={DIET_LABELS[d]}>{d}</span>)}
+                        </span>
+                      )}
                           {c.price > 0 && <span className="sf-modal-chip-price">+{currencySymbol}{c.price.toFixed(2)}</span>}
                         </button>
                       ))}

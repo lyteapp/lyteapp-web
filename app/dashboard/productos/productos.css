@@ -784,7 +784,10 @@
   font-size: 10px; font-weight: 800; letter-spacing: -0.02em;
   background: #E2E8F0; color: #64748B; transition: all 0.15s;
 }
-.pr-diet.on .pr-diet-GF { background: #D97706; color: white; }
-.pr-diet.on .pr-diet-VG { background: #15803D; color: white; }
-.pr-diet.on .pr-diet-V  { background: #65A30D; color: white; }
-.pr-diet.on .pr-diet-P  { background: #0284C7; color: white; }
+.pr-diet.on .pr-diet-GF, .pr-diet-dot.pr-diet-GF.on { background: #D97706; color: white; }
+.pr-diet.on .pr-diet-VG, .pr-diet-dot.pr-diet-VG.on { background: #15803D; color: white; }
+.pr-diet.on .pr-diet-V,  .pr-diet-dot.pr-diet-V.on  { background: #65A30D; color: white; }
+.pr-diet.on .pr-diet-P,  .pr-diet-dot.pr-diet-P.on  { background: #0284C7; color: white; }
+/* per-choice diet toggles under each variable choice's nutrition inputs */
+.pr-opt-choice-diets { grid-column: 1 / -1; display: flex; gap: 5px; margin-top: 2px; }
+.pr-opt-choice-diets .pr-diet-dot { width: 24px; height: 24px; border: none; cursor: pointer; font-family: inherit; font-size: 9.5px; }

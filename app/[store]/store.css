@@ -1679,6 +1679,9 @@ html, body { overflow-x: clip; }
 .sf-diet-VG { background: #15803D; }
 .sf-diet-V  { background: #65A30D; }
 .sf-diet-P  { background: #0284C7; }
+/* the same circles, small, inside a variable choice's chip */
+.sf-chip-diets { display: inline-flex; gap: 3px; margin-left: 6px; vertical-align: middle; }
+.sf-chip-diets .sf-diet { width: 18px; height: 18px; font-size: 7.5px; }
 .sf-tpl-oscuro .sf-modal-diets { border-left-color: rgba(255, 255, 255, 0.1); }
 .sf-tpl-oscuro .sf-modal-nutrition-badge {
   background: #1E293B; border-color: rgba(255, 255, 255, 0.1);

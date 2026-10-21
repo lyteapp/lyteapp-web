@@ -1851,6 +1851,28 @@ html, body { overflow-x: clip; }
 .sf-modal-chip.selected {
   background: var(--sf-accent-color, #7C3AED); border-color: var(--sf-accent-color, #7C3AED); color: white; font-weight: 600;
 }
+/* Choice with a background photo: a small photo tile, name over it */
+.sf-modal-chip.sf-chip-photo {
+  min-width: 112px; min-height: 84px; padding: 10px 12px; border-radius: 14px;
+  display: inline-flex; flex-wrap: wrap; align-items: flex-end; align-content: flex-end; gap: 4px;
+  background-size: cover; background-position: center; background-color: #1E293B;
+  border: 2px solid transparent; color: white; font-weight: 600; text-align: left;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.45);
+}
+.sf-modal-chip.sf-chip-photo:hover { color: white; border-color: color-mix(in srgb, var(--sf-accent-color, #7C3AED) 60%, transparent); }
+.sf-modal-chip.sf-chip-photo.selected {
+  color: white; border-color: var(--sf-accent-color, #7C3AED);
+  box-shadow: 0 0 0 2px var(--sf-accent-color, #7C3AED);
+}
+.sf-modal-chip.sf-chip-photo.selected::after {
+  content: '✓'; position: absolute; top: 6px; left: 6px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--sf-accent-color, #7C3AED); color: white; text-shadow: none;
+  font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+}
+.sf-chip-photo .sf-modal-chip-price { margin-left: 0; opacity: 0.95; flex-basis: 100%; }
+.sf-modal-chips:has(.sf-chip-photo) .sf-modal-chip:not(.sf-chip-photo) { align-self: center; }
+.sf-chip-photo .sf-chip-diets { margin-left: 0; }
 .sf-modal-chip-price {
   margin-left: 6px; font-size: 12px; font-weight: 600; opacity: 0.75;
 }

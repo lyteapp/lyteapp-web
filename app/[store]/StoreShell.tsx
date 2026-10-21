@@ -16,12 +16,12 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
 )
 
-type VariableChoice = { value: string; price: number; calories?: number; fat?: number; protein?: number; carbs?: number; diets?: string[] }
+type VariableChoice = { value: string; price: number; calories?: number; fat?: number; protein?: number; carbs?: number; diets?: string[]; imageUrl?: string }
 type VariableGroup  = { label: string; choices: VariableChoice[]; min?: number; max?: number }
 function normalizeChoice(c: VariableChoice | string): VariableChoice {
   return typeof c === 'string'
     ? { value: c, price: 0 }
-    : { value: c.value, price: c.price ?? 0, calories: c.calories, fat: c.fat, protein: c.protein, carbs: c.carbs, diets: c.diets }
+    : { value: c.value, price: c.price ?? 0, calories: c.calories, fat: c.fat, protein: c.protein, carbs: c.carbs, diets: c.diets, imageUrl: c.imageUrl }
 }
 // A group defaults to a single required-or-optional pick (min 0, max 1),
 // matching pre-existing products that predate min/max — extending it to a
@@ -2367,7 +2367,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   {modalWizardStep.group.choices.map(normalizeChoice).map(c => (
                     <button
                       key={c.value}
-                      className={`sf-modal-chip${(modalVars[modalWizardStep.group.label] ?? []).includes(c.value) ? ' selected' : ''}`}
+                      className={`sf-modal-chip${c.imageUrl ? ' sf-chip-photo' : ''}${(modalVars[modalWizardStep.group.label] ?? []).includes(c.value) ? ' selected' : ''}`}
+                      style={c.imageUrl ? { backgroundImage: `linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0.05) 75%), url(${resizedImg(c.imageUrl, 400)})` } : undefined}
                       onClick={() => chipClick(() => {
                         toggleModalVar(modalWizardStep.group, c.value)
                         if (wizardVarMinMax.max <= 1) advanceModalWizard()
@@ -2455,7 +2456,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
                       {g.choices.map(normalizeChoice).map(c => (
                         <button
                           key={c.value}
-                          className={`sf-modal-chip${(modalVars[g.label] ?? []).includes(c.value) ? ' selected' : ''}`}
+                          className={`sf-modal-chip${c.imageUrl ? ' sf-chip-photo' : ''}${(modalVars[g.label] ?? []).includes(c.value) ? ' selected' : ''}`}
+                          style={c.imageUrl ? { backgroundImage: `linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0.05) 75%), url(${resizedImg(c.imageUrl, 400)})` } : undefined}
                           onClick={() => chipClick(() => toggleModalVar(g, c.value))}
                           onPointerDown={e => chipPressStart(e, c)}
                           onPointerUp={chipPressEnd}

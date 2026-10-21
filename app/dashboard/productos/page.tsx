@@ -10,13 +10,13 @@ import { isLightColor as isLightHex } from '../../lib/colorContrast'
 import './productos.css'
 import LyteLeafLoader from '../../components/LyteLeafLoader'
 
-type VariableChoice = { value: string; price: number; calories?: number; fat?: number; protein?: number; carbs?: number; diets?: string[] }
+type VariableChoice = { value: string; price: number; calories?: number; fat?: number; protein?: number; carbs?: number; diets?: string[]; imageUrl?: string }
 // presetId links a group to the saved variable (preset) it came from
 type VariableGroup  = { label: string; choices: VariableChoice[]; min?: number; max?: number; presetId?: string }
 function normalizeChoice(c: VariableChoice | string): VariableChoice {
   return typeof c === 'string'
     ? { value: c, price: 0 }
-    : { value: c.value, price: c.price ?? 0, calories: c.calories, fat: c.fat, protein: c.protein, carbs: c.carbs, diets: c.diets }
+    : { value: c.value, price: c.price ?? 0, calories: c.calories, fat: c.fat, protein: c.protein, carbs: c.carbs, diets: c.diets, imageUrl: c.imageUrl }
 }
 const PRODUCT_VIDEO_EXT_RE = /\.(mp4|webm|mov|m4v)(\?|#|$)/i
 function isVideoUrl(url?: string | null): boolean {
@@ -420,6 +420,29 @@ export default function ProductosPage() {
     setImgUploading(false)
   }
 
+  // Background photo of a variable choice (shown behind its chip in the store)
+  const choiceImgInput = useRef<HTMLInputElement>(null)
+  const [choiceImgTarget, setChoiceImgTarget] = useState<{ gi: number; ci: number } | null>(null)
+  const [choiceImgUploading, setChoiceImgUploading] = useState<string | null>(null)
+  function setChoiceImage(gi: number, ci: number, url: string | undefined) {
+    setOptVariables(v => v.map((g, i) => i === gi
+      ? { ...g, choices: g.choices.map((c, j) => j === ci ? { ...normalizeChoice(c), imageUrl: url } : c) } : g))
+    setIsDirty(true)
+  }
+  async function handleChoiceImgUpload(e: { target: { files: FileList | null; value?: string } }) {
+    const file = e.target.files?.[0]
+    const target = choiceImgTarget
+    if (!file || !storeId || !target) return
+    setChoiceImgUploading(`${target.gi}-${target.ci}`)
+    const ext  = file.name.split('.').pop()
+    const path = `${storeId}-choice-${Date.now()}.${ext}`
+    const { error } = await supabase.storage.from('product-images').upload(path, file, { upsert: true, contentType: file.type })
+    if (!error) setChoiceImage(target.gi, target.ci, supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl)
+    setChoiceImgUploading(null)
+    setChoiceImgTarget(null)
+    if (choiceImgInput.current) choiceImgInput.current.value = ''
+  }
+
   async function handleVariantImgUpload(e: { target: { files: FileList | null } }) {
     const file = e.target.files?.[0]
     if (!file || !storeId || variantImgUploadIdx === null) return
@@ -776,6 +799,7 @@ export default function ProductosPage() {
               )}
             </div>
           )}
+          <input ref={choiceImgInput} type="file" accept="image/*" hidden onChange={handleChoiceImgUpload} />
           {optVariables.length > 0 && (
             <div className="pr-opts-box-body">
               {optVariables.map((g, gi) => (
@@ -851,6 +875,23 @@ export default function ProductosPage() {
                       return (
                         <div key={ci} className="pr-opt-choice-block">
                           <div className="pr-opt-chip">
+                            {choice.imageUrl ? (
+                              <span className="pr-opt-chip-photo" style={{ backgroundImage: `url(${choice.imageUrl})` }}>
+                                <button type="button" title="Quitar foto" onClick={() => setChoiceImage(gi, ci, undefined)}>×</button>
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                className="pr-opt-chip-photo-add"
+                                title="Agregar foto de fondo"
+                                disabled={choiceImgUploading === `${gi}-${ci}`}
+                                onClick={() => { setChoiceImgTarget({ gi, ci }); choiceImgInput.current?.click() }}
+                              >
+                                {choiceImgUploading === `${gi}-${ci}` ? '…' : (
+                                  <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fillRule="evenodd" d="M1 5.25A2.25 2.25 0 013.25 3h13.5A2.25 2.25 0 0119 5.25v9.5A2.25 2.25 0 0116.75 17H3.25A2.25 2.25 0 011 14.75v-9.5zm1.5 5.81v3.69c0 .414.336.75.75.75h13.5a.75.75 0 00.75-.75v-2.69l-2.22-2.219a.75.75 0 00-1.06 0l-1.91 1.909.47.47a.75.75 0 11-1.06 1.06L6.53 8.091a.75.75 0 00-1.06 0l-2.97 2.97zM12 7a1 1 0 11-2 0 1 1 0 012 0z" clipRule="evenodd" /></svg>
+                                )}
+                              </button>
+                            )}
                             <span className="pr-opt-chip-label">{choice.value}</span>
                             <span className="pr-opt-chip-price-wrap">
                               <span className="pr-opt-chip-dollar">+$</span>

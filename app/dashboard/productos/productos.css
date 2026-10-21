@@ -798,3 +798,20 @@
 /* per-choice diet toggles under each variable choice's nutrition inputs */
 .pr-opt-choice-diets { grid-column: 1 / -1; display: flex; gap: 5px; margin-top: 2px; }
 .pr-opt-choice-diets .pr-diet-dot { width: 24px; height: 24px; border: none; cursor: pointer; font-family: inherit; font-size: 9.5px; }
+
+/* ── Background photo per variable choice ── */
+.pr-opt-chip .pr-opt-chip-photo-add {
+  width: 26px; height: 26px; border-radius: 7px; flex-shrink: 0;
+  border: 1px dashed rgba(28,27,58,0.3); color: #64748B; background: white;
+  align-items: center; justify-content: center; font-size: 12px;
+}
+.pr-opt-chip .pr-opt-chip-photo-add:hover { color: var(--lyte-navy); border-color: var(--lyte-navy); }
+.pr-opt-chip-photo {
+  position: relative; width: 26px; height: 26px; border-radius: 7px; flex-shrink: 0;
+  background: #E2E8F0 center / cover no-repeat;
+}
+.pr-opt-chip .pr-opt-chip-photo button {
+  position: absolute; top: -6px; right: -6px; width: 16px; height: 16px; border-radius: 50%;
+  background: #0F172A; color: white; font-size: 11px; align-items: center; justify-content: center;
+}
+.pr-opt-chip .pr-opt-chip-photo button:hover { background: #EF4444; color: white; }

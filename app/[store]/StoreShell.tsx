@@ -21,7 +21,7 @@ type VariableGroup  = { label: string; choices: VariableChoice[]; min?: number; 
 function normalizeChoice(c: VariableChoice | string): VariableChoice {
   return typeof c === 'string'
     ? { value: c, price: 0 }
-    : { value: c.value, price: c.price ?? 0, calories: c.calories, fat: c.fat, protein: c.protein, carbs: c.carbs }
+    : { value: c.value, price: c.price ?? 0, calories: c.calories, fat: c.fat, protein: c.protein, carbs: c.carbs, diets: c.diets }
 }
 // A group defaults to a single required-or-optional pick (min 0, max 1),
 // matching pre-existing products that predate min/max — extending it to a

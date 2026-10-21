@@ -11,7 +11,8 @@ import './productos.css'
 import LyteLeafLoader from '../../components/LyteLeafLoader'
 
 type VariableChoice = { value: string; price: number; calories?: number; fat?: number; protein?: number; carbs?: number; diets?: string[] }
-type VariableGroup  = { label: string; choices: VariableChoice[]; min?: number; max?: number }
+// presetId links a group to the saved variable (preset) it came from
+type VariableGroup  = { label: string; choices: VariableChoice[]; min?: number; max?: number; presetId?: string }
 function normalizeChoice(c: VariableChoice | string): VariableChoice {
   return typeof c === 'string'
     ? { value: c, price: 0 }
@@ -321,15 +322,57 @@ export default function ProductosPage() {
     const next = [...variableGroupPresets, preset]
     setVariableGroupPresets(next)
     persistOptionPresets({ variableGroups: next, additionalGroups: additionalGroupPresets })
+    setOptVariables(v => v.map((g, i) => i === gi ? { ...g, presetId: preset.id } : g))
     setSavingVarPresetFor(null); setVarPresetNameInput('')
   }
 
   function applyVariableGroupPreset() {
     const preset = variableGroupPresets.find(p => p.id === applyVarPresetId)
     if (!preset) return
-    setOptVariables(v => [...v, { label: preset.group.label, choices: (preset.group.choices ?? []).map(normalizeChoice), min: preset.group.min, max: preset.group.max }])
+    setOptVariables(v => [...v, { label: preset.group.label, choices: (preset.group.choices ?? []).map(normalizeChoice), min: preset.group.min, max: preset.group.max, presetId: preset.id }])
     setIsDirty(true)
     setApplyVarPresetId('')
+  }
+
+  // The saved variable a group belongs to: linked by id, or (groups added
+  // before the link existed) by having the same name.
+  const sameLabel = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase()
+  function presetForGroup(g: VariableGroup) {
+    return variableGroupPresets.find(p => p.id === g.presetId)
+      ?? (g.presetId ? undefined : variableGroupPresets.find(p => sameLabel(p.group.label, g.label) || sameLabel(p.name, g.label)))
+  }
+
+  // Push this group's current setup to its saved variable and to every other
+  // product that uses it (this product is saved with the form as usual).
+  const [applyingGroup, setApplyingGroup] = useState<number | null>(null)
+  async function applyGroupEverywhere(gi: number) {
+    const g = optVariables[gi]
+    const preset = g && presetForGroup(g)
+    if (!g || !preset || !storeId) return
+    const usesPreset = (x: VariableGroup) => x.presetId === preset.id || (!x.presetId && sameLabel(x.label, preset.group.label))
+    const updated: VariableGroup = { label: g.label, choices: g.choices.map(normalizeChoice), min: g.min, max: g.max, presetId: preset.id }
+    const others = products.filter(p => p.id !== editing?.id && (p.options?.variables ?? []).some(usesPreset))
+    if (!confirm(others.length
+      ? `Se actualizará la variable "${preset.name}" y ${others.length} ${others.length === 1 ? 'producto más que la usa' : 'productos más que la usan'}. ¿Continuar?`
+      : `Se actualizará la variable guardada "${preset.name}". Ningún otro producto la usa todavía. ¿Continuar?`)) return
+    setApplyingGroup(gi)
+    const nextPresets = variableGroupPresets.map(p => p.id === preset.id ? { ...p, group: updated } : p)
+    setVariableGroupPresets(nextPresets)
+    await persistOptionPresets({ variableGroups: nextPresets, additionalGroups: additionalGroupPresets })
+    const results = await Promise.all(others.map(async p => {
+      const options = { ...p.options, variables: (p.options?.variables ?? []).map(x => usesPreset(x) ? updated : x) }
+      const { error } = await supabase.from('products').update({ options }).eq('id', p.id)
+      return error ? null : { id: p.id, options }
+    }))
+    const ok = results.filter(r => r !== null)
+    const byId = new Map(ok.map(r => [r!.id, r!.options]))
+    setProducts(prev => prev.map(p => byId.has(p.id) ? { ...p, options: byId.get(p.id)! } : p))
+    setOptVariables(v => v.map((x, i) => i === gi ? { ...x, presetId: preset.id } : x))
+    setIsDirty(true)
+    setApplyingGroup(null)
+    alert(ok.length === others.length
+      ? `Listo: "${preset.name}" actualizada${others.length ? ` en ${others.length} ${others.length === 1 ? 'producto' : 'productos'}` : ''}. Guarda este producto para terminar.`
+      : `Se actualizaron ${ok.length} de ${others.length} productos. Intenta de nuevo para los demás.`)
   }
 
   function deleteVariableGroupPreset(id: string) {
@@ -755,6 +798,16 @@ export default function ProductosPage() {
                     >
                       Guardar como preset
                     </button>
+                    {presetForGroup(g) && (
+                      <button
+                        className="pr-opt-apply-all"
+                        disabled={applyingGroup === gi || !g.label.trim() || g.choices.length === 0}
+                        onClick={() => applyGroupEverywhere(gi)}
+                        title={`Actualiza la variable guardada "${presetForGroup(g)!.name}" y todos los productos que la usan`}
+                      >
+                        {applyingGroup === gi ? 'Aplicando…' : 'Aplicar a todos'}
+                      </button>
+                    )}
                     <button className="pr-opt-del-group" onClick={() => removeVarGroup(gi)}>Eliminar grupo</button>
                   </div>
                   <div className="pr-opt-group-minmax">

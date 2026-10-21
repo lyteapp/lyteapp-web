@@ -25,7 +25,14 @@ type Additional    = { name: string; price: number; calories?: number; fat?: num
 // imageUrl stays the cover photo for this color (used anywhere only one
 // image per variant is shown); imageUrls holds any extra gallery photos.
 type ColorVariant  = { label: string; color: string; imageUrl: string; imageUrls?: string[] }
-type NutritionInfo = { enabled?: boolean; calories?: number; fat?: number; protein?: number; carbs?: number }
+type NutritionInfo = { enabled?: boolean; calories?: number; fat?: number; protein?: number; carbs?: number; diets?: string[] }
+// Dietary badges shown as small circles with the nutrition info
+const DIETS = [
+  { code: 'GF', label: 'Sin gluten' },
+  { code: 'VG', label: 'Vegano' },
+  { code: 'V',  label: 'Vegetariano' },
+  { code: 'P',  label: 'Pescetariano' },
+]
 type ProductOptions = {
   variables?:     VariableGroup[]
   colors?:        string[]
@@ -96,6 +103,7 @@ export default function ProductosPage() {
   const [optAllowNotes, setOptAllowNotes]   = useState(false)
 
   const [optNutritionEnabled, setOptNutritionEnabled] = useState(false)
+  const [optDiets, setOptDiets] = useState<string[]>([])
   const [optCalories, setOptCalories] = useState('')
   const [optFat,      setOptFat]      = useState('')
   const [optProtein,  setOptProtein]  = useState('')
@@ -180,6 +188,7 @@ export default function ProductosPage() {
     setOptColorVariants([])
     setOptAdditionals([]); setOptAllowNotes(false)
     setOptNutritionEnabled(false)
+    setOptDiets([])
     setOptCalories(''); setOptFat(''); setOptProtein(''); setOptCarbs('')
     setOptImages([])
     setOptSaleEnabled(false); setOptSaleWas(''); setOptSaleBadge(''); setOptSaleColor('')
@@ -211,6 +220,7 @@ export default function ProductosPage() {
     setOptAdditionals(opts.additionals ?? [])
     setOptAllowNotes(opts.allowNotes ?? false)
     setOptNutritionEnabled(opts.nutrition?.enabled ?? false)
+    setOptDiets(opts.nutrition?.diets ?? [])
     setOptCalories(opts.nutrition?.calories !== undefined ? String(opts.nutrition.calories) : '')
     setOptFat(opts.nutrition?.fat !== undefined ? String(opts.nutrition.fat) : '')
     setOptProtein(opts.nutrition?.protein !== undefined ? String(opts.nutrition.protein) : '')
@@ -451,6 +461,7 @@ export default function ProductosPage() {
         fat:      parseFloat(optFat) || 0,
         protein:  parseFloat(optProtein) || 0,
         carbs:    parseFloat(optCarbs) || 0,
+        diets:    optDiets.length ? DIETS.map(d => d.code).filter(c => optDiets.includes(c)) : undefined,
       } : undefined,
       images: optImages,
       sale: optSaleEnabled ? { compareAtPrice: saleWasNum, badge: optSaleBadge.trim() || undefined, badgeColor: optSaleColor || undefined } : undefined,
@@ -1060,6 +1071,26 @@ export default function ProductosPage() {
                 <div className="pr-nutrition-field">
                   <label>Carbohidratos <span className="pr-nutrition-unit">g</span></label>
                   <input type="number" min="0" step="0.1" placeholder="0" value={optCarbs} onChange={e => { setOptCarbs(e.target.value); setIsDirty(true) }} />
+                </div>
+              </div>
+              <div className="pr-diets">
+                <div className="pr-diets-label">Tipo de dieta <span>(opcional)</span></div>
+                <div className="pr-diets-row">
+                  {DIETS.map(d => {
+                    const on = optDiets.includes(d.code)
+                    return (
+                      <button
+                        key={d.code}
+                        type="button"
+                        className={`pr-diet${on ? ' on' : ''}`}
+                        onClick={() => { setOptDiets(prev => on ? prev.filter(c => c !== d.code) : [...prev, d.code]); setIsDirty(true) }}
+                        aria-pressed={on}
+                      >
+                        <span className={`pr-diet-dot pr-diet-${d.code}`}>{d.code}</span>
+                        {d.label}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             </div>

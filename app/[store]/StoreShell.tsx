@@ -165,7 +165,9 @@ type Additional     = { name: string; price: number; calories?: number; fat?: nu
 // imageUrl is the cover photo for this color (used anywhere only one image
 // per variant is shown); imageUrls holds any extra gallery photos.
 type ColorVariant   = { label: string; color: string; imageUrl: string; imageUrls?: string[] }
-type NutritionInfo  = { enabled?: boolean; calories?: number; fat?: number; protein?: number; carbs?: number }
+type NutritionInfo  = { enabled?: boolean; calories?: number; fat?: number; protein?: number; carbs?: number; diets?: string[] }
+// Dietary badges set on the product (with its nutrition info)
+const DIET_LABELS: Record<string, string> = { GF: 'Sin gluten', VG: 'Vegano', V: 'Vegetariano', P: 'Pescetariano' }
 type ProductOptions = {
   variables?:     VariableGroup[]
   colors?:        string[]
@@ -2169,6 +2171,13 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   Carbos <strong>{Math.round(modalNutritionDisplay.carbs)}g</strong>
                 </div>
               </div>
+              {(modalProduct?.options?.nutrition?.diets ?? []).filter(d => DIET_LABELS[d]).length > 0 && (
+                <div className="sf-modal-diets">
+                  {modalProduct!.options!.nutrition!.diets!.filter(d => DIET_LABELS[d]).map(d => (
+                    <span key={d} className={`sf-diet sf-diet-${d}`} title={DIET_LABELS[d]} aria-label={DIET_LABELS[d]}>{d}</span>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         <div

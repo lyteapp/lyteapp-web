@@ -1,6 +1,8 @@
 'use client'
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { useDashboardStore } from '../lib/DashboardStoreProvider'
+import { useCloudDoc } from './cloudDoc'
 import {
   type Corte, type Partida, type SeccionId, type TipoPartida,
   corteVacio, duplicarCorte, hoy, nuevaPartida, normalizarCorte,
@@ -33,45 +35,34 @@ export function useBalance() {
   return ctx
 }
 
-function leerJSON(clave: string): unknown {
-  try {
-    const raw = localStorage.getItem(clave)
-    return raw ? JSON.parse(raw) : null
-  } catch {
-    return null
+const normalizarCortes = (raw: unknown): Record<string, Corte> => {
+  const out: Record<string, Corte> = {}
+  if (raw && typeof raw === 'object') {
+    for (const [k, v] of Object.entries(raw as Record<string, unknown>)) out[k] = normalizarCorte(v)
   }
+  return out
 }
 
+/* Both the saved cortes and the working draft live in the database
+   (fin_books, per store) — see cloudDoc.ts. The draft saves itself, so
+   nothing is lost on reload or when switching devices. */
 export default function BalanceProvider({ children }: { children: React.ReactNode }) {
-  const [corte, setCorte] = useState<Corte>(corteVacio)
-  const [cortes, setCortes] = useState<Record<string, Corte>>({})
-  // Gates the first draft write so the empty initial state can't overwrite a
-  // stored draft before it has been read back.
-  const [listo, setListo] = useState(false)
+  const { storeId } = useDashboardStore()
   const [toast, setToast] = useState('')
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const avisoRef = useRef<(m: string) => void>(() => {})
 
-  /* ── carga inicial ── */
-  useEffect(() => {
-    const guardados = leerJSON(CLAVE_CORTES)
-    if (guardados && typeof guardados === 'object') {
-      const out: Record<string, Corte> = {}
-      for (const [k, v] of Object.entries(guardados as Record<string, unknown>)) {
-        out[k] = normalizarCorte(v)
-      }
-      setCortes(out)
-    }
-
-    const borrador = leerJSON(CLAVE_BORRADOR)
-    setCorte(borrador ? { ...normalizarCorte(borrador), fecha: (normalizarCorte(borrador).fecha || hoy()) } : { ...corteVacio(), fecha: hoy() })
-    setListo(true)
-  }, [])
-
-  /* ── el borrador se persiste solo, para no perder trabajo al recargar ── */
-  useEffect(() => {
-    if (!listo) return
-    try { localStorage.setItem(CLAVE_BORRADOR, JSON.stringify(corte)) } catch { /* cuota llena o modo privado */ }
-  }, [corte, listo])
+  const { value: cortes, setValue: setCortes, ready: cortesListos } = useCloudDoc<Record<string, Corte>>({
+    storeId, key: 'balance_cortes', legacyKey: CLAVE_CORTES,
+    empty: () => ({}), normalize: normalizarCortes,
+    onConflict: () => avisoRef.current('Se cargaron cambios hechos desde otro dispositivo.'),
+  })
+  const { value: corte, setValue: setCorte, ready: borradorListo } = useCloudDoc<Corte>({
+    storeId, key: 'balance_borrador', legacyKey: CLAVE_BORRADOR,
+    empty: () => ({ ...corteVacio(), fecha: hoy() }),
+    normalize: raw => { const c = normalizarCorte(raw); return { ...c, fecha: c.fecha || hoy() } },
+  })
+  const listo = cortesListos && borradorListo
 
   useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current) }, [])
 
@@ -80,11 +71,11 @@ export default function BalanceProvider({ children }: { children: React.ReactNod
     if (toastTimer.current) clearTimeout(toastTimer.current)
     toastTimer.current = setTimeout(() => setToast(''), 2600)
   }, [])
+  useEffect(() => { avisoRef.current = aviso }, [aviso])
 
   const persistirCortes = useCallback((next: Record<string, Corte>) => {
-    localStorage.setItem(CLAVE_CORTES, JSON.stringify(next))
     setCortes(next)
-  }, [])
+  }, [setCortes])
 
   const guardar = useCallback(() => {
     if (!corte.fecha) { aviso('Ponle una fecha de corte antes de guardar.'); return }

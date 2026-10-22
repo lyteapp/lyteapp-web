@@ -66,8 +66,23 @@ export type Movimiento = {
   monto: string
 }
 
+/* Money moved by other modules (inventory purchases and supplier payments),
+   read from fin_entries. Never stored inside the libro and never edited from
+   Finanzas — it's managed where it happened. */
+export type Externo = {
+  id: string
+  fecha: string
+  tipo: 'entrada' | 'salida'
+  metodoId: string
+  monto: number
+  usd: number | null
+  concepto: string
+}
+
 export type Libro = {
   saldoInicial: string
+  /** Opening balance of each account, in its own currency. */
+  saldosCuenta: Record<string, string>
   metodos: Metodo[]
   /** Bs per USD, by date. Read by whatever is dated that day. */
   tasas: Record<string, string>
@@ -75,6 +90,8 @@ export type Libro = {
   cobranzas: Cobranza[]
   gastos: Gasto[]
   movimientos: Movimiento[]
+  /** Filled at runtime from fin_entries (see FlujoProvider); not stored. */
+  externos?: Externo[]
 }
 
 export const CLAVE_FLUJO = 'lyte:flujo-caja'
@@ -90,6 +107,7 @@ export const nuevoId = () => `f${Date.now().toString(36)}${(contador++).toString
 
 export const libroVacio = (): Libro => ({
   saldoInicial: '',
+  saldosCuenta: {},
   metodos: METODOS_BASE.map(m => ({ ...m })),
   tasas: {},
   cierres: [],
@@ -203,8 +221,16 @@ export function normalizarLibro(raw: unknown): Libro {
   const arr = <T,>(v: unknown, fn: (o: Record<string, unknown>) => T): T[] =>
     Array.isArray(v) ? v.map(x => fn((x ?? {}) as Record<string, unknown>)) : []
 
+  const saldosCuenta: Record<string, string> = {}
+  if (o.saldosCuenta && typeof o.saldosCuenta === 'object') {
+    for (const [k, v] of Object.entries(o.saldosCuenta as Record<string, unknown>)) {
+      if (typeof v === 'string') saldosCuenta[k] = v
+    }
+  }
+
   return {
     saldoInicial: texto(o.saldoInicial),
+    saldosCuenta,
     metodos,
     tasas,
     cierres: arr(o.cierres, c => ({
@@ -254,7 +280,7 @@ export function normalizarLibro(raw: unknown): Libro {
    get a saldo. This flattens them into one shape, carrying the origin so the
    summary can still say where each figure came from. */
 
-export type Origen = 'detal' | 'mayor' | 'gasto' | 'otro'
+export type Origen = 'detal' | 'mayor' | 'gasto' | 'otro' | 'compra'
 
 export type Linea = {
   id: string
@@ -273,6 +299,7 @@ export const ETIQUETA_ORIGEN: Record<Origen, string> = {
   mayor: 'Cobranza al mayor',
   gasto: 'Gasto',
   otro: 'Otro movimiento',
+  compra: 'Compra a proveedor',
 }
 
 const num = (s: string) => {
@@ -337,6 +364,15 @@ export function lineasDe(libro: Libro): Linea[] {
     })
   }
 
+  for (const e of libro.externos ?? []) {
+    if (!e.monto) continue
+    out.push({
+      id: `ext:${e.id}`, fecha: e.fecha, tipo: e.tipo, origen: 'compra',
+      descripcion: e.concepto, metodoId: e.metodoId, monto: e.monto,
+      usd: e.usd ?? aUSD(libro, e.monto, e.metodoId, e.fecha),
+    })
+  }
+
   return out.sort((a, b) => (a.fecha === b.fecha ? a.id.localeCompare(b.id) : a.fecha.localeCompare(b.fecha)))
 }
 
@@ -373,7 +409,7 @@ export function resumenMes(libro: Libro, mes: string): ResumenMes {
     return { linea, saldo: corriente }
   })
 
-  const porOrigen: Record<Origen, number> = { detal: 0, mayor: 0, gasto: 0, otro: 0 }
+  const porOrigen: Record<Origen, number> = { detal: 0, mayor: 0, gasto: 0, otro: 0, compra: 0 }
   for (const l of usables) porOrigen[l.origen] += l.usd!
 
   const entradas = usables.filter(l => l.tipo === 'entrada').reduce((a, l) => a + l.usd!, 0)
@@ -390,4 +426,23 @@ export function resumenMes(libro: Libro, mes: string): ResumenMes {
 /** Every month that has something in it, newest first. */
 export function mesesConDatos(libro: Libro): string[] {
   return [...new Set(lineasDe(libro).filter(l => l.fecha).map(l => mesDe(l.fecha)))].sort().reverse()
+}
+
+/* ── estado de cada cuenta ──
+   Each account in its own currency: what it started with, what came in and
+   went out (everything, any date), and what it should hold now. */
+export type EstadoCuenta = { metodo: Metodo; inicial: number; entradas: number; salidas: number; saldo: number }
+
+export function estadoCuentas(libro: Libro): EstadoCuenta[] {
+  const lineas = lineasDe(libro)
+  return libro.metodos.map(metodo => {
+    const inicial = num(libro.saldosCuenta?.[metodo.id] ?? '')
+    let entradas = 0, salidas = 0
+    for (const l of lineas) {
+      if (l.metodoId !== metodo.id) continue
+      if (l.tipo === 'entrada') entradas += l.monto
+      else salidas += l.monto
+    }
+    return { metodo, inicial, entradas, salidas, saldo: inicial + entradas - salidas }
+  })
 }

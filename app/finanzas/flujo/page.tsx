@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useFlujo } from '../FlujoProvider'
 import { money, moneyShort, parseNum } from '../balance'
 import {
-  ETIQUETA_ORIGEN, type Origen, diaCorto, mesDe, mesLargo, mesesConDatos, metodoDe, resumenMes,
+  ETIQUETA_ORIGEN, type Origen, diaCorto, estadoCuentas, mesDe, mesLargo, mesesConDatos, metodoDe, resumenMes,
 } from './model'
 
 const hoyISO = () => new Date().toISOString().slice(0, 10)
@@ -14,7 +14,11 @@ const FUENTES: { origen: Origen; href: string; titulo: string; sentido: 'entrada
   { origen: 'detal', href: '/finanzas/flujo/detal',  titulo: 'Cierre al detal',    sentido: 'entrada' },
   { origen: 'mayor', href: '/finanzas/flujo/mayor',  titulo: 'Cobranzas al mayor', sentido: 'entrada' },
   { origen: 'gasto', href: '/finanzas/flujo/gastos', titulo: 'Gastos',             sentido: 'salida'  },
+  { origen: 'compra', href: '/dashboard/inventario', titulo: 'Compras a proveedores', sentido: 'salida' },
 ]
+
+const fmtMoneda = (n: number, moneda: string) =>
+  `${moneda === 'VES' ? 'Bs ' : moneda === 'USDT' ? '₮' : '$'}${n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 export default function FlujoResumen() {
   const { libro, setLibro, listo } = useFlujo()
@@ -24,6 +28,7 @@ export default function FlujoResumen() {
   useEffect(() => { setMes(mesDe(hoyISO())) }, [])
 
   const r = useMemo(() => (mes ? resumenMes(libro, mes) : null), [libro, mes])
+  const cuentas = useMemo(() => estadoCuentas(libro), [libro])
 
   const meses = useMemo(() => {
     const conDatos = mesesConDatos(libro)
@@ -121,6 +126,46 @@ export default function FlujoResumen() {
         ))}
       </div>
 
+      {/* ── SALDO POR CUENTA ── */}
+      <div className="bal-block" style={{ marginTop: 18 }}>
+        <div className="bal-blockhead">
+          <h2>Saldo por cuenta</h2>
+          <span className="bal-muted-sm">Cada cuenta en su moneda, con todo lo registrado</span>
+        </div>
+        <div className="bal-table-wrap">
+          <table className="bal-table bal-cuentas">
+            <thead>
+              <tr>
+                <th>Cuenta</th>
+                <th className="r" style={{ width: 130 }}>Saldo inicial</th>
+                <th className="r" style={{ width: 120 }}>Entradas</th>
+                <th className="r" style={{ width: 120 }}>Salidas</th>
+                <th className="r" style={{ width: 130 }}>Saldo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cuentas.map(c => (
+                <tr key={c.metodo.id}>
+                  <td>{c.metodo.nombre} <span className="bal-muted-sm">{c.metodo.moneda === 'VES' ? 'Bs' : c.metodo.moneda}</span></td>
+                  <td className="r">
+                    <input
+                      className="bal-inline-num num"
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      value={libro.saldosCuenta?.[c.metodo.id] ?? ''}
+                      onChange={e => setLibro(l => ({ ...l, saldosCuenta: { ...l.saldosCuenta, [c.metodo.id]: e.target.value } }))}
+                    />
+                  </td>
+                  <td className="r num bal-v-entrada">+{fmtMoneda(c.entradas, c.metodo.moneda)}</td>
+                  <td className="r num bal-v-salida">−{fmtMoneda(c.salidas, c.metodo.moneda)}</td>
+                  <td className={`r num${c.saldo < 0 ? ' bal-v-salida' : ''}`}><strong>{fmtMoneda(c.saldo, c.metodo.moneda)}</strong></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* ── MOVIMIENTOS ── */}
       <div className="bal-block" style={{ marginTop: 18 }}>
         <div className="bal-blockhead">
@@ -203,8 +248,8 @@ export default function FlujoResumen() {
       </div>
 
       <p className="bal-storage-note">
-        Todo se consolida en dólares con la tasa de cada fecha. El flujo de caja se guarda por
-        ahora en este navegador, igual que el balance.
+        Todo se consolida en dólares con la tasa de cada fecha. El flujo de caja se guarda en la
+        nube, igual que el balance. Las compras de Inventario se suman solas a la cuenta con que pagaste.
       </p>
     </div>
   )

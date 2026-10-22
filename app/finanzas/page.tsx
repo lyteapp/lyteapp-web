@@ -271,8 +271,7 @@ export default function BalanceGeneral() {
       </div>
 
       <p className="bal-storage-note">
-        Los cortes se guardan por ahora en este navegador. Cuando conectemos la base de
-        datos van a quedar en la nube y los vas a ver desde cualquier dispositivo.
+        Los cortes se guardan en la nube: los ves desde cualquier dispositivo.
       </p>
     </div>
   )

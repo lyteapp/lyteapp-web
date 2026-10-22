@@ -254,6 +254,8 @@ section:first-of-type > .inv-group-title { margin-top: 4px; }
 .inv-picker-opt.active { background: var(--lyte-lavender-soft, #F3F4FF); }
 .inv-picker-opt.sel span { font-weight: 700; }
 .inv-picker-empty { padding: 10px; font-size: 13px; color: #64748B; }
+.inv-cat-new { display: flex; gap: 6px; align-items: center; }
+.inv-cat-new .inv-input { flex: 1; }
 .inv-picker-create { border-bottom: 1px solid #F1F5F9; border-radius: 8px 8px 0 0; }
 .inv-picker-create span { color: var(--lyte-navy); font-weight: 700; }
 .inv-subform {

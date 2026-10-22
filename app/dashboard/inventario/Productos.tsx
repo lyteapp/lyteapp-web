@@ -125,7 +125,7 @@ export default function Productos({ storeId, items, warehouses, onChanged, flash
     const cost = parseNum(newIng.cost)
     const { data, error } = await supabase.from('inv_items').insert({
       store_id: storeId, name: newIng.name.trim(), unit: newIng.unit,
-      category: newIng.category.trim() || null, avg_cost: cost > 0 ? cost : 0,
+      category: newIng.category.replace('\u0000', '').trim() || null, avg_cost: cost > 0 ? cost : 0,
     }).select('id, name, unit, avg_cost, active, sku, barcode, category').single()
     setIngSaving(false)
     if (error || !data) return flash(error?.message ?? 'No se pudo crear')
@@ -378,7 +378,27 @@ export default function Productos({ storeId, items, warehouses, onChanged, flash
                       <input className="inv-input" inputMode="decimal" placeholder="0,00" value={newIng.cost} onChange={e => setNewIng({ ...newIng, cost: e.target.value.replace(/[^0-9.,]/g, '') })} />
                     </label>
                   </div>
-                  <input className="inv-input" placeholder="Categoría (opcional)" value={newIng.category} onChange={e => setNewIng({ ...newIng, category: e.target.value })} />
+                  {(() => {
+                    // Inventory categories already in use; '+ Nueva' switches to typing one
+                    const cats = [...new Set(allItems.map(i => i.category?.trim()).filter((c): c is string => !!c))].sort((x, y) => x.localeCompare(y, 'es'))
+                    const typing = newIng.category === '\u0000' || (!!newIng.category && !cats.includes(newIng.category))
+                    return typing ? (
+                      <div className="inv-cat-new">
+                        <input className="inv-input" placeholder="Nombre de la nueva categoría" autoFocus
+                          value={newIng.category === '\u0000' ? '' : newIng.category}
+                          onChange={e => setNewIng({ ...newIng, category: e.target.value || '\u0000' })} />
+                        {cats.length > 0 && <button className="inv-btn ghost small" onClick={() => setNewIng({ ...newIng, category: '' })}>Elegir existente</button>}
+                      </div>
+                    ) : (
+                      <label className="inv-field"><span>Categoría</span>
+                        <select className="inv-input" value={newIng.category} onChange={e => setNewIng({ ...newIng, category: e.target.value })}>
+                          <option value="">Sin categoría</option>
+                          {cats.map(c => <option key={c} value={c}>{c}</option>)}
+                          <option value={'\u0000'}>+ Nueva categoría…</option>
+                        </select>
+                      </label>
+                    )
+                  })()}
                   <div className="inv-modal-actions">
                     <button className="inv-btn ghost small" onClick={() => setNewIng(null)}>Cancelar</button>
                     <button className="inv-btn primary small" onClick={saveNewIngredient} disabled={ingSaving || !newIng.name.trim()}>{ingSaving ? 'Creando…' : 'Crear y usar'}</button>

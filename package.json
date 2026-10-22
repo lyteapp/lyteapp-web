@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",
+    "@react-three/drei": "^10.7.9",
+    "@react-three/fiber": "^9.8.2",
     "@simplewebauthn/browser": "^13.3.0",
     "@simplewebauthn/server": "^13.3.3",
     "@supabase/supabase-js": "^2.105.4",
@@ -23,6 +25,7 @@
     "react-leaflet": "^5.0.0",
     "react-map-gl": "^7.1.9",
     "resend": "^6.12.3",
+    "three": "^0.186.1",
     "twilio": "^6.0.2",
     "web-push": "^3.6.7"
   },
@@ -31,6 +34,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.186.0",
     "@types/web-push": "^3.6.4",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",

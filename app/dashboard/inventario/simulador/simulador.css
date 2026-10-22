@@ -1,0 +1,125 @@
+/* ── Modo simulador (Inventario as a game) ── */
+.sim-root {
+  position: fixed; inset: 0; z-index: 350; background: #E9EAFF;
+  font-family: var(--lyte-font-body), -apple-system, system-ui, sans-serif; color: #0F172A;
+  overscroll-behavior: none; touch-action: none; user-select: none; -webkit-user-select: none;
+}
+.sim-root canvas { display: block; }
+.sim-loading { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #475569; font-weight: 600; }
+
+.sim-exit {
+  border: none; background: white; color: var(--lyte-navy, #1C1B3A); border-radius: 12px; padding: 9px 14px;
+  font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 3px 12px rgba(28,27,58,0.15);
+}
+
+/* pick a warehouse */
+.sim-pick {
+  position: absolute; inset: 0; overflow-y: auto; touch-action: pan-y;
+  padding: calc(env(safe-area-inset-top) + 16px) 18px 30px;
+  background: radial-gradient(circle at 30% 0%, #C7D2FE, #E9EAFF 55%);
+}
+.sim-pick-title { text-align: center; margin: 18px 0 22px; }
+.sim-pick-title > span { font-size: 54px; display: block; animation: simBounce 1.6s ease-in-out infinite; }
+.sim-pick-title h1 { font-size: 28px; font-weight: 900; letter-spacing: -0.03em; color: var(--lyte-navy, #1C1B3A); }
+.sim-pick-title p { color: #475569; font-size: 15px; max-width: 380px; margin: 6px auto 0; }
+@keyframes simBounce { 50% { transform: translateY(-8px) rotate(-6deg); } }
+.sim-pick-empty { text-align: center; color: #475569; }
+.sim-pick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; max-width: 760px; margin: 0 auto; }
+.sim-pick-card {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 20px 14px;
+  background: white; border: 3px solid transparent; border-radius: 22px; cursor: pointer; font: inherit; color: inherit;
+  box-shadow: 0 8px 0 #C7D2FE, 0 12px 24px rgba(28,27,58,0.12); transition: transform 0.12s, box-shadow 0.12s;
+}
+.sim-pick-card:hover { border-color: var(--lyte-blue, #9AB7FD); }
+.sim-pick-card:active { transform: translateY(6px); box-shadow: 0 2px 0 #C7D2FE, 0 4px 10px rgba(28,27,58,0.12); }
+.sim-pick-icon { font-size: 40px; }
+.sim-pick-card strong { font-size: 18px; }
+.sim-pick-card small { color: #64748B; }
+.sim-pick-go { margin-top: 8px; background: var(--lyte-navy, #1C1B3A); color: white; border-radius: 100px; padding: 6px 16px; font-weight: 800; font-size: 13px; }
+
+/* HUD */
+.sim-hud-top {
+  position: absolute; top: calc(env(safe-area-inset-top) + 12px); left: 12px; right: 12px;
+  display: flex; align-items: center; gap: 10px; pointer-events: none;
+}
+.sim-hud-top > * { pointer-events: auto; }
+.sim-wh {
+  flex: 1; text-align: center; font-weight: 900; font-size: 17px; color: var(--lyte-navy, #1C1B3A);
+  text-shadow: 0 2px 0 white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sim-coins { background: #FEF3C7; color: #92400E; border-radius: 100px; padding: 8px 14px; font-weight: 900; box-shadow: 0 3px 12px rgba(146,64,14,0.2); }
+
+.sim-missions {
+  position: absolute; top: calc(env(safe-area-inset-top) + 64px); left: 12px; width: 240px; max-width: calc(100% - 24px);
+  background: rgba(255,255,255,0.94); border-radius: 16px; padding: 8px 12px 10px; box-shadow: 0 6px 20px rgba(28,27,58,0.15);
+  font-size: 13px;
+}
+.sim-missions.closed { width: auto; padding-bottom: 8px; }
+.sim-missions-head { border: none; background: none; font: inherit; font-weight: 900; color: var(--lyte-navy, #1C1B3A); padding: 0; cursor: pointer; }
+.sim-mission-title { font-weight: 700; margin: 6px 0 4px; color: #475569; }
+.sim-mission-row { display: flex; gap: 6px; padding: 3px 0; }
+.sim-mission-row.ok { color: #15803D; text-decoration: line-through; }
+.sim-mission-done { margin-top: 6px; color: #15803D; font-weight: 700; }
+
+.sim-hint {
+  position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 18px); transform: translateX(-50%);
+  background: rgba(28,27,58,0.85); color: white; border-radius: 100px; padding: 9px 16px; font-size: 13px; font-weight: 600;
+  white-space: nowrap; pointer-events: none;
+}
+
+.sim-pop {
+  position: absolute; left: 50%; top: 38%; transform: translateX(-50%); pointer-events: none;
+  background: #FEF3C7; color: #92400E; border-radius: 100px; padding: 10px 18px; font-weight: 900; font-size: 16px;
+  box-shadow: 0 8px 24px rgba(146,64,14,0.3); animation: simPop 1.6s ease forwards; white-space: nowrap;
+}
+@keyframes simPop {
+  0% { opacity: 0; transform: translate(-50%, 20px) scale(0.8); }
+  15% { opacity: 1; transform: translate(-50%, 0) scale(1.08); }
+  25% { transform: translate(-50%, 0) scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -40px); }
+}
+
+/* the item in reach */
+.sim-card {
+  position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 14px); transform: translateX(-50%);
+  width: min(420px, calc(100% - 24px)); background: white; border-radius: 22px; padding: 14px;
+  box-shadow: 0 8px 0 #C7D2FE, 0 14px 30px rgba(28,27,58,0.2); animation: simCardIn 0.25s cubic-bezier(0.32,0.72,0,1);
+  touch-action: manipulation; user-select: text;
+}
+@keyframes simCardIn { from { transform: translate(-50%, 30px); opacity: 0; } }
+.sim-card-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
+.sim-card-head small { font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #94A3B8; }
+.sim-card-head strong { display: block; font-size: 18px; }
+.sim-card-qty { font-size: 22px; font-weight: 900; color: var(--lyte-navy, #1C1B3A); white-space: nowrap; }
+.sim-card-qty span { font-size: 13px; color: #64748B; font-weight: 700; }
+.sim-card-qty.low { color: #DC2626; }
+.sim-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.sim-actions button, .sim-form-actions button {
+  border: none; border-radius: 14px; padding: 12px 6px; font: inherit; font-size: 14px; font-weight: 800; cursor: pointer;
+  background: var(--lyte-navy, #1C1B3A); color: white; box-shadow: 0 4px 0 #0B0A1F; transition: transform 0.08s, box-shadow 0.08s;
+}
+.sim-actions button:active, .sim-form-actions button:active { transform: translateY(3px); box-shadow: 0 1px 0 #0B0A1F; }
+.sim-form { display: flex; flex-direction: column; gap: 10px; }
+.sim-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 700; color: #475569; }
+.sim-form input { border: 2px solid #E2E8F0; border-radius: 12px; padding: 10px 12px; font: inherit; font-size: 18px; font-weight: 800; outline: none; }
+.sim-form input:focus { border-color: var(--lyte-blue, #9AB7FD); }
+.sim-form-actions { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; }
+.sim-form-actions button.ghost { background: #F1F5F9; color: #475569; box-shadow: 0 4px 0 #CBD5E1; }
+.sim-error { background: #FEF2F2; color: #DC2626; border-radius: 10px; padding: 8px 10px; font-size: 13px; }
+
+/* labels floating over the 3D scene */
+.sim-tag {
+  background: white; border-radius: 10px; padding: 4px 8px; text-align: center; white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(28,27,58,0.18); font-family: var(--lyte-font-body), system-ui, sans-serif; pointer-events: none;
+  border: 2px solid transparent;
+}
+.sim-tag b { display: block; font-size: 12px; color: #0F172A; max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+.sim-tag span { font-size: 11px; color: #64748B; font-weight: 700; }
+.sim-tag.low { border-color: #EF4444; }
+.sim-tag.low span { color: #DC2626; }
+.sim-tag.sel { border-color: var(--lyte-navy, #1C1B3A); transform: scale(1.12); }
+.sim-sign {
+  background: var(--lyte-navy, #1C1B3A); color: white; border-radius: 8px; padding: 4px 10px; white-space: nowrap;
+  font-weight: 900; font-size: 13px; letter-spacing: 0.02em; pointer-events: none; font-family: var(--lyte-font-body), system-ui, sans-serif;
+}

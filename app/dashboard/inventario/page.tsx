@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { supabase } from '../../lib/supabase'
 import { useDashboardStore } from '../../lib/DashboardStoreProvider'
 import LyteLeafLoader from '../../components/LyteLeafLoader'
@@ -281,6 +282,16 @@ export default function InventarioPage() {
       {/* ══ INICIO: elegir almacén ══ */}
       {tab === 'home' && (
         <div className="inv-home">
+          {!needsSetup && (
+            <Link className="inv-game-btn" href="/dashboard/inventario/simulador">
+              <span className="inv-game-emoji">🎮</span>
+              <span className="inv-game-text">
+                <strong>Modo simulador</strong>
+                <small>Camina por tu almacén en 3D y trabaja tu inventario como en un juego</small>
+              </span>
+              <span className="inv-game-play">Jugar ▶</span>
+            </Link>
+          )}
           <div className="inv-home-title">
             <h2>{needsSetup ? 'Empieza creando tu primer almacén' : '¿Con qué almacén vas a trabajar?'}</h2>
             <p>{needsSetup

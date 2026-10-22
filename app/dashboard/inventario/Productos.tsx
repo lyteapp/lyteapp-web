@@ -119,12 +119,14 @@ export default function Productos({ storeId, items, warehouses, onChanged, flash
   type EditLine = { itemId: string; qty: string }
   const [edit, setEdit] = useState<null | { product: Product; mode: 'none' | 'item' | 'recipe'; itemId: string; lines: EditLine[] }>(null)
   const [saving, setSaving] = useState(false)
-  function openEdit(p: Product) {
+  // 'Crear receta': pick the product, then its recipe editor opens
+  const [newRecipe, setNewRecipe] = useState(false)
+  function openEdit(p: Product, forceRecipe = false) {
     const link = linkOf(p.id)
     const rec = recipeOf(p.id)
     setEdit({
       product: p,
-      mode: link?.mode ?? 'none',
+      mode: forceRecipe ? 'recipe' : link?.mode ?? 'none',
       itemId: link?.mode === 'item' ? link.item_id ?? '' : '',
       lines: rec.length ? rec.map(l => ({ itemId: l.item_id, qty: String(l.qty) })) : [{ itemId: '', qty: '' }],
     })
@@ -203,7 +205,33 @@ export default function Productos({ storeId, items, warehouses, onChanged, flash
       <div className="inv-toolbar">
         <input className="inv-input inv-search" placeholder="Buscar producto de la tienda" value={search} onChange={e => setSearch(e.target.value)} />
         <div className="inv-toolbar-title" style={{ flex: 'none' }}>{linkedCount} de {products.length} en inventario</div>
+        <button className="inv-btn primary" onClick={() => setNewRecipe(true)} disabled={products.length === 0}>+ Crear receta</button>
       </div>
+
+      {newRecipe && (
+        <div className="inv-overlay" onClick={() => setNewRecipe(false)}>
+          <div className="inv-modal" onClick={e => e.stopPropagation()}>
+            <div className="inv-modal-head">
+              <strong>Crear receta</strong>
+              <button className="inv-x" onClick={() => setNewRecipe(false)} aria-label="Cerrar">✕</button>
+            </div>
+            <div className="inv-hint">¿Para qué producto de tu tienda es la receta? Después agregas sus ingredientes.</div>
+            <label className="inv-field"><span>Producto</span>
+              <ItemPicker
+                items={[...products]
+                  .sort((a, b) => Number(linkOf(a.id)?.mode === 'recipe') - Number(linkOf(b.id)?.mode === 'recipe') || a.name.localeCompare(b.name, 'es'))
+                  .map(p => ({
+                    id: p.id, name: p.name, unit: money(p.price),
+                    category: [catName[catOfProduct[p.id] ?? ''], linkOf(p.id)?.mode === 'recipe' ? 'ya tiene receta' : null].filter(Boolean).join(' · ') || null,
+                  }))}
+                value=""
+                placeholder="Escribe el nombre del producto…"
+                onPick={x => { const p = products.find(pp => pp.id === x.id); setNewRecipe(false); if (p) openEdit(p, true) }}
+              />
+            </label>
+          </div>
+        </div>
+      )}
 
       {untracked.length > 0 && (
         <div className="inv-bulk">

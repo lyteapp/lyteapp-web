@@ -1,0 +1,230 @@
+/* ── Simulador: the business as a building ── */
+.simb-root {
+  position: fixed; inset: 0; z-index: 350; overflow: hidden;
+  --sky-top: #8EC5FC; --sky-bottom: #E0EAFE; --brick: #8A3B2E; --brick-dark: #6E2C22;
+  background: linear-gradient(var(--sky-top), var(--sky-bottom));
+  font-family: var(--lyte-font-body), -apple-system, system-ui, sans-serif; color: #0F172A;
+  user-select: none; -webkit-user-select: none;
+}
+.simb-root.dusk { --sky-top: #3B2C5E; --sky-bottom: #F59E8B; }
+.simb-root.night { --sky-top: #0B1026; --sky-bottom: #283A66; }
+.simb-loading { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 12px; align-items: center; justify-content: center; font-weight: 700; color: #1C1B3A; }
+
+.simb-scroll { position: absolute; inset: 0; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.simb-scene { position: relative; margin: 0 auto; }
+.simb-world { position: absolute; left: 0; top: 0; transform-origin: top left; }
+.simb-sky { position: absolute; inset: 0; background: linear-gradient(var(--sky-top), var(--sky-bottom)); }
+.night .simb-sky::after {
+  content: ''; position: absolute; inset: 0 0 50% 0; opacity: 0.8;
+  background-image: radial-gradient(1.5px 1.5px at 10% 20%, #fff, transparent), radial-gradient(1px 1px at 30% 8%, #fff, transparent),
+    radial-gradient(1.5px 1.5px at 55% 15%, #fff, transparent), radial-gradient(1px 1px at 72% 30%, #fff, transparent),
+    radial-gradient(1.2px 1.2px at 88% 10%, #fff, transparent), radial-gradient(1px 1px at 45% 35%, #fff, transparent);
+}
+
+/* neighbours */
+.simb-neighbor {
+  position: absolute; bottom: 78px; width: 300px; padding: 26px 22px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px 30px; align-content: start;
+  background: #4A3B5C; box-shadow: inset 0 6px 0 #3B2E4A;
+}
+.simb-neighbor.left { left: 70px; background: #5B3A3A; box-shadow: inset 0 6px 0 #4A2E2E; }
+.simb-neighbor.right { right: 60px; }
+.simb-neighbor i { display: block; height: 46px; border-radius: 2px; background: #2A2233; box-shadow: inset 0 0 0 3px #3B2E2E; }
+.night .simb-neighbor i.lit, .dusk .simb-neighbor i.lit { background: #FCD38D; box-shadow: inset 0 0 0 3px #3B2E2E, 0 0 14px #FCD38D66; }
+
+/* building */
+.simb-building {
+  position: absolute; bottom: 78px; display: flex; flex-direction: column;
+  background: var(--brick); padding: 0 20px;
+  background-image:
+    linear-gradient(90deg, #00000014 1px, transparent 1px), linear-gradient(#00000018 1px, transparent 1px);
+  background-size: 22px 11px, 22px 11px;
+  box-shadow: inset 6px 0 0 #00000022, inset -6px 0 0 #00000022, 0 0 0 4px #4A1E17;
+}
+.simb-roof {
+  position: relative; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin: 0 -26px; padding: 0 30px; background: #3A2622; border-bottom: 6px solid #2A1A17;
+}
+.simb-roof-sign { color: #FDE68A; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; font-size: 18px; text-shadow: 0 0 10px #F59E0B88; }
+.simb-add-floor {
+  border: 2px dashed #FDE68A; background: #FDE68A22; color: #FDE68A; border-radius: 8px; padding: 6px 12px;
+  font: inherit; font-weight: 800; font-size: 14px; cursor: pointer;
+}
+.simb-add-floor:disabled { display: none; }
+
+.simb-floor {
+  position: relative; display: block; width: 100%; margin-top: 12px; padding: 0; border: none; cursor: pointer;
+  background: none; font: inherit; color: inherit; text-align: left;
+}
+.simb-room {
+  position: absolute; inset: 0; overflow: hidden; border-radius: 2px;
+  background:
+    radial-gradient(ellipse at 20% 0%, #FFE8A355, transparent 55%), radial-gradient(ellipse at 55% 0%, #FFE8A344, transparent 55%), radial-gradient(ellipse at 85% 0%, #FFE8A355, transparent 55%),
+    linear-gradient(90deg, #00000012 1px, transparent 1px), linear-gradient(#00000014 1px, transparent 1px),
+    #5C3B30;
+  background-size: auto, auto, auto, 18px 9px, 18px 9px, auto;
+  box-shadow: inset 0 -16px 0 #3B2A22, inset 0 0 0 4px #2A1A17, inset 0 6px 14px #0000004d;
+}
+.night .simb-room { box-shadow: inset 0 -16px 0 #3B2A22, inset 0 0 0 4px #2A1A17, inset 0 6px 14px #0000004d, 0 0 26px #FCD38D33; }
+.simb-room > * { bottom: 16px; }
+.simb-floor:hover .simb-room, .simb-floor.sel .simb-room { outline: 3px solid #FDE68A; outline-offset: 2px; }
+.simb-plate {
+  position: absolute; left: -6px; top: 8px; z-index: 5; background: #1C1B3A; color: #FDE68A; border-radius: 0 6px 6px 0;
+  padding: 3px 9px; font-size: 12px; font-weight: 900; letter-spacing: 0.06em; box-shadow: 0 2px 6px #0006;
+}
+
+/* store (ground floor) */
+.simb-shop {
+  position: relative; display: block; width: calc(100% + 40px); margin: 12px -20px 0; padding: 0; border: none; cursor: pointer;
+  background: #2B1D1A; font: inherit; color: inherit; overflow: hidden;
+  box-shadow: inset 0 8px 0 #4A1E17;
+}
+.simb-shop:hover, .simb-shop.sel { outline: 3px solid #FDE68A; outline-offset: -3px; }
+.simb-awning {
+  position: absolute; left: 0; right: 0; top: 0; height: 30px; z-index: 2;
+  background: repeating-linear-gradient(90deg, var(--accent) 0 28px, #FFF8EE 28px 56px);
+  clip-path: polygon(0 0, 100% 0, 100% 70%, 97% 100%, 94% 70%, 91% 100%, 88% 70%, 85% 100%, 82% 70%, 79% 100%, 76% 70%, 73% 100%, 70% 70%, 67% 100%, 64% 70%, 61% 100%, 58% 70%, 55% 100%, 52% 70%, 49% 100%, 46% 70%, 43% 100%, 40% 70%, 37% 100%, 34% 70%, 31% 100%, 28% 70%, 25% 100%, 22% 70%, 19% 100%, 16% 70%, 13% 100%, 10% 70%, 7% 100%, 4% 70%, 0 100%);
+  box-shadow: 0 4px 0 #0003;
+}
+.simb-shop-sign {
+  position: absolute; top: 36px; left: 50%; transform: translateX(-50%); z-index: 2;
+  display: flex; align-items: center; gap: 8px; padding: 6px 16px; border-radius: 6px;
+  background: #1C1B3A; border: 3px solid #C8A27A; color: #FDE68A; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; font-size: 18px;
+  text-shadow: 0 0 10px #F59E0B99; white-space: nowrap;
+}
+.simb-shop-sign img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; }
+.simb-shopwindow {
+  position: absolute; left: 30px; bottom: 0; width: 330px; height: 110px; z-index: 1;
+  background: linear-gradient(135deg, #FFF3D6, #F8D9A0); border: 6px solid #6E4630; border-bottom-width: 14px;
+  display: flex; align-items: flex-end; justify-content: space-around; padding: 8px; gap: 6px;
+  box-shadow: inset 0 0 30px #F59E0B55;
+}
+.simb-shopwindow.right { left: auto; right: 30px; width: 300px; align-items: center; justify-content: center; }
+.simb-display { width: 62px; height: 62px; border-radius: 8px; background: #FFFFFFAA; border: 3px solid #C8A27A; overflow: hidden; }
+.simb-display img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.simb-sales { display: flex; flex-direction: column; align-items: center; color: #7C2D12; font-size: 28px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.simb-sales small { font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #9A3412; }
+.simb-door {
+  position: absolute; left: 50%; bottom: 0; width: 90px; height: 120px; transform: translateX(-50%); z-index: 1;
+  background: linear-gradient(#FDE68A44, #F59E0B22), #3B2A22; border: 6px solid #6E4630; border-bottom: none; border-radius: 40px 40px 0 0;
+  display: flex; justify-content: center; padding-top: 20px;
+}
+.simb-door span { height: fit-content; background: #16A34A; color: white; font-size: 10px; font-weight: 900; letter-spacing: 0.08em; padding: 2px 6px; border-radius: 3px; }
+
+/* street */
+.simb-sidewalk { position: absolute; left: 0; right: 0; bottom: 58px; height: 20px; background: #9CA3AF; box-shadow: inset 0 3px 0 #D1D5DB; }
+.simb-street { position: absolute; left: 0; right: 0; bottom: 0; height: 58px; background: #374151; overflow: hidden; }
+.simb-street::after { content: ''; position: absolute; left: 0; right: 0; top: 28px; height: 3px; background: repeating-linear-gradient(90deg, #FDE68A 0 40px, transparent 40px 80px); opacity: 0.6; }
+.simb-car {
+  position: absolute; bottom: 10px; left: -160px; width: 120px; height: 40px; border-radius: 14px 18px 6px 6px;
+  background: #111827; animation: simbCar 14s linear infinite 3s;
+}
+.simb-car::before { content: ''; position: absolute; left: 24px; top: -16px; width: 60px; height: 20px; border-radius: 12px 12px 0 0; background: #1F2937; }
+.simb-car::after { content: ''; position: absolute; left: 14px; bottom: -8px; width: 92px; height: 16px; background: radial-gradient(circle at 10px 8px, #4B5563 6px, #000 7px, transparent 8px), radial-gradient(circle at 82px 8px, #4B5563 6px, #000 7px, transparent 8px); }
+@keyframes simbCar { to { left: 1600px; } }
+.simb-streetlamp { position: absolute; bottom: 78px; width: 6px; height: 120px; background: #1F2937; }
+.simb-streetlamp::before { content: ''; position: absolute; top: -10px; left: -9px; width: 24px; height: 16px; border-radius: 8px 8px 2px 2px; background: #FDE68A; box-shadow: 0 0 22px #FDE68A; }
+.simb-passerby { position: absolute; bottom: 72px; left: 100px; width: 1300px; height: 50px; z-index: 3; pointer-events: none; }
+.simb-passerby.c { z-index: 0; }
+
+/* walking people (shared with the rooms) */
+.sim-walker {
+  position: absolute; bottom: 16px; left: 0; z-index: 2;
+  animation-name: simWalk; animation-timing-function: linear; animation-iteration-count: infinite;
+}
+@keyframes simWalk {
+  0% { transform: translateX(var(--from)); }
+  48% { transform: translateX(calc(var(--from) + var(--dist))); }
+  52% { transform: translateX(calc(var(--from) + var(--dist))); }
+  100% { transform: translateX(var(--from)); }
+}
+.sim-walker-flip { animation-name: simFlip; animation-timing-function: steps(1); animation-iteration-count: infinite; }
+@keyframes simFlip { 0% { transform: scaleX(1); } 50% { transform: scaleX(-1); } }
+.sim-person { display: block; overflow: visible; }
+.sim-person.walking .leg.l { animation: simLeg 0.5s ease-in-out infinite; transform-origin: 8px 30px; }
+.sim-person.walking .leg.r { animation: simLeg 0.5s ease-in-out infinite reverse; transform-origin: 14px 30px; }
+.sim-person.walking .arm { animation: simLeg 0.5s ease-in-out infinite reverse; transform-origin: 4px 15px; }
+.sim-person.walking .arm.r { animation-direction: normal; transform-origin: 18px 15px; }
+@keyframes simLeg { 0%, 100% { transform: rotate(18deg); } 50% { transform: rotate(-18deg); } }
+
+.sim-lamp { position: absolute; top: 0 !important; bottom: auto !important; }
+.sim-lamp::after { content: ''; position: absolute; left: -30px; top: 18px; width: 86px; height: 110px; background: radial-gradient(ellipse at top, #FFE8A333, transparent 70%); pointer-events: none; }
+.sim-screen { animation: simScreen 3s ease-in-out infinite; }
+@keyframes simScreen { 50% { fill: #A5F3FC; } }
+.sim-oven { animation: simOven 1.6s ease-in-out infinite; }
+@keyframes simOven { 50% { opacity: 0.8; } }
+.sim-steam { animation: simSteam 2s ease-in-out infinite; }
+@keyframes simSteam { 0% { opacity: 0; transform: translateY(4px); } 50% { opacity: 0.8; } 100% { opacity: 0; transform: translateY(-6px); } }
+.sim-ticket { animation: simTicket 2.4s ease-in-out infinite; transform-origin: top center; }
+@keyframes simTicket { 50% { transform: rotate(3deg); } }
+.sim-bar { transform-origin: bottom; animation: simBar 0.8s ease-out both; }
+@keyframes simBar { from { transform: scaleY(0); } }
+.sim-garage-door { position: absolute; right: 120px; bottom: 16px !important; width: 140px; height: 104px; background: repeating-linear-gradient(#6B7280 0 10px, #4B5563 10px 13px); border: 4px solid #374151; }
+.sim-frame { position: absolute; width: 74px; height: 56px; background: #6E4630; padding: 5px; box-shadow: 0 3px 6px #0005; }
+.sim-frame img, .sim-frame span { display: block; width: 100%; height: 100%; object-fit: cover; background: #F8FAFC; }
+.sim-money { position: absolute; background: #14532D; color: #BBF7D0; border: 3px solid #6E4630; border-radius: 6px; padding: 6px 12px; font-weight: 900; font-size: 20px; display: flex; flex-direction: column; align-items: center; font-variant-numeric: tabular-nums; }
+.sim-money small { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; }
+.sim-bubble {
+  position: absolute; z-index: 6; padding: 6px 12px; border-radius: 12px; font-size: 14px; font-weight: 900; white-space: nowrap;
+  background: #FFF7ED; color: #C2410C; border: 3px solid #C2410C; box-shadow: 0 4px 0 #0003; animation: simBubble 1.4s ease-in-out infinite;
+}
+.sim-bubble::after { content: ''; position: absolute; left: 18px; bottom: -11px; border: 8px solid transparent; border-top-color: #C2410C; }
+.sim-bubble.info { background: #EFF6FF; color: #1D4ED8; border-color: #1D4ED8; }
+.sim-bubble.info::after { border-top-color: #1D4ED8; }
+@keyframes simBubble { 50% { transform: translateY(-4px); } }
+
+/* HUD */
+.simb-hud {
+  position: absolute; top: calc(env(safe-area-inset-top) + 10px); left: 10px; right: 10px; z-index: 20;
+  display: flex; align-items: center; gap: 8px; pointer-events: none;
+}
+.simb-hud > * { pointer-events: auto; }
+.simb-hud-stats {
+  flex: 1; display: flex; justify-content: center; gap: 14px; flex-wrap: wrap;
+  background: #F5E6C8; border: 3px solid #6E4630; border-radius: 10px; padding: 6px 12px;
+  font-weight: 800; font-size: 14px; color: #3B2A22; box-shadow: 0 4px 0 #0003;
+}
+.simb-btn {
+  border: 3px solid #6E4630; background: #F5E6C8; color: #3B2A22; border-radius: 10px; padding: 7px 12px;
+  font: inherit; font-weight: 900; font-size: 14px; cursor: pointer; box-shadow: 0 4px 0 #0003; white-space: nowrap;
+}
+.simb-btn.primary { background: #EA580C; border-color: #7C2D12; color: white; }
+.simb-btn.danger { background: #FEE2E2; border-color: #991B1B; color: #991B1B; }
+.simb-btn:disabled { opacity: 0.5; }
+.simb-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #0003; }
+.simb-rotate {
+  position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 14px); transform: translateX(-50%); z-index: 20;
+  background: #1C1B3Aee; color: #FDE68A; padding: 9px 16px; border-radius: 100px; font-weight: 800; font-size: 13px; white-space: nowrap;
+}
+
+/* panels */
+.simb-panel { position: absolute; inset: 0; z-index: 30; background: #0F172A66; display: flex; align-items: center; justify-content: center; padding: 14px; }
+.simb-panel-card {
+  width: min(420px, 100%); max-height: calc(100% - 20px); overflow-y: auto; background: #FBF3E2; border: 4px solid #6E4630; border-radius: 16px;
+  padding: 16px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 8px 0 #0004;
+}
+.simb-panel-card.wide { width: min(720px, 100%); }
+.simb-panel-head { display: flex; align-items: center; gap: 12px; }
+.simb-panel-head > span { font-size: 34px; }
+.simb-panel-head small { font-size: 11px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; color: #9A3412; }
+.simb-panel-head strong { display: block; font-size: 20px; color: #3B2A22; }
+.simb-panel-desc { color: #6B4E3D; font-size: 14px; }
+.simb-panel-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+.simb-panel-stats > div { background: white; border: 2px solid #E7D3B8; border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; }
+.simb-panel-stats b { font-size: 20px; color: #1C1B3A; }
+.simb-panel-stats span { font-size: 12px; color: #6B4E3D; font-weight: 700; }
+.simb-panel-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.simb-build-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.simb-build-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left; cursor: pointer;
+  background: white; border: 3px solid #E7D3B8; border-radius: 12px; padding: 10px; font: inherit; color: #3B2A22;
+}
+.simb-build-card:hover { border-color: #EA580C; }
+.simb-build-icon { font-size: 26px; }
+.simb-build-card strong { font-size: 14px; }
+.simb-build-card small { font-size: 12px; color: #6B4E3D; }
+
+@media (max-width: 700px) {
+  .simb-hud-stats { font-size: 12px; gap: 8px; padding: 5px 8px; }
+  .simb-btn { font-size: 13px; padding: 6px 9px; }
+}

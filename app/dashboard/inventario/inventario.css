@@ -109,6 +109,12 @@ button.inv-card { cursor: pointer; }
 }
 
 /* ── Compras ── */
+.inv-subform {
+  display: flex; flex-direction: column; gap: 8px;
+  background: var(--lyte-lavender-soft, #F3F4FF); border: 1px solid var(--lyte-blue-border, #D3DEFE);
+  border-radius: 14px; padding: 12px;
+}
+.inv-subform-title { font-size: 13px; font-weight: 700; color: var(--lyte-navy); }
 .inv-modal-wide { max-width: 680px; }
 .inv-row-btn { width: 100%; font: inherit; color: inherit; text-align: left; cursor: pointer; }
 .inv-row-btn:hover { border-color: var(--lyte-blue-border, #D3DEFE); }

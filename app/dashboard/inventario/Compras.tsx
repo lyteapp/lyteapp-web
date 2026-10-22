@@ -57,7 +57,28 @@ export default function Compras({ storeId, items, suppliers, warehouses, onChang
     fetch(`/api/bcv-rate?store=${storeId}`).then(r => r.json()).then(d => { const r = d.rate ?? d.rates?.USD; if (r > 0) setBcv(r) }).catch(() => {})
   }, [storeId])
 
-  const supplierName = (id: string | null) => suppliers.find(s => s.id === id)?.name ?? 'Sin proveedor'
+  // Suppliers created from the purchase form, shown right away (the parent's
+  // list catches up on its next reload)
+  const [newSuppliers, setNewSuppliers] = useState<Supplier[]>([])
+  const allSuppliers = [...suppliers, ...newSuppliers.filter(n => !suppliers.some(s => s.id === n.id))]
+  const supplierName = (id: string | null) => allSuppliers.find(s => s.id === id)?.name ?? 'Sin proveedor'
+  const [supDraft, setSupDraft] = useState<null | { name: string; taxId: string; phone: string }>(null)
+  const [supSaving, setSupSaving] = useState(false)
+  async function createSupplier() {
+    if (!supDraft?.name.trim()) return
+    setSupSaving(true)
+    const { data, error } = await supabase.from('inv_suppliers').insert({
+      store_id: storeId, name: supDraft.name.trim(),
+      tax_id: supDraft.taxId.trim() || null, phone: supDraft.phone.trim() || null,
+    }).select('id, name, active').single()
+    setSupSaving(false)
+    if (error || !data) return flash(error?.message ?? 'No se pudo crear el proveedor')
+    setNewSuppliers(prev => [...prev, data as Supplier])
+    setForm(f => f ? { ...f, supplierId: data.id } : f)
+    setSupDraft(null)
+    flash('Proveedor creado')
+    onChanged()
+  }
   const accountOf = (id: string) => accounts.find(a => a.id === id)
   const activeItems = items.filter(i => i.active)
   const activeWh = warehouses.filter(w => w.active)
@@ -81,6 +102,7 @@ export default function Compras({ storeId, items, suppliers, warehouses, onChang
 
   function openNew() {
     setFormError('')
+    setSupDraft(null)
     setForm({
       supplierId: '', whId: defaultWh, date: todayISO(), invoice: '', notes: '',
       currency: 'USD', rate: bcv ? String(bcv) : '', lines: [blankLine()],
@@ -244,9 +266,13 @@ export default function Compras({ storeId, items, suppliers, warehouses, onChang
 
             <div className="inv-two">
               <label className="inv-field"><span>Proveedor</span>
-                <select className="inv-input" value={form.supplierId} onChange={e => setForm({ ...form, supplierId: e.target.value })}>
+                <select className="inv-input" value={form.supplierId} onChange={e => {
+                  if (e.target.value === '__new') { setSupDraft({ name: '', taxId: '', phone: '' }); return }
+                  setForm({ ...form, supplierId: e.target.value })
+                }}>
                   <option value="">— Sin proveedor —</option>
-                  {suppliers.filter(s => s.active).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  {allSuppliers.filter(s => s.active).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  <option value="__new">+ Nuevo proveedor…</option>
                 </select>
               </label>
               <label className="inv-field"><span>Entra al almacén</span>
@@ -255,6 +281,21 @@ export default function Compras({ storeId, items, suppliers, warehouses, onChang
                 </select>
               </label>
             </div>
+            {supDraft && (
+              <div className="inv-subform">
+                <div className="inv-subform-title">Nuevo proveedor</div>
+                <input className="inv-input" placeholder="Nombre o razón social *" value={supDraft.name} onChange={e => setSupDraft({ ...supDraft, name: e.target.value })} autoFocus />
+                <div className="inv-two">
+                  <input className="inv-input" placeholder="RIF" value={supDraft.taxId} onChange={e => setSupDraft({ ...supDraft, taxId: e.target.value })} />
+                  <input className="inv-input" placeholder="Teléfono / WhatsApp" inputMode="tel" value={supDraft.phone} onChange={e => setSupDraft({ ...supDraft, phone: e.target.value })} />
+                </div>
+                <div className="inv-modal-actions">
+                  <button className="inv-btn ghost small" onClick={() => setSupDraft(null)}>Cancelar</button>
+                  <button className="inv-btn primary small" onClick={createSupplier} disabled={supSaving || !supDraft.name.trim()}>{supSaving ? 'Guardando…' : 'Crear y usar'}</button>
+                </div>
+              </div>
+            )}
+
             <div className="inv-two">
               <label className="inv-field"><span>Fecha</span>
                 <input className="inv-input" type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />

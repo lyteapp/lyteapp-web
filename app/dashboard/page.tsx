@@ -132,8 +132,6 @@ export default function Dashboard() {
             <button className="dh-btn-ghost" onClick={() => { if (storeSlug) navigator.clipboard.writeText(`https://lyte-app.com/${storeSlug}`) }}>
               {t('dash.shareLink')}
             </button>
-            {/* Building simulator — small while it's being polished */}
-            <Link href="/dashboard/simulador" className="dh-btn-ghost dh-sim-btn" title="Simulador (beta)">🏢 Simulador</Link>
           </div>
         </div>
       </section>

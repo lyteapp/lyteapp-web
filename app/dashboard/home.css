@@ -349,5 +349,3 @@
   /* Ocultar setup card en móvil */
   .dh-setup { display: none; }
 }
-
-.dh-sim-btn { font-size: 12px; opacity: 0.85; }

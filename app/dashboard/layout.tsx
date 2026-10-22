@@ -157,7 +157,6 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
     '/dashboard/caja': 'Caja',
     '/dashboard/delivery': 'Delivery',
     '/dashboard/clientes': 'Clientes',
-    '/dashboard/simulador': 'Simulador',
     '/dashboard/inventario': 'Inventario',
     '/dashboard/productos': t('nav.products'),
     '/dashboard/productos/categorias': 'Categorias',

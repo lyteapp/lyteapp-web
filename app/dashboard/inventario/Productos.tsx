@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import ItemPicker from './ItemPicker'
+import ListControls, { Thumb, sortAndGroup, useListPrefs } from './ListControls'
 
 // The store's products in Inventario: each one is not tracked, sold as one
 // inventory item ("tal cual"), or made from a recipe / formula. Selling it
@@ -11,7 +12,7 @@ import ItemPicker from './ItemPicker'
 
 type Item = { id: string; name: string; unit: string; avg_cost: number; active: boolean; sku?: string | null; barcode?: string | null; category?: string | null }
 type Warehouse = { id: string; name: string; is_default: boolean; active: boolean }
-type Product = { id: string; name: string; price: number; image_url: string | null; is_active: boolean }
+type Product = { id: string; name: string; price: number; image_url: string | null; is_active: boolean; category_id: string | null }
 type Link = { product_id: string; mode: 'item' | 'recipe'; item_id: string | null }
 type RecipeLine = { product_id: string; item_id: string; qty: number; position: number }
 type Settings = { sales_warehouse_id: string | null; deduct_on: 'pending' | 'confirmed' | 'delivered' }
@@ -37,10 +38,14 @@ export default function Productos({ storeId, items, warehouses, onChanged, flash
   const [picked, setPicked] = useState<Set<string>>(new Set())
   const [bulkBusy, setBulkBusy] = useState(false)
   const [extraItems, setExtraItems] = useState<Item[]>([])
+  // The store's own categories (a product can be in several; the first one groups it)
+  const [catName, setCatName] = useState<Record<string, string>>({})
+  const [catOfProduct, setCatOfProduct] = useState<Record<string, string>>({})
+  const prefs = useListPrefs('products', 'category')
 
   const load = useCallback(async () => {
     const [p, l, r, s] = await Promise.all([
-      supabase.from('products').select('id, name, price, image_url, is_active').eq('store_id', storeId).order('name'),
+      supabase.from('products').select('id, name, price, image_url, is_active, category_id').eq('store_id', storeId).order('name'),
       supabase.from('inv_product_links').select('product_id, mode, item_id').eq('store_id', storeId),
       supabase.from('inv_recipe_lines').select('product_id, item_id, qty, position').eq('store_id', storeId).order('position'),
       supabase.from('inv_settings').select('sales_warehouse_id, deduct_on').eq('store_id', storeId).maybeSingle(),
@@ -49,6 +54,18 @@ export default function Productos({ storeId, items, warehouses, onChanged, flash
     setLinks((l.data ?? []) as Link[])
     setLines(((r.data ?? []) as RecipeLine[]).map(x => ({ ...x, qty: Number(x.qty) })))
     setSettings((s.data as Settings | null) ?? null)
+    const prods = (p.data ?? []) as Product[]
+    const [{ data: cats }, { data: pcs }] = await Promise.all([
+      supabase.from('categories').select('id, name, position').eq('store_id', storeId).order('position'),
+      prods.length ? supabase.from('product_categories').select('product_id, category_id').in('product_id', prods.map(x => x.id)) : Promise.resolve({ data: [] }),
+    ])
+    const names: Record<string, string> = {}
+    for (const c of (cats ?? []) as { id: string; name: string }[]) names[c.id] = c.name
+    const byProduct: Record<string, string> = {}
+    for (const r of (pcs ?? []) as { product_id: string; category_id: string }[]) byProduct[r.product_id] ??= r.category_id
+    for (const x of prods) if (!byProduct[x.id] && x.category_id) byProduct[x.id] = x.category_id
+    setCatName(names)
+    setCatOfProduct(byProduct)
     setLoaded(true)
   }, [storeId])
   useEffect(() => { Promise.resolve().then(load) }, [load])
@@ -201,11 +218,33 @@ export default function Productos({ storeId, items, warehouses, onChanged, flash
         </div>
       )}
 
+      {products.length > 0 && (
+        <ListControls
+          sorts={[
+            { id: 'category', label: 'Por categoría' }, { id: 'name', label: 'Nombre A → Z' }, { id: 'name_desc', label: 'Nombre Z → A' },
+            { id: 'price:asc', label: 'Precio menor' }, { id: 'price:desc', label: 'Precio mayor' },
+            { id: 'margin:asc', label: 'Menor margen' }, { id: 'margin:desc', label: 'Mayor margen' },
+            { id: 'status:asc', label: 'Configurados primero' }, { id: 'status:desc', label: 'Sin configurar primero' },
+          ]}
+          sort={prefs.sort} onSort={prefs.setSort} view={prefs.view} onView={prefs.setView}
+        />
+      )}
+
       {products.length === 0 ? (
         <div className="inv-empty"><span>Tu tienda todavía no tiene productos.</span></div>
-      ) : (
-        <div className="inv-list">
-          {shown.map(p => {
+      ) : sortAndGroup(shown, prefs.sort, {
+        name: p => p.name,
+        category: p => catName[catOfProduct[p.id] ?? ''],
+        keys: {
+          price: p => p.price,
+          margin: p => { const c = costOf(p.id); return c != null && p.price > 0 ? (p.price - c) / p.price : prefs.sort === 'margin:asc' ? 9 : -9 },
+          status: p => (linkOf(p.id) ? 0 : 1),
+        },
+      }).map(group => (
+        <section key={group.title ?? 'all'}>
+          {group.title && <div className="inv-group-title">{group.title} <span>{group.rows.length}</span></div>}
+        <div className={`inv-list view-${prefs.view}`}>
+          {group.rows.map(p => {
             const link = linkOf(p.id)
             const cost = costOf(p.id)
             const margin = cost != null && p.price > 0 ? ((p.price - cost) / p.price) * 100 : null
@@ -215,8 +254,7 @@ export default function Productos({ storeId, items, warehouses, onChanged, flash
                   <input type="checkbox" className="inv-row-check" checked={picked.has(p.id)}
                     onChange={e => setPicked(prev => { const n = new Set(prev); if (e.target.checked) n.add(p.id); else n.delete(p.id); return n })} />
                 )}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                {p.image_url ? <img className="inv-row-img" src={p.image_url} alt="" /> : <span className="inv-row-img" />}
+                <Thumb src={p.image_url} name={p.name} />
                 <div className="inv-row-main">
                   <div className="inv-row-name">
                     {p.name}
@@ -243,7 +281,8 @@ export default function Productos({ storeId, items, warehouses, onChanged, flash
             )
           })}
         </div>
-      )}
+        </section>
+      ))}
 
       {/* ══ EDITOR ══ */}
       {edit && (() => {

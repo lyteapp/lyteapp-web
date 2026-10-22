@@ -6,6 +6,7 @@ import { useDashboardStore } from '../../lib/DashboardStoreProvider'
 import LyteLeafLoader from '../../components/LyteLeafLoader'
 import Compras from './Compras'
 import Productos from './Productos'
+import ListControls, { Thumb, sortAndGroup, useListPrefs } from './ListControls'
 import './inventario.css'
 
 // Inventory, phase 1: stock per warehouse, items, warehouses, suppliers and
@@ -60,6 +61,10 @@ export default function InventarioPage() {
   const [stock, setStock] = useState<Stock[]>([])
   const [movements, setMovements] = useState<Movement[]>([])
   const [debtBySupplier, setDebtBySupplier] = useState<Record<string, number>>({})
+  // Item photo: the store product it's sold as, if any
+  const [photoByItem, setPhotoByItem] = useState<Record<string, string>>({})
+  const stockPrefs = useListPrefs('stock', 'category')
+  const itemPrefs = useListPrefs('items', 'category')
   const [toast, setToast] = useState('')
 
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(''), 2600) }
@@ -79,6 +84,12 @@ export default function InventarioPage() {
       if (d.supplier_id) debt[d.supplier_id] = (debt[d.supplier_id] ?? 0) + Math.max(0, num(d.total_usd) - num(d.paid_usd))
     }
     setDebtBySupplier(debt)
+    const { data: pics } = await supabase.from('inv_product_links').select('item_id, products(image_url)').eq('store_id', sid).eq('mode', 'item')
+    const photos: Record<string, string> = {}
+    for (const r of (pics ?? []) as unknown as { item_id: string | null; products: { image_url: string | null } | null }[]) {
+      if (r.item_id && r.products?.image_url) photos[r.item_id] = r.products.image_url
+    }
+    setPhotoByItem(photos)
     setWarehouses((w.data ?? []) as Warehouse[])
     setItems(((i.data ?? []) as Item[]).map(x => ({ ...x, purchase_factor: num(x.purchase_factor) || 1, min_stock: num(x.min_stock), avg_cost: num(x.avg_cost) })))
     setSuppliers((s.data ?? []) as Supplier[])
@@ -279,18 +290,37 @@ export default function InventarioPage() {
           ) : stockRows.length === 0 ? (
             <div className="inv-empty"><span>Ningún artículo coincide con el filtro.</span></div>
           ) : (
-            <div className="inv-list">
-              {stockRows.map(({ item, qty }) => {
+            <>
+            <ListControls
+              sorts={[
+                { id: 'category', label: 'Por categoría' }, { id: 'name', label: 'Nombre A → Z' }, { id: 'name_desc', label: 'Nombre Z → A' },
+                { id: 'low:asc', label: 'Bajo mínimo primero' }, { id: 'stock:asc', label: 'Menos stock' }, { id: 'stock:desc', label: 'Más stock' },
+                { id: 'value:desc', label: 'Mayor valor' },
+              ]}
+              sort={stockPrefs.sort} onSort={stockPrefs.setSort} view={stockPrefs.view} onView={stockPrefs.setView}
+            />
+            {sortAndGroup(stockRows, stockPrefs.sort, {
+              name: r => r.item.name, category: r => r.item.category,
+              keys: {
+                stock: r => r.qty, value: r => r.qty * r.item.avg_cost,
+                low: r => (r.item.min_stock > 0 && r.qty < r.item.min_stock ? 0 : 1),
+              },
+            }).map(group => (
+            <section key={group.title ?? 'all'}>
+              {group.title && <div className="inv-group-title">{group.title} <span>{group.rows.length}</span></div>}
+            <div className={`inv-list view-${stockPrefs.view}`}>
+              {group.rows.map(({ item, qty }) => {
                 const low = item.min_stock > 0 && qty < item.min_stock
                 const perWh = !whFilter && activeWarehouses.length > 1
                   ? activeWarehouses.map(w => ({ w, q: qtyOf(item.id, w.id) })).filter(x => x.q !== 0)
                   : []
                 return (
                   <div key={item.id} className={`inv-row${low ? ' low' : ''}`}>
+                    <Thumb src={photoByItem[item.id]} name={item.name} />
                     <div className="inv-row-main">
                       <div className="inv-row-name">{item.name}{item.sku && <span className="inv-muted"> · {item.sku}</span>}</div>
                       <div className="inv-row-meta">
-                        {item.category && <span className="inv-tag">{item.category}</span>}
+                        {item.category && stockPrefs.sort !== 'category' && <span className="inv-tag">{item.category}</span>}
                         {low && <span className="inv-tag warn">Bajo mínimo ({fmtQty(item.min_stock)} {item.unit})</span>}
                         {perWh.map(x => <span key={x.w.id} className="inv-muted">{x.w.name}: {fmtQty(x.q)}</span>)}
                       </div>
@@ -306,6 +336,9 @@ export default function InventarioPage() {
                 )
               })}
             </div>
+            </section>
+            ))}
+            </>
           )}
         </>
       )}
@@ -333,9 +366,24 @@ export default function InventarioPage() {
               <span>Un artículo es cualquier cosa que guardas y cuentas: insumos (harina, queso), empaques o productos para la venta.</span>
             </div>
           ) : (
-            <div className="inv-list">
-              {items.map(it => (
+            <>
+            <ListControls
+              sorts={[
+                { id: 'category', label: 'Por categoría' }, { id: 'name', label: 'Nombre A → Z' }, { id: 'name_desc', label: 'Nombre Z → A' },
+                { id: 'cost:asc', label: 'Costo menor' }, { id: 'cost:desc', label: 'Costo mayor' }, { id: 'active:asc', label: 'Activos primero' },
+              ]}
+              sort={itemPrefs.sort} onSort={itemPrefs.setSort} view={itemPrefs.view} onView={itemPrefs.setView}
+            />
+            {sortAndGroup(items, itemPrefs.sort, {
+              name: it => it.name, category: it => it.category,
+              keys: { cost: it => it.avg_cost, active: it => (it.active ? 0 : 1) },
+            }).map(group => (
+            <section key={group.title ?? 'all'}>
+              {group.title && <div className="inv-group-title">{group.title} <span>{group.rows.length}</span></div>}
+            <div className={`inv-list view-${itemPrefs.view}`}>
+              {group.rows.map(it => (
                 <div key={it.id} className={`inv-row${it.active ? '' : ' off'}`}>
+                  <Thumb src={photoByItem[it.id]} name={it.name} />
                   <div className="inv-row-main">
                     <div className="inv-row-name">{it.name}{!it.active && <span className="inv-tag">Inactivo</span>}</div>
                     <div className="inv-row-meta">
@@ -343,7 +391,7 @@ export default function InventarioPage() {
                       {it.purchase_unit && <span className="inv-muted">Compra: {it.purchase_unit} = {fmtQty(it.purchase_factor)} {it.unit}</span>}
                       {it.sku && <span className="inv-muted">SKU {it.sku}</span>}
                       {it.barcode && <span className="inv-muted">Cód. {it.barcode}</span>}
-                      {it.category && <span className="inv-tag">{it.category}</span>}
+                      {it.category && itemPrefs.sort !== 'category' && <span className="inv-tag">{it.category}</span>}
                       {it.supplier_id && <span className="inv-muted">Prov.: {suppliers.find(s => s.id === it.supplier_id)?.name}</span>}
                     </div>
                   </div>
@@ -362,6 +410,9 @@ export default function InventarioPage() {
                 </div>
               ))}
             </div>
+            </section>
+            ))}
+            </>
           )}
         </>
       )}

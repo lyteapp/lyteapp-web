@@ -18,10 +18,11 @@ type Purchase = {
   invoice_path: string | null; total_usd: number; paid_usd: number; status: 'paid' | 'credit' | 'partial'
   due_date: string | null; notes: string | null; created_at: string
 }
-type PurchaseLine = { id: string; item_id: string; qty: number; unit_kind: 'base' | 'purchase'; base_qty: number; unit_cost: number; total: number }
+type PurchaseLine = { id: string; item_id: string; qty: number; unit_kind: 'base' | 'purchase'; base_qty: number; unit_cost: number; total: number; warehouse_id: string | null }
 type Payment = { id: string; date: string; method_id: string; amount: number; amount_usd: number; rate: number | null }
 
-type Line = { itemId: string; qty: string; unitKind: 'base' | 'purchase'; cost: string }
+// whId '' = goes to the invoice's warehouse
+type Line = { itemId: string; qty: string; unitKind: 'base' | 'purchase'; cost: string; whId: string }
 
 const parseNum = (s: string) => { const v = parseFloat(String(s).replace(',', '.')); return Number.isFinite(v) ? v : NaN }
 const money = (n: number) => `$${n.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -91,7 +92,7 @@ export default function Compras({ storeId, items, suppliers, warehouses, onChang
   const shown = filter === 'due' ? purchases.filter(p => p.status !== 'paid') : purchases
 
   // ── new purchase ──
-  const blankLine = (): Line => ({ itemId: '', qty: '', unitKind: 'base', cost: '' })
+  const blankLine = (): Line => ({ itemId: '', qty: '', unitKind: 'base', cost: '', whId: '' })
   const [form, setForm] = useState<null | {
     supplierId: string; whId: string; date: string; invoice: string; notes: string
     currency: 'USD' | 'VES'; rate: string; lines: Line[]
@@ -155,7 +156,7 @@ export default function Compras({ storeId, items, suppliers, warehouses, onChang
         store_id: storeId, supplier_id: form.supplierId || null, warehouse_id: form.whId, date: form.date,
         invoice_number: form.invoice.trim() || null, invoice_path: invoicePath, notes: form.notes.trim() || null,
         due_date: form.pay === 'credit' && form.dueDate ? form.dueDate : null,
-        lines: lines.map(l => ({ item_id: l.itemId, qty: parseNum(l.qty), unit_kind: l.unitKind, unit_cost: Math.round(toUSD(parseNum(l.cost)) * 1e6) / 1e6 })),
+        lines: lines.map(l => ({ item_id: l.itemId, qty: parseNum(l.qty), unit_kind: l.unitKind, unit_cost: Math.round(toUSD(parseNum(l.cost)) * 1e6) / 1e6, warehouse_id: l.whId || null })),
         payment,
       },
     })
@@ -172,7 +173,7 @@ export default function Compras({ storeId, items, suppliers, warehouses, onChang
   const [paying, setPaying] = useState(false)
   async function openDetail(p: Purchase) {
     const [{ data: lines }, { data: pays }, signed] = await Promise.all([
-      supabase.from('inv_purchase_items').select('id, item_id, qty, unit_kind, base_qty, unit_cost, total').eq('purchase_id', p.id),
+      supabase.from('inv_purchase_items').select('id, item_id, qty, unit_kind, base_qty, unit_cost, total, warehouse_id').eq('purchase_id', p.id),
       supabase.from('inv_purchase_payments').select('id, date, method_id, amount, amount_usd, rate').eq('purchase_id', p.id).order('date'),
       p.invoice_path ? supabase.storage.from('invoices').createSignedUrl(p.invoice_path, 3600) : Promise.resolve({ data: null }),
     ])
@@ -276,7 +277,7 @@ export default function Compras({ storeId, items, suppliers, warehouses, onChang
                   <option value="__new">+ Nuevo proveedor…</option>
                 </select>
               </label>
-              <label className="inv-field"><span>Entra al almacén</span>
+              <label className="inv-field"><span>{activeWh.length > 1 ? 'Almacén de toda la factura' : 'Entra al almacén'}</span>
                 <select className="inv-input" value={form.whId} onChange={e => setForm({ ...form, whId: e.target.value })}>
                   {activeWh.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
                 </select>
@@ -356,6 +357,12 @@ export default function Compras({ storeId, items, suppliers, warehouses, onChang
                     </div>
                     <input className="inv-input" inputMode="decimal" placeholder="0,00" value={l.cost} onChange={e => set({ cost: e.target.value.replace(/[^0-9.,]/g, '') })} />
                     <button className="inv-x" onClick={() => setForm({ ...form, lines: form.lines.length > 1 ? form.lines.filter((_, j) => j !== i) : [blankLine()] })} aria-label="Quitar">✕</button>
+                    {activeWh.length > 1 && (
+                      <select className="inv-input inv-line-wh" value={l.whId} onChange={e => set({ whId: e.target.value })}>
+                        <option value="">→ {activeWh.find(w => w.id === form.whId)?.name ?? 'Almacén de la factura'} (el de la factura)</option>
+                        {activeWh.filter(w => w.id !== form.whId).map(w => <option key={w.id} value={w.id}>→ {w.name}</option>)}
+                      </select>
+                    )}
                     {lineTotal(l) > 0 && <div className="inv-line-total">= {form.currency === 'VES' ? bs(lineTotal(l)) : money(lineTotal(l))}</div>}
                   </div>
                 )
@@ -436,7 +443,7 @@ export default function Compras({ storeId, items, suppliers, warehouses, onChang
                   const it = itemName.get(l.item_id)
                   return (
                     <div key={l.id} className="inv-mini-row">
-                      <span>{it?.name ?? '—'}</span>
+                      <span>{it?.name ?? '—'}{l.warehouse_id && l.warehouse_id !== p.warehouse_id && <small className="inv-muted"> → {warehouses.find(w => w.id === l.warehouse_id)?.name}</small>}</span>
                       <span className="inv-muted">{l.qty} {l.unit_kind === 'purchase' ? it?.purchase_unit : it?.unit} × {money(l.unit_cost)}</span>
                       <strong>{money(l.total)}</strong>
                     </div>

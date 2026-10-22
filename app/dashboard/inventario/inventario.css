@@ -154,6 +154,7 @@ button.inv-card { cursor: pointer; }
 .inv-line-qty { display: flex; gap: 4px; align-items: center; min-width: 0; }
 .inv-line-qty input { width: 70px; flex-shrink: 0; }
 .inv-line-qty select { flex: 1; min-width: 0; }
+.inv-line-wh { grid-column: 1 / -2; font-size: 13px; padding: 6px 10px; color: #475569; }
 .inv-line-total { grid-column: 1 / -1; text-align: right; font-size: 12.5px; color: #64748B; margin-top: -4px; }
 .inv-total {
   display: flex; justify-content: space-between; align-items: baseline;

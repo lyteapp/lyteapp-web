@@ -115,6 +115,31 @@ export default function Productos({ storeId, items, warehouses, onChanged, flash
       lines: rec.length ? rec.map(l => ({ itemId: l.item_id, qty: String(l.qty) })) : [{ itemId: '', qty: '' }],
     })
   }
+  // Create an ingredient / item without leaving the recipe
+  const UNITS = ['und', 'kg', 'g', 'l', 'ml', 'lb', 'oz', 'm', 'par']
+  const [newIng, setNewIng] = useState<null | { target: number | 'item'; name: string; unit: string; cost: string; category: string }>(null)
+  const [ingSaving, setIngSaving] = useState(false)
+  async function saveNewIngredient() {
+    if (!newIng?.name.trim()) return
+    setIngSaving(true)
+    const cost = parseNum(newIng.cost)
+    const { data, error } = await supabase.from('inv_items').insert({
+      store_id: storeId, name: newIng.name.trim(), unit: newIng.unit,
+      category: newIng.category.trim() || null, avg_cost: cost > 0 ? cost : 0,
+    }).select('id, name, unit, avg_cost, active, sku, barcode, category').single()
+    setIngSaving(false)
+    if (error || !data) return flash(error?.message ?? 'No se pudo crear')
+    const it = { ...(data as Item), avg_cost: Number(data.avg_cost) || 0 }
+    setExtraItems(prev => [...prev, it])
+    const target = newIng.target
+    setEdit(e => !e ? e : target === 'item'
+      ? { ...e, itemId: it.id }
+      : { ...e, lines: e.lines.map((l, j) => j === target ? { ...l, itemId: it.id } : l) })
+    setNewIng(null)
+    flash(`"${it.name}" creado`)
+    onChanged()
+  }
+
   async function createItemForProduct() {
     if (!edit) return
     const { data, error } = await supabase.from('inv_items').insert({ store_id: storeId, name: edit.product.name, unit: 'und' })
@@ -303,7 +328,8 @@ export default function Productos({ storeId, items, warehouses, onChanged, flash
                 <>
                   <div className="inv-hint">Cada unidad vendida descuenta 1 del artículo que elijas (ej.: un refresco, una camisa).</div>
                   <label className="inv-field"><span>Artículo</span>
-                    <ItemPicker items={activeItems} value={edit.itemId} onPick={i => setEdit({ ...edit, itemId: i.id })} />
+                    <ItemPicker items={activeItems} value={edit.itemId} onPick={i => setEdit({ ...edit, itemId: i.id })}
+                      onCreate={name => setNewIng({ target: 'item', name: name || edit.product.name, unit: 'und', cost: '', category: '' })} />
                   </label>
                   {!edit.itemId && (
                     <button className="inv-btn small" onClick={createItemForProduct}>Crear el artículo “{edit.product.name}”</button>
@@ -322,7 +348,8 @@ export default function Productos({ storeId, items, warehouses, onChanged, flash
                       const lineCost = it && parseNum(l.qty) > 0 ? parseNum(l.qty) * it.avg_cost : 0
                       return (
                         <div key={i} className="inv-line inv-recipe-cols">
-                          <ItemPicker items={activeItems} value={l.itemId} onPick={n => set({ itemId: n.id })} />
+                          <ItemPicker items={activeItems} value={l.itemId} onPick={n => set({ itemId: n.id })}
+                            onCreate={name => setNewIng({ target: i, name, unit: 'kg', cost: '', category: '' })} />
                           <div className="inv-line-qty">
                             <input className="inv-input" inputMode="decimal" placeholder="0" value={l.qty} onChange={e => set({ qty: e.target.value.replace(/[^0-9.,]/g, '') })} />
                             <span className="inv-muted">{it?.unit ?? ''}</span>
@@ -335,6 +362,28 @@ export default function Productos({ storeId, items, warehouses, onChanged, flash
                     <button className="inv-btn small" onClick={() => setEdit({ ...edit, lines: [...edit.lines, { itemId: '', qty: '' }] })}>+ Agregar ingrediente</button>
                   </div>
                 </>
+              )}
+
+              {newIng && (
+                <div className="inv-subform">
+                  <div className="inv-subform-title">{newIng.target === 'item' ? 'Nuevo artículo' : 'Nuevo ingrediente'}</div>
+                  <input className="inv-input" placeholder="Nombre *" value={newIng.name} onChange={e => setNewIng({ ...newIng, name: e.target.value })} autoFocus />
+                  <div className="inv-two">
+                    <label className="inv-field"><span>Unidad</span>
+                      <select className="inv-input" value={newIng.unit} onChange={e => setNewIng({ ...newIng, unit: e.target.value })}>
+                        {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                      </select>
+                    </label>
+                    <label className="inv-field"><span>Costo por {newIng.unit} ($, aprox.)</span>
+                      <input className="inv-input" inputMode="decimal" placeholder="0,00" value={newIng.cost} onChange={e => setNewIng({ ...newIng, cost: e.target.value.replace(/[^0-9.,]/g, '') })} />
+                    </label>
+                  </div>
+                  <input className="inv-input" placeholder="Categoría (opcional)" value={newIng.category} onChange={e => setNewIng({ ...newIng, category: e.target.value })} />
+                  <div className="inv-modal-actions">
+                    <button className="inv-btn ghost small" onClick={() => setNewIng(null)}>Cancelar</button>
+                    <button className="inv-btn primary small" onClick={saveNewIngredient} disabled={ingSaving || !newIng.name.trim()}>{ingSaving ? 'Creando…' : 'Crear y usar'}</button>
+                  </div>
+                </div>
               )}
 
               {edit.mode !== 'none' && (

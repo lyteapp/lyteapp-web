@@ -10,10 +10,12 @@ type PickItem = { id: string; name: string; unit: string; sku?: string | null; b
 
 const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
-export default function ItemPicker<T extends PickItem>({ items, value, onPick, placeholder = 'Escribe para buscar…' }: {
+export default function ItemPicker<T extends PickItem>({ items, value, onPick, onCreate, placeholder = 'Escribe para buscar…' }: {
   items: T[]
   value: string
   onPick: (item: T) => void
+  /** Offers '+ Crear "…"' with what was typed (e.g. a new ingredient) */
+  onCreate?: (name: string) => void
   placeholder?: string
 }) {
   const selected = items.find(i => i.id === value)
@@ -62,8 +64,19 @@ export default function ItemPicker<T extends PickItem>({ items, value, onPick, p
       />
       {open && (
         <div className="inv-picker-list" role="listbox">
+          {onCreate && (
+            <button
+              type="button"
+              className="inv-picker-opt inv-picker-create"
+              onPointerDown={e => e.preventDefault()}
+              onClick={() => { onCreate(query.trim()); setQuery(''); setOpen(false) }}
+            >
+              <span>+ {query.trim() ? `Crear “${query.trim()}”` : 'Crear un artículo nuevo'}</span>
+              <small>Se agrega a tus artículos</small>
+            </button>
+          )}
           {matches.length === 0 ? (
-            <div className="inv-picker-empty">Ningún artículo coincide con “{query}”. Créalo en la pestaña Artículos.</div>
+            !onCreate && <div className="inv-picker-empty">Ningún artículo coincide con “{query}”. Créalo en la pestaña Artículos.</div>
           ) : matches.map((i, idx) => (
             <button
               key={i.id}

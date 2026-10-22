@@ -108,6 +108,25 @@ button.inv-card { cursor: pointer; }
   box-shadow: 0 8px 24px rgba(15,23,42,0.3);
 }
 
+/* ── Productos y recetas ── */
+.inv-sales {
+  background: white; border: 1px solid rgba(15,23,42,0.08); border-radius: 14px;
+  padding: 14px; display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px;
+}
+.inv-sales.on { border-color: var(--lyte-blue-border, #D3DEFE); background: var(--lyte-lavender-faint, #FAFAFF); }
+.inv-sales .inv-check { align-items: flex-start; }
+.inv-sales .inv-check span { display: flex; flex-direction: column; gap: 2px; }
+.inv-sales .inv-check strong { color: #0F172A; }
+.inv-sales .inv-check small { font-size: 12.5px; color: #64748B; }
+.inv-bulk {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
+  background: #F8FAFC; border-radius: 12px; padding: 8px 12px; margin-bottom: 10px;
+}
+.inv-row-check { width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--lyte-navy); }
+.inv-row-img { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; flex-shrink: 0; background: #F1F5F9; }
+.inv-seg.inv-seg-3 { grid-template-columns: repeat(3, 1fr); }
+.inv-recipe-cols { grid-template-columns: 1.8fr 1.2fr 0.8fr 32px !important; }
+
 /* ── Compras ── */
 .inv-scan {
   display: flex; align-items: center; gap: 12px; cursor: pointer;
@@ -197,6 +216,8 @@ button.inv-card { cursor: pointer; }
 .inv-pay { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid #F1F5F9; padding-top: 12px; }
 
 @media (max-width: 720px) {
+  .inv-recipe-cols { grid-template-columns: 1fr 1fr 32px !important; }
+  .inv-recipe-cols > .inv-muted { display: none; }
   .inv-lines-head { display: none; }
   .inv-line { grid-template-columns: 1fr 1fr 32px; border-bottom: 1px solid #F1F5F9; padding-bottom: 8px; }
   .inv-line > select:first-child { grid-column: 1 / -1; }

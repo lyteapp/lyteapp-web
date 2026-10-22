@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { useDashboardStore } from '../../lib/DashboardStoreProvider'
 import LyteLeafLoader from '../../components/LyteLeafLoader'
 import Compras from './Compras'
+import Productos from './Productos'
 import './inventario.css'
 
 // Inventory, phase 1: stock per warehouse, items, warehouses, suppliers and
@@ -27,7 +28,7 @@ type Movement = {
   id: string; item_id: string; warehouse_id: string; type: string; qty: number
   unit_cost: number | null; balance: number; note: string | null; created_at: string
 }
-type Tab = 'stock' | 'purchases' | 'items' | 'warehouses' | 'suppliers' | 'kardex'
+type Tab = 'stock' | 'purchases' | 'products' | 'items' | 'warehouses' | 'suppliers' | 'kardex'
 
 const UNITS = [
   { id: 'und', label: 'Unidad (und)' }, { id: 'kg', label: 'Kilogramo (kg)' }, { id: 'g', label: 'Gramo (g)' },
@@ -37,7 +38,7 @@ const UNITS = [
 const MOVE_LABEL: Record<string, string> = {
   initial: 'Stock inicial', adjust: 'Ajuste', count: 'Conteo físico', purchase: 'Compra',
   transfer_in: 'Transferencia (entra)', transfer_out: 'Transferencia (sale)', waste: 'Desperdicio',
-  production_in: 'Producción', production_out: 'Consumo producción', sale: 'Venta', requisition: 'Requisición',
+  production_in: 'Producción', production_out: 'Consumo producción', sale: 'Venta', sale_return: 'Venta cancelada (vuelve)', requisition: 'Requisición',
 }
 
 const num = (v: unknown) => Number(v) || 0
@@ -58,21 +59,19 @@ export default function InventarioPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [stock, setStock] = useState<Stock[]>([])
   const [movements, setMovements] = useState<Movement[]>([])
-  const [products, setProducts] = useState<{ id: string; name: string }[]>([])
   const [debtBySupplier, setDebtBySupplier] = useState<Record<string, number>>({})
   const [toast, setToast] = useState('')
 
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(''), 2600) }
 
   const load = useCallback(async (sid: string) => {
-    const [w, i, s, st, mv, pr] = await Promise.all([
+    const [w, i, s, st, mv] = await Promise.all([
       supabase.from('inv_warehouses').select('*').eq('store_id', sid).order('created_at'),
       supabase.from('inv_items').select('*').eq('store_id', sid).order('name'),
       supabase.from('inv_suppliers').select('*').eq('store_id', sid).order('name'),
       supabase.from('inv_stock').select('warehouse_id, item_id, qty').eq('store_id', sid),
       supabase.from('inv_movements').select('id, item_id, warehouse_id, type, qty, unit_cost, balance, note, created_at')
         .eq('store_id', sid).order('created_at', { ascending: false }).limit(300),
-      supabase.from('products').select('id, name').eq('store_id', sid).order('name'),
     ])
     const { data: dues } = await supabase.from('inv_purchases').select('supplier_id, total_usd, paid_usd').eq('store_id', sid).neq('status', 'paid')
     const debt: Record<string, number> = {}
@@ -85,7 +84,6 @@ export default function InventarioPage() {
     setSuppliers((s.data ?? []) as Supplier[])
     setStock(((st.data ?? []) as Stock[]).map(x => ({ ...x, qty: num(x.qty) })))
     setMovements(((mv.data ?? []) as Movement[]).map(x => ({ ...x, qty: num(x.qty), balance: num(x.balance), unit_cost: x.unit_cost == null ? null : num(x.unit_cost) })))
-    setProducts((pr.data ?? []) as { id: string; name: string }[])
     setLoading(false)
   }, [])
   useEffect(() => { if (storeId) Promise.resolve().then(() => load(storeId)) }, [storeId, load])
@@ -144,7 +142,7 @@ export default function InventarioPage() {
       purchase_unit: itemForm.purchase_unit.trim() || null,
       purchase_factor: parseNum(itemForm.purchase_factor) > 0 ? parseNum(itemForm.purchase_factor) : 1,
       min_stock: parseNum(itemForm.min_stock) || 0,
-      supplier_id: itemForm.supplier_id || null, product_id: itemForm.product_id || null,
+      supplier_id: itemForm.supplier_id || null,
       notes: itemForm.notes.trim() || null,
     }
     const { error } = itemForm.id
@@ -235,7 +233,7 @@ export default function InventarioPage() {
   return (
     <div className="inv-root">
       <nav className="inv-tabs">
-        {([['stock', 'Existencias'], ['purchases', 'Compras'], ['items', 'Artículos'], ['warehouses', 'Almacenes'], ['suppliers', 'Proveedores'], ['kardex', 'Kardex']] as [Tab, string][]).map(([k, l]) => (
+        {([['stock', 'Existencias'], ['purchases', 'Compras'], ['products', 'Productos y recetas'], ['items', 'Artículos'], ['warehouses', 'Almacenes'], ['suppliers', 'Proveedores'], ['kardex', 'Kardex']] as [Tab, string][]).map(([k, l]) => (
           <button key={k} className={`inv-tab${tab === k ? ' active' : ''}`} onClick={() => setTab(k)}>{l}</button>
         ))}
       </nav>
@@ -317,6 +315,11 @@ export default function InventarioPage() {
         <Compras storeId={storeId} items={items} suppliers={suppliers} warehouses={warehouses} onChanged={() => load(storeId)} flash={flash} />
       )}
 
+      {/* ══ PRODUCTOS DE LA TIENDA / RECETAS ══ */}
+      {tab === 'products' && !needsSetup && storeId && (
+        <Productos storeId={storeId} items={items} warehouses={warehouses} onChanged={() => load(storeId)} flash={flash} />
+      )}
+
       {/* ══ ARTÍCULOS ══ */}
       {tab === 'items' && (
         <>
@@ -342,7 +345,6 @@ export default function InventarioPage() {
                       {it.barcode && <span className="inv-muted">Cód. {it.barcode}</span>}
                       {it.category && <span className="inv-tag">{it.category}</span>}
                       {it.supplier_id && <span className="inv-muted">Prov.: {suppliers.find(s => s.id === it.supplier_id)?.name}</span>}
-                      {it.product_id && <span className="inv-tag link">En tienda: {products.find(p => p.id === it.product_id)?.name ?? '—'}</span>}
                     </div>
                   </div>
                   <div className="inv-row-qty">
@@ -592,12 +594,6 @@ export default function InventarioPage() {
                 <input className="inv-input" inputMode="numeric" value={itemForm.barcode} onChange={e => setItemForm({ ...itemForm, barcode: e.target.value })} />
               </label>
             </div>
-            <label className="inv-field"><span>Producto de la tienda (si este artículo se vende tal cual)</span>
-              <select className="inv-input" value={itemForm.product_id} onChange={e => setItemForm({ ...itemForm, product_id: e.target.value })}>
-                <option value="">— No se vende directamente —</option>
-                {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-            </label>
             <label className="inv-field"><span>Notas</span>
               <input className="inv-input" value={itemForm.notes} onChange={e => setItemForm({ ...itemForm, notes: e.target.value })} />
             </label>

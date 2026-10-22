@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useDashboardStore } from '../../lib/DashboardStoreProvider'
 import LyteLeafLoader from '../../components/LyteLeafLoader'
+import Compras from './Compras'
 import './inventario.css'
 
 // Inventory, phase 1: stock per warehouse, items, warehouses, suppliers and
@@ -26,7 +27,7 @@ type Movement = {
   id: string; item_id: string; warehouse_id: string; type: string; qty: number
   unit_cost: number | null; balance: number; note: string | null; created_at: string
 }
-type Tab = 'stock' | 'items' | 'warehouses' | 'suppliers' | 'kardex'
+type Tab = 'stock' | 'purchases' | 'items' | 'warehouses' | 'suppliers' | 'kardex'
 
 const UNITS = [
   { id: 'und', label: 'Unidad (und)' }, { id: 'kg', label: 'Kilogramo (kg)' }, { id: 'g', label: 'Gramo (g)' },
@@ -58,6 +59,7 @@ export default function InventarioPage() {
   const [stock, setStock] = useState<Stock[]>([])
   const [movements, setMovements] = useState<Movement[]>([])
   const [products, setProducts] = useState<{ id: string; name: string }[]>([])
+  const [debtBySupplier, setDebtBySupplier] = useState<Record<string, number>>({})
   const [toast, setToast] = useState('')
 
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(''), 2600) }
@@ -72,6 +74,12 @@ export default function InventarioPage() {
         .eq('store_id', sid).order('created_at', { ascending: false }).limit(300),
       supabase.from('products').select('id, name').eq('store_id', sid).order('name'),
     ])
+    const { data: dues } = await supabase.from('inv_purchases').select('supplier_id, total_usd, paid_usd').eq('store_id', sid).neq('status', 'paid')
+    const debt: Record<string, number> = {}
+    for (const d of (dues ?? []) as { supplier_id: string | null; total_usd: number; paid_usd: number }[]) {
+      if (d.supplier_id) debt[d.supplier_id] = (debt[d.supplier_id] ?? 0) + Math.max(0, num(d.total_usd) - num(d.paid_usd))
+    }
+    setDebtBySupplier(debt)
     setWarehouses((w.data ?? []) as Warehouse[])
     setItems(((i.data ?? []) as Item[]).map(x => ({ ...x, purchase_factor: num(x.purchase_factor) || 1, min_stock: num(x.min_stock), avg_cost: num(x.avg_cost) })))
     setSuppliers((s.data ?? []) as Supplier[])
@@ -227,7 +235,7 @@ export default function InventarioPage() {
   return (
     <div className="inv-root">
       <nav className="inv-tabs">
-        {([['stock', 'Existencias'], ['items', 'Artículos'], ['warehouses', 'Almacenes'], ['suppliers', 'Proveedores'], ['kardex', 'Kardex']] as [Tab, string][]).map(([k, l]) => (
+        {([['stock', 'Existencias'], ['purchases', 'Compras'], ['items', 'Artículos'], ['warehouses', 'Almacenes'], ['suppliers', 'Proveedores'], ['kardex', 'Kardex']] as [Tab, string][]).map(([k, l]) => (
           <button key={k} className={`inv-tab${tab === k ? ' active' : ''}`} onClick={() => setTab(k)}>{l}</button>
         ))}
       </nav>
@@ -302,6 +310,11 @@ export default function InventarioPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* ══ COMPRAS ══ */}
+      {tab === 'purchases' && !needsSetup && storeId && (
+        <Compras storeId={storeId} items={items} suppliers={suppliers} warehouses={warehouses} onChanged={() => load(storeId)} flash={flash} />
       )}
 
       {/* ══ ARTÍCULOS ══ */}
@@ -418,6 +431,9 @@ export default function InventarioPage() {
                         <span className="inv-muted">{items.filter(i => i.supplier_id === s.id).length} artículos</span>
                       </div>
                     </div>
+                    {(debtBySupplier[s.id] ?? 0) > 0 && (
+                      <div className="inv-row-qty"><strong className="warn-text">{money(debtBySupplier[s.id])}</strong><div className="inv-muted">le debes</div></div>
+                    )}
                     <div className="inv-row-actions">
                       <button className="inv-btn small" onClick={() => setSupForm({
                         id: s.id, name: s.name, tax_id: s.tax_id ?? '', contact_name: s.contact_name ?? '', phone: s.phone ?? '',

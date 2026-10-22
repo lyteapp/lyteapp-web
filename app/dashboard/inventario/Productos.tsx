@@ -15,12 +15,10 @@ type Warehouse = { id: string; name: string; is_default: boolean; active: boolea
 type Product = { id: string; name: string; price: number; image_url: string | null; is_active: boolean; category_id: string | null }
 type Link = { product_id: string; mode: 'item' | 'recipe'; item_id: string | null }
 type RecipeLine = { product_id: string; item_id: string; qty: number; position: number }
-type Settings = { sales_warehouse_id: string | null; deduct_on: 'pending' | 'confirmed' | 'delivered' }
 
 const money = (n: number) => `$${n.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const parseNum = (s: string) => { const v = parseFloat(String(s).replace(',', '.')); return Number.isFinite(v) ? v : NaN }
 const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-const DEDUCT_LABEL = { pending: 'Cuando entra el pedido', confirmed: 'Cuando confirmas el pedido', delivered: 'Cuando se entrega' }
 
 export default function Productos({ storeId, items, warehouses, onChanged, flash }: {
   storeId: string
@@ -32,7 +30,6 @@ export default function Productos({ storeId, items, warehouses, onChanged, flash
   const [products, setProducts] = useState<Product[]>([])
   const [links, setLinks] = useState<Link[]>([])
   const [lines, setLines] = useState<RecipeLine[]>([])
-  const [settings, setSettings] = useState<Settings | null>(null)
   const [loaded, setLoaded] = useState(false)
   const [search, setSearch] = useState('')
   const [picked, setPicked] = useState<Set<string>>(new Set())
@@ -44,16 +41,14 @@ export default function Productos({ storeId, items, warehouses, onChanged, flash
   const prefs = useListPrefs('products', 'category')
 
   const load = useCallback(async () => {
-    const [p, l, r, s] = await Promise.all([
+    const [p, l, r] = await Promise.all([
       supabase.from('products').select('id, name, price, image_url, is_active, category_id').eq('store_id', storeId).order('name'),
       supabase.from('inv_product_links').select('product_id, mode, item_id').eq('store_id', storeId),
       supabase.from('inv_recipe_lines').select('product_id, item_id, qty, position').eq('store_id', storeId).order('position'),
-      supabase.from('inv_settings').select('sales_warehouse_id, deduct_on').eq('store_id', storeId).maybeSingle(),
     ])
     setProducts(((p.data ?? []) as Product[]).map(x => ({ ...x, price: Number(x.price) || 0 })))
     setLinks((l.data ?? []) as Link[])
     setLines(((r.data ?? []) as RecipeLine[]).map(x => ({ ...x, qty: Number(x.qty) })))
-    setSettings((s.data as Settings | null) ?? null)
     const prods = (p.data ?? []) as Product[]
     const [{ data: cats }, { data: pcs }] = await Promise.all([
       supabase.from('categories').select('id, name, position').eq('store_id', storeId).order('position'),
@@ -74,6 +69,7 @@ export default function Productos({ storeId, items, warehouses, onChanged, flash
   const itemById = new Map(allItems.map(i => [i.id, i]))
   const activeItems = allItems.filter(i => i.active)
   const activeWh = warehouses.filter(w => w.active)
+  const mainWh = activeWh.find(w => w.is_default) ?? activeWh[0]
   const linkOf = (pid: string) => links.find(l => l.product_id === pid)
   const recipeOf = (pid: string) => lines.filter(l => l.product_id === pid)
   const costOf = (pid: string) => {
@@ -81,18 +77,6 @@ export default function Productos({ storeId, items, warehouses, onChanged, flash
     if (!link) return null
     if (link.mode === 'item') return link.item_id ? itemById.get(link.item_id)?.avg_cost ?? 0 : null
     return recipeOf(pid).reduce((t, l) => t + l.qty * (itemById.get(l.item_id)?.avg_cost ?? 0), 0)
-  }
-
-  // ── sales settings ──
-  async function saveSettings(next: Settings | null) {
-    if (next) {
-      const { error } = await supabase.from('inv_settings').upsert({ store_id: storeId, ...next, updated_at: new Date().toISOString() })
-      if (error) return flash(error.message)
-    } else {
-      await supabase.from('inv_settings').delete().eq('store_id', storeId)
-    }
-    setSettings(next)
-    flash(next ? 'Las ventas descontarán inventario' : 'Las ventas ya no descuentan inventario')
   }
 
   // ── bulk: create products as items sold "tal cual" ──
@@ -178,28 +162,10 @@ export default function Productos({ storeId, items, warehouses, onChanged, flash
 
   return (
     <>
-      {/* sales → stock settings */}
-      <div className={`inv-sales${settings ? ' on' : ''}`}>
-        <label className="inv-check">
-          <input type="checkbox" checked={!!settings} disabled={activeWh.length === 0}
-            onChange={e => saveSettings(e.target.checked ? { sales_warehouse_id: activeWh.find(w => w.is_default)?.id ?? activeWh[0]?.id ?? null, deduct_on: 'confirmed' } : null)} />
-          <span><strong>Descontar inventario con las ventas de la tienda</strong>
-            <small>Cada producto vendido descuenta su artículo o los ingredientes de su receta. Si el pedido se cancela, vuelve al inventario.</small></span>
-        </label>
-        {settings && (
-          <div className="inv-two">
-            <label className="inv-field"><span>Sale del almacén</span>
-              <select className="inv-input" value={settings.sales_warehouse_id ?? ''} onChange={e => saveSettings({ ...settings, sales_warehouse_id: e.target.value || null })}>
-                {activeWh.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-              </select>
-            </label>
-            <label className="inv-field"><span>Momento del descuento</span>
-              <select className="inv-input" value={settings.deduct_on} onChange={e => saveSettings({ ...settings, deduct_on: e.target.value as Settings['deduct_on'] })}>
-                {(Object.keys(DEDUCT_LABEL) as Settings['deduct_on'][]).map(k => <option key={k} value={k}>{DEDUCT_LABEL[k]}</option>)}
-              </select>
-            </label>
-          </div>
-        )}
+      {/* sales always discount the main warehouse (see inv_sync_order) */}
+      <div className="inv-shared-note" style={{ marginTop: 0 }}>
+        Cada venta de la tienda descuenta su artículo o los ingredientes de su receta del almacén principal
+        {mainWh ? <> (<strong>{mainWh.name}</strong>)</> : ''} en cuanto entra el pedido. Si el pedido se cancela, vuelve al inventario.
       </div>
 
       <div className="inv-toolbar">

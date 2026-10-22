@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { METODOS_BASE, normalizarLibro, type Metodo } from '../../finanzas/flujo/model'
+import ItemPicker from './ItemPicker'
 
 // Inventory purchases: lines go into a warehouse at cost (inv_register_purchase),
 // paid from a Finanzas account (an outflow there) or on credit (a debt with
 // the supplier, paid later with inv_pay_purchase). The invoice photo goes to
 // the private 'invoices' bucket.
 
-type Item = { id: string; name: string; unit: string; purchase_unit: string | null; purchase_factor: number; avg_cost: number; active: boolean; supplier_id: string | null }
+type Item = { id: string; name: string; unit: string; purchase_unit: string | null; purchase_factor: number; avg_cost: number; active: boolean; supplier_id: string | null; sku?: string | null; barcode?: string | null; category?: string | null }
 type Supplier = { id: string; name: string; active: boolean }
 type Warehouse = { id: string; name: string; is_default: boolean; active: boolean }
 type Purchase = {
@@ -334,16 +335,16 @@ export default function Compras({ storeId, items, suppliers, warehouses, onChang
                 const set = (patch: Partial<Line>) => setForm({ ...form, lines: form.lines.map((x, j) => j === i ? { ...x, ...patch } : x) })
                 return (
                   <div key={i} className="inv-line">
-                    <select className="inv-input" value={l.itemId} onChange={e => {
-                      const n = itemName.get(e.target.value)
-                      const usesPurchase = !!n?.purchase_unit
-                      const costUSD = n ? n.avg_cost * (usesPurchase ? n.purchase_factor : 1) : 0
-                      set({ itemId: e.target.value, unitKind: usesPurchase ? 'purchase' : 'base',
-                        cost: costUSD ? String(Math.round((form.currency === 'VES' && rateNum > 0 ? costUSD * rateNum : costUSD) * 100) / 100) : '' })
-                    }}>
-                      <option value="">Elegir artículo…</option>
-                      {activeItems.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
-                    </select>
+                    <ItemPicker
+                      items={activeItems}
+                      value={l.itemId}
+                      onPick={n => {
+                        const usesPurchase = !!n.purchase_unit
+                        const costUSD = n.avg_cost * (usesPurchase ? n.purchase_factor : 1)
+                        set({ itemId: n.id, unitKind: usesPurchase ? 'purchase' : 'base',
+                          cost: costUSD ? String(Math.round((form.currency === 'VES' && rateNum > 0 ? costUSD * rateNum : costUSD) * 100) / 100) : '' })
+                      }}
+                    />
                     <div className="inv-line-qty">
                       <input className="inv-input" inputMode="decimal" placeholder="0" value={l.qty} onChange={e => set({ qty: e.target.value.replace(/[^0-9.,]/g, '') })} />
                       {it?.purchase_unit ? (

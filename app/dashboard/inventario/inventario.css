@@ -109,6 +109,23 @@ button.inv-card { cursor: pointer; }
 }
 
 /* ── Compras ── */
+.inv-picker { position: relative; min-width: 0; }
+.inv-picker .inv-input { width: 100%; }
+.inv-picker-list {
+  position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; right: 0; min-width: 220px;
+  max-height: 240px; overflow-y: auto; overscroll-behavior: contain;
+  background: white; border: 1px solid rgba(15,23,42,0.12); border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(15,23,42,0.18); padding: 4px;
+}
+.inv-picker-opt {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px; width: 100%;
+  border: none; background: none; text-align: left; padding: 8px 10px; border-radius: 8px;
+  font: inherit; font-size: 14px; color: #0F172A; cursor: pointer;
+}
+.inv-picker-opt small { font-size: 11.5px; color: #64748B; }
+.inv-picker-opt.active { background: var(--lyte-lavender-soft, #F3F4FF); }
+.inv-picker-opt.sel span { font-weight: 700; }
+.inv-picker-empty { padding: 10px; font-size: 13px; color: #64748B; }
 .inv-subform {
   display: flex; flex-direction: column; gap: 8px;
   background: var(--lyte-lavender-soft, #F3F4FF); border: 1px solid var(--lyte-blue-border, #D3DEFE);

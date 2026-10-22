@@ -29,7 +29,14 @@ type Movement = {
   id: string; item_id: string; warehouse_id: string; type: string; qty: number
   unit_cost: number | null; balance: number; note: string | null; created_at: string
 }
-type Tab = 'stock' | 'purchases' | 'products' | 'items' | 'warehouses' | 'suppliers' | 'kardex'
+// 'home' picks a warehouse; stock/purchases/kardex work inside the chosen
+// warehouse; items/products/suppliers/warehouses are the shared catalog.
+type Tab = 'home' | 'stock' | 'purchases' | 'products' | 'items' | 'warehouses' | 'suppliers' | 'kardex'
+const WAREHOUSE_TABS: [Tab, string][] = [
+  ['stock', 'Existencias'], ['purchases', 'Compras'], ['kardex', 'Movimientos'],
+  ['items', 'Artículos'], ['products', 'Productos y recetas'], ['suppliers', 'Proveedores'],
+]
+const CATALOG_TITLE: Partial<Record<Tab, string>> = { warehouses: 'Administrar almacenes' }
 
 const UNITS = [
   { id: 'und', label: 'Unidad (und)' }, { id: 'kg', label: 'Kilogramo (kg)' }, { id: 'g', label: 'Gramo (g)' },
@@ -53,7 +60,9 @@ const EMPTY_SUPPLIER = { name: '', tax_id: '', contact_name: '', phone: '', emai
 
 export default function InventarioPage() {
   const { storeId } = useDashboardStore()
-  const [tab, setTab] = useState<Tab>('stock')
+  const [tab, setTab] = useState<Tab>('home')
+  // The warehouse being worked on (kept in the URL so a reload stays there)
+  const [whSel, setWhSel] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [warehouses, setWarehouses] = useState<Warehouse[]>([])
   const [items, setItems] = useState<Item[]>([])
@@ -68,6 +77,7 @@ export default function InventarioPage() {
   const [toast, setToast] = useState('')
 
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(''), 2600) }
+
 
   const load = useCallback(async (sid: string) => {
     const [w, i, s, st, mv] = await Promise.all([
@@ -221,6 +231,31 @@ export default function InventarioPage() {
   const [kxItem, setKxItem] = useState('')
   const [kxWh, setKxWh] = useState('')
 
+  // ── navigation: pick a warehouse first ──
+  const setUrl = (params: Record<string, string | null>) => {
+    const u = new URL(window.location.href)
+    for (const [k, v] of Object.entries(params)) { if (v) u.searchParams.set(k, v); else u.searchParams.delete(k) }
+    window.history.replaceState(null, '', u)
+  }
+  function openWarehouse(id: string) {
+    setWhSel(id); setWhFilter(id); setKxWh(id); setKxItem(''); setSearch(''); setLowOnly(false)
+    setTab('stock'); setUrl({ almacen: id, ver: null })
+  }
+  function openCatalog(t: Tab) { setWhSel(null); setTab(t); setUrl({ almacen: null, ver: t }) }
+  function goHome() { setWhSel(null); setTab('home'); setUrl({ almacen: null, ver: null }) }
+  // Reopen the warehouse / catalog page the URL points to
+  const [restored, setRestored] = useState(false)
+  useEffect(() => {
+    if (loading || restored) return
+    const u = new URL(window.location.href)
+    const wh = u.searchParams.get('almacen'), ver = u.searchParams.get('ver') as Tab | null
+    Promise.resolve().then(() => {
+      if (wh && warehouses.some(w => w.id === wh)) openWarehouse(wh)
+      else if (ver && CATALOG_TITLE[ver]) openCatalog(ver)
+      setRestored(true)
+    })
+  }, [loading, restored, warehouses]) // eslint-disable-line react-hooks/exhaustive-deps
+
   if (loading) return <div className="inv-loading"><LyteLeafLoader size={44} /></div>
 
   // First run: nothing set up yet
@@ -236,29 +271,95 @@ export default function InventarioPage() {
       return true
     })
   const totalValue = visibleItems.reduce((t, i) => t + qtyOf(i.id, whFilter || undefined) * i.avg_cost, 0)
-  const lowCount = visibleItems.filter(i => i.min_stock > 0 && qtyOf(i.id) < i.min_stock).length
+  const lowCount = visibleItems.filter(i => i.min_stock > 0 && qtyOf(i.id, whFilter || undefined) < i.min_stock).length
   const defaultWh = activeWarehouses.find(w => w.is_default)?.id ?? activeWarehouses[0]?.id ?? ''
 
   const kxRows = movements.filter(m => (!kxItem || m.item_id === kxItem) && (!kxWh || m.warehouse_id === kxWh))
 
   return (
     <div className="inv-root">
-      <nav className="inv-tabs">
-        {([['stock', 'Existencias'], ['purchases', 'Compras'], ['products', 'Productos y recetas'], ['items', 'Artículos'], ['warehouses', 'Almacenes'], ['suppliers', 'Proveedores'], ['kardex', 'Kardex']] as [Tab, string][]).map(([k, l]) => (
-          <button key={k} className={`inv-tab${tab === k ? ' active' : ''}`} onClick={() => setTab(k)}>{l}</button>
-        ))}
-      </nav>
+      {/* ══ INICIO: elegir almacén ══ */}
+      {tab === 'home' && (
+        <div className="inv-home">
+          <div className="inv-home-title">
+            <h2>{needsSetup ? 'Empieza creando tu primer almacén' : '¿Con qué almacén vas a trabajar?'}</h2>
+            <p>{needsSetup
+              ? 'Un almacén es donde guardas la mercancía: depósito, cocina, bodega, tienda. Puedes tener varios.'
+              : 'Elige uno para ver sus existencias, cargar compras y hacer movimientos.'}</p>
+          </div>
+          <div className="inv-wh-grid">
+            {activeWarehouses.map(w => {
+              const rows = stock.filter(x => x.warehouse_id === w.id)
+              const value = rows.reduce((t, x) => t + x.qty * (itemById.get(x.item_id)?.avg_cost ?? 0), 0)
+              const count = rows.filter(x => x.qty !== 0).length
+              const low = items.filter(i => i.active && i.min_stock > 0 && rows.some(x => x.item_id === i.id) && qtyOf(i.id, w.id) < i.min_stock).length
+              return (
+                <button key={w.id} className="inv-wh-card" onClick={() => openWarehouse(w.id)}>
+                  <div className="inv-wh-card-top">
+                    <span className="inv-wh-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9.5 12 4l9 5.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5Z" /><path d="M7 21v-8h10v8M7 17h10" /></svg>
+                    </span>
+                    {w.is_default && <span className="inv-tag link">Principal</span>}
+                  </div>
+                  <strong className="inv-wh-name">{w.name}</strong>
+                  {w.description && <span className="inv-muted">{w.description}</span>}
+                  <div className="inv-wh-stats">
+                    <span><b>{money(value)}</b> en mercancía</span>
+                    <span>{count} {count === 1 ? 'artículo' : 'artículos'}</span>
+                    {low > 0 && <span className="inv-tag warn">{low} bajo mínimo</span>}
+                  </div>
+                  <span className="inv-wh-go">Entrar →</span>
+                </button>
+              )
+            })}
+            <button className="inv-wh-card inv-wh-new" onClick={() => setWhForm({ name: needsSetup ? 'Almacén principal' : '', description: '', is_default: needsSetup })}>
+              <span className="inv-wh-plus">+</span>
+              <strong>Nuevo almacén</strong>
+            </button>
+          </div>
 
-      {needsSetup && tab !== 'warehouses' && (
-        <div className="inv-setup">
-          <strong>Empieza creando tu primer almacén</strong>
-          <span>Un almacén es donde guardas la mercancía: depósito, cocina, bodega, tienda. Puedes tener varios.</span>
-          <button className="inv-btn primary" onClick={() => { setTab('warehouses'); setWhForm({ name: 'Almacén principal', description: '', is_default: true }) }}>Crear almacén</button>
+          {warehouses.length > 0 && (
+            <button className="inv-home-admin" onClick={() => openCatalog('warehouses')}>Administrar almacenes (editar, desactivar)</button>
+          )}
+        </div>
+      )}
+
+      {/* ══ DENTRO DE UN ALMACÉN ══ */}
+      {whSel && tab !== 'home' && (
+        <>
+          <div className="inv-ws-head">
+            <button className="inv-back" onClick={goHome}>‹ Almacenes</button>
+            <div className="inv-ws-title">
+              <small>Almacén</small>
+              <h2>{whById.get(whSel)?.name}</h2>
+            </div>
+            {activeWarehouses.length > 1 && (
+              <select className="inv-input inv-ws-switch" value={whSel} onChange={e => openWarehouse(e.target.value)} aria-label="Cambiar de almacén">
+                {activeWarehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+              </select>
+            )}
+          </div>
+          <nav className="inv-tabs">
+            {WAREHOUSE_TABS.map(([k, l], i) => (
+              <button key={k} className={`inv-tab${tab === k ? ' active' : ''}${i === 3 ? ' sep' : ''}`} onClick={() => setTab(k)}>{l}</button>
+            ))}
+          </nav>
+          {(tab === 'items' || tab === 'products' || tab === 'suppliers') && (
+            <div className="inv-shared-note">Esto es común a todos tus almacenes.</div>
+          )}
+        </>
+      )}
+
+      {/* ══ CATÁLOGO ══ */}
+      {!whSel && CATALOG_TITLE[tab] && (
+        <div className="inv-ws-head">
+          <button className="inv-back" onClick={goHome}>‹ Inventario</button>
+          <div className="inv-ws-title"><small>Catálogo</small><h2>{CATALOG_TITLE[tab]}</h2></div>
         </div>
       )}
 
       {/* ══ EXISTENCIAS ══ */}
-      {tab === 'stock' && !needsSetup && (
+      {tab === 'stock' && whSel && (
         <>
           <div className="inv-cards">
             <div className="inv-card featured"><span>Valor del inventario</span><strong>{money(totalValue)}</strong></div>
@@ -271,10 +372,6 @@ export default function InventarioPage() {
 
           <div className="inv-toolbar">
             <input className="inv-input inv-search" placeholder="Buscar por nombre, código o categoría" value={search} onChange={e => setSearch(e.target.value)} />
-            <select className="inv-input" value={whFilter} onChange={e => setWhFilter(e.target.value)}>
-              <option value="">Todos los almacenes</option>
-              {activeWarehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-            </select>
             <button className="inv-btn primary" disabled={visibleItems.length === 0}
               onClick={() => { setMvError(''); setMv({ itemId: visibleItems[0]?.id ?? '', whId: whFilter || defaultWh, kind: 'in', qty: '', cost: '', note: '' }) }}>
               + Movimiento
@@ -344,17 +441,17 @@ export default function InventarioPage() {
       )}
 
       {/* ══ COMPRAS ══ */}
-      {tab === 'purchases' && !needsSetup && storeId && (
-        <Compras storeId={storeId} items={items} suppliers={suppliers} warehouses={warehouses} onChanged={() => load(storeId)} flash={flash} />
+      {tab === 'purchases' && whSel && storeId && (
+        <Compras storeId={storeId} items={items} suppliers={suppliers} warehouses={warehouses} warehouseId={whSel} onChanged={() => load(storeId)} flash={flash} />
       )}
 
       {/* ══ PRODUCTOS DE LA TIENDA / RECETAS ══ */}
-      {tab === 'products' && !needsSetup && storeId && (
+      {tab === 'products' && whSel && storeId && (
         <Productos storeId={storeId} items={items} warehouses={warehouses} onChanged={() => load(storeId)} flash={flash} />
       )}
 
       {/* ══ ARTÍCULOS ══ */}
-      {tab === 'items' && (
+      {tab === 'items' && whSel && (
         <>
           <div className="inv-toolbar">
             <div className="inv-toolbar-title">{items.filter(i => i.active).length} artículos activos</div>
@@ -418,7 +515,7 @@ export default function InventarioPage() {
       )}
 
       {/* ══ ALMACENES ══ */}
-      {tab === 'warehouses' && (
+      {tab === 'warehouses' && !whSel && (
         <>
           <div className="inv-toolbar">
             <div className="inv-toolbar-title">{activeWarehouses.length} {activeWarehouses.length === 1 ? 'almacén activo' : 'almacenes activos'}</div>
@@ -457,7 +554,7 @@ export default function InventarioPage() {
       )}
 
       {/* ══ PROVEEDORES ══ */}
-      {tab === 'suppliers' && (
+      {tab === 'suppliers' && whSel && (
         <>
           <div className="inv-toolbar">
             <input className="inv-input inv-search" placeholder="Buscar proveedor" value={supSearch} onChange={e => setSupSearch(e.target.value)} />
@@ -502,16 +599,12 @@ export default function InventarioPage() {
       )}
 
       {/* ══ KARDEX ══ */}
-      {tab === 'kardex' && (
+      {tab === 'kardex' && whSel && (
         <>
           <div className="inv-toolbar">
             <select className="inv-input" value={kxItem} onChange={e => setKxItem(e.target.value)}>
               <option value="">Todos los artículos</option>
               {items.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
-            </select>
-            <select className="inv-input" value={kxWh} onChange={e => setKxWh(e.target.value)}>
-              <option value="">Todos los almacenes</option>
-              {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
             </select>
           </div>
           {kxRows.length === 0 ? (

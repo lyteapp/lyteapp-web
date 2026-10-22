@@ -57,8 +57,10 @@ const STATUS: Record<Purchase['status'], { label: string; cls: string }> = {
   paid: { label: 'Pagada', cls: 'ok' }, credit: { label: 'Por pagar', cls: 'warn' }, partial: { label: 'Pago parcial', cls: 'warn' },
 }
 
-export default function Compras({ storeId, items, suppliers, warehouses, onChanged, flash }: {
+export default function Compras({ storeId, items, suppliers, warehouses, warehouseId, onChanged, flash }: {
   storeId: string
+  /** The warehouse being worked on: lists its purchases and is the default destination */
+  warehouseId?: string
   items: Item[]
   suppliers: Supplier[]
   warehouses: Warehouse[]
@@ -111,12 +113,13 @@ export default function Compras({ storeId, items, suppliers, warehouses, onChang
   const activeItems = [...items, ...newItems.filter(n => !items.some(i => i.id === n.id))].filter(i => i.active)
   const itemName = new Map([...items, ...newItems].map(i => [i.id, i]))
   const activeWh = warehouses.filter(w => w.active)
-  const defaultWh = activeWh.find(w => w.is_default)?.id ?? activeWh[0]?.id ?? ''
+  const defaultWh = warehouseId ?? activeWh.find(w => w.is_default)?.id ?? activeWh[0]?.id ?? ''
 
+  const here = warehouseId ? purchases.filter(p => p.warehouse_id === warehouseId) : purchases
   const debt = purchases.reduce((t, p) => t + Math.max(0, p.total_usd - p.paid_usd), 0)
   const month = todayISO().slice(0, 7)
-  const monthTotal = purchases.filter(p => p.date.startsWith(month)).reduce((t, p) => t + p.total_usd, 0)
-  const shown = filter === 'due' ? purchases.filter(p => p.status !== 'paid') : purchases
+  const monthTotal = here.filter(p => p.date.startsWith(month)).reduce((t, p) => t + p.total_usd, 0)
+  const shown = filter === 'due' ? here.filter(p => p.status !== 'paid') : here
 
   // ── new purchase ──
   const blankLine = (): Line => ({ itemId: '', qty: '', unitKind: 'base', cost: '', whId: '' })
@@ -321,7 +324,7 @@ export default function Compras({ storeId, items, suppliers, warehouses, onChang
         <button className={`inv-card${filter === 'due' ? ' on' : ''}`} onClick={() => setFilter(f => f === 'due' ? 'all' : 'due')}>
           <span>Por pagar a proveedores</span><strong className={debt > 0 ? 'warn' : ''}>{money(debt)}</strong>
         </button>
-        <div className="inv-card"><span>Compras registradas</span><strong>{purchases.length}</strong></div>
+        <div className="inv-card"><span>Compras en este almacén</span><strong>{here.length}</strong></div>
         <div className="inv-card"><span>Tasa BCV</span><strong>{bcv ? bcv.toLocaleString('es-VE', { maximumFractionDigits: 2 }) : '—'}</strong></div>
       </div>
 

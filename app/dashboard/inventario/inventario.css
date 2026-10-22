@@ -108,6 +108,45 @@ button.inv-card { cursor: pointer; }
   box-shadow: 0 8px 24px rgba(15,23,42,0.3);
 }
 
+/* ── Inicio: elegir almacén ── */
+.inv-home { display: flex; flex-direction: column; gap: 16px; }
+.inv-home-title h2 { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: #0F172A; }
+.inv-home-title p { font-size: 14px; color: #64748B; margin-top: 4px; }
+.inv-wh-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.inv-wh-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left;
+  background: white; border: 1px solid rgba(15,23,42,0.08); border-radius: 18px; padding: 16px;
+  font: inherit; color: inherit; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+.inv-wh-card:hover { border-color: var(--lyte-blue, #9AB7FD); box-shadow: 0 6px 20px rgba(28,27,58,0.08); transform: translateY(-1px); }
+.inv-wh-card-top { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 4px; }
+.inv-wh-icon {
+  width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  background: var(--lyte-lavender-soft, #F3F4FF); color: var(--lyte-navy);
+}
+.inv-wh-icon svg { width: 22px; height: 22px; }
+.inv-wh-name { font-size: 17px; font-weight: 700; }
+.inv-wh-stats { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 13px; color: #64748B; margin-top: 4px; }
+.inv-wh-stats b { color: #0F172A; }
+.inv-wh-go { margin-top: 8px; font-size: 13px; font-weight: 700; color: var(--lyte-navy); }
+.inv-wh-new { align-items: center; justify-content: center; border-style: dashed; border-width: 1.5px; color: var(--lyte-navy); min-height: 150px; }
+.inv-wh-plus { font-size: 30px; font-weight: 300; line-height: 1; }
+.inv-home-admin { align-self: flex-start; border: none; background: none; color: #64748B; font: inherit; font-size: 13px; text-decoration: underline; cursor: pointer; padding: 0; }
+
+/* ── Dentro de un almacén ── */
+.inv-ws-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.inv-back {
+  border: 1px solid rgba(15,23,42,0.12); background: white; border-radius: 10px; padding: 8px 12px;
+  font: inherit; font-size: 14px; font-weight: 600; color: var(--lyte-navy); cursor: pointer;
+}
+.inv-ws-title { flex: 1; min-width: 0; }
+.inv-ws-title small { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #94A3B8; }
+.inv-ws-title h2 { font-size: 21px; font-weight: 800; letter-spacing: -0.02em; color: #0F172A; line-height: 1.15; }
+.inv-ws-switch { max-width: 200px; }
+.inv-tab.sep { margin-left: 14px; position: relative; }
+.inv-tab.sep::before { content: ''; position: absolute; left: -9px; top: 12px; bottom: 12px; width: 1px; background: rgba(15,23,42,0.12); }
+.inv-shared-note { font-size: 12.5px; color: #64748B; background: #F8FAFC; border-radius: 10px; padding: 7px 12px; margin: -6px 0 12px; }
+
 /* ── List controls (sort + view) ── */
 .inv-listctl { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
 .inv-listctl-sort { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #64748B; }
@@ -260,6 +299,15 @@ section:first-of-type > .inv-group-title { margin-top: 4px; }
 .inv-pay { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid #F1F5F9; padding-top: 12px; }
 
 @media (max-width: 720px) {
+  .inv-ws-title { flex-basis: calc(100% - 140px); }
+  .inv-ws-switch { display: none; }
+  .inv-ws-title h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .inv-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; border-bottom: none; }
+  .inv-tab { border: 1px solid rgba(15,23,42,0.1); border-radius: 10px; margin: 0; padding: 9px 4px; font-size: 13px; background: white; text-align: center; white-space: normal; line-height: 1.2; }
+  .inv-tab.active { background: var(--lyte-navy); border-color: var(--lyte-navy); color: white; }
+  .inv-tab.sep { margin-left: 0; }
+  .inv-tab.sep::before { display: none; }
+  .inv-wh-new { min-height: 90px; }
   .inv-viewseg button span { display: none; }
   .inv-list.view-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
   .inv-list.view-grid .inv-row-main { flex-basis: auto; }

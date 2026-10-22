@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { METODOS_BASE, normalizarLibro, type Metodo } from '../../finanzas/flujo/model'
 import ItemPicker from './ItemPicker'
@@ -21,8 +21,32 @@ type Purchase = {
 type PurchaseLine = { id: string; item_id: string; qty: number; unit_kind: 'base' | 'purchase'; base_qty: number; unit_cost: number; total: number; warehouse_id: string | null }
 type Payment = { id: string; date: string; method_id: string; amount: number; amount_usd: number; rate: number | null }
 
-// whId '' = goes to the invoice's warehouse
-type Line = { itemId: string; qty: string; unitKind: 'base' | 'purchase'; cost: string; whId: string }
+// whId '' = goes to the invoice's warehouse. scanDesc/rawPrice: what the AI
+// scan read for this line (rawPrice in the invoice currency, before tax).
+type Line = { itemId: string; qty: string; unitKind: 'base' | 'purchase'; cost: string; whId: string; scanDesc?: string; rawPrice?: number }
+type ScanResult = {
+  supplier_name: string; supplier_tax_id: string; matched_supplier_id: string; invoice_number: string; date: string
+  currency: 'USD' | 'VES'; exchange_rate: number; subtotal: number; tax: number; total: number
+  lines: { description: string; quantity: number; unit_price: number; line_total: number; matched_item_id: string; unit_kind: 'base' | 'purchase' }[]
+}
+
+// Photos are shrunk (and HEIC turned into JPEG) before upload/scan
+async function toJpeg(file: File, maxSide = 2000): Promise<File> {
+  if (!file.type.startsWith('image/')) return file
+  const url = URL.createObjectURL(file)
+  try {
+    const img = await new Promise<HTMLImageElement>((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url })
+    const k = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.round(img.naturalWidth * k); canvas.height = Math.round(img.naturalHeight * k)
+    canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
+    const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, 'image/jpeg', 0.85))
+    return blob ? new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' }) : file
+  } catch { return file } finally { URL.revokeObjectURL(url) }
+}
+const toBase64 = (f: File) => new Promise<string>((res, rej) => {
+  const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1] ?? ''); r.onerror = rej; r.readAsDataURL(f)
+})
 
 const parseNum = (s: string) => { const v = parseFloat(String(s).replace(',', '.')); return Number.isFinite(v) ? v : NaN }
 const money = (n: number) => `$${n.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -82,7 +106,10 @@ export default function Compras({ storeId, items, suppliers, warehouses, onChang
     onChanged()
   }
   const accountOf = (id: string) => accounts.find(a => a.id === id)
-  const activeItems = items.filter(i => i.active)
+  // Items created from scanned lines, usable right away
+  const [newItems, setNewItems] = useState<Item[]>([])
+  const activeItems = [...items, ...newItems.filter(n => !items.some(i => i.id === n.id))].filter(i => i.active)
+  const itemName = new Map([...items, ...newItems].map(i => [i.id, i]))
   const activeWh = warehouses.filter(w => w.active)
   const defaultWh = activeWh.find(w => w.is_default)?.id ?? activeWh[0]?.id ?? ''
 
@@ -98,12 +125,17 @@ export default function Compras({ storeId, items, suppliers, warehouses, onChang
     currency: 'USD' | 'VES'; rate: string; lines: Line[]
     pay: 'now' | 'credit'; accountId: string; dueDate: string
     photo: File | null; photoPreview: string
+    /** Set after an AI scan: the invoice's own totals, and whether IVA goes into the cost */
+    scan?: { subtotal: number; tax: number; total: number; taxInCost: boolean }
   }>(null)
+  const [scanning, setScanning] = useState(false)
+  const [scanError, setScanError] = useState('')
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
 
   function openNew() {
     setFormError('')
+    setScanError('')
     setSupDraft(null)
     setForm({
       supplierId: '', whId: defaultWh, date: todayISO(), invoice: '', notes: '',
@@ -119,6 +151,82 @@ export default function Compras({ storeId, items, suppliers, warehouses, onChang
   const totalUSD = toUSD(invoiceTotal)
   const payAccount = form ? accountOf(form.accountId) : undefined
   const payInBs = payAccount?.moneda === 'VES'
+
+  // ── AI scan: read the invoice photo and fill the form ──
+  async function scanInvoice(raw: File) {
+    if (!form) return
+    setScanError(''); setScanning(true)
+    try {
+      const file = await toJpeg(raw)
+      // the request must stay under the hosting limit (~4.5 MB once encoded)
+      if (file.size > 3_000_000) throw new Error(file.type === 'application/pdf' ? 'El PDF es muy pesado (máx. 3 MB). Prueba con una foto de la factura.' : 'La foto es muy pesada. Intenta de nuevo.')
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/invoice-scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token ?? ''}` },
+        body: JSON.stringify({ storeId, mediaType: file.type, data: await toBase64(file) }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error ?? 'No se pudo leer la factura.')
+      const r = json as ScanResult
+      const taxInCost = r.tax > 0
+      const factor = taxInCost && r.subtotal > 0 ? (r.subtotal + r.tax) / r.subtotal : 1
+      const lines: Line[] = r.lines.length ? r.lines.map(l => {
+        const it = itemName.get(l.matched_item_id)
+        return {
+          itemId: it ? it.id : '',
+          qty: l.quantity ? String(l.quantity) : '',
+          unitKind: it?.purchase_unit ? l.unit_kind : 'base',
+          cost: l.unit_price ? String(Math.round(l.unit_price * factor * 100) / 100) : '',
+          whId: '', scanDesc: l.description, rawPrice: l.unit_price,
+        }
+      }) : [blankLine()]
+      const knownSupplier = r.matched_supplier_id && allSuppliers.some(x => x.id === r.matched_supplier_id)
+      setForm(f => f ? {
+        ...f,
+        supplierId: knownSupplier ? r.matched_supplier_id : f.supplierId,
+        invoice: r.invoice_number || f.invoice,
+        date: /^\d{4}-\d{2}-\d{2}$/.test(r.date) ? r.date : f.date,
+        currency: r.currency,
+        rate: r.currency === 'VES' ? String(r.exchange_rate > 0 ? r.exchange_rate : (parseNum(f.rate) > 0 ? f.rate : bcv || '')) : f.rate,
+        lines,
+        photo: file,
+        photoPreview: file.type.startsWith('image/') ? URL.createObjectURL(file) : '',
+        scan: { subtotal: r.subtotal, tax: r.tax, total: r.total, taxInCost },
+      } : f)
+      if (!knownSupplier && r.supplier_name) setSupDraft({ name: r.supplier_name, taxId: r.supplier_tax_id, phone: '' })
+    } catch (e) {
+      setScanError((e as Error).message)
+    } finally {
+      setScanning(false)
+    }
+  }
+  function setTaxInCost(on: boolean) {
+    setForm(f => {
+      if (!f?.scan) return f
+      const factor = on && f.scan.subtotal > 0 ? (f.scan.subtotal + f.scan.tax) / f.scan.subtotal : 1
+      return {
+        ...f, scan: { ...f.scan, taxInCost: on },
+        lines: f.lines.map(l => l.rawPrice ? { ...l, cost: String(Math.round(l.rawPrice * factor * 100) / 100) } : l),
+      }
+    })
+  }
+  const [creatingItem, setCreatingItem] = useState<number | null>(null)
+  async function createItemFromLine(i: number) {
+    const l = form?.lines[i]
+    if (!l?.scanDesc) return
+    setCreatingItem(i)
+    const { data, error } = await supabase.from('inv_items')
+      .insert({ store_id: storeId, name: l.scanDesc.trim(), unit: 'und', supplier_id: form?.supplierId || null })
+      .select('*').single()
+    setCreatingItem(null)
+    if (error || !data) return flash(error?.message ?? 'No se pudo crear el artículo')
+    const it = { ...(data as Item), purchase_factor: Number(data.purchase_factor) || 1, avg_cost: Number(data.avg_cost) || 0 }
+    setNewItems(prev => [...prev, it])
+    setForm(f => f ? { ...f, lines: f.lines.map((x, j) => j === i ? { ...x, itemId: it.id, unitKind: 'base' } : x) } : f)
+    flash(`Artículo "${it.name}" creado`)
+    onChanged()
+  }
 
   async function savePurchase() {
     if (!form) return
@@ -206,8 +314,6 @@ export default function Compras({ storeId, items, suppliers, warehouses, onChang
     if (fresh) openDetail({ ...(fresh as Purchase), total_usd: Number(fresh.total_usd), paid_usd: Number(fresh.paid_usd) })
   }
 
-  const itemName = useMemo(() => new Map(items.map(i => [i.id, i])), [items])
-
   return (
     <>
       <div className="inv-cards">
@@ -221,12 +327,10 @@ export default function Compras({ storeId, items, suppliers, warehouses, onChang
 
       <div className="inv-toolbar">
         <div className="inv-toolbar-title">{filter === 'due' ? 'Compras con saldo pendiente' : 'Últimas compras'}</div>
-        <button className="inv-btn primary" onClick={openNew} disabled={activeItems.length === 0 || activeWh.length === 0}>+ Nueva compra</button>
+        <button className="inv-btn primary" onClick={openNew} disabled={activeWh.length === 0}>+ Nueva compra</button>
       </div>
 
-      {activeItems.length === 0 ? (
-        <div className="inv-empty"><span>Primero crea los artículos que compras (pestaña Artículos).</span></div>
-      ) : shown.length === 0 ? (
+      {shown.length === 0 ? (
         <div className="inv-empty"><span>{filter === 'due' ? 'No le debes nada a ningún proveedor.' : 'Todavía no hay compras registradas.'}</span></div>
       ) : (
         <div className="inv-list">
@@ -265,6 +369,36 @@ export default function Compras({ storeId, items, suppliers, warehouses, onChang
               <strong>Nueva compra</strong>
               <button className="inv-x" onClick={() => setForm(null)} aria-label="Cerrar">✕</button>
             </div>
+
+            <label className={`inv-scan${scanning ? ' busy' : ''}`}>
+              <input type="file" accept="image/*,application/pdf" capture="environment" hidden disabled={scanning}
+                onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) scanInvoice(f) }} />
+              <span className="inv-scan-icon">{scanning ? <span className="inv-spinner" /> : '✨'}</span>
+              <span>
+                {scanning ? 'Leyendo la factura…' : form.scan ? 'Escanear otra factura' : 'Escanear factura con IA'}
+                <small>{scanning ? 'Esto toma unos segundos' : 'Tómale una foto y se llena todo solo. Tú revisas y corriges.'}</small>
+              </span>
+            </label>
+            {scanError && <div className="inv-error">{scanError}</div>}
+            {form.scan && !scanning && (() => {
+              const diff = form.scan.total > 0 ? invoiceTotal - form.scan.total : 0
+              const unmatched = form.lines.filter(l => l.scanDesc && !l.itemId).length
+              return (
+                <div className="inv-scan-note">
+                  <strong>Revisa los datos que leyó la IA antes de registrar.</strong>
+                  {unmatched > 0 && <span>{unmatched} {unmatched === 1 ? 'artículo no está' : 'artículos no están'} en tu inventario: búscalos o créalos abajo.</span>}
+                  {form.scan.tax > 0 && (
+                    <label className="inv-check">
+                      <input type="checkbox" checked={form.scan.taxInCost} onChange={e => setTaxInCost(e.target.checked)} />
+                      Sumar el IVA ({form.currency === 'VES' ? bs(form.scan.tax) : money(form.scan.tax)}) al costo de los artículos
+                    </label>
+                  )}
+                  {form.scan.total > 0 && Math.abs(diff) > Math.max(0.05, form.scan.total * 0.005) && (
+                    <span className="warn-text">El total de la factura es {form.currency === 'VES' ? bs(form.scan.total) : money(form.scan.total)} y aquí suma {form.currency === 'VES' ? bs(invoiceTotal) : money(invoiceTotal)}. Revisa cantidades y precios.</span>
+                  )}
+                </div>
+              )
+            })()}
 
             <div className="inv-two">
               <label className="inv-field"><span>Proveedor</span>
@@ -346,6 +480,14 @@ export default function Compras({ storeId, items, suppliers, warehouses, onChang
                           cost: costUSD ? String(Math.round((form.currency === 'VES' && rateNum > 0 ? costUSD * rateNum : costUSD) * 100) / 100) : '' })
                       }}
                     />
+                    {l.scanDesc && !l.itemId && (
+                      <div className="inv-line-scan">
+                        <span>La IA leyó: <strong>“{l.scanDesc}”</strong></span>
+                        <button className="inv-btn small" onClick={() => createItemFromLine(i)} disabled={creatingItem === i}>
+                          {creatingItem === i ? 'Creando…' : 'Crear artículo'}
+                        </button>
+                      </div>
+                    )}
                     <div className="inv-line-qty">
                       <input className="inv-input" inputMode="decimal" placeholder="0" value={l.qty} onChange={e => set({ qty: e.target.value.replace(/[^0-9.,]/g, '') })} />
                       {it?.purchase_unit ? (

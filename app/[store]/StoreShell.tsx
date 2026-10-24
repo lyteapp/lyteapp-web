@@ -1516,6 +1516,13 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // Product modal background (Vitrina → Modal del producto); a dark one
   // switches the modal's own text to light
   const cfgModalBg = typeof (cfg as { modalBg?: unknown }).modalBg === 'string' ? (cfg as { modalBg?: string }).modalBg! : ''
+  // The footer sits on the page background, so it needs light text when that's dark
+  const pageBgDark = (() => {
+    const m = /^#?([0-9a-f]{6})$/i.exec(typeof cfg.pageBg === 'string' ? cfg.pageBg : '')
+    if (!m) return false
+    const n = parseInt(m[1], 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.55
+  })()
   const cfgModalDark = (() => {
     const m = /^#?([0-9a-f]{6})$/i.exec(cfgModalBg)
     if (!m) return false
@@ -4217,7 +4224,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
         </button>
       </div>
 
-      <footer className="sf-footer">
+      <footer className={`sf-footer${pageBgDark ? ' sf-footer-dark' : ''}`}>
         <Link href="/registro" className="sf-footer-link sf-footer-made">
           <span>{t('store.footerCreatedWith')}</span>
           <span className="sf-footer-logo" role="img" aria-label="Lyte app" />
@@ -5336,7 +5343,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
         </button>
       )}
 
-      <footer className="sf-footer">
+      <footer className={`sf-footer${pageBgDark ? ' sf-footer-dark' : ''}`}>
         {showInstallBtn && (
           <div className="sf-install-wrap">
             <button className="sf-install-btn" onClick={handleInstall}>

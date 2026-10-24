@@ -1261,7 +1261,12 @@ html, body { overflow-x: clip; }
 .sf-empty-sub { font-size: 0.93em; color: #94A3B8; line-height: 1.6; }
 
 /* ── FOOTER ── */
-.sf-footer { background: white; border-top: 1px solid rgba(15,23,42,0.07); padding: 16px 24px; text-align: center; }
+/* sits on the store's own background color (no white strip) */
+.sf-footer { background: var(--sf-page-bg, white); border-top: 1px solid rgba(15,23,42,0.07); padding: 16px 24px; text-align: center; }
+.sf-footer-dark, .sf-tpl-oscuro .sf-footer { border-top-color: rgba(255,255,255,0.08); }
+.sf-footer-dark .sf-footer-made, .sf-tpl-oscuro .sf-footer-made { color: rgba(241,245,249,0.7); }
+.sf-footer-dark .sf-footer-cta, .sf-tpl-oscuro .sf-footer-cta { color: #F8FAFC; }
+.sf-footer-dark .sf-footer-logo, .sf-tpl-oscuro .sf-footer-logo { background: #F8FAFC; }
 .sf-footer-link { font-size: 10.5px; color: #94A3B8; text-decoration: none; transition: color 0.15s; }
 .sf-footer-link:hover { color: var(--sf-accent-color, #7C3AED); }
 .sf-footer-link strong { color: var(--sf-accent-color, #7C3AED); font-weight: 700; }
@@ -1482,7 +1487,7 @@ html, body { overflow-x: clip; }
 .sf-tpl-oscuro .sf-card-img-wrap { background: #334155; }
 .sf-tpl-oscuro .sf-card-name { color: white; }
 .sf-tpl-oscuro .sf-card-desc { color: rgba(255,255,255,0.5); }
-.sf-tpl-oscuro .sf-footer { background: #1E293B; border-color: rgba(255,255,255,0.06); }
+.sf-tpl-oscuro .sf-footer { background: var(--sf-page-bg, #1E293B); border-color: rgba(255,255,255,0.06); }
 
 /* ── TEMPLATE: MINIMAL ── */
 .sf-tpl-minimal { background: #F8FAFC; }

@@ -1523,6 +1523,25 @@ export default function StoreShell({ store, products, categories = [], initialBc
     const n = parseInt(m[1], 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
     return (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.55
   })()
+  // Variable chip colors (Vitrina → Modal del producto); text picks light or
+  // dark for contrast. Exposed as --sf-chip-* on the modal.
+  const isDarkHex = (hex: string) => {
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex)
+    if (!m) return false
+    const n = parseInt(m[1], 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.55
+  }
+  const chipBg = typeof (cfg as { variantBg?: unknown }).variantBg === 'string' ? (cfg as { variantBg?: string }).variantBg! : ''
+  const chipSelBg = typeof (cfg as { variantSelBg?: unknown }).variantSelBg === 'string' ? (cfg as { variantSelBg?: string }).variantSelBg! : ''
+  const chipVars: Record<string, string> = {
+    ...(chipBg ? {
+      '--sf-chip-bg': chipBg,
+      '--sf-chip-text': isDarkHex(chipBg) ? '#F8FAFC' : '#1E293B',
+      '--sf-chip-border': isDarkHex(chipBg) ? 'rgba(255,255,255,0.18)' : 'rgba(15,23,42,0.12)',
+      '--sf-chip-hover-text': isDarkHex(chipBg) ? '#FFFFFF' : '#0F172A',
+    } : {}),
+    ...(chipSelBg ? { '--sf-chip-sel-bg': chipSelBg, '--sf-chip-sel-text': isDarkHex(chipSelBg) ? '#FFFFFF' : '#0F172A' } : {}),
+  }
   const cfgModalDark = (() => {
     const m = /^#?([0-9a-f]{6})$/i.exec(cfgModalBg)
     if (!m) return false
@@ -2201,7 +2220,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
           style={{
             ...(showHeaderAboveModal ? { height: `calc(100dvh - ${modalTop}px)`, maxHeight: `calc(100dvh - ${modalTop}px)` } : {}),
             ...(cfgModalBg ? { background: cfgModalBg } : {}),
-          }}
+            ...chipVars,
+          } as React.CSSProperties}
           onClick={e => e.stopPropagation()}
           onTouchStartCapture={e => {
             const t = e.touches[0]

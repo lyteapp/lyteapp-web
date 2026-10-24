@@ -226,6 +226,42 @@ function estimateAdBarHeight(ad: Ad): number {
   return Math.round(contentHeight + 20)
 }
 
+// A row of color swatches: 'Auto' (empty value), a palette and a custom picker
+function ColorSwatches({ value, onChange, palette, autoLabel = 'Auto', autoStyle }: {
+  value: string
+  onChange: (v: string) => void
+  palette: string[]
+  autoLabel?: string
+  autoStyle?: React.CSSProperties
+}) {
+  const custom = !!value && !palette.includes(value)
+  return (
+    <div className="ed-tp-swatches" style={{ position: 'relative' }}>
+      <button
+        className={`ed-tp-swatch ed-tp-light${value === '' ? ' ed-tp-active' : ''}`}
+        style={{ background: 'white', fontSize: 9, fontWeight: 700, color: '#94A3B8', letterSpacing: 0, ...autoStyle }}
+        title={autoLabel}
+        onClick={() => onChange('')}
+      >
+        Auto
+      </button>
+      {palette.map(c => (
+        <button
+          key={c}
+          className={`ed-tp-swatch${value === c ? ' ed-tp-active' : ''}${['#FFFFFF', '#F5F0E8', '#D6C9B6'].includes(c) ? ' ed-tp-light' : ''}`}
+          style={{ background: c }}
+          title={c}
+          onClick={() => onChange(c)}
+        />
+      ))}
+      <label className={`ed-tp-swatch ed-tp-custom${custom ? ' ed-tp-active' : ''}`} style={custom ? { background: value } : undefined} title="Personalizado">
+        {!custom && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>}
+        <input type="color" value={/^#[0-9a-f]{6}$/i.test(value) ? value : '#FFFFFF'} onChange={e => onChange(e.target.value)} className="ed-tp-custom-input" />
+      </label>
+    </div>
+  )
+}
+
 function FontSelect({
   value, onChange, options, placeholder,
 }: {
@@ -356,6 +392,8 @@ export default function EditorPage() {
   const [modalSize, setModalSize] = useState<'full' | 'half'>('full')
   const [modalBg, setModalBg] = useState('')
   const [variantShape, setVariantShape] = useState<'pill' | 'rounded' | 'square'>('pill')
+  const [variantBg, setVariantBg] = useState('')
+  const [variantSelBg, setVariantSelBg] = useState('')
   const [variantSize, setVariantSize] = useState<'small' | 'medium' | 'large'>('medium')
 
   // Per-breakpoint overrides for a handful of size/spacing settings — the
@@ -559,6 +597,8 @@ export default function EditorPage() {
       if (cfg.modalSize) setModalSize(cfg.modalSize as 'full' | 'half')
       setModalBg(typeof cfg.modalBg === 'string' ? cfg.modalBg : '')
       if (cfg.variantShape) setVariantShape(cfg.variantShape as 'pill' | 'rounded' | 'square')
+      setVariantBg(typeof cfg.variantBg === 'string' ? cfg.variantBg : '')
+      setVariantSelBg(typeof cfg.variantSelBg === 'string' ? cfg.variantSelBg : '')
       if (cfg.variantSize) setVariantSize(cfg.variantSize as 'small' | 'medium' | 'large')
       if (cfg.responsiveSizes) {
         const rs = cfg.responsiveSizes as { tablet?: SizeOverrides; desktop?: SizeOverrides }
@@ -1107,7 +1147,7 @@ export default function EditorPage() {
       priceColor, accentColor, priceFont: priceFont || pageFont, priceSize,
       catTitleFont: catTitleFont || undefined, productNameFont: productNameFont || undefined,
       categoryNavStyle, showCatNav, stickyCatNav, catNavOverBanner, categorySpacing,
-      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, showHeaderSearch, showHeaderCart, headerIconColor: headerIconColor || undefined, headerOverBanner, headerSticky, headerHeightPx, modalWizard, hideVariableCount, showMinHint, modalSize, modalBg: modalBg || undefined, variantShape, variantSize, enableReorder, reorderBannerEnabled: enableReorder ? reorderBannerEnabled : undefined, reorderHeaderButton: enableReorder ? reorderHeaderButton : undefined, reorderHeaderHintSeconds: (enableReorder && reorderHeaderButton) ? reorderHeaderHintSeconds : undefined, reorderFloatSeconds: reorderFloatSeconds > 0 ? reorderFloatSeconds : undefined,
+      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, showHeaderSearch, showHeaderCart, headerIconColor: headerIconColor || undefined, headerOverBanner, headerSticky, headerHeightPx, modalWizard, hideVariableCount, showMinHint, modalSize, modalBg: modalBg || undefined, variantShape, variantBg: variantBg || undefined, variantSelBg: variantSelBg || undefined, variantSize, enableReorder, reorderBannerEnabled: enableReorder ? reorderBannerEnabled : undefined, reorderHeaderButton: enableReorder ? reorderHeaderButton : undefined, reorderHeaderHintSeconds: (enableReorder && reorderHeaderButton) ? reorderHeaderHintSeconds : undefined, reorderFloatSeconds: reorderFloatSeconds > 0 ? reorderFloatSeconds : undefined,
       reorderPosition: reorderPosition !== 'right' ? reorderPosition : undefined,
       reorderTitle: reorderTitle.trim() || undefined,
       reorderImageUrl: reorderImageUrl || undefined,
@@ -3528,6 +3568,14 @@ export default function EditorPage() {
                 </button>
               ))}
             </div>
+
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Color de las variables</div>
+            <ColorSwatches value={variantBg} onChange={setVariantBg} palette={BG_COLORS.map(c => c.value)} autoLabel="Blanco (predeterminado)" />
+
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Color al seleccionar</div>
+            <ColorSwatches value={variantSelBg} onChange={setVariantSelBg} palette={ACCENT_COLORS} autoLabel="Color de acento de la tienda"
+              autoStyle={{ background: accentColor, color: 'white' }} />
+            <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 4 }}>El texto se ajusta solo para que se lea.</div>
 
             <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Tamano de las variables</div>
             <div className="ed-size-opts">

@@ -1835,7 +1835,8 @@ html, body { overflow-x: clip; }
 .sf-modal-chip {
   position: relative;
   padding: 8px 16px; border-radius: 100px; font-size: 14px; font-weight: 500;
-  border: 1.5px solid rgba(15,23,42,0.12); background: white; color: #475569;
+  /* colors from Vitrina → Modal del producto (--sf-chip-*), else the defaults */
+  border: 1.5px solid var(--sf-chip-border, rgba(15,23,42,0.12)); background: var(--sf-chip-bg, white); color: var(--sf-chip-text, #475569);
   cursor: pointer; transition: all 0.15s; font-family: inherit;
   /* iOS shows its copy/select callout on a press-and-hold by default —
      these disable that so the long-press nutrition preview isn't fought
@@ -1852,9 +1853,9 @@ html, body { overflow-x: clip; }
   border: 1.5px solid white;
 }
 .sf-modal-chip.selected .sf-modal-chip-nutrition-dot { background: white; border-color: var(--sf-accent-color, #7C3AED); }
-.sf-modal-chip:hover { border-color: color-mix(in srgb, var(--sf-accent-color, #7C3AED) 35%, transparent); color: var(--sf-accent-color, #7C3AED); }
+.sf-modal-chip:hover { border-color: color-mix(in srgb, var(--sf-chip-sel-bg, var(--sf-accent-color, #7C3AED)) 45%, transparent); color: var(--sf-chip-hover-text, var(--sf-accent-color, #7C3AED)); }
 .sf-modal-chip.selected {
-  background: var(--sf-accent-color, #7C3AED); border-color: var(--sf-accent-color, #7C3AED); color: white; font-weight: 600;
+  background: var(--sf-chip-sel-bg, var(--sf-accent-color, #7C3AED)); border-color: var(--sf-chip-sel-bg, var(--sf-accent-color, #7C3AED)); color: var(--sf-chip-sel-text, white); font-weight: 600;
 }
 /* Choice with a background photo: a small photo tile, name over it */
 .sf-modal-chip.sf-chip-photo {

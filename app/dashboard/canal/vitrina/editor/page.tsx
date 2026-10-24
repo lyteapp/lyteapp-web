@@ -407,6 +407,7 @@ export default function EditorPage() {
   const [showHeaderSearch, setShowHeaderSearch] = useState(false)
   const [showHeaderCart, setShowHeaderCart] = useState(false)
   const [headerIconColor, setHeaderIconColor] = useState('')
+  const [headerBg, setHeaderBg] = useState('')
   const [headerOverBanner, setHeaderOverBanner] = useState(false)
   const [headerSticky, setHeaderSticky] = useState(false)
   const [modalWizard, setModalWizard] = useState(false)
@@ -617,6 +618,7 @@ export default function EditorPage() {
       if (cfg.showHeaderSearch !== undefined) setShowHeaderSearch(cfg.showHeaderSearch as boolean)
       if (cfg.showHeaderCart !== undefined) setShowHeaderCart(cfg.showHeaderCart as boolean)
       if (cfg.headerIconColor) setHeaderIconColor(cfg.headerIconColor as string)
+      setHeaderBg(typeof cfg.headerBg === 'string' ? cfg.headerBg : '')
       if (cfg.headerOverBanner !== undefined) setHeaderOverBanner(cfg.headerOverBanner as boolean)
       if (cfg.headerSticky !== undefined) setHeaderSticky(cfg.headerSticky as boolean)
       if (cfg.modalWizard !== undefined) setModalWizard(cfg.modalWizard as boolean)
@@ -837,6 +839,7 @@ export default function EditorPage() {
       }
       .sf-topbar-inner { min-height: ${headerHeightPx}px !important; }
       ${headerIconColor ? `.sf-menu-btn, .sf-header-icon-btn { color: ${headerIconColor} !important; }` : ''}
+      ${headerBg ? `.sf-topbar:not(.sf-topbar-glass), .sf-nav { background: ${headerBg} !important; }` : ''}
     `
   }
 
@@ -1097,7 +1100,7 @@ export default function EditorPage() {
   useEffect(() => {
     applyPreview()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, variantShape, variantSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign, newBlockFont, contentBlocks, blockGroups, newBlockButtons, newBlockButtonStyle, newBlockButtonSize, newBlockButtonWidth, editingBlockId, newBlockImageSize, enableReorder, reorderBannerEnabled, reorderPosition, reorderTitle, reorderImageUrl, reorderFontSize, reorderFontWeight, reorderColor, reorderFont, reorderButtonStyle, reorderButtonSize, reorderButtonColor, reorderScale, reorderInset, ads, deviceType, responsiveSizes])
+  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, variantShape, variantSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, headerBg, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign, newBlockFont, contentBlocks, blockGroups, newBlockButtons, newBlockButtonStyle, newBlockButtonSize, newBlockButtonWidth, editingBlockId, newBlockImageSize, enableReorder, reorderBannerEnabled, reorderPosition, reorderTitle, reorderImageUrl, reorderFontSize, reorderFontWeight, reorderColor, reorderFont, reorderButtonStyle, reorderButtonSize, reorderButtonColor, reorderScale, reorderInset, ads, deviceType, responsiveSizes])
 
   // ── Auto-save category shape (reloads iframe immediately) ─
   async function handleCategoryShape(catId: string, shape: string | null) {
@@ -1175,7 +1178,7 @@ export default function EditorPage() {
       priceColor, accentColor, priceFont: priceFont || pageFont, priceSize,
       catTitleFont: catTitleFont || undefined, productNameFont: productNameFont || undefined,
       categoryNavStyle, showCatNav, stickyCatNav, catNavOverBanner, categorySpacing,
-      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, showHeaderSearch, showHeaderCart, headerIconColor: headerIconColor || undefined, headerOverBanner, headerSticky, headerHeightPx, modalWizard, hideVariableCount, showMinHint, modalSize, modalBg: modalBg || undefined, customFonts: customFonts.length ? customFonts : undefined, variantShape, variantBg: variantBg || undefined, variantSelBg: variantSelBg || undefined, variantSize, enableReorder, reorderBannerEnabled: enableReorder ? reorderBannerEnabled : undefined, reorderHeaderButton: enableReorder ? reorderHeaderButton : undefined, reorderHeaderHintSeconds: (enableReorder && reorderHeaderButton) ? reorderHeaderHintSeconds : undefined, reorderFloatSeconds: reorderFloatSeconds > 0 ? reorderFloatSeconds : undefined,
+      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, showHeaderSearch, showHeaderCart, headerIconColor: headerIconColor || undefined, headerBg: headerBg || undefined, headerOverBanner, headerSticky, headerHeightPx, modalWizard, hideVariableCount, showMinHint, modalSize, modalBg: modalBg || undefined, customFonts: customFonts.length ? customFonts : undefined, variantShape, variantBg: variantBg || undefined, variantSelBg: variantSelBg || undefined, variantSize, enableReorder, reorderBannerEnabled: enableReorder ? reorderBannerEnabled : undefined, reorderHeaderButton: enableReorder ? reorderHeaderButton : undefined, reorderHeaderHintSeconds: (enableReorder && reorderHeaderButton) ? reorderHeaderHintSeconds : undefined, reorderFloatSeconds: reorderFloatSeconds > 0 ? reorderFloatSeconds : undefined,
       reorderPosition: reorderPosition !== 'right' ? reorderPosition : undefined,
       reorderTitle: reorderTitle.trim() || undefined,
       reorderImageUrl: reorderImageUrl || undefined,
@@ -2865,6 +2868,12 @@ export default function EditorPage() {
                 </div>
               </div>
             </label>
+
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Color del encabezado</div>
+            <ColorSwatches value={headerBg} onChange={setHeaderBg} palette={[...BG_COLORS.map(c => c.value).filter(c => c !== '#FFFFFF'), ...ACCENT_COLORS.filter(c => !BG_COLORS.some(b => b.value === c))]} autoLabel="Blanco (predeterminado)" />
+            <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 4 }}>
+              {headerOverBanner ? 'Con el encabezado sobre el banner se ve transparente; el color se usa al desactivarlo.' : 'Con un color oscuro, el nombre y los iconos se ponen claros.'}
+            </div>
 
             <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Color de los iconos</div>
             <div className="ed-tp-swatches" style={{ position: 'relative' }}>

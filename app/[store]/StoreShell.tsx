@@ -1532,6 +1532,15 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // Product modal background (Vitrina → Modal del producto); a dark one
   // switches the modal's own text to light
   const cfgModalBg = typeof (cfg as { modalBg?: unknown }).modalBg === 'string' ? (cfg as { modalBg?: string }).modalBg! : ''
+  // Header background (Vitrina → Encabezado); a dark one turns the store name
+  // and default icons light
+  const cfgHeaderBg = typeof (cfg as { headerBg?: unknown }).headerBg === 'string' ? (cfg as { headerBg?: string }).headerBg! : ''
+  const headerBgDark = (() => {
+    const m = /^#?([0-9a-f]{6})$/i.exec(cfgHeaderBg)
+    if (!m) return false
+    const n = parseInt(m[1], 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.55
+  })()
   // The footer sits on the page background, so it needs light text when that's dark
   const pageBgDark = (() => {
     const m = /^#?([0-9a-f]{6})$/i.exec(typeof cfg.pageBg === 'string' ? cfg.pageBg : '')
@@ -3653,7 +3662,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           onClose={() => setShowMapPicker(false)}
         />
       )}
-      <nav className="sf-nav">
+      <nav className={`sf-nav${headerBgDark ? ' sf-topbar-dark' : ''}`} style={cfgHeaderBg ? { background: cfgHeaderBg } : undefined}>
         <div className="sf-nav-inner">
           <button className="sf-nav-back" onClick={() => setView('catalog')}>
             <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18"><path fillRule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clipRule="evenodd" /></svg>
@@ -4995,7 +5004,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
     <div className={`sf-page sf-tpl-${tpl} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize} sf-vshape-${cfgVariantShape} sf-vsize-${cfgVariantSize} sf-eshape-${cfgExtraShape}${catalogEnter ? ` sf-catalog-enter sf-trans-${store.template_config?.homePage?.transition || 'slide'}` : ''}`} style={welcomeOverlay ? { ...catalogPageStyle, height: '100vh', overflow: 'hidden', opacity: 0 } : catalogPageStyle}>
       {responsiveSizeCSS && <style dangerouslySetInnerHTML={{ __html: responsiveSizeCSS }} />}
       {renderCheckoutTransition()}
-      <div className={`sf-topbar${cfgHeaderOverBanner ? ' sf-topbar-glass' : ''}${cfgHeaderSticky && !cfgHeaderOverBanner ? ' sf-topbar-sticky' : ''}${cfgHeaderSticky && cfgHeaderOverBanner ? ' sf-topbar-pinned' : ''}${showHeaderAboveModal ? ' sf-topbar-above-modal' : ''}`}>
+      <div className={`sf-topbar${cfgHeaderOverBanner ? ' sf-topbar-glass' : ''}${cfgHeaderSticky && !cfgHeaderOverBanner ? ' sf-topbar-sticky' : ''}${cfgHeaderSticky && cfgHeaderOverBanner ? ' sf-topbar-pinned' : ''}${showHeaderAboveModal ? ' sf-topbar-above-modal' : ''}${!cfgHeaderOverBanner && headerBgDark ? ' sf-topbar-dark' : ''}`}
+        style={!cfgHeaderOverBanner && cfgHeaderBg ? { background: cfgHeaderBg } : undefined}>
         <div className="sf-topbar-inner sf-topbar-3col">
           <div className="sf-topbar-slot-left">
             {cfg.showMenuButton && (

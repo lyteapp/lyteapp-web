@@ -70,6 +70,10 @@ html, body { overflow-x: clip; }
    --sf-sticky-offset instead of the two overlapping at top:0. A screen-
    anchored top bar ad, if present, pushes both down by its own height via
    --sf-ad-bar-offset so it doesn't get covered by either. */
+/* dark custom header color: light name, icons and border */
+.sf-topbar-dark { border-bottom-color: rgba(255,255,255,0.08) !important; }
+.sf-topbar-dark .sf-nav-name, .sf-topbar-dark .sf-nav-checkout-title, .sf-topbar-dark .sf-nav-back { color: #F8FAFC; }
+.sf-topbar-dark .sf-menu-btn, .sf-topbar-dark .sf-header-icon-btn { color: var(--sf-header-icon-color, #F8FAFC); }
 .sf-topbar-sticky { position: sticky; top: var(--sf-ad-bar-offset, 0px); z-index: 25; }
 /* Same option, but for a glass header floating over the banner: it's
    already positioned at top:0 (absolute, so it normally scrolls away

@@ -129,6 +129,23 @@ const PAGE_FONTS = [
   { id: 'caveat',       name: 'Manuscrita' },
 ]
 
+// Fonts the merchant uploads (template_config.customFonts). Registered into
+// FONT_MAP under a family of their own and loaded with @font-face, here and
+// on the storefront (StoreShell does the same).
+type CustomFont = { id: string; name: string; url: string }
+const FONT_FORMATS: Record<string, string> = { ttf: 'truetype', otf: 'opentype', woff: 'woff', woff2: 'woff2' }
+const customFamily = (id: string) => `LyteFont-${id}`
+function registerCustomFonts(fonts: CustomFont[]) {
+  for (const f of fonts) FONT_MAP[f.id] = `'${customFamily(f.id)}', system-ui, sans-serif`
+  if (typeof document === 'undefined') return
+  let el = document.getElementById('ed-custom-fonts') as HTMLStyleElement | null
+  if (!el) { el = document.createElement('style'); el.id = 'ed-custom-fonts'; document.head.appendChild(el) }
+  el.textContent = fonts.map(f => {
+    const ext = f.url.split('?')[0].split('.').pop()?.toLowerCase() ?? ''
+    return `@font-face{font-family:'${customFamily(f.id)}';src:url('${f.url}')${FONT_FORMATS[ext] ? ` format('${FONT_FORMATS[ext]}')` : ''};font-display:swap}`
+  }).join('\n')
+}
+
 const PHOTO_SHAPES_CAT = [
   { id: 'square', name: 'Redondeada' },
   { id: 'sharp',  name: 'Recta'      },
@@ -351,6 +368,12 @@ export default function EditorPage() {
   const [pageBg, setPageBg]         = useState('#FFFFFF')
   const [cardBg, setCardBg]         = useState('')
   const [pageFont, setPageFont]     = useState('geist')
+  const [customFonts, setCustomFonts] = useState<CustomFont[]>([])
+  const [fontUploading, setFontUploading] = useState(false)
+  const [fontError, setFontError] = useState('')
+  useEffect(() => { registerCustomFonts(customFonts) }, [customFonts])
+  // every font list offers the uploaded ones too
+  const allFonts = [...PAGE_FONTS, ...customFonts.map(f => ({ id: f.id, name: `${f.name} (propia)` }))]
   const [fontSizePx, setFontSizePx] = useState(15)
   const [textAlign, setTextAlign]   = useState<'left' | 'center'>('left')
   const [photoShape, setPhotoShape] = useState<'sharp' | 'square' | 'circle'>('square')
@@ -546,6 +569,11 @@ export default function EditorPage() {
       if (cfg.pageBg)  setPageBg(cfg.pageBg as string)
       if ((cfg as Record<string,unknown>).cardBg !== undefined) setCardBg((cfg as Record<string,unknown>).cardBg as string)
       if ((cfg as Record<string,unknown>).catTitleColor !== undefined) setCatTitleColor((cfg as Record<string,unknown>).catTitleColor as string)
+      if (Array.isArray(cfg.customFonts)) {
+        const fonts = (cfg.customFonts as CustomFont[]).filter(f => f && f.id && f.url)
+        registerCustomFonts(fonts)
+        setCustomFonts(fonts)
+      }
       if (cfg.pageFont)   setPageFont(cfg.pageFont as string)
       if (cfg.fontSizePx) setFontSizePx(Number(cfg.fontSizePx))
       else if (cfg.fontSize) setFontSizePx(cfg.fontSize === 'small' ? 13 : cfg.fontSize === 'large' ? 18 : 15)
@@ -1147,7 +1175,7 @@ export default function EditorPage() {
       priceColor, accentColor, priceFont: priceFont || pageFont, priceSize,
       catTitleFont: catTitleFont || undefined, productNameFont: productNameFont || undefined,
       categoryNavStyle, showCatNav, stickyCatNav, catNavOverBanner, categorySpacing,
-      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, showHeaderSearch, showHeaderCart, headerIconColor: headerIconColor || undefined, headerOverBanner, headerSticky, headerHeightPx, modalWizard, hideVariableCount, showMinHint, modalSize, modalBg: modalBg || undefined, variantShape, variantBg: variantBg || undefined, variantSelBg: variantSelBg || undefined, variantSize, enableReorder, reorderBannerEnabled: enableReorder ? reorderBannerEnabled : undefined, reorderHeaderButton: enableReorder ? reorderHeaderButton : undefined, reorderHeaderHintSeconds: (enableReorder && reorderHeaderButton) ? reorderHeaderHintSeconds : undefined, reorderFloatSeconds: reorderFloatSeconds > 0 ? reorderFloatSeconds : undefined,
+      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, showHeaderSearch, showHeaderCart, headerIconColor: headerIconColor || undefined, headerOverBanner, headerSticky, headerHeightPx, modalWizard, hideVariableCount, showMinHint, modalSize, modalBg: modalBg || undefined, customFonts: customFonts.length ? customFonts : undefined, variantShape, variantBg: variantBg || undefined, variantSelBg: variantSelBg || undefined, variantSize, enableReorder, reorderBannerEnabled: enableReorder ? reorderBannerEnabled : undefined, reorderHeaderButton: enableReorder ? reorderHeaderButton : undefined, reorderHeaderHintSeconds: (enableReorder && reorderHeaderButton) ? reorderHeaderHintSeconds : undefined, reorderFloatSeconds: reorderFloatSeconds > 0 ? reorderFloatSeconds : undefined,
       reorderPosition: reorderPosition !== 'right' ? reorderPosition : undefined,
       reorderTitle: reorderTitle.trim() || undefined,
       reorderImageUrl: reorderImageUrl || undefined,
@@ -2147,15 +2175,53 @@ export default function EditorPage() {
             <FontSelect
               value={pageFont}
               onChange={setPageFont}
-              options={PAGE_FONTS}
+              options={allFonts}
               placeholder="Elegir fuente"
             />
+            <label className={`ed-font-upload${fontUploading ? ' busy' : ''}`}>
+              <input type="file" accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2" hidden disabled={fontUploading}
+                onChange={async e => {
+                  const file = e.target.files?.[0]; e.target.value = ''
+                  if (!file || !storeId) return
+                  const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
+                  if (!FONT_FORMATS[ext]) { setFontError('Usa un archivo .ttf, .otf, .woff o .woff2'); return }
+                  if (file.size > 5_000_000) { setFontError('La fuente pesa más de 5 MB'); return }
+                  setFontUploading(true); setFontError('')
+                  const id = `custom-${crypto.randomUUID().slice(0, 8)}`
+                  const path = `fonts/${storeId}/${id}.${ext}`
+                  const { error } = await supabase.storage.from('store-assets').upload(path, file, { upsert: true, contentType: `font/${ext}` })
+                  setFontUploading(false)
+                  if (error) { setFontError('No se pudo subir: ' + error.message); return }
+                  const url = supabase.storage.from('store-assets').getPublicUrl(path).data.publicUrl
+                  const name = file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim().slice(0, 40) || 'Mi fuente'
+                  setCustomFonts(prev => [...prev, { id, name, url }])
+                  setPageFont(id)
+                }} />
+              <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path d="M10 3a1 1 0 01.7.3l3.5 3.5a1 1 0 01-1.4 1.4L11 6.4V13a1 1 0 11-2 0V6.4L7.2 8.2a1 1 0 01-1.4-1.4l3.5-3.5A1 1 0 0110 3zM4 15a1 1 0 011 1v1h10v-1a1 1 0 112 0v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2a1 1 0 011-1z" /></svg>
+              {fontUploading ? 'Subiendo fuente…' : 'Subir fuente propia (.ttf, .otf, .woff)'}
+            </label>
+            {fontError && <div className="ed-font-error">{fontError}</div>}
+            {customFonts.length > 0 && (
+              <div className="ed-font-custom-list">
+                {customFonts.map(f => (
+                  <div key={f.id} className="ed-font-custom-item">
+                    <span style={{ fontFamily: FONT_MAP[f.id] }}>{f.name}</span>
+                    <button type="button" title="Quitar fuente" onClick={() => {
+                      setCustomFonts(prev => prev.filter(x => x.id !== f.id))
+                      if (pageFont === f.id) setPageFont('geist')
+                      if (catTitleFont === f.id) setCatTitleFont('')
+                      if (productNameFont === f.id) setProductNameFont('')
+                    }}>✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Fuente de categorias</div>
             <FontSelect
               value={catTitleFont}
               onChange={setCatTitleFont}
-              options={[{ id: '', name: 'Igual que la general' }, ...PAGE_FONTS]}
+              options={[{ id: '', name: 'Igual que la general' }, ...allFonts]}
               placeholder="Igual que la general"
             />
 
@@ -2163,7 +2229,7 @@ export default function EditorPage() {
             <FontSelect
               value={productNameFont}
               onChange={setProductNameFont}
-              options={[{ id: '', name: 'Igual que la general' }, ...PAGE_FONTS]}
+              options={[{ id: '', name: 'Igual que la general' }, ...allFonts]}
               placeholder="Igual que la general"
             />
 
@@ -2392,7 +2458,7 @@ export default function EditorPage() {
             <FontSelect
               value={priceFont}
               onChange={setPriceFont}
-              options={[{ id: '', name: 'Igual que la general' }, ...PAGE_FONTS]}
+              options={[{ id: '', name: 'Igual que la general' }, ...allFonts]}
               placeholder="Igual que la general"
             />
 
@@ -3025,7 +3091,7 @@ export default function EditorPage() {
                   <FontSelect
                     value={newBlockFont}
                     onChange={setNewBlockFont}
-                    options={[{ id: '', name: 'Fuente de la tienda' }, ...PAGE_FONTS]}
+                    options={[{ id: '', name: 'Fuente de la tienda' }, ...allFonts]}
                     placeholder="Fuente de la tienda"
                   />
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -3829,7 +3895,7 @@ export default function EditorPage() {
                 <FontSelect
                   value={reorderFont}
                   onChange={setReorderFont}
-                  options={[{ id: '', name: 'Fuente de la tienda' }, ...PAGE_FONTS]}
+                  options={[{ id: '', name: 'Fuente de la tienda' }, ...allFonts]}
                   placeholder="Fuente de la tienda"
                 />
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -4171,7 +4237,7 @@ export default function EditorPage() {
                 <FontSelect
                   value={ad.font ?? ''}
                   onChange={v => updateAd(ad.id, { font: v })}
-                  options={[{ id: '', name: 'Fuente de la tienda' }, ...PAGE_FONTS]}
+                  options={[{ id: '', name: 'Fuente de la tienda' }, ...allFonts]}
                   placeholder="Fuente de la tienda"
                 />
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>

@@ -1460,6 +1460,22 @@ export default function StoreShell({ store, products, categories = [], initialBc
     fredoka:      'var(--font-fredoka), Fredoka, sans-serif',
   }
   const cfg          = store.template_config ?? {}
+  // Fonts the merchant uploaded in Vitrina (template_config.customFonts):
+  // each gets a family of its own, loaded with @font-face below.
+  const customFonts = (Array.isArray((cfg as { customFonts?: unknown }).customFonts)
+    ? (cfg as { customFonts: { id: string; name: string; url: string }[] }).customFonts : []).filter(f => f && f.id && f.url)
+  for (const f of customFonts) FONT_MAP[f.id] = `'LyteFont-${f.id}', system-ui, sans-serif`
+  const customFontCSS = customFonts.map(f => {
+    const ext = f.url.split('?')[0].split('.').pop()?.toLowerCase() ?? ''
+    const fmt = ({ ttf: 'truetype', otf: 'opentype', woff: 'woff', woff2: 'woff2' } as Record<string, string>)[ext]
+    return `@font-face{font-family:'LyteFont-${f.id}';src:url('${f.url}')${fmt ? ` format('${fmt}')` : ''};font-display:swap}`
+  }).join('')
+  useEffect(() => {
+    if (!customFontCSS) return
+    let el = document.getElementById('sf-custom-fonts') as HTMLStyleElement | null
+    if (!el) { el = document.createElement('style'); el.id = 'sf-custom-fonts'; document.head.appendChild(el) }
+    el.textContent = customFontCSS
+  }, [customFontCSS])
   const cfgFontFamily  = cfg.pageFont ? FONT_MAP[cfg.pageFont] : undefined
   const cfgFontSize    = cfg.fontSize ?? 'medium'
   const cfgFontSizePx  = cfg.fontSizePx ?? (cfg.fontSize === 'small' ? 13 : cfg.fontSize === 'large' ? 18 : undefined)

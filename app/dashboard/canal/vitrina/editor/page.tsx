@@ -354,6 +354,7 @@ export default function EditorPage() {
   const [hideVariableCount, setHideVariableCount] = useState(false)
   const [showMinHint, setShowMinHint] = useState(false)
   const [modalSize, setModalSize] = useState<'full' | 'half'>('full')
+  const [modalBg, setModalBg] = useState('')
   const [variantShape, setVariantShape] = useState<'pill' | 'rounded' | 'square'>('pill')
   const [variantSize, setVariantSize] = useState<'small' | 'medium' | 'large'>('medium')
 
@@ -556,6 +557,7 @@ export default function EditorPage() {
       if (cfg.hideVariableCount !== undefined) setHideVariableCount(cfg.hideVariableCount as boolean)
       if (cfg.showMinHint !== undefined) setShowMinHint(cfg.showMinHint as boolean)
       if (cfg.modalSize) setModalSize(cfg.modalSize as 'full' | 'half')
+      setModalBg(typeof cfg.modalBg === 'string' ? cfg.modalBg : '')
       if (cfg.variantShape) setVariantShape(cfg.variantShape as 'pill' | 'rounded' | 'square')
       if (cfg.variantSize) setVariantSize(cfg.variantSize as 'small' | 'medium' | 'large')
       if (cfg.responsiveSizes) {
@@ -1105,7 +1107,7 @@ export default function EditorPage() {
       priceColor, accentColor, priceFont: priceFont || pageFont, priceSize,
       catTitleFont: catTitleFont || undefined, productNameFont: productNameFont || undefined,
       categoryNavStyle, showCatNav, stickyCatNav, catNavOverBanner, categorySpacing,
-      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, showHeaderSearch, showHeaderCart, headerIconColor: headerIconColor || undefined, headerOverBanner, headerSticky, headerHeightPx, modalWizard, hideVariableCount, showMinHint, modalSize, variantShape, variantSize, enableReorder, reorderBannerEnabled: enableReorder ? reorderBannerEnabled : undefined, reorderHeaderButton: enableReorder ? reorderHeaderButton : undefined, reorderHeaderHintSeconds: (enableReorder && reorderHeaderButton) ? reorderHeaderHintSeconds : undefined, reorderFloatSeconds: reorderFloatSeconds > 0 ? reorderFloatSeconds : undefined,
+      logoShape, logoSizePx, logoPosition, namePosition, showMenuButton, showHeaderSearch, showHeaderCart, headerIconColor: headerIconColor || undefined, headerOverBanner, headerSticky, headerHeightPx, modalWizard, hideVariableCount, showMinHint, modalSize, modalBg: modalBg || undefined, variantShape, variantSize, enableReorder, reorderBannerEnabled: enableReorder ? reorderBannerEnabled : undefined, reorderHeaderButton: enableReorder ? reorderHeaderButton : undefined, reorderHeaderHintSeconds: (enableReorder && reorderHeaderButton) ? reorderHeaderHintSeconds : undefined, reorderFloatSeconds: reorderFloatSeconds > 0 ? reorderFloatSeconds : undefined,
       reorderPosition: reorderPosition !== 'right' ? reorderPosition : undefined,
       reorderTitle: reorderTitle.trim() || undefined,
       reorderImageUrl: reorderImageUrl || undefined,
@@ -3474,6 +3476,40 @@ export default function EditorPage() {
                 Media pagina
               </button>
             </div>
+
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Color del modal</div>
+            <div className="ed-tp-swatches" style={{ position: 'relative' }}>
+              <button
+                className={`ed-tp-swatch ed-tp-light${modalBg === '' ? ' ed-tp-active' : ''}`}
+                style={{ background: 'white', fontSize: 9, fontWeight: 700, color: '#94A3B8', letterSpacing: 0 }}
+                title="Blanco (predeterminado)"
+                onClick={() => setModalBg('')}
+              >
+                Auto
+              </button>
+              {BG_COLORS.filter(c => c.value !== '#FFFFFF' && c.value.toUpperCase() !== '#FFFFFF').map(c => (
+                <button
+                  key={c.value}
+                  className={`ed-tp-swatch${modalBg === c.value ? ' ed-tp-active' : ''}${c.light ? ' ed-tp-light' : ''}`}
+                  style={{ background: c.value }}
+                  title={c.value}
+                  onClick={() => setModalBg(c.value)}
+                />
+              ))}
+              <label
+                className={`ed-tp-swatch ed-tp-custom${modalBg && !BG_COLORS.some(c => c.value === modalBg) ? ' ed-tp-active' : ''}`}
+                style={modalBg && !BG_COLORS.some(c => c.value === modalBg) ? { background: modalBg } : undefined}
+                title="Personalizado"
+              >
+                {!(modalBg && !BG_COLORS.some(c => c.value === modalBg)) && (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                )}
+                <input type="color" value={/^#[0-9a-f]{6}$/i.test(modalBg) ? modalBg : '#FFFFFF'} onChange={e => setModalBg(e.target.value)} className="ed-tp-custom-input" />
+              </label>
+            </div>
+            <div className="ed-tp-hint" style={{ fontSize: 11, color: '#94A3B8', marginTop: 4 }}>Aplica en media página y página completa. Con un color oscuro, los textos se ponen claros.</div>
 
             <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Look de las variables</div>
             <div className="ed-shape-opts">

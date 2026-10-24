@@ -1513,6 +1513,15 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // Explicit "full" is a real full-screen takeover — distinct from the
   // unset/legacy default, which keeps today's ~90vh sheet look unchanged.
   const cfgModalFull = cfg.modalSize === 'full'
+  // Product modal background (Vitrina → Modal del producto); a dark one
+  // switches the modal's own text to light
+  const cfgModalBg = typeof (cfg as { modalBg?: unknown }).modalBg === 'string' ? (cfg as { modalBg?: string }).modalBg! : ''
+  const cfgModalDark = (() => {
+    const m = /^#?([0-9a-f]{6})$/i.exec(cfgModalBg)
+    if (!m) return false
+    const n = parseInt(m[1], 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.55
+  })()
   // A full-page product modal is otherwise a fixed inset:0 overlay, which
   // hides the store's own header behind it — pin the header above the
   // overlay and start the overlay right below it instead, so it stays
@@ -2181,8 +2190,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
             </div>
           )}
         <div
-          className={`sf-modal${cfgModalHalf ? ' sf-modal-half' : ''}${cfgModalFull ? ' sf-modal-fullpage' : ''}`}
-          style={showHeaderAboveModal ? { height: `calc(100dvh - ${modalTop}px)`, maxHeight: `calc(100dvh - ${modalTop}px)` } : undefined}
+          className={`sf-modal${cfgModalHalf ? ' sf-modal-half' : ''}${cfgModalFull ? ' sf-modal-fullpage' : ''}${cfgModalDark ? ' sf-modal-dark' : ''}`}
+          style={{
+            ...(showHeaderAboveModal ? { height: `calc(100dvh - ${modalTop}px)`, maxHeight: `calc(100dvh - ${modalTop}px)` } : {}),
+            ...(cfgModalBg ? { background: cfgModalBg } : {}),
+          }}
           onClick={e => e.stopPropagation()}
           onTouchStartCapture={e => {
             const t = e.touches[0]

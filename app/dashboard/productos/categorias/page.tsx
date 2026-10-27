@@ -72,6 +72,8 @@ export default function CategoriasPage() {
   }
 
   function handleDragPointerDown(catId: string, productId: string, index: number, e: React.PointerEvent) {
+    e.preventDefault()
+    window.getSelection()?.removeAllRanges()
     e.currentTarget.setPointerCapture(e.pointerId)
     dragRef.current = { catId, productId }
     setDraggingId(productId)

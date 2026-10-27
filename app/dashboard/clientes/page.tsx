@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useDashboardStore } from '../../lib/DashboardStoreProvider'
 import LyteLeafLoader from '../../components/LyteLeafLoader'
+import './clientes.css'
 
 interface Customer {
   key: string
@@ -193,7 +194,7 @@ export default function ClientesPage() {
           {/* Filters row */}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {/* Search */}
-            <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
+            <div className="cl-search" style={{ position: 'relative', flex: 1, minWidth: 200 }}>
               <svg style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="#94A3B8" strokeWidth="2">
                 <circle cx="8" cy="8" r="6"/><path strokeLinecap="round" d="M14 14l4 4"/>
               </svg>
@@ -217,7 +218,7 @@ export default function ClientesPage() {
             </div>
 
             {/* Sort */}
-            <div style={{ display: 'flex', gap: 4, background: '#F1F5F9', borderRadius: 9, padding: 3, flexShrink: 0 }}>
+            <div className="cl-sort" style={{ display: 'flex', gap: 4, background: '#F1F5F9', borderRadius: 9, padding: 3, flexShrink: 0 }}>
               {SORT_OPTIONS.map(opt => (
                 <button
                   key={opt.value}
@@ -255,7 +256,7 @@ export default function ClientesPage() {
           </div>
         ) : (
           <div style={{ background: 'white', borderRadius: 14, border: '1px solid #E2E8F0', overflow: 'hidden' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 150px 90px 120px 70px', padding: '10px 20px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+            <div className="cl-grid cl-head" style={{ padding: '10px 20px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
               {['Cliente', 'Telefono', 'Pedidos', 'Total gastado', 'Ultimo'].map(h => (
                 <div key={h} style={{ fontSize: 11, fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</div>
               ))}
@@ -267,18 +268,19 @@ export default function ClientesPage() {
                 <div
                   key={c.key}
                   onClick={() => openCustomer(c)}
-                  style={{ display: 'grid', gridTemplateColumns: '1fr 150px 90px 120px 70px', padding: '13px 20px', borderBottom: i < filtered.length - 1 ? '1px solid #F1F5F9' : 'none', alignItems: 'center', cursor: 'pointer', background: isActive ? 'var(--lyte-lavender-soft)' : 'transparent', transition: 'background 0.1s' }}
+                  className="cl-grid cl-row"
+                  style={{ padding: '13px 20px', borderBottom: i < filtered.length - 1 ? '1px solid #F1F5F9' : 'none', alignItems: 'center', cursor: 'pointer', background: isActive ? 'var(--lyte-lavender-soft)' : 'transparent', transition: 'background 0.1s' }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div className="cl-name" style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
                     <div style={{ width: 34, height: 34, borderRadius: '50%', background: isActive ? 'var(--lyte-navy)' : '#7C3AED18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'background 0.15s' }}>
                       <span style={{ fontSize: 13, fontWeight: 700, color: isActive ? 'white' : 'var(--lyte-navy)' }}>{(c.name || '?').charAt(0).toUpperCase()}</span>
                     </div>
                     <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>
                   </div>
-                  <div style={{ fontSize: 13, color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.phone || <span style={{ color: '#CBD5E1' }}>—</span>}</div>
-                  <div style={{ fontSize: 13, color: '#475569' }}>{c.orderCount} {c.orderCount === 1 ? 'pedido' : 'pedidos'}</div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A' }}>${c.totalSpent.toFixed(2)}</div>
-                  <div style={{ fontSize: 12, color: '#94A3B8' }}>{timeAgo(c.lastOrder)}</div>
+                  <div className="cl-phone" style={{ fontSize: 13, color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.phone || <span style={{ color: '#CBD5E1' }}>—</span>}</div>
+                  <div className="cl-orders" style={{ fontSize: 13, color: '#475569' }}>{c.orderCount} {c.orderCount === 1 ? 'pedido' : 'pedidos'}</div>
+                  <div className="cl-total" style={{ fontSize: 13, fontWeight: 600, color: '#0F172A' }}>${c.totalSpent.toFixed(2)}</div>
+                  <div className="cl-last" style={{ fontSize: 12, color: '#94A3B8' }}>{timeAgo(c.lastOrder)}</div>
                 </div>
               )
             })}
@@ -288,7 +290,7 @@ export default function ClientesPage() {
 
       {/* ── Detail panel ── */}
       {selected && (
-        <div style={{ width: 360, flexShrink: 0, background: 'white', borderRadius: 16, border: '1px solid #E2E8F0', overflow: 'hidden', position: 'sticky', top: 24 }}>
+        <div className="cl-panel">
           {/* Panel header */}
           <div style={{ padding: '18px 20px', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--lyte-navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -325,7 +327,7 @@ export default function ClientesPage() {
             Historial de pedidos
           </div>
 
-          <div style={{ maxHeight: 480, overflowY: 'auto', scrollbarWidth: 'none' }}>
+          <div className="cl-panel-orders">
             {ordersLoading ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}>
                 <LyteLeafLoader size={36} />

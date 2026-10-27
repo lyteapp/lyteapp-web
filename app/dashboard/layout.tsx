@@ -9,6 +9,7 @@ import { useT } from '../lib/LocaleProvider'
 import { DashboardThemeProvider } from '../lib/dashboardTheme'
 import DashboardLoader from './DashboardLoader'
 import AssistantPanel from './AssistantPanel'
+import DashboardTour from './DashboardTour'
 import { useLyteSound } from '../lib/useLyteSound'
 import { DashboardStoreProvider, useDashboardStore } from '../lib/DashboardStoreProvider'
 import './dashboard.css'
@@ -81,7 +82,25 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   const [productosOpen, setProductosOpen] = useState(false)
   const [settingsOpen, setSettingsOpen]   = useState(false)
   const [mobileNav, setMobileNav] = useState(false)
+  // First-visit tour: shown once per account (user_metadata.tour_done, plus
+  // this device's localStorage so it doesn't flash back before that loads)
+  const [tour, setTour] = useState<{ phone: boolean } | null>(null)
   const { play, unlock } = useLyteSound()
+
+  useEffect(() => {
+    if (loading || storeLoading || !user || stores.length === 0 || pathname !== '/dashboard') return
+    let seen = !!user.user_metadata?.tour_done
+    try { seen = seen || localStorage.getItem('lyte-tour-done') === '1' } catch {}
+    if (seen) return
+    const t = setTimeout(() => setTour({ phone: window.matchMedia('(max-width: 1024px)').matches }), 900)
+    return () => clearTimeout(t)
+  }, [loading, storeLoading, user, stores.length, pathname])
+
+  function finishTour() {
+    setTour(null)
+    try { localStorage.setItem('lyte-tour-done', '1') } catch {}
+    if (!user?.user_metadata?.tour_done) supabase.auth.updateUser({ data: { tour_done: true } }).catch(() => {})
+  }
 
   useEffect(() => {
     if (!loading && !storeLoading && user && stores.length === 0 && pathname !== '/dashboard/tienda/nueva') {
@@ -213,6 +232,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         {/* Store switcher */}
         <div style={{ position: 'relative', margin: '10px 8px' }}>
           <button
+            data-tour="store"
             className="db-store-block"
             style={{ width: '100%', margin: 0, cursor: 'pointer' }}
             onClick={() => setStorePopoverOpen(o => !o)}
@@ -283,7 +303,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
           {navItems.slice(0, 2).map((item) => {
             const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href)
             return (
-              <Link key={item.href} href={item.href} className={`db-nav-item${isActive ? ' active' : ''}`}>
+              <Link key={item.href} href={item.href} data-tour={item.href === '/dashboard/pedidos' ? 'orders' : undefined} className={`db-nav-item${isActive ? ' active' : ''}`}>
                 {item.icon}
                 {t(item.tKey)}
               </Link>
@@ -292,6 +312,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
           {/* Caja */}
           <Link
+            data-tour="caja"
             href="/dashboard/caja"
             className={`db-nav-item${pathname.startsWith('/dashboard/caja') ? ' active' : ''}`}
           >
@@ -304,6 +325,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
           {/* Delivery */}
           <Link
+            data-tour="delivery"
             href="/dashboard/delivery"
             className={`db-nav-item${pathname.startsWith('/dashboard/delivery') ? ' active' : ''}`}
           >
@@ -319,6 +341,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
           {/* Productos (expandable) */}
           <button
+            data-tour="products"
             className={`db-canal-toggle${productosOpen ? ' open' : ''}${pathname.startsWith('/dashboard/productos') ? ' active' : ''}`}
             onClick={() => setProductosOpen(o => !o)}
           >
@@ -343,6 +366,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
           {/* Inventario */}
           <Link
+            data-tour="inventario"
             href="/dashboard/inventario"
             className={`db-nav-item${pathname.startsWith('/dashboard/inventario') ? ' active' : ''}`}
             onClick={() => setMobileNav(false)}
@@ -356,7 +380,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
           {/* Finanzas — lives outside /dashboard, so this navigates out of this
               layout entirely into its own shell */}
-          <Link href="/finanzas" className="db-nav-item">
+          <Link href="/finanzas" data-tour="finanzas" className="db-nav-item">
             <svg viewBox="0 0 20 20" fill="currentColor">
               <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z" />
               <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z" />
@@ -377,6 +401,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
           {/* Diseño (web builder) */}
           <button
+            data-tour="design"
             className={`db-canal-toggle${canalOpen ? ' open' : ''}`}
             onClick={() => setCanalOpen(o => !o)}
           >
@@ -405,6 +430,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
           {/* Analytics */}
           <Link
+            data-tour="analytics"
             href="/dashboard/analitics"
             className={`db-nav-item${pathname.startsWith('/dashboard/analitics') ? ' active' : ''}`}
           >
@@ -462,6 +488,15 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
         {/* Bottom user row */}
         <div className="db-sidebar-bottom">
+          <button type="button" className="db-tour-replay" onClick={() => {
+            const phone = window.matchMedia('(max-width: 1024px)').matches
+            if (pathname !== '/dashboard') router.push('/dashboard')
+            setMobileNav(false)
+            setTimeout(() => setTour({ phone }), pathname !== '/dashboard' ? 700 : 250)
+          }}>
+            <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
+            Ver tutorial
+          </button>
           <div className="db-user-row" onClick={handleSignOut} role="button" tabIndex={0}>
             <div className="db-user-avatar">{emailInitial}</div>
             <div className="db-user-info">
@@ -476,7 +511,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
       <div className="db-main">
         <div className="db-topbar">
           <div className="db-topbar-left">
-            <button className="db-hamburger" onClick={() => setMobileNav(o => !o)} aria-label="Menú">
+            <button className="db-hamburger" data-tour="menu" onClick={() => setMobileNav(o => !o)} aria-label="Menú">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 {mobileNav
                   ? <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>
@@ -503,6 +538,8 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
           {children}
         </div>
       </div>
+
+      {tour && <DashboardTour phone={tour.phone} onMenu={setMobileNav} onDone={finishTour} />}
 
       {orderNotif && (
         <div className="db-order-toast">

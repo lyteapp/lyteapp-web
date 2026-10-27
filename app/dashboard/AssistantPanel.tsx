@@ -199,7 +199,7 @@ export default function AssistantPanel() {
 
   return (
     <>
-      <button className="db-assistant-btn" onClick={() => (open ? closePanel() : openPanel())} aria-label="Asistente virtual" aria-expanded={open}>
+      <button className="db-assistant-btn" data-tour="assistant" onClick={() => (open ? closePanel() : openPanel())} aria-label="Asistente virtual" aria-expanded={open}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z" />
           <path d="M19 15l.8 1.9 1.9.8-1.9.8L19 20.4l-.8-1.9-1.9-.8 1.9-.8z" />

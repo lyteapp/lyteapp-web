@@ -276,6 +276,7 @@ type ContentBlock = {
   // even if products get reordered; catPosition is the fallback when that
   // product isn't in the list (hidden, deleted, filtered out by search).
   afterProductId?: string
+  sizes?: { tablet?: BlockSizeOverrides; desktop?: BlockSizeOverrides }
 }
 type BlockGroup = {
   id: string; afterId: string; background?: string; borderRadius?: number; padding?: number
@@ -339,7 +340,12 @@ type ResponsiveSizeOverrides = {
   categorySpacing?: number
   photoSize?: 'small' | 'medium' | 'large'
   variantSize?: 'small' | 'medium' | 'large'
+  logoSizePx?: number
+  headerHeightPx?: number
 }
+// A content block's own sizes for tablet/desktop, when set there in the
+// Vitrina editor — unset keys use the block's (phone) value.
+type BlockSizeOverrides = { fontSize?: number; imageSize?: number; spacing?: number; buttonSize?: number; buttonWidth?: number }
 type TemplateConfig = {
   pageBg?: string; pageFont?: string
   fontSize?: 'small' | 'medium' | 'large'
@@ -516,8 +522,31 @@ function buildResponsiveSizeCSS(overrides: ResponsiveSizeOverrides | undefined, 
   if (overrides.priceSize) parts.push(PRICE_SIZE_CSS[overrides.priceSize])
   if (overrides.photoSize) parts.push(PHOTO_SIZE_CSS[overrides.photoSize])
   if (overrides.variantSize) parts.push(VARIANT_SIZE_CSS[overrides.variantSize])
+  if (overrides.logoSizePx !== undefined) parts.push(`.sf-nav-logo-wrap{height:${overrides.logoSizePx}px!important}`)
+  if (overrides.headerHeightPx !== undefined) parts.push(`.sf-page{--sf-header-height:${overrides.headerHeightPx}px!important}.sf-topbar-inner{min-height:${overrides.headerHeightPx}px!important}`)
   if (!parts.length) return ''
   return `@media (min-width:${minWidthPx}px){${parts.join('')}}`
+}
+
+// Same idea per content block (keyed by its #sf-cb-<id> wrapper)
+function buildBlockSizeCSS(blocks: ContentBlock[] | undefined, device: 'tablet' | 'desktop', minWidthPx: number): string {
+  const parts: string[] = []
+  for (const b of blocks ?? []) {
+    const o = b.sizes?.[device]
+    if (!o) continue
+    const sel = `#sf-cb-${b.id}`
+    if (o.spacing !== undefined) parts.push(`${sel}{margin:${o.spacing}px 0!important}`)
+    if (o.fontSize !== undefined) parts.push(`${sel} .sf-block-text{font-size:${o.fontSize}px!important}`)
+    if (o.imageSize !== undefined) parts.push(`${sel} .sf-block-img{max-width:${o.imageSize}%!important;margin:${o.imageSize < 100 ? '0 auto' : '0'}!important}`)
+    if (o.buttonSize !== undefined) {
+      const m = buttonSizeMetrics(o.buttonSize)
+      parts.push(`${sel} .sf-block-btn{font-size:${m.fontSize}px!important;padding:${m.padV}px ${m.padH}px!important}`)
+      parts.push(`${sel} .sf-block-slide-bar{height:${m.height}px!important;--sf-slide-thumb:${m.thumb}px!important;--sf-slide-pad:${m.pad}px!important}`)
+      parts.push(`${sel} .sf-block-slide-label{font-size:${Math.max(10, m.fontSize - 2)}px!important}`)
+    }
+    if (o.buttonWidth !== undefined) parts.push(`${sel} .sf-block-btn,${sel} .sf-block-slide-bar{width:${o.buttonWidth ? `${o.buttonWidth}px` : 'auto'}!important}`)
+  }
+  return parts.length ? `@media (min-width:${minWidthPx}px){${parts.join('')}}` : ''
 }
 
 function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -1674,7 +1703,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
   const responsiveSizeCSS =
     buildResponsiveSizeCSS(cfg.responsiveSizes?.tablet, 768) +
-    buildResponsiveSizeCSS(cfg.responsiveSizes?.desktop, 1024)
+    buildResponsiveSizeCSS(cfg.responsiveSizes?.desktop, 1024) +
+    buildBlockSizeCSS(cfg.contentBlocks, 'tablet', 768) +
+    buildBlockSizeCSS(cfg.contentBlocks, 'desktop', 1024)
 
   function blockSlideUpdate(btnId: string, clientX: number) {
     const bar = blockSlideBarRefs.current.get(btnId)

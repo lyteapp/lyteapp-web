@@ -189,6 +189,18 @@ type ContentBlock = {
   linkProductId?: string
   catPosition?: 'before' | number
   afterProductId?: string
+  sizes?: { tablet?: BlockSizes; desktop?: BlockSizes }
+}
+// A block's own sizes for tablet/desktop (see StoreShell's buildBlockSizeCSS)
+type BlockSizes = { fontSize?: number; imageSize?: number; spacing?: number; buttonSize?: number; buttonWidth?: number }
+type BlockSizeKey = keyof BlockSizes
+const BLOCK_SIZE_KEYS: BlockSizeKey[] = ['fontSize', 'imageSize', 'spacing', 'buttonSize', 'buttonWidth']
+// The block's phone value for a size, in the same number form as overrides
+function blockBaseSize(b: ContentBlock, key: BlockSizeKey): number {
+  if (key === 'buttonSize') return buttonSizeMetrics(b.buttonSize).fontSize
+  if (key === 'fontSize') return b.fontSize ?? 15
+  if (key === 'imageSize') return b.imageSize ?? 100
+  return b[key] ?? 0
 }
 type BlockButtonItem = { id: string; label: string; target: 'product' | 'category'; targetId: string }
 // Mirrors StoreShell.tsx's buttonSizeMetrics — keeps the dashboard's draft
@@ -463,12 +475,41 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
     categorySpacing?: number
     photoSize?: 'small' | 'medium' | 'large'
     variantSize?: 'small' | 'medium' | 'large'
+    logoSizePx?: number
+    headerHeightPx?: number
   }
   const [responsiveSizes, setResponsiveSizes] = useState<{ tablet: SizeOverrides; desktop: SizeOverrides }>({ tablet: {}, desktop: {} })
 
   function sizeValue<K extends keyof SizeOverrides>(key: K, mobileValue: NonNullable<SizeOverrides[K]>): NonNullable<SizeOverrides[K]> {
     if (deviceType === 'mobile') return mobileValue
-    return responsiveSizes[deviceType][key] ?? mobileValue
+    // tablet rules apply on wider screens too, so desktop inherits them
+    return responsiveSizes[deviceType][key] ?? (deviceType === 'desktop' ? responsiveSizes.tablet[key] : undefined) ?? mobileValue
+  }
+
+  // A content block's size on the device being edited
+  function blockSize(b: ContentBlock, key: BlockSizeKey): number {
+    if (deviceType === 'mobile') return blockBaseSize(b, key)
+    return b.sizes?.[deviceType]?.[key] ?? (deviceType === 'desktop' ? b.sizes?.tablet?.[key] : undefined) ?? blockBaseSize(b, key)
+  }
+  // Applies edited fields to a block: on phone they're the block's own
+  // values; on tablet/desktop, size changes go to that device's overrides
+  // (an override equal to the phone value is dropped) and the rest as usual.
+  function withBlockSizes(existing: ContentBlock, fields: Partial<ContentBlock>): ContentBlock {
+    if (deviceType === 'mobile') return { ...existing, ...fields }
+    const next: ContentBlock = { ...existing, ...fields }
+    const own: BlockSizes = { ...existing.sizes?.[deviceType] }
+    for (const k of BLOCK_SIZE_KEYS) {
+      if (!(k in fields)) continue
+      const raw = fields[k]
+      const v = k === 'buttonSize' ? buttonSizeMetrics(raw as ContentBlock['buttonSize']).fontSize : ((raw as number | undefined) ?? (k === 'fontSize' ? 15 : k === 'imageSize' ? 100 : 0))
+      // keep the phone value
+      ;(next as Record<string, unknown>)[k] = existing[k]
+      if (v === blockBaseSize(existing, k)) delete own[k]
+      else own[k] = v
+    }
+    const sizes = { ...existing.sizes, [deviceType]: Object.keys(own).length ? own : undefined }
+    next.sizes = sizes.tablet || sizes.desktop ? sizes : undefined
+    return next
   }
   function setSizeValue<K extends keyof SizeOverrides>(key: K, value: NonNullable<SizeOverrides[K]>, mobileSetter: (v: NonNullable<SizeOverrides[K]>) => void) {
     if (deviceType === 'mobile') { mobileSetter(value); return }
@@ -886,9 +927,9 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
       ${alignCSS}
       .sf-nav-logo-wrap {
         border-radius: ${logoShape === 'circle' ? '50%' : logoShape === 'square' ? '0' : '8px'} !important;
-        height: ${logoSizePx}px !important;
+        height: ${sizeValue('logoSizePx', logoSizePx)}px !important;
       }
-      .sf-topbar-inner { min-height: ${headerHeightPx}px !important; }
+      .sf-topbar-inner { min-height: ${sizeValue('headerHeightPx', headerHeightPx)}px !important; }
       ${headerIconColor ? `.sf-menu-btn, .sf-header-icon-btn { color: ${headerIconColor} !important; }` : ''}
       ${headerBg ? `.sf-topbar:not(.sf-topbar-glass), .sf-nav { background: ${headerBg} !important; }` : ''}
     `
@@ -1134,6 +1175,9 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
     // of only the ones a brand-new block already gets via the draft above.
     const editingBlock = contentBlocks.find(b => b.id === editingBlockId)
     const editingSizeRules: string[] = []
+    if (editingBlock?.type === 'text') {
+      editingSizeRules.push(`#sf-cb-${editingBlock.id} .sf-block-text { font-size: ${newBlockFontSize}px !important; }`)
+    }
     if (editingBlock?.type === 'image') {
       editingSizeRules.push(`#sf-cb-${editingBlock.id} .sf-block-img { max-width: ${newBlockImageSize}% !important; margin: ${newBlockImageSize < 100 ? '0 auto' : '0'} !important; }`)
     }
@@ -1145,7 +1189,19 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
     }
 
     blocksEl.textContent = [
-      ...contentBlocks.filter(b => !b.groupId).map(b => `#sf-cb-${b.id} { margin: ${b.spacing ?? 0}px 0 !important; }`),
+      ...contentBlocks.filter(b => !b.groupId).map(b => `#sf-cb-${b.id} { margin: ${blockSize(b, 'spacing')}px 0 !important; }`),
+      // saved per-device sizes of the other blocks, for the device on screen
+      ...(deviceType === 'mobile' ? [] : contentBlocks.filter(b => b.id !== editingBlockId).flatMap(b => {
+        const r: string[] = []
+        if (b.type === 'text') r.push(`#sf-cb-${b.id} .sf-block-text { font-size: ${blockSize(b, 'fontSize')}px !important; }`)
+        if (b.type === 'image') { const v = blockSize(b, 'imageSize'); r.push(`#sf-cb-${b.id} .sf-block-img { max-width: ${v}% !important; margin: ${v < 100 ? '0 auto' : '0'} !important; }`) }
+        if (b.type === 'buttons') {
+          const m = buttonSizeMetrics(blockSize(b, 'buttonSize')); const w = blockSize(b, 'buttonWidth')
+          r.push(`#sf-cb-${b.id} .sf-block-btn { font-size: ${m.fontSize}px !important; padding: ${m.padV}px ${m.padH}px !important; ${w ? `width: ${w}px !important;` : ''} }`)
+          r.push(`#sf-cb-${b.id} .sf-block-slide-bar { height: ${m.height}px !important; ${w ? `width: ${w}px !important;` : ''} }`)
+        }
+        return r
+      })),
       ...blockGroups.map(g => `#sf-bg-${g.id} { gap: ${g.gap ?? 12}px !important; padding: ${g.padding ?? 16}px !important; border-radius: ${g.borderRadius ?? 12}px !important; background: ${g.background || '#F8FAFC'} !important; flex-direction: ${g.direction === 'row' ? 'row' : 'column'} !important; }`),
       ...editingSizeRules,
     ].join('\n')
@@ -1470,16 +1526,16 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
       setNewBlockContent(b.content)
       setNewBlockButtons([])
     }
-    setNewBlockFontSize(b.fontSize ?? 15)
+    setNewBlockFontSize(blockSize(b, 'fontSize'))
     setNewBlockFontWeight(b.fontWeight ?? 400)
     setNewBlockColor(b.color ?? '#0F172A')
     setNewBlockAlign(b.align ?? 'left')
-    setNewBlockSpacing(b.spacing ?? 0)
+    setNewBlockSpacing(blockSize(b, 'spacing'))
     setNewBlockFont(b.font ?? '')
     setNewBlockButtonStyle(b.buttonStyle ?? 'solid')
-    setNewBlockButtonSize(buttonSizeMetrics(b.buttonSize).fontSize)
-    setNewBlockButtonWidth(b.buttonWidth ?? 0)
-    setNewBlockImageSize(b.imageSize ?? 100)
+    setNewBlockButtonSize(blockSize(b, 'buttonSize'))
+    setNewBlockButtonWidth(blockSize(b, 'buttonWidth'))
+    setNewBlockImageSize(blockSize(b, 'imageSize'))
     setNewBlockLinkUrl(b.linkUrl ?? '')
     setNewBlockLinkTarget(b.linkTarget ?? 'url')
     setNewBlockLinkCategoryId(b.linkCategoryId ?? '')
@@ -1553,14 +1609,14 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
             <span style={{ fontSize: 10, color: '#94A3B8', flexShrink: 0 }}>Separacion</span>
             <input
               type="range" min={-120} max={120} step={2}
-              value={b.spacing ?? 0}
+              value={blockSize(b, 'spacing')}
               onChange={e => {
                 const val = Number(e.target.value)
-                setContentBlocks(prev => prev.map(x => x.id === b.id ? { ...x, spacing: val } : x))
+                setContentBlocks(prev => prev.map(x => x.id === b.id ? withBlockSizes(x, { spacing: val }) : x))
               }}
               style={{ flex: 1 }}
             />
-            <span style={{ fontSize: 10, color: '#94A3B8', width: 36, flexShrink: 0, textAlign: 'right' }}>{b.spacing ?? 0}px</span>
+            <span style={{ fontSize: 10, color: '#94A3B8', width: 36, flexShrink: 0, textAlign: 'right' }}>{blockSize(b, 'spacing')}px</span>
           </div>
         )}
       </div>
@@ -1592,6 +1648,19 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
   // each panel is a fresh element.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setTpPage(0) }, [activeTool])
+
+  // Switching device while editing a block shows that device's sizes
+  useEffect(() => {
+    const b = contentBlocks.find(x => x.id === editingBlockId)
+    if (!b) return
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setNewBlockFontSize(blockSize(b, 'fontSize'))
+    setNewBlockSpacing(blockSize(b, 'spacing'))
+    setNewBlockButtonSize(blockSize(b, 'buttonSize'))
+    setNewBlockButtonWidth(blockSize(b, 'buttonWidth'))
+    setNewBlockImageSize(blockSize(b, 'imageSize'))
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [deviceType]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const read = () => setVp({ w: window.innerWidth, h: window.innerHeight })
@@ -3031,7 +3100,7 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
 
             <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>
               Tamano del logo
-              <span className="ed-size-slider-val">{logoSizePx}px</span>
+              <span className="ed-size-slider-val">{sizeValue('logoSizePx', logoSizePx)}px</span>
             </div>
             <div className="ed-size-slider-wrap">
               <div style={{ width: 16, height: 16, borderRadius: 4, background: '#CBD5E1', flexShrink: 0 }} />
@@ -3040,16 +3109,17 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
                 min={20}
                 max={100}
                 step={2}
-                value={logoSizePx}
-                onChange={e => setLogoSizePx(Number(e.target.value))}
+                value={sizeValue('logoSizePx', logoSizePx)}
+                onChange={e => setSizeValue('logoSizePx', Number(e.target.value), setLogoSizePx)}
                 className="ed-size-slider"
               />
               <div style={{ width: 28, height: 28, borderRadius: 6, background: '#CBD5E1', flexShrink: 0 }} />
             </div>
+            {renderDeviceOverrideHint('logoSizePx')}
 
             <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>
               Tamano del encabezado
-              <span className="ed-size-slider-val">{headerHeightPx}px</span>
+              <span className="ed-size-slider-val">{sizeValue('headerHeightPx', headerHeightPx)}px</span>
             </div>
             <div className="ed-size-slider-wrap">
               <div style={{ width: 16, height: 10, borderRadius: 3, background: '#CBD5E1', flexShrink: 0 }} />
@@ -3058,12 +3128,13 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
                 min={32}
                 max={100}
                 step={2}
-                value={headerHeightPx}
-                onChange={e => setHeaderHeightPx(Number(e.target.value))}
+                value={sizeValue('headerHeightPx', headerHeightPx)}
+                onChange={e => setSizeValue('headerHeightPx', Number(e.target.value), setHeaderHeightPx)}
                 className="ed-size-slider"
               />
               <div style={{ width: 28, height: 18, borderRadius: 4, background: '#CBD5E1', flexShrink: 0 }} />
             </div>
+            {renderDeviceOverrideHint('headerHeightPx')}
 
             <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Menu lateral</div>
             <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#F8FAFC', borderRadius: 10, cursor: 'pointer', gap: 12 }}>
@@ -3301,6 +3372,13 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
             )}
 
             <div className="ed-tp-subtitle">{editingBlockId ? 'Editando bloque' : 'Agregar bloque'}</div>
+            {deviceType !== 'mobile' && (
+              <div className="ed-device-note">
+                {editingBlockId
+                  ? `Los tamaños (letra, imagen, botones, separación) que cambies aquí son solo para ${deviceType === 'tablet' ? 'tablet' : 'computadora'}.`
+                  : 'Un bloque nuevo usa estos tamaños en todas las versiones; luego puedes editarlo para ajustarlo solo aquí.'}
+              </div>
+            )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <select
                 value={newBlockPos === 'top' || newBlockPos === 'bottom' ? newBlockPos : `${newBlockPos}|${newBlockCatMode}`}
@@ -3691,7 +3769,7 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
                       if (valid.length === 0) return
                       if (editingBlockId) {
                         setContentBlocks(prev => prev.map(x => x.id === editingBlockId
-                          ? { ...x, afterId: newBlockPos, type: 'buttons' as const, content: JSON.stringify(valid), spacing: newBlockSpacing, buttonStyle: newBlockButtonStyle, buttonSize: newBlockButtonSize, buttonWidth: newBlockButtonWidth || undefined, catPosition, afterProductId }
+                          ? withBlockSizes(x, { afterId: newBlockPos, type: 'buttons' as const, content: JSON.stringify(valid), spacing: newBlockSpacing, buttonStyle: newBlockButtonStyle, buttonSize: newBlockButtonSize, buttonWidth: newBlockButtonWidth || undefined, catPosition, afterProductId })
                           : x))
                         cancelEditBlock()
                         return
@@ -3723,7 +3801,7 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
                       linkProductId: newBlockType === 'image' ? (newBlockLinkProductId || undefined) : undefined,
                     }
                     if (editingBlockId) {
-                      setContentBlocks(prev => prev.map(x => x.id === editingBlockId ? { ...x, ...fields } : x))
+                      setContentBlocks(prev => prev.map(x => x.id === editingBlockId ? withBlockSizes(x, fields) : x))
                       cancelEditBlock()
                       return
                     }

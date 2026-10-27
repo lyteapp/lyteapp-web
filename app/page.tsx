@@ -172,7 +172,7 @@ export default function Home() {
           <div className="demo-phone">
             <div className="demo-phone-notch" />
             <div className="demo-phone-screen">
-              <video src="/demo/kosh-demo.mp4" poster="/demo/kosh-demo-poster.jpg"
+              <video src="/demo/kosh-demo.mp4?v=2" poster="/demo/kosh-demo-poster.jpg?v=2"
                 autoPlay muted loop playsInline preload="metadata" aria-label="KOSH APPAREL — tienda de ejemplo" />
             </div>
           </div>

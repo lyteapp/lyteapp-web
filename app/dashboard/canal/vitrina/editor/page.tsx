@@ -39,11 +39,12 @@ function compressBlockImage(file: File, maxDim = 1920, quality = 0.82): Promise<
 const IMAGE_MIME_BY_EXT: Record<string, string> = {
   gif: 'image/gif', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
   webp: 'image/webp', svg: 'image/svg+xml',
+  mp4: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm', m4v: 'video/x-m4v',
 }
-async function uploadBlockImage(file: File, storeId: string) {
-  const compressed = await compressBlockImage(file)
+async function uploadBlockImage(file: File, storeId: string, folder = 'blocks', compress = true) {
+  const compressed = compress ? await compressBlockImage(file) : file
   const ext = compressed.name.split('.').pop()?.toLowerCase() ?? ''
-  const path = `blocks/${storeId}-${Date.now()}.${ext}`
+  const path = `${folder}/${storeId}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`
   // Some browsers report a blank or wrong File.type for a GIF (depends on how
   // it was picked/dragged in), so Supabase ends up serving the asset with a
   // generic content-type. Safari still renders it by sniffing the bytes, but
@@ -393,6 +394,11 @@ export default function EditorPage() {
   const [categoryLayouts, setCategoryLayouts] = useState<Record<string, string>>({})
   const [hiddenCategoryIds, setHiddenCategoryIds] = useState<string[]>([])
   const [baseConfig, setBaseConfig]         = useState<Record<string, unknown>>({})
+  // Logo and banner (same fields the Tienda page edits), saved right away
+  const [logoUrl, setLogoUrl]               = useState('')
+  const [bannerSlides, setBannerSlides]     = useState<string[]>([])
+  const [mediaBusy, setMediaBusy]           = useState<'' | 'logo' | 'banner'>('')
+  const [mediaError, setMediaError]         = useState('')
 
   const [categoryNavStyle, setCategoryNavStyle] = useState('pills')
   const [showCatNav, setShowCatNav] = useState(true)
@@ -562,7 +568,7 @@ export default function EditorPage() {
     ;(async () => {
       const { data: store } = await supabase
         .from('stores')
-        .select('id, slug, template, brand_color, template_config')
+        .select('id, slug, template, brand_color, template_config, logo_url, banner_url')
         .eq('id', activeStoreId)
         .maybeSingle()
       if (!store) return
@@ -571,6 +577,12 @@ export default function EditorPage() {
       if ((store as { template?: string }).template) setTemplate((store as { template: string }).template)
       const cfg = (store as { template_config?: Record<string, unknown> }).template_config ?? {}
       setBaseConfig(cfg)
+      {
+        const st = store as { logo_url?: string | null; banner_url?: string | null }
+        setLogoUrl(st.logo_url ?? '')
+        const extra = Array.isArray(cfg.bannerSlides) ? (cfg.bannerSlides as string[]).filter(Boolean) : []
+        setBannerSlides(extra.length ? extra : st.banner_url ? [st.banner_url] : [])
+      }
       if (cfg.pageBg)  setPageBg(cfg.pageBg as string)
       if ((cfg as Record<string,unknown>).cardBg !== undefined) setCardBg((cfg as Record<string,unknown>).cardBg as string)
       if ((cfg as Record<string,unknown>).catTitleColor !== undefined) setCatTitleColor((cfg as Record<string,unknown>).catTitleColor as string)
@@ -1107,6 +1119,50 @@ export default function EditorPage() {
   }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, variantShape, variantSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, headerBg, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign, newBlockFont, contentBlocks, blockGroups, newBlockButtons, newBlockButtonStyle, newBlockButtonSize, newBlockButtonWidth, editingBlockId, newBlockImageSize, enableReorder, reorderBannerEnabled, reorderPosition, reorderTitle, reorderImageUrl, reorderFontSize, reorderFontWeight, reorderColor, reorderFont, reorderButtonStyle, reorderButtonSize, reorderButtonColor, reorderScale, reorderInset, ads, deviceType, responsiveSizes])
 
   // ── Auto-save category shape (reloads iframe immediately) ─
+  async function saveBrandMedia(logo: string, slides: string[]) {
+    setLogoUrl(logo)
+    setBannerSlides(slides)
+    if (!storeId) return
+    const newConfig = { ...baseConfig, bannerSlides: slides.length > 1 ? slides : undefined }
+    const { error } = await supabase.from('stores').update({
+      logo_url: logo || null,
+      banner_url: slides[0] || null,
+      template_config: newConfig,
+    }).eq('id', storeId)
+    if (error) { setMediaError('No se pudo guardar. Intenta de nuevo.'); return }
+    setBaseConfig(newConfig)
+    setIframeKey(k => k + 1)
+  }
+
+  async function handleLogoFile(file: File | undefined) {
+    if (!file || !storeId) return
+    setMediaBusy('logo'); setMediaError('')
+    // logos are uploaded as-is so a transparent PNG stays transparent
+    try { await saveBrandMedia(await uploadBlockImage(file, storeId, 'logos', false), bannerSlides) }
+    catch { setMediaError('No se pudo subir el logo.') }
+    setMediaBusy('')
+  }
+
+  async function handleBannerFiles(files: File[]) {
+    if (!files.length || !storeId) return
+    const tooBig = files.find(f => f.type.startsWith('video/') && f.size > 30_000_000)
+    if (tooBig) { setMediaError(`"${tooBig.name}" pesa más de 30 MB. Usa un video más corto o comprimido.`); return }
+    setMediaBusy('banner'); setMediaError('')
+    try {
+      const urls: string[] = []
+      for (const f of files) urls.push(await uploadBlockImage(f, storeId, 'banners'))
+      await saveBrandMedia(logoUrl, [...bannerSlides, ...urls])
+    } catch { setMediaError('No se pudo subir el banner.') }
+    setMediaBusy('')
+  }
+
+  function moveBannerSlide(i: number, d: -1 | 1) {
+    const j = i + d
+    if (j < 0 || j >= bannerSlides.length) return
+    const next = [...bannerSlides]; [next[i], next[j]] = [next[j], next[i]]
+    saveBrandMedia(logoUrl, next)
+  }
+
   async function handleCategoryShape(catId: string, shape: string | null) {
     const next = { ...categoryShapes }
     if (shape) next[catId] = shape
@@ -2734,7 +2790,54 @@ export default function EditorPage() {
             {renderPanelDragHandle()}
             <div className="ed-tp-title">Encabezado</div>
 
-            <div className="ed-tp-subtitle">Posicion del logo</div>
+            <div className="ed-tp-subtitle">Logo</div>
+            <div className="ed-media-logo">
+              <label className={`ed-media-logo-box${mediaBusy === 'logo' ? ' busy' : ''}`}>
+                {logoUrl
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img src={logoUrl} alt="Logo" />
+                  : <span>+</span>}
+                <input type="file" accept="image/*" hidden disabled={!!mediaBusy}
+                  onChange={e => { handleLogoFile(e.target.files?.[0]); e.target.value = '' }} />
+              </label>
+              <div className="ed-media-logo-actions">
+                <label className="ed-media-btn">
+                  {mediaBusy === 'logo' ? 'Subiendo…' : logoUrl ? 'Cambiar logo' : 'Subir logo'}
+                  <input type="file" accept="image/*" hidden disabled={!!mediaBusy}
+                    onChange={e => { handleLogoFile(e.target.files?.[0]); e.target.value = '' }} />
+                </label>
+                {logoUrl && <button type="button" className="ed-media-btn ed-media-btn-soft" onClick={() => saveBrandMedia('', bannerSlides)}>Quitar</button>}
+                <small>PNG sin fondo se ve mejor</small>
+              </div>
+            </div>
+            {mediaError && <div className="ed-font-error">{mediaError}</div>}
+
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Banner</div>
+            <div className="ed-media-slides">
+              {bannerSlides.map((u, i) => (
+                <div key={u + i} className="ed-media-slide">
+                  {/\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(u)
+                    ? <video src={u} muted playsInline autoPlay loop />
+                    // eslint-disable-next-line @next/next/no-img-element
+                    : <img src={u} alt="" />}
+                  {i === 0 && bannerSlides.length > 1 && <span className="ed-media-slide-main">Principal</span>}
+                  <div className="ed-media-slide-actions">
+                    <button type="button" onClick={() => moveBannerSlide(i, -1)} disabled={i === 0} aria-label="Mover a la izquierda">‹</button>
+                    <button type="button" onClick={() => saveBrandMedia(logoUrl, bannerSlides.filter((_, j) => j !== i))} aria-label="Quitar">✕</button>
+                    <button type="button" onClick={() => moveBannerSlide(i, 1)} disabled={i === bannerSlides.length - 1} aria-label="Mover a la derecha">›</button>
+                  </div>
+                </div>
+              ))}
+              <label className={`ed-media-slide ed-media-slide-add${mediaBusy === 'banner' ? ' busy' : ''}`}>
+                <span>{mediaBusy === 'banner' ? '…' : '+'}</span>
+                <small>{mediaBusy === 'banner' ? 'Subiendo' : 'Foto o video'}</small>
+                <input type="file" accept="image/*,video/*" multiple hidden disabled={!!mediaBusy}
+                  onChange={e => { handleBannerFiles(Array.from(e.target.files ?? [])); e.target.value = '' }} />
+              </label>
+            </div>
+            <div className="ed-media-hint">Horizontal (1200×400) · videos MP4 hasta 30 MB. Con varios se pasan solos; el primero es el principal.</div>
+
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Posicion del logo</div>
             <div style={{ display: 'flex', gap: 6 }}>
               {([
                 { id: 'left' as const,   label: 'Izquierda' },

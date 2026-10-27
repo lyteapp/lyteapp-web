@@ -6,6 +6,16 @@ import { useDashboardStore } from '../../../lib/DashboardStoreProvider'
 import Link from 'next/link'
 import '../canal.css'
 
+// Key-sorted JSON, so two settings objects compare by value
+function stableJson(v: unknown): string {
+  if (Array.isArray(v)) return `[${v.map(stableJson).join(',')}]`
+  if (v && typeof v === 'object') {
+    return `{${Object.keys(v).sort().filter(k => (v as Record<string, unknown>)[k] !== undefined)
+      .map(k => `${JSON.stringify(k)}:${stableJson((v as Record<string, unknown>)[k])}`).join(',')}}`
+  }
+  return JSON.stringify(v) ?? 'null'
+}
+
 // The checkout's sections, in page order (their data-sec index), for the
 // phone layout's icon bar
 const CO_SECTIONS: { label: string; icon: React.ReactNode }[] = [
@@ -207,6 +217,10 @@ export default function CheckoutPage() {
   const [storeWhatsapp, setStoreWhatsapp] = useState<string | null>(null)
   const [previewKey, setPreviewKey] = useState(0)
 
+  // What's stored, for the "unsaved changes" notice (Cancelar puts it back)
+  const [savedSnap, setSavedSnap] = useState<{ settings: CheckoutSettings; orderNumberNext: string; methods: PaymentMethod[] } | null>(null)
+  const [justSaved, setJustSaved] = useState(false)
+
   // Phone held upright: laid out like the Vitrina editor — the preview as a
   // phone in miniature on top, a bar of section icons at the bottom, and the
   // picked section in a sheet above the bar (‹ › to go through them).
@@ -221,7 +235,7 @@ export default function CheckoutPage() {
   const phoneLayout = vp.w > 0 && vp.w <= 800 && vp.h > vp.w
   // the frame is 410×864 with its border; fit it in what's above the sheet
   const pvScale = phoneLayout
-    ? Math.min((vp.w - 32) / 410, (vp.h - 72 - (mSec !== null ? vp.h * 0.42 : 0) - 28) / 864)
+    ? Math.min((vp.w - 32) * 0.72 / 410, (vp.h - 72 - (mSec !== null ? vp.h * 0.42 : 0) - 40) / 864)
     : 1
 
   useEffect(() => {
@@ -235,16 +249,18 @@ export default function CheckoutPage() {
           .maybeSingle()
         if (!store) return
         setStoreWhatsapp((store as Record<string, unknown>).whatsapp as string | null ?? null)
-        if (store.checkout_settings) setSettings({ ...DEFAULTS, ...store.checkout_settings })
+        const loadedSettings: CheckoutSettings = store.checkout_settings ? { ...DEFAULTS, ...store.checkout_settings } : DEFAULTS
+        setSettings(loadedSettings)
         const nextNum = (store as Record<string, unknown>).order_number_next
-        if (typeof nextNum === 'number') setOrderNumberNext(String(nextNum))
-        if (store.payment_methods) {
-          const pm = store.payment_methods as Record<string, { enabled: boolean; values: Record<string, string> }>
-          setMethods(prev => prev.map(m => {
-            const s = pm[m.id]
-            return s ? { ...m, enabled: s.enabled ?? false, values: s.values ?? {} } : m
-          }))
-        }
+        const loadedNum = typeof nextNum === 'number' ? String(nextNum) : '1'
+        setOrderNumberNext(loadedNum)
+        const pm = (store.payment_methods ?? {}) as Record<string, { enabled: boolean; values: Record<string, string> }>
+        const loadedMethods = METHODS.map(m => {
+          const s = pm[m.id]
+          return s ? { ...m, enabled: s.enabled ?? false, values: s.values ?? {} } : { ...m, enabled: false, values: {} }
+        })
+        setMethods(loadedMethods)
+        setSavedSnap({ settings: loadedSettings, orderNumberNext: loadedNum, methods: loadedMethods })
       } catch { /* silently handle */ }
     }
     load()
@@ -256,7 +272,7 @@ export default function CheckoutPage() {
 
   async function saveSettings(e: { preventDefault(): void }) {
     e.preventDefault()
-    if (!storeId) return
+    if (!storeId) return false
     setSettingsError(''); setSuccess(false); setSaving(true)
     const nextNum = parseInt(orderNumberNext, 10)
     const { error: err } = await supabase.from('stores').update({
@@ -264,21 +280,45 @@ export default function CheckoutPage() {
       ...(Number.isFinite(nextNum) && nextNum > 0 ? { order_number_next: nextNum } : {}),
     }).eq('id', storeId)
     if (err) setSettingsError(err.message)
-    else { setSuccess(true); setPreviewKey(k => k + 1) }
+    else {
+      setSuccess(true); setPreviewKey(k => k + 1)
+      setSavedSnap(prev => prev && { ...prev, settings, orderNumberNext })
+    }
     setSaving(false)
+    return !err
   }
 
   async function savePagos() {
-    if (!storeId) return
+    if (!storeId) return false
     setSavingPagos(true); setPagosError(''); setSuccessPagos(false)
     const pm: Record<string, { enabled: boolean; values: Record<string, string> }> = {}
     for (const m of methods) pm[m.id] = { enabled: m.enabled, values: m.values }
     const { error: err } = await supabase.from('stores').update({ payment_methods: pm }).eq('id', storeId)
     setSavingPagos(false)
-    if (err) { setPagosError(err.message); return }
+    if (err) { setPagosError(err.message); return false }
+    setSavedSnap(prev => prev && { ...prev, methods })
     setSuccessPagos(true)
     setPreviewKey(k => k + 1)
     setTimeout(() => setSuccessPagos(false), 3000)
+    return true
+  }
+
+  const settingsDirty = !!savedSnap && (stableJson(settings) !== stableJson(savedSnap.settings) || orderNumberNext !== savedSnap.orderNumberNext)
+  const pagosDirty = !!savedSnap && stableJson(methods.map(m => [m.id, m.enabled, m.values])) !== stableJson(savedSnap.methods.map(m => [m.id, m.enabled, m.values]))
+  const hasUnsaved = settingsDirty || pagosDirty
+
+  async function saveAll() {
+    let ok = true
+    if (settingsDirty) ok = (await saveSettings({ preventDefault() {} })) && ok
+    if (pagosDirty) ok = (await savePagos()) && ok
+    if (ok) { setJustSaved(true); setTimeout(() => setJustSaved(false), 2000) }
+  }
+  function discardChanges() {
+    if (!savedSnap) return
+    setSettings(savedSnap.settings)
+    setOrderNumberNext(savedSnap.orderNumberNext)
+    setMethods(savedSnap.methods)
+    setSettingsError(''); setPagosError('')
   }
 
   return (
@@ -789,6 +829,23 @@ export default function CheckoutPage() {
             <CheckoutPreview storeSlug={storeSlug} previewKey={previewKey} />
           )}
         </div>
+
+        {(hasUnsaved || justSaved) && (
+          <div className={`cn-unsaved${hasUnsaved ? '' : ' cn-unsaved-done'}`} role="status">
+            {hasUnsaved ? (
+              <>
+                <span className="cn-unsaved-dot" />
+                <span className="cn-unsaved-text">Tienes cambios sin guardar</span>
+                <button type="button" className="cn-unsaved-btn cn-unsaved-cancel" onClick={discardChanges} disabled={saving || savingPagos}>Cancelar</button>
+                <button type="button" className="cn-unsaved-btn" onClick={saveAll} disabled={saving || savingPagos}>
+                  {saving || savingPagos ? 'Guardando…' : 'Guardar'}
+                </button>
+              </>
+            ) : (
+              <span className="cn-unsaved-text">✓ Cambios guardados</span>
+            )}
+          </div>
+        )}
 
         {/* Phone: the picked section's header (‹ › between sections) and the icon bar */}
         {phoneLayout && mSec !== null && (

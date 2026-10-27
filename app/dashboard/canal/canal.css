@@ -618,3 +618,28 @@
   animation: cnSheetIn 0.18s ease;
 }
 .cn-co-m[data-sec="none"] .cn-sidebar { display: none; }
+
+/* ── Unsaved-changes notice (same as the Vitrina editor's) ── */
+.cn-unsaved {
+  position: fixed; z-index: 140; bottom: 22px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 7px 7px 14px; border-radius: 100px;
+  background: var(--lyte-navy, #1C1B3A); color: white;
+  box-shadow: 0 10px 30px rgba(15,23,42,0.28);
+  font-size: 13px; font-weight: 600; white-space: nowrap;
+  animation: cnUnsavedIn 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.cn-unsaved-done { padding: 9px 16px; background: #16A34A; }
+.cn-unsaved-dot { width: 8px; height: 8px; border-radius: 50%; background: #FBBF24; flex-shrink: 0; animation: cnUnsavedPulse 1.6s ease-in-out infinite; }
+.cn-unsaved-btn {
+  border: none; border-radius: 100px; padding: 7px 16px; cursor: pointer;
+  background: var(--lyte-blue, #9AB7FD); color: var(--lyte-navy, #1C1B3A);
+  font-family: inherit; font-size: 13px; font-weight: 700;
+}
+.cn-unsaved-btn:disabled { opacity: 0.7; cursor: progress; }
+.cn-unsaved-btn.cn-unsaved-cancel { background: rgba(255,255,255,0.12); color: white; margin-right: -4px; }
+@keyframes cnUnsavedIn { from { opacity: 0; transform: translate(-50%, 14px) scale(0.96); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+@keyframes cnUnsavedPulse { 50% { opacity: 0.35; } }
+.cn-co-m .cn-unsaved { bottom: 84px; gap: 8px; font-size: 12px; padding-left: 12px; }
+.cn-co-m .cn-unsaved-btn { padding: 7px 12px; font-size: 12px; }
+.cn-co-m:not([data-sec="none"]) .cn-unsaved { bottom: calc(72px + 42dvh + 10px); }

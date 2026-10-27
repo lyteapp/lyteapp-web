@@ -1156,9 +1156,14 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
     // real storefront's --sf-ad-bar-offset mechanism — injected as !important
     // overrides so they win over the page's own React-managed inline styles.
     let adOffsetEl = doc.getElementById('ed-ad-offset-preview') as HTMLStyleElement | null
-    const screenTopBarHeight = visibleAds
+    const screenTopBarEstimate = visibleAds
       .filter(a => a.placement === 'bar-top' && (a.topAnchor ?? 'screen') === 'screen')
       .reduce((sum, a) => sum + estimateAdBarHeight(a), 0)
+    // the real height when the bars are already drawn in the preview
+    const drawnTopBars = Array.from(doc.querySelectorAll<HTMLElement>('[data-sf-ad-screen-bar]'))
+    const screenTopBarHeight = screenTopBarEstimate && drawnTopBars.length
+      ? drawnTopBars.reduce((sum, el) => sum + el.offsetHeight, 0) || screenTopBarEstimate
+      : screenTopBarEstimate
     if (screenTopBarHeight > 0) {
       if (!adOffsetEl) {
         adOffsetEl = doc.createElement('style')

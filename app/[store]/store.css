@@ -1,3 +1,10 @@
+/* The notch / status-bar inset, through one variable so the dashboard's
+   previews (the store inside an iframe in the middle of the editor) can
+   zero it — iOS still hands an iframe the page's top inset, which pushed
+   the preview's header and top ad down by a notch's worth of dead space. */
+:root { --sf-safe-top: env(safe-area-inset-top, 0px); }
+html.sf-in-preview { --sf-safe-top: 0px; }
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 /* overflow-x: hidden here (instead of clip) breaks position:sticky in Safari/iOS —
    it implicitly makes overflow-y: auto too, turning body into its own scroll
@@ -11,7 +18,7 @@ html, body { overflow-x: clip; }
    affecting the splash screen (which never renders it). */
 .sf-statusbar-strip {
   position: fixed; top: 0; left: 0; right: 0;
-  height: env(safe-area-inset-top);
+  height: var(--sf-safe-top);
   background: rgba(15,23,42,0.5);
   backdrop-filter: blur(16px) saturate(160%);
   -webkit-backdrop-filter: blur(16px) saturate(160%);
@@ -51,7 +58,7 @@ html, body { overflow-x: clip; }
 .sf-topbar {
   background: white;
   border-bottom: 1px solid rgba(15,23,42,0.07);
-  padding-top: env(safe-area-inset-top);
+  padding-top: var(--sf-safe-top);
 }
 /* "Encabezado sobre el banner" — floats the topbar over the banner image
    in a frosted-glass strip instead of stacking above it in normal flow. */
@@ -135,7 +142,7 @@ html, body { overflow-x: clip; }
   background: white;
   border-bottom: 1px solid rgba(15,23,42,0.07);
   position: sticky; top: 0; z-index: 50;
-  padding-top: env(safe-area-inset-top);
+  padding-top: var(--sf-safe-top);
 }
 .sf-nav-inner {
   max-width: 1100px; margin: 0 auto;
@@ -717,7 +724,7 @@ video.sf-banner-img { object-fit: cover; }
   min-height: 100vh;
   overflow: hidden;
   display: flex; align-items: center; justify-content: center;
-  padding: calc(env(safe-area-inset-top) + 24px) 24px 24px;
+  padding: calc(var(--sf-safe-top) + 24px) 24px 24px;
   text-align: center;
   font-family: var(--font-geist-sans), sans-serif;
   animation: sfFadeIn 0.5s ease both;
@@ -954,7 +961,7 @@ video.sf-banner-img { object-fit: cover; }
 .sf-reorder-banner.has-img .sf-reorder-close:hover { color: white; }
 .sf-reorder-pos-right  { right: var(--sf-reorder-inset, 16px); top: 50%; transform-origin: right center; animation: sfReorderInRight 0.4s cubic-bezier(0.16,1,0.3,1) both; }
 .sf-reorder-pos-left   { left: var(--sf-reorder-inset, 16px); top: 50%; transform-origin: left center; animation: sfReorderInLeft 0.4s cubic-bezier(0.16,1,0.3,1) both; }
-.sf-reorder-pos-top    { top: calc(env(safe-area-inset-top, 0px) + var(--sf-reorder-inset, 16px)); left: 50%; transform-origin: center top; animation: sfReorderInTop 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+.sf-reorder-pos-top    { top: calc(var(--sf-safe-top) + var(--sf-reorder-inset, 16px)); left: 50%; transform-origin: center top; animation: sfReorderInTop 0.4s cubic-bezier(0.16,1,0.3,1) both; }
 .sf-reorder-pos-bottom { bottom: var(--sf-reorder-inset, 20px); left: 50%; transform-origin: center bottom; animation: sfReorderInBottom 0.4s cubic-bezier(0.16,1,0.3,1) both; }
 @keyframes sfReorderInRight {
   from { opacity: 0; transform: translateY(-50%) translateX(24px) scale(var(--sf-reorder-scale, 1)); }
@@ -996,7 +1003,7 @@ video.sf-banner-img { object-fit: cover; }
   .sf-reorder-banner { max-width: min(260px, calc(100vw - 24px)); }
   .sf-reorder-pos-right  { right: var(--sf-reorder-inset, 12px); }
   .sf-reorder-pos-left   { left: var(--sf-reorder-inset, 12px); }
-  .sf-reorder-pos-top    { top: calc(env(safe-area-inset-top, 0px) + var(--sf-reorder-inset, 12px)); }
+  .sf-reorder-pos-top    { top: calc(var(--sf-safe-top) + var(--sf-reorder-inset, 12px)); }
   .sf-reorder-pos-bottom { bottom: var(--sf-reorder-inset, 12px); }
   .sf-reorder-title { font-size: 13px; }
 }
@@ -1037,7 +1044,7 @@ video.sf-banner-img { object-fit: cover; }
 .sf-ad-float-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .sf-ad-float-pos-right  { right: var(--sf-ad-inset, 16px); top: 50%; transform-origin: right center; animation: sfAdInRight 0.4s cubic-bezier(0.16,1,0.3,1) both; }
 .sf-ad-float-pos-left   { left: var(--sf-ad-inset, 16px); top: 50%; transform-origin: left center; animation: sfAdInLeft 0.4s cubic-bezier(0.16,1,0.3,1) both; }
-.sf-ad-float-pos-top    { top: calc(env(safe-area-inset-top, 0px) + var(--sf-ad-inset, 16px)); left: 50%; transform-origin: center top; animation: sfAdInTop 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+.sf-ad-float-pos-top    { top: calc(var(--sf-safe-top) + var(--sf-ad-inset, 16px)); left: 50%; transform-origin: center top; animation: sfAdInTop 0.4s cubic-bezier(0.16,1,0.3,1) both; }
 .sf-ad-float-pos-bottom { bottom: var(--sf-ad-inset, 20px); left: 50%; transform-origin: center bottom; animation: sfAdInBottom 0.4s cubic-bezier(0.16,1,0.3,1) both; }
 @keyframes sfAdInRight {
   from { opacity: 0; transform: translateY(-50%) translateX(24px) scale(var(--sf-ad-scale, 1)); }
@@ -1059,7 +1066,7 @@ video.sf-banner-img { object-fit: cover; }
   .sf-ad-float { max-width: min(260px, calc(100vw - 24px)); }
   .sf-ad-float-pos-right  { right: var(--sf-ad-inset, 12px); }
   .sf-ad-float-pos-left   { left: var(--sf-ad-inset, 12px); }
-  .sf-ad-float-pos-top    { top: calc(env(safe-area-inset-top, 0px) + var(--sf-ad-inset, 12px)); }
+  .sf-ad-float-pos-top    { top: calc(var(--sf-safe-top) + var(--sf-ad-inset, 12px)); }
   .sf-ad-float-pos-bottom { bottom: var(--sf-ad-inset, 12px); }
 }
 
@@ -1111,7 +1118,7 @@ video.sf-banner-img { object-fit: cover; }
 .sf-ad-bar .sf-ad-btn-outline { border-color: white; color: white; }
 .sf-ad-bar .sf-ad-close { position: absolute; right: 10px; color: rgba(255,255,255,0.85); }
 .sf-ad-bar .sf-ad-close:hover { color: white; }
-.sf-ad-bar-top { top: env(safe-area-inset-top, 0px); animation: sfAdBarInTop 0.3s ease both; }
+.sf-ad-bar-top { top: var(--sf-safe-top); animation: sfAdBarInTop 0.3s ease both; }
 .sf-ad-bar-bottom { bottom: 0; animation: sfAdBarInBottom 0.3s ease both; }
 @keyframes sfAdBarInTop { from { opacity: 0; transform: translateY(-100%); } to { opacity: 1; transform: translateY(0); } }
 @keyframes sfAdBarInBottom { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: translateY(0); } }
@@ -1168,7 +1175,7 @@ video.sf-banner-img { object-fit: cover; }
   background: var(--sf-reveal-bg, #111111);
   display: flex; align-items: center; justify-content: center;
   position: relative;
-  padding: calc(env(safe-area-inset-top) + 24px) 24px 24px;
+  padding: calc(var(--sf-safe-top) + 24px) 24px 24px;
 }
 .sf-reveal-content { display: flex; flex-direction: column; align-items: center; gap: 22px; text-align: center; }
 .sf-reveal-greeting {
@@ -1234,7 +1241,7 @@ video.sf-banner-img { object-fit: cover; }
 .sf-confirm-screen {
   min-height: 100vh; background: #FAFAF9;
   display: flex; align-items: center; justify-content: center;
-  padding: calc(env(safe-area-inset-top) + 24px) 24px 24px;
+  padding: calc(var(--sf-safe-top) + 24px) 24px 24px;
   font-family: var(--font-geist-sans), sans-serif;
 }
 .sf-confirm-card {
@@ -1434,7 +1441,7 @@ video.sf-banner-img { object-fit: cover; }
 .sf-search-overlay-top {
   display: flex; align-items: center; gap: 8px;
   padding: 10px 12px;
-  padding-top: max(10px, env(safe-area-inset-top, 0px));
+  padding-top: max(10px, var(--sf-safe-top));
   background: white; border-bottom: 1px solid rgba(15,23,42,0.08);
   flex-shrink: 0;
 }
@@ -2594,7 +2601,7 @@ video.sf-banner-img { object-fit: cover; }
 }
 .sf-max-toast {
   position: fixed; z-index: 260;
-  top: calc(env(safe-area-inset-top) + 14px); left: 50%; transform: translateX(-50%);
+  top: calc(var(--sf-safe-top) + 14px); left: 50%; transform: translateX(-50%);
   width: max-content; max-width: calc(100vw - 32px);
   display: flex; align-items: center; gap: 10px;
   padding: 11px 16px 11px 12px; border-radius: 14px;

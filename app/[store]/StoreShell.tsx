@@ -621,6 +621,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // a hand-built mockup — it opens straight into checkout with a sample cart
   // already in it, and handleSubmit refuses to actually place that order.
   const isCheckoutPreview = searchParams.get('previewCheckout') === '1'
+  // Inside a dashboard preview (an iframe) the device's notch inset means
+  // nothing — zero it (see --sf-safe-top in store.css)
+  useEffect(() => {
+    if (isDashboardPreview || isCheckoutPreview || window.self !== window.top) document.documentElement.classList.add('sf-in-preview')
+  }, [isDashboardPreview, isCheckoutPreview])
   // Fades out the server-rendered logo loading screen (#sf-boot, see
   // page.tsx) once the page has stopped moving: window load (banner, logo
   // and other eager images sized), web fonts ready, then two frames for the
@@ -892,9 +897,26 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // (analytically estimated, not measured) height so the two sit stacked
   // instead of the ad overlapping the header, correct from the very first
   // render an ad becomes visible.
-  const topScreenAdHeight = (store.template_config?.ads ?? [])
+  const topScreenAdEstimate = (store.template_config?.ads ?? [])
     .filter(a => a.enabled !== false && a.placement === 'bar-top' && (a.topAnchor ?? 'screen') === 'screen' && adVisible[a.id])
     .reduce((sum, a) => sum + estimateAdBarHeight(a), 0)
+  // ...then corrected to the bar's real rendered height once it's on screen
+  // (fonts and line-height can make it a few px taller than the estimate,
+  // which tucked the header under the ad's bottom edge)
+  const [topScreenAdMeasured, setTopScreenAdMeasured] = useState(0)
+  useEffect(() => {
+    if (!topScreenAdEstimate) return
+    const measure = () => {
+      const h = Array.from(document.querySelectorAll<HTMLElement>('[data-sf-ad-screen-bar]'))
+        .reduce((sum, el) => sum + el.offsetHeight, 0)
+      setTopScreenAdMeasured(h)
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    document.querySelectorAll('[data-sf-ad-screen-bar]').forEach(el => ro.observe(el))
+    return () => ro.disconnect()
+  }, [topScreenAdEstimate])
+  const topScreenAdHeight = topScreenAdEstimate ? (topScreenAdMeasured || topScreenAdEstimate) : 0
 
   // A "debajo del encabezado" ad sits between the header and the category
   // nav — the nav's own sticky offset needs to grow by this ad's real
@@ -2130,7 +2152,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
     // measured and fed into the category nav's own sticky offset — without
     // that, the nav would stick right below the header too, landing on top
     // of (covering) this ad instead of the ad staying visible above it.
-    const headerBarProps = barSide === 'top' && ad.topAnchor === 'header' ? { 'data-sf-ad-header-bar': '1' } : {}
+    const headerBarProps = barSide === 'top' && ad.topAnchor === 'header' ? { 'data-sf-ad-header-bar': '1' }
+      : barSide === 'top' && (ad.topAnchor ?? 'screen') === 'screen' ? { 'data-sf-ad-screen-bar': '1' } : {}
 
     if (barStyleKind === 'marquee') {
       return (
@@ -4564,7 +4587,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       <div
         className={`sf-search-overlay${topScreenAdHeight > 0 ? ' sf-search-overlay-below-ad' : ''}`}
         style={{
-          ...(topScreenAdHeight > 0 ? { top: `calc(env(safe-area-inset-top, 0px) + ${topScreenAdHeight}px)` } : {}),
+          ...(topScreenAdHeight > 0 ? { top: `calc(var(--sf-safe-top) + ${topScreenAdHeight}px)` } : {}),
           // A full-page product opened from here shows the store header over
           // this screen, which would otherwise show the search bar through it.
           ...(showHeaderAboveModal ? { visibility: 'hidden' as const } : {}),

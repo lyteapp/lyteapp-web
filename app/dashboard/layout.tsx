@@ -89,6 +89,13 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
     }
   }, [loading, storeLoading, user, stores.length, pathname, router])
 
+  // No rubber-band past the header or past the bottom of the page (see
+  // html.db-shell in dashboard.css) — only while the dashboard is mounted
+  useEffect(() => {
+    document.documentElement.classList.add('db-shell')
+    return () => document.documentElement.classList.remove('db-shell')
+  }, [])
+
   useEffect(() => {
     const once = () => { unlock(); window.removeEventListener('pointerdown', once) }
     window.addEventListener('pointerdown', once)

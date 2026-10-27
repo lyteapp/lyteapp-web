@@ -3,6 +3,10 @@
 html, body {
   background: #F8F7F4;
 }
+/* The page doesn't stretch past its top (the header) or its bottom */
+html.db-shell, html.db-shell body {
+  overscroll-behavior-y: none;
+}
 
 /* ===== DASHBOARD SHELL ===== */
 .db-layout {

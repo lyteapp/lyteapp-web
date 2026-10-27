@@ -645,3 +645,30 @@
 .cn-co-m:not([data-sec="none"]) .cn-unsaved { bottom: calc(72px + 42dvh + 10px); }
 .cn-unsaved.cn-unsaved-raised { bottom: 92px; gap: 8px; font-size: 12px; padding-left: 12px; }
 .cn-unsaved-raised .cn-unsaved-btn { padding: 7px 12px; font-size: 12px; }
+
+/* ── ORDER TRACKING editor on a phone (shares the cn-co-* layout) ── */
+.cn-tr-m .cn-tr-preview-col {
+  position: fixed; left: 0; right: 0; top: 0; bottom: 72px;
+  display: flex; align-items: center; justify-content: center; padding: 14px 16px;
+}
+.cn-tr-m:not([data-sec="none"]) .cn-tr-preview-col { bottom: calc(72px + 42dvh); }
+.cn-tr-m .cn-tr-sheet {
+  position: fixed; left: 0; right: 0; bottom: 72px;
+  height: 42vh; height: 42dvh;
+  display: flex; flex-direction: column;
+  background: white; border-radius: 18px 18px 0 0;
+  box-shadow: 0 -6px 24px rgba(15,23,42,0.12);
+  padding-top: 46px; overflow: hidden;
+  animation: cnSheetIn 0.18s ease;
+}
+.cn-tr-m[data-sec="none"] .cn-tr-sheet { display: none; }
+/* the mode switch is a section of its own here; the controls list scrolls */
+.cn-tr-m:not([data-sec="mode"]) .cn-tr-sheet [data-tsec="mode"] { display: none; }
+.cn-tr-m[data-sec="mode"] .cn-tr-sheet [data-tsec="mode"] { border-bottom: none !important; }
+.cn-tr-m[data-sec="mode"] .cn-tr-sheet [data-tsec]:not([data-tsec="mode"]) { display: none; }
+.cn-tr-m[data-sec="map"] .cn-tr-sheet [data-tsec]:not([data-tsec="map"]) { display: none; }
+.cn-tr-m[data-sec="colors"] .cn-tr-sheet [data-tsec]:not([data-tsec="colors"]) { display: none; }
+.cn-tr-m[data-sec="dots"] .cn-tr-sheet [data-tsec]:not([data-tsec="dots"]) { display: none; }
+.cn-tr-m[data-sec="text"] .cn-tr-sheet [data-tsec]:not([data-tsec="text"]) { display: none; }
+.cn-tr-m[data-sec="pills"] .cn-tr-sheet [data-tsec]:not([data-tsec="pills"]) { display: none; }
+.cn-tr-m[data-sec="queue"] .cn-tr-sheet [data-tsec]:not([data-tsec="queue"]) { display: none; }

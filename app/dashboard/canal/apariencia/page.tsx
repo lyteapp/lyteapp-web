@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
 import { supabase } from '../../../lib/supabase'
 import { useDashboardStore } from '../../../lib/DashboardStoreProvider'
 import UnsavedNotice, { stableJson } from '../UnsavedNotice'
@@ -177,11 +178,29 @@ export default function Apariencia() {
   const [success, setSuccess]               = useState(false)
   const [error, setError]                   = useState('')
   const [isMobile, setIsMobile]             = useState(false)
-  const [mobileTab, setMobileTab]           = useState<'preview' | 'config'>('preview')
   const [copiedUrl, setCopiedUrl]           = useState(false)
   // What's stored, for the "unsaved changes" notice (Cancelar puts it back)
   const [savedSnap, setSavedSnap] = useState<{ trConfig: TrackingConfig; variantShape: typeof variantShape; extraShape: typeof extraShape } | null>(null)
   const [justSaved, setJustSaved] = useState(false)
+  // Phone: same layout as the other editors (miniature preview, icon bar,
+  // the picked section in a sheet); the frame's height is measured to fit it
+  const [mSec, setMSec] = useState<string | null>(null)
+  const [vp, setVp] = useState({ w: 0, h: 0 })
+  const [frameH, setFrameH] = useState(640)
+  const frameRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const read = () => setVp({ w: window.innerWidth, h: window.innerHeight })
+    read()
+    window.addEventListener('resize', read)
+    return () => window.removeEventListener('resize', read)
+  }, [])
+  useEffect(() => {
+    const el = frameRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setFrameH(el.offsetHeight))
+    ro.observe(el)
+    return () => ro.disconnect()
+  })
   const hasUnsaved = !!savedSnap && stableJson({ trConfig, variantShape, extraShape }) !== stableJson(savedSnap)
 
   useEffect(() => {
@@ -280,8 +299,25 @@ export default function Apariencia() {
   const unsavedNotice = (
     <UnsavedNotice dirty={hasUnsaved} justSaved={justSaved} saving={saving}
       onSave={() => save({ preventDefault() {} })} onDiscard={discardChanges}
-      className={isMobile ? 'cn-unsaved-raised' : ''} />
+      />
   )
+
+  // Phone sections: each shows its tagged (data-tsec) controls
+  const TR_SECTIONS: { key: string; label: string; icon: React.ReactNode }[] = [
+    { key: 'mode', label: 'Estilo de rastreo', icon: <><path d="M4 6h16M4 12h16M4 18h10" /></> },
+    { key: 'map', label: 'Mapa', icon: <><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z" /><path d="M9 4v14M15 6v14" /></> },
+    { key: 'colors', label: 'Colores', icon: <><path d="M12 3a9 9 0 100 18c1.1 0 1.6-.8 1.6-1.6 0-1.2-1-1.6-1-2.6 0-1 .8-1.8 1.8-1.8H17a4 4 0 004-4C21 6.5 17 3 12 3z" /><circle cx="7.5" cy="11" r="1" /><circle cx="10" cy="7" r="1" /><circle cx="15" cy="7.5" r="1" /></> },
+    { key: 'dots', label: 'Puntos y barra', icon: <><circle cx="5" cy="12" r="2.5" /><circle cx="19" cy="12" r="2.5" /><path d="M7.5 12h9" /></> },
+    { key: 'text', label: 'Letras', icon: <path d="M5 19L11 5h2l6 14M8 14h8" /> },
+    { key: 'pills', label: 'Variables y extras', icon: <><rect x="2.5" y="8" width="9" height="8" rx="4" /><rect x="13.5" y="8" width="8" height="8" rx="2" /></> },
+    { key: 'queue', label: 'Pantalla de turnos', icon: <><rect x="3" y="4" width="18" height="13" rx="2" /><path d="M8 21h8M12 17v4M7 9h4M7 12h6" /></> },
+  ]
+  function openSection(key: string | null) {
+    setMSec(key)
+    // the turnos screen is its own preview; the rest preview the tracking page
+    if (key === 'queue') setActivePanel('queue')
+    else if (key && activePanel === 'queue') setActivePanel(trConfig.mode)
+  }
 
   function setQueueBoard<K extends keyof QueueBoardConfig>(key: K, value: QueueBoardConfig[K]) {
     setTrConfig(p => ({ ...p, queueBoard: { ...p.queueBoard, [key]: value } }))
@@ -715,7 +751,7 @@ export default function Apariencia() {
   const toolsBody = (
     <>
       {/* mode switch */}
-      <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(15,23,42,0.07)', flexShrink: 0 }}>
+      <div data-tsec="mode" style={{ padding: '14px 20px', borderBottom: '1px solid rgba(15,23,42,0.07)', flexShrink: 0 }}>
         <div className="cn-label" style={{ marginBottom: 8 }}>Estilo de rastreo</div>
         <div style={{ display: 'flex', background: '#F1F5F9', borderRadius: 10, padding: 3, gap: 2 }}>
           {([
@@ -766,7 +802,7 @@ export default function Apariencia() {
         {activePanel !== 'queue' && (
         <>
         {/* Map style */}
-        <div className="cn-field">
+        <div className="cn-field" data-tsec="map">
           <div className="cn-label">Estilo del mapa</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6, marginTop: 6 }}>
             {MAP_STYLE_PRESETS.map(s => {
@@ -808,7 +844,7 @@ export default function Apariencia() {
         </div>
 
         {/* Accent color */}
-        <div className="cn-field">
+        <div className="cn-field" data-tsec="colors">
           <div className="cn-label">Color de acento</div>
           <div className="cn-colors">
             {TR_ACCENT_PRESETS.map(c => (
@@ -834,7 +870,7 @@ export default function Apariencia() {
         </div>
 
         {/* Connector thickness */}
-        <div className="cn-field">
+        <div className="cn-field" data-tsec="dots">
           <div className="cn-label">Grosor de la barra de progreso</div>
           <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
             {CONN_OPTS.map(({ id, label, px }) => {
@@ -871,7 +907,7 @@ export default function Apariencia() {
         </div>
 
         {/* Dot color */}
-        <div className="cn-field">
+        <div className="cn-field" data-tsec="colors">
           <div className="cn-label">Color de los puntos</div>
           <div className="cn-colors">
             {DOT_COLOR_PRESETS.map(c => (
@@ -897,7 +933,7 @@ export default function Apariencia() {
         </div>
 
         {/* Dot size */}
-        <div className="cn-field">
+        <div className="cn-field" data-tsec="dots">
           <div className="cn-label">Tamaño de los puntos</div>
           <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
             {DOT_OPTS.map(({ id, label, statusPreviewPx, locPreviewPx }) => {
@@ -933,7 +969,7 @@ export default function Apariencia() {
 
         {/* Background — status mode only */}
         {trConfig.mode === 'status' && (
-          <div className="cn-field">
+          <div className="cn-field" data-tsec="colors">
             <div className="cn-label">Color de fondo</div>
             <div className="cn-pill-row" style={{ flexWrap: 'wrap' }}>
               {TR_BG_PRESETS.map(({ color: c, label }) => (
@@ -953,7 +989,7 @@ export default function Apariencia() {
         )}
 
         {/* Font family */}
-        <div className="cn-field">
+        <div className="cn-field" data-tsec="text">
           <div className="cn-label">Fuente</div>
           <div className="cn-pill-row" style={{ flexWrap: 'wrap' }}>
             {TR_FONTS.map(f => (
@@ -970,7 +1006,7 @@ export default function Apariencia() {
         </div>
 
         {/* Font size */}
-        <div className="cn-field">
+        <div className="cn-field" data-tsec="text">
           <div className="cn-label">Tamaño de texto</div>
           <div className="cn-pill-row">
             {TR_SIZES.map(s => (
@@ -987,7 +1023,7 @@ export default function Apariencia() {
         </div>
 
         {/* Variant chip shape */}
-        <div className="cn-field">
+        <div className="cn-field" data-tsec="pills">
           <div className="cn-label">Forma de pills de variables</div>
           <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
             {([
@@ -1030,7 +1066,7 @@ export default function Apariencia() {
         </div>
 
         {/* Extra shape */}
-        <div className="cn-field">
+        <div className="cn-field" data-tsec="pills">
           <div className="cn-label">Forma de pills de extras</div>
           <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
             {([
@@ -1083,7 +1119,7 @@ export default function Apariencia() {
         {activePanel === 'queue' && (
         <>
         {/* Enable toggle */}
-        <div className="cn-toggle-row">
+        <div className="cn-toggle-row" data-tsec="queue">
           <div className="cn-toggle-info">
             <div className="cn-toggle-label">Activar pantalla pública de cola</div>
             <div className="cn-toggle-hint">Muestra el estado de todos los pedidos activos de la tienda al escanear el QR en &quot;Pedido confirmado&quot;</div>
@@ -1092,7 +1128,7 @@ export default function Apariencia() {
         </div>
 
         {/* Title / subtitle */}
-        <div className="cn-field">
+        <div className="cn-field" data-tsec="queue">
           <div className="cn-label">Título</div>
           <input
             type="text"
@@ -1102,7 +1138,7 @@ export default function Apariencia() {
             placeholder="Estado de pedidos"
           />
         </div>
-        <div className="cn-field">
+        <div className="cn-field" data-tsec="queue">
           <div className="cn-label">Subtítulo</div>
           <input
             type="text"
@@ -1114,7 +1150,7 @@ export default function Apariencia() {
         </div>
 
         {/* Column labels */}
-        <div className="cn-field">
+        <div className="cn-field" data-tsec="queue">
           <div className="cn-label">Etiqueta columna &quot;en preparación&quot;</div>
           <input
             type="text"
@@ -1124,7 +1160,7 @@ export default function Apariencia() {
             placeholder="En preparación"
           />
         </div>
-        <div className="cn-field">
+        <div className="cn-field" data-tsec="queue">
           <div className="cn-label">Etiqueta columna &quot;listo&quot;</div>
           <input
             type="text"
@@ -1136,7 +1172,7 @@ export default function Apariencia() {
         </div>
 
         {/* Customer display */}
-        <div className="cn-field">
+        <div className="cn-field" data-tsec="queue">
           <div className="cn-label">Cómo mostrar al cliente</div>
           <div className="cn-pill-row" style={{ flexWrap: 'wrap' }}>
             {QUEUE_DISPLAY_OPTS.map(o => (
@@ -1153,7 +1189,7 @@ export default function Apariencia() {
         </div>
 
         {/* Show logo */}
-        <div className="cn-toggle-row">
+        <div className="cn-toggle-row" data-tsec="queue">
           <div className="cn-toggle-info">
             <div className="cn-toggle-label">Mostrar logo de la tienda</div>
           </div>
@@ -1162,7 +1198,7 @@ export default function Apariencia() {
 
         {/* Public URL */}
         {storeSlug && (
-          <div className="cn-field">
+          <div className="cn-field" data-tsec="queue">
             <div className="cn-label">Enlace público</div>
             <div style={{ display: 'flex', gap: 6 }}>
               <div style={{
@@ -1207,61 +1243,42 @@ export default function Apariencia() {
 
   // ── Mobile layout ─────────────────────────────────────────────────────
   if (isMobile) {
+    const sc = Math.min((vp.w - 32) * 0.72 / 310, (vp.h - 72 - (mSec ? vp.h * 0.42 : 0) - 40) / Math.max(1, frameH))
+    const i = TR_SECTIONS.findIndex(x => x.key === mSec)
     return (
-      <div style={{ margin: '-16px -16px', display: 'flex', flexDirection: 'column', height: 'calc(100dvh - 56px)', background: 'white' }}>
-      {unsavedNotice}
-
-        {/* Tab bar */}
-        <div style={{ display: 'flex', borderBottom: '1px solid rgba(15,23,42,0.08)', flexShrink: 0, background: 'white' }}>
-          {([
-            { id: 'preview', label: 'Vista previa' },
-            { id: 'config',  label: 'Configurar'   },
-          ] as const).map(tab => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setMobileTab(tab.id)}
-              style={{
-                flex: 1, padding: '14px 0', border: 'none',
-                background: 'transparent', cursor: 'pointer',
-                fontSize: 14, fontWeight: 600,
-                color: mobileTab === tab.id ? 'var(--lyte-navy)' : '#94A3B8',
-                borderBottom: `2px solid ${mobileTab === tab.id ? 'var(--lyte-navy)' : 'transparent'}`,
-                fontFamily: 'var(--font-geist-sans), sans-serif',
-                transition: 'color 0.15s',
-              }}
-            >
-              {tab.label}
-            </button>
-          ))}
+      <div className="cn-page cn-co-m cn-tr-m" data-sec={mSec ?? 'none'}>
+        {unsavedNotice}
+        <div className="cn-tr-preview-col">
+          <div className="cn-co-stage" style={{ width: 310 * sc, height: frameH * sc }}>
+            <div ref={frameRef} style={{ position: 'absolute', top: 0, left: 0, transform: `scale(${sc})`, transformOrigin: '0 0' }}>{phoneFrame}</div>
+          </div>
         </div>
 
-        {/* Preview tab */}
-        {mobileTab === 'preview' && (
-          <div style={{
-            flex: 1,
-            background: '#0F172A',
-            backgroundImage: 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)',
-            backgroundSize: '22px 22px',
-            overflowY: 'auto',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'flex-start',
-            padding: '24px 12px 32px',
-          }}>
-            <div style={{ transform: 'scale(0.82)', transformOrigin: 'top center', flexShrink: 0, marginBottom: '-110px' }}>
-              {phoneFrame}
-            </div>
+        <form onSubmit={save} className="cn-tr-sheet">
+          {toolsBody}
+          {saveFooter}
+        </form>
+
+        {i >= 0 && (
+          <div className="cn-co-sheet-head">
+            <button type="button" onClick={() => openSection(TR_SECTIONS[i - 1].key)} disabled={i === 0} aria-label="Anterior">‹</button>
+            <span>{TR_SECTIONS[i].label}<small>{i + 1}/{TR_SECTIONS.length}</small></span>
+            <button type="button" onClick={() => openSection(TR_SECTIONS[i + 1].key)} disabled={i === TR_SECTIONS.length - 1} aria-label="Siguiente">›</button>
+            <button type="button" className="cn-co-close" onClick={() => openSection(null)} aria-label="Cerrar">✕</button>
           </div>
         )}
-
-        {/* Config tab */}
-        {mobileTab === 'config' && (
-          <form onSubmit={save} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'white' }}>
-            {toolsBody}
-            {saveFooter}
-          </form>
-        )}
+        <nav className="cn-co-bar">
+          {TR_SECTIONS.map(x => (
+            <button key={x.key} type="button" title={x.label}
+              className={`cn-co-bar-btn${mSec === x.key ? ' on' : ''}`}
+              onClick={() => openSection(mSec === x.key ? null : x.key)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{x.icon}</svg>
+            </button>
+          ))}
+          <Link href="/dashboard" title="Salir" className="cn-co-bar-btn cn-co-exit">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+          </Link>
+        </nav>
       </div>
     )
   }

@@ -373,13 +373,25 @@ function FontSelect({
   )
 }
 
+type EditorKeep = { activeTool?: ToolId | null; deviceType?: DeviceId; storeSlug?: string | null }
+type ToolId = 'colors' | 'text' | 'shape' | 'price' | 'categories' | 'brand' | 'blocks' | 'product' | 'reorder' | 'ads'
+type DeviceId = 'mobile' | 'tablet' | 'desktop'
+
+// "Cancelar" in the unsaved-changes notice remounts the editor, so every
+// setting goes back to what's stored (and the preview with it); the open
+// tool, device and store stay as they were.
 export default function EditorPage() {
+  const [boot, setBoot] = useState<{ n: number; keep: EditorKeep }>({ n: 0, keep: {} })
+  return <Editor key={boot.n} keep={boot.keep} onDiscard={keep => setBoot(b => ({ n: b.n + 1, keep }))} />
+}
+
+function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: EditorKeep) => void }) {
   const router = useRouter()
   const { storeId: activeStoreId } = useDashboardStore()
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
   const [storeId, setStoreId]     = useState<string | null>(null)
-  const [storeSlug, setStoreSlug] = useState<string | null>(null)
+  const [storeSlug, setStoreSlug] = useState<string | null>(keep.storeSlug ?? null)
 
   const [pageBg, setPageBg]         = useState('#FFFFFF')
   const [cardBg, setCardBg]         = useState('')
@@ -557,7 +569,7 @@ export default function EditorPage() {
   const [newBlockLinkCategoryId, setNewBlockLinkCategoryId] = useState('')
   const [newBlockLinkProductId, setNewBlockLinkProductId] = useState('')
   const blockImgRef = useRef<HTMLInputElement>(null)
-  const [activeTool, setActiveTool] = useState<'colors' | 'text' | 'shape' | 'price' | 'categories' | 'brand' | 'blocks' | 'product' | 'reorder' | 'ads' | null>(null)
+  const [activeTool, setActiveTool] = useState<ToolId | null>(keep.activeTool ?? null)
   const [iframeKey, setIframeKey]   = useState(0)
   // Combined with iframeKey for the preview URL's cache-busting param — a
   // fresh page load also needs a new value, or a full refresh (which resets
@@ -566,7 +578,7 @@ export default function EditorPage() {
   const [previewLoadId] = useState(() => Date.now())
   // Preview-only — resizes the device frame so the owner can check how the
   // storefront looks on each screen size; never saved or sent to the store.
-  const [deviceType, setDeviceType] = useState<'mobile' | 'tablet' | 'desktop'>('mobile')
+  const [deviceType, setDeviceType] = useState<DeviceId>(keep.deviceType ?? 'mobile')
   // Viewport size, for the phone's "seen from afar" tablet/desktop preview
   const [vp, setVp] = useState({ w: 0, h: 0 })
   const [saving, setSaving]         = useState(false)
@@ -2032,6 +2044,10 @@ export default function EditorPage() {
             <>
               <span className="ed-unsaved-dot" />
               <span className="ed-unsaved-text">Tienes cambios sin guardar</span>
+              <button type="button" className="ed-unsaved-btn ed-unsaved-cancel" disabled={saving}
+                onClick={() => onDiscard({ activeTool, deviceType, storeSlug })}>
+                Cancelar
+              </button>
               <button type="button" className="ed-unsaved-btn" onClick={saveSettings} disabled={saving}>
                 {saving ? 'Guardando…' : 'Guardar'}
               </button>

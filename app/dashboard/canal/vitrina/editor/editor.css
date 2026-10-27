@@ -2465,6 +2465,8 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
   font-family: inherit; font-size: 13px; font-weight: 700;
 }
 .ed-unsaved-btn:hover { background: var(--lyte-blue-light, #C7D6FE); }
+.ed-unsaved-btn.ed-unsaved-cancel { background: rgba(255,255,255,0.12); color: white; margin-right: -4px; }
+.ed-unsaved-btn.ed-unsaved-cancel:hover { background: rgba(255,255,255,0.22); }
 .ed-unsaved-btn:disabled { opacity: 0.7; cursor: progress; }
 @keyframes edUnsavedIn {
   from { opacity: 0; transform: translate(-50%, 14px) scale(0.96); }
@@ -2472,7 +2474,8 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
 }
 @keyframes edUnsavedPulse { 50% { opacity: 0.35; } }
 @media (max-width: 800px) {
-  .ed-unsaved { left: 50%; bottom: 84px; }
+  .ed-unsaved { left: 50%; bottom: 84px; gap: 8px; font-size: 12px; padding-left: 12px; }
+  .ed-unsaved-btn { padding: 7px 12px; font-size: 12px; }
   .ed-app-sheet-open .ed-unsaved { bottom: calc(72px + var(--ed-sheet-h) + 10px); }
   .ed-app-sheet-open:has(.ed-tool-panel-expanded) .ed-unsaved { bottom: calc(72px + 70dvh + 10px); }
 }

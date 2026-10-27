@@ -26,7 +26,7 @@
   inset: 0;
   z-index: 100;
   display: grid;
-  grid-template-columns: 1fr 56px;
+  grid-template-columns: 1fr 68px;
   background: var(--ed-bg);
   font-family: 'Geist', -apple-system, sans-serif;
   color: var(--ed-ink);
@@ -285,7 +285,7 @@
 /* DEVICE FRAME — full phone, fits viewport (default: mobile) */
 .ed-device {
   width: 100%;
-  max-width: min(390px, calc(100vw - 56px - 48px));
+  max-width: min(390px, calc(100vw - 68px - 48px));
   background: var(--ed-surface);
   border-radius: 44px;
   border: 1px solid var(--ed-line);
@@ -300,14 +300,14 @@
   max-height: 820px;
 }
 .ed-device-tablet {
-  max-width: min(820px, calc(100vw - 56px - 48px));
+  max-width: min(820px, calc(100vw - 68px - 48px));
   border-radius: 20px;
   box-shadow:
     0 0 0 6px rgba(15, 23, 42, 0.06),
     0 30px 60px -10px rgba(15, 23, 42, 0.2);
 }
 .ed-device-desktop {
-  max-width: min(1240px, calc(100vw - 56px - 48px));
+  max-width: min(1240px, calc(100vw - 68px - 48px));
   border-radius: 10px;
   box-shadow: 0 20px 50px -10px rgba(15, 23, 42, 0.18);
 }
@@ -813,7 +813,7 @@
 /* Tools bar in the dashboard header's navy, with icons in the logo's
    periwinkle (--lyte-navy / --lyte-blue; both follow the user's theme). */
 .ed-side-bar {
-  width: 56px;
+  width: 68px;
   background: var(--lyte-navy);
   border-left: 1px solid rgba(255,255,255,0.06);
   display: flex;
@@ -821,12 +821,15 @@
   align-items: center;
   padding: 14px 0;
   gap: 4px;
+  overflow-y: auto;
+  scrollbar-width: none;
 }
+.ed-side-bar::-webkit-scrollbar { display: none; }
 
 .ed-tool-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 11px;
+  width: 48px;
+  height: 48px;
+  border-radius: 13px;
   border: none;
   background: transparent;
   color: var(--ed-ink-muted);
@@ -859,7 +862,7 @@
 @media (prefers-reduced-motion: reduce) {
   .ed-side-bar .ed-tool-btn svg, .ed-side-bar .ed-tool-active svg { transition: none; animation: none; }
 }
-.ed-tool-btn svg { width: 18px; height: 18px; }
+.ed-tool-btn svg { width: 22px; height: 22px; }
 .ed-tool-active { background: var(--ed-violet-bg) !important; color: var(--ed-violet) !important; }
 .ed-tool-exit { margin-top: auto; }
 
@@ -874,7 +877,7 @@
 /* FLOATING PANEL */
 .ed-tool-panel {
   position: fixed;
-  right: 64px;
+  right: 76px;
   top: 50%;
   transform: translateY(-50%);
   width: 196px;
@@ -1949,11 +1952,11 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
      56px-wide column down the side. */
   .ed-app {
     grid-template-columns: 1fr;
-    grid-template-rows: 1fr 60px;
+    grid-template-rows: 1fr 72px;
   }
   .ed-side-bar {
     width: 100%;
-    height: 60px;
+    height: 72px;
     flex-direction: row;
     align-items: center;
     border-left: none;
@@ -1962,7 +1965,8 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
     gap: 2px;
     overflow-x: auto;
   }
-  .ed-side-bar .ed-tool-btn { width: 38px; height: 38px; flex-shrink: 0; }
+  .ed-side-bar .ed-tool-btn { width: 48px; height: 48px; flex-shrink: 0; }
+  .ed-side-bar .ed-tool-btn svg { width: 24px; height: 24px; }
   .ed-tool-exit { margin-top: 0; margin-left: auto; }
 
   .ed-canvas-scroll {
@@ -1970,8 +1974,8 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
   }
   .ed-device {
     max-width: calc(100vw - 16px);
-    height: calc(100vh - 96px);
-    height: calc(100dvh - 96px);
+    height: calc(100vh - 108px);
+    height: calc(100dvh - 108px);
     border-radius: 32px;
   }
   .ed-device-content {
@@ -2012,7 +2016,7 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
     left: 0;
     right: 0;
     top: auto;
-    bottom: 60px;
+    bottom: 72px;
     transform: none;
     width: auto;
     height: var(--ed-sheet-h);
@@ -2032,8 +2036,8 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
   .ed-app-sheet-open .ed-canvas-scroll { padding-bottom: calc(var(--ed-sheet-h) + 6px); }
   .ed-tool-panel .ed-tp-swatches { grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 6px; }
   .ed-app-sheet-open .ed-device {
-    height: calc(100vh - 96px - var(--ed-sheet-h));
-    height: calc(100dvh - 96px - var(--ed-sheet-h));
+    height: calc(100vh - 108px - var(--ed-sheet-h));
+    height: calc(100dvh - 108px - var(--ed-sheet-h));
     transition: height 0.22s cubic-bezier(0.32, 0.72, 0, 1);
   }
   /* Dragged the handle up past the threshold — see renderPanelDragHandle. */

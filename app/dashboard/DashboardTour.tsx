@@ -1,99 +1,82 @@
 'use client'
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
-// First-visit guided tour of the dashboard: a spotlight on each part (via
-// its data-tour="…" attribute) with a friendly card. Two versions — on a
-// computer the sidebar is always there; on a phone the sections live in the
-// ☰ menu, so the tour points at that button first and opens/closes the menu
-// itself. "Saltar" ends it from any step; once finished or skipped it's
-// marked done (see onDone) and never comes back on its own.
+import type { TourStep } from './tours'
 
-type Step = { target?: string; title: string; text: string; menu?: 'open' | 'closed' }
-
-const DESKTOP_STEPS: Step[] = [
-  { title: '¡Bienvenido a Lyte!', text: 'Te mostramos en menos de un minuto dónde está todo. Puedes saltar el tutorial cuando quieras.' },
-  { target: 'store', title: 'Tu tienda', text: 'Aquí ves la tienda que estás manejando. Haz clic para cambiar entre tus tiendas o crear una nueva.' },
-  { target: 'orders', title: 'Pedidos', text: 'Cada pedido nuevo llega aquí al instante, con un sonido para que no se te escape ninguno.' },
-  { target: 'caja', title: 'Caja', text: 'Registra las ventas en persona y lleva el cuadre del día.' },
-  { target: 'delivery', title: 'Delivery', text: 'Asigna repartidores, sigue las entregas en el mapa en vivo y define tus zonas y tarifas.' },
-  { target: 'products', title: 'Productos', text: 'Crea tus productos con fotos, variables (sabores, tamaños) y extras, y ordénalos por categorías.' },
-  { target: 'inventario', title: 'Inventario', text: 'Controla almacenes, compras e ingredientes. Cada venta descuenta sola de tu almacén.' },
-  { target: 'finanzas', title: 'Finanzas', text: 'Tus cuentas, ingresos y gastos en un solo lugar.' },
-  { target: 'design', title: 'Diseño', text: 'Personaliza cómo se ve tu tienda: vitrina, página de inicio, checkout y rastreo del pedido.' },
-  { target: 'analytics', title: 'Analíticas', text: 'Mira cuánto vendes, tus productos estrella y cómo crece tu negocio.' },
-  { target: 'assistant', title: 'Asistente', text: '¿Tienes dudas? Pregúntale al asistente cómo hacer cualquier cosa en Lyte.' },
-  { title: '¡Todo listo!', text: 'Ya conoces lo básico. Un buen primer paso: crea tu primer producto o diseña tu tienda.' },
-]
-
-const PHONE_STEPS: Step[] = [
-  { title: '¡Bienvenido a Lyte!', text: 'Te mostramos en menos de un minuto dónde está todo. Puedes saltar el tutorial cuando quieras.', menu: 'closed' },
-  { target: 'menu', title: 'Tu menú', text: 'Todas las secciones están aquí. Tócalo cuando quieras ir a otra parte. Te las mostramos.', menu: 'closed' },
-  { target: 'store', title: 'Tu tienda', text: 'La tienda que estás manejando. Tócala para cambiar entre tus tiendas o crear una nueva.', menu: 'open' },
-  { target: 'orders', title: 'Pedidos', text: 'Cada pedido nuevo llega aquí al instante, con un sonido para que no se te escape.', menu: 'open' },
-  { target: 'caja', title: 'Caja', text: 'Registra ventas en persona y lleva el cuadre del día.', menu: 'open' },
-  { target: 'delivery', title: 'Delivery', text: 'Asigna repartidores y sigue las entregas en el mapa en vivo.', menu: 'open' },
-  { target: 'products', title: 'Productos', text: 'Tus productos con fotos, variables y extras, ordenados por categorías.', menu: 'open' },
-  { target: 'inventario', title: 'Inventario', text: 'Almacenes, compras e ingredientes. Cada venta descuenta sola.', menu: 'open' },
-  { target: 'finanzas', title: 'Finanzas', text: 'Tus cuentas, ingresos y gastos.', menu: 'open' },
-  { target: 'design', title: 'Diseño', text: 'Cómo se ve tu tienda: vitrina, inicio, checkout y rastreo. Se edita cómodo desde el teléfono.', menu: 'open' },
-  { target: 'analytics', title: 'Analíticas', text: 'Cuánto vendes y tus productos estrella.', menu: 'open' },
-  { target: 'assistant', title: 'Asistente', text: '¿Dudas? Toca aquí y pregúntale al asistente cómo hacer cualquier cosa.', menu: 'closed' },
-  { title: '¡Todo listo!', text: 'Ya conoces lo básico. Un buen primer paso: crea tu primer producto.', menu: 'closed' },
-]
+// A guided tour (see tours.ts): a spotlight on each step's element with a
+// friendly card. On phones it can open/close the ☰ menu drawer for the
+// steps that need it. Steps whose element isn't on screen are skipped.
+// "Saltar" ends it from any step; onDone marks it as seen.
 
 const PAD = 6 // spotlight margin around the target
 
-export default function DashboardTour({ phone, onMenu, onDone }: {
+function findTarget(sel?: string): HTMLElement | null {
+  if (!sel) return null
+  const el = document.querySelector<HTMLElement>(sel)
+  if (!el) return null
+  const r = el.getBoundingClientRect()
+  return r.width > 0 && r.height > 0 ? el : null
+}
+
+export default function DashboardTour({ steps, phone, onMenu, onDone }: {
+  steps: TourStep[]
   /** Phone layout (sidebar tucked in the ☰ drawer) */
   phone: boolean
   /** Open/close the phone menu drawer for the steps that need it */
   onMenu: (open: boolean) => void
   onDone: () => void
 }) {
-  const steps = phone ? PHONE_STEPS : DESKTOP_STEPS
   const [i, setI] = useState(0)
   const [rect, setRect] = useState<DOMRect | null>(null)
   const [cardH, setCardH] = useState(200)
   const cardRef = useRef<HTMLDivElement>(null)
+  const dir = useRef<1 | -1>(1)
   const step = steps[Math.min(i, steps.length - 1)]
 
-  // Put the menu where the step needs it, then find (and scroll to) its target
+  // Put the menu where the step needs it, then find (and scroll to) its
+  // target — or move past the step when its element isn't there
   useEffect(() => {
     if (phone && step.menu) onMenu(step.menu === 'open')
     let raf = 0
     const t = setTimeout(() => {
-      const el = step.target ? document.querySelector<HTMLElement>(`[data-tour="${step.target}"]`) : null
+      const el = findTarget(step.sel)
+      if (step.sel && !el) {
+        if (dir.current === -1 && i > 0) setI(i - 1)
+        else if (i < steps.length - 1) { dir.current = 1; setI(i + 1) }
+        else finish()
+        return
+      }
       if (!el) { setRect(null); return }
       el.scrollIntoView({ block: 'center', behavior: 'smooth' })
       // re-measure while the smooth scroll / drawer slide settles
       let n = 0
       const tick = () => { setRect(el.getBoundingClientRect()); if (++n < 30) raf = requestAnimationFrame(tick) }
       tick()
-    }, phone && step.menu ? 320 : 60)
+    }, phone && step.menu ? 320 : 80)
     return () => { clearTimeout(t); cancelAnimationFrame(raf) }
   }, [i, phone]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const onResize = () => {
-      const el = step.target ? document.querySelector<HTMLElement>(`[data-tour="${step.target}"]`) : null
+      const el = findTarget(step.sel)
       setRect(el ? el.getBoundingClientRect() : null)
     }
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
-  }, [step.target])
+  }, [step.sel])
 
   useLayoutEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (cardRef.current) setCardH(cardRef.current.offsetHeight)
   }, [i, rect])
 
-  const finish = useCallback(() => {
-    if (phone) onMenu(false)
+  function finish() {
+    if (phone && steps.some(st => st.menu)) onMenu(false)
     onDone()
-  }, [phone, onMenu, onDone])
-  const next = () => (i >= steps.length - 1 ? finish() : setI(i + 1))
-  const back = () => setI(Math.max(0, i - 1))
+  }
+  const next = () => { dir.current = 1; if (i >= steps.length - 1) finish(); else setI(i + 1) }
+  const back = () => { dir.current = -1; setI(Math.max(0, i - 1)) }
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -139,7 +122,7 @@ export default function DashboardTour({ phone, onMenu, onDone }: {
           <span style={{ flex: 1 }} />
           {i > 0 && !last && <button type="button" className="db-tour-back" onClick={back}>Atrás</button>}
           <button type="button" className="db-tour-next" onClick={next}>
-            {i === 0 ? '¡Empecemos!' : last ? 'Terminar' : 'Siguiente'}
+            {last ? (steps.length === 1 ? 'Entendido' : 'Terminar') : i === 0 && !step.sel ? 'Empecemos' : 'Siguiente'}
           </button>
         </div>
       </div>

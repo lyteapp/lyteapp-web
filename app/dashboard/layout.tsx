@@ -10,6 +10,7 @@ import { DashboardThemeProvider } from '../lib/dashboardTheme'
 import DashboardLoader from './DashboardLoader'
 import AssistantPanel from './AssistantPanel'
 import DashboardTour from './DashboardTour'
+import { TOURS, stepsFor } from './tours'
 import { useLyteSound } from '../lib/useLyteSound'
 import { DashboardStoreProvider, useDashboardStore } from '../lib/DashboardStoreProvider'
 import './dashboard.css'
@@ -82,24 +83,41 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   const [productosOpen, setProductosOpen] = useState(false)
   const [settingsOpen, setSettingsOpen]   = useState(false)
   const [mobileNav, setMobileNav] = useState(false)
-  // First-visit tour: shown once per account (user_metadata.tour_done, plus
-  // this device's localStorage so it doesn't flash back before that loads)
-  const [tour, setTour] = useState<{ phone: boolean } | null>(null)
+  // Guided tours (tours.ts): the general one and one per section, each
+  // shown the first time — remembered per account (user_metadata.tours_done)
+  // and on this device (localStorage) so they don't flash back meanwhile
+  const [tour, setTour] = useState<{ id: string; phone: boolean } | null>(null)
+  const [toursDone, setToursDone] = useState<string[] | null>(null)
   const { play, unlock } = useLyteSound()
 
   useEffect(() => {
-    if (loading || storeLoading || !user || stores.length === 0 || pathname !== '/dashboard') return
-    let seen = !!user.user_metadata?.tour_done
-    try { seen = seen || localStorage.getItem('lyte-tour-done') === '1' } catch {}
-    if (seen) return
-    const t = setTimeout(() => setTour({ phone: window.matchMedia('(max-width: 1024px)').matches }), 900)
+    if (!user || toursDone) return
+    const meta = user.user_metadata ?? {}
+    const done = new Set<string>(Array.isArray(meta.tours_done) ? meta.tours_done : [])
+    if (meta.tour_done) done.add('intro')
+    try {
+      for (const id of JSON.parse(localStorage.getItem('lyte-tours-done') || '[]')) done.add(id)
+      if (localStorage.getItem('lyte-tour-done') === '1') done.add('intro')
+    } catch {}
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setToursDone([...done])
+  }, [user, toursDone])
+
+  useEffect(() => {
+    if (loading || storeLoading || !user || stores.length === 0 || !toursDone || tour) return
+    const next = TOURS.find(x => x.match(pathname) && !toursDone.includes(x.id))
+    if (!next) return
+    const t = setTimeout(() => setTour({ id: next.id, phone: window.matchMedia('(max-width: 1024px)').matches }), 900)
     return () => clearTimeout(t)
-  }, [loading, storeLoading, user, stores.length, pathname])
+  }, [loading, storeLoading, user, stores.length, pathname, toursDone, tour])
 
   function finishTour() {
+    if (!tour) return
+    const done = [...new Set([...(toursDone ?? []), tour.id])]
     setTour(null)
-    try { localStorage.setItem('lyte-tour-done', '1') } catch {}
-    if (!user?.user_metadata?.tour_done) supabase.auth.updateUser({ data: { tour_done: true } }).catch(() => {})
+    setToursDone(done)
+    try { localStorage.setItem('lyte-tours-done', JSON.stringify(done)) } catch {}
+    supabase.auth.updateUser({ data: { tours_done: done } }).catch(() => {})
   }
 
   useEffect(() => {
@@ -492,7 +510,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             const phone = window.matchMedia('(max-width: 1024px)').matches
             if (pathname !== '/dashboard') router.push('/dashboard')
             setMobileNav(false)
-            setTimeout(() => setTour({ phone }), pathname !== '/dashboard' ? 700 : 250)
+            setTimeout(() => setTour({ id: 'intro', phone }), pathname !== '/dashboard' ? 700 : 250)
           }}>
             <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
             Ver tutorial
@@ -539,7 +557,10 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      {tour && <DashboardTour phone={tour.phone} onMenu={setMobileNav} onDone={finishTour} />}
+      {tour && (
+        <DashboardTour key={tour.id} steps={stepsFor(TOURS.find(x => x.id === tour.id)!, tour.phone)}
+          phone={tour.phone} onMenu={setMobileNav} onDone={finishTour} />
+      )}
 
       {orderNotif && (
         <div className="db-order-toast">

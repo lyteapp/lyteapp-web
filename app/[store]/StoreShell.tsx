@@ -1100,6 +1100,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
     }
   }, [menuSwipeEnabled])
   const [modalVars, setModalVars]             = useState<Record<string, string[]>>({})
+  // Tapping one more choice than a variable allows: that chip shakes and a
+  // notice says the limit was reached (n restarts both on repeated taps)
+  const [maxHit, setMaxHit] = useState<{ key: string; text: string; n: number } | null>(null)
+  useEffect(() => {
+    if (!maxHit) return
+    const t = setTimeout(() => setMaxHit(null), 2400)
+    return () => clearTimeout(t)
+  }, [maxHit])
   const [modalColor, setModalColor]           = useState<string | undefined>()
   const [modalAdditionals, setModalAdditionals] = useState<Set<number>>(new Set())
   const [modalNotes, setModalNotes]           = useState('')
@@ -2217,6 +2225,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
     if (!modalProduct) return null
     return (
       <div className="sf-modal-overlay" style={showHeaderAboveModal ? { top: modalTop } : undefined} onClick={() => setModalProduct(null)}>
+        {maxHit && (
+          <div key={maxHit.n} className="sf-max-toast" role="alert" onClick={e => { e.stopPropagation(); setMaxHit(null) }}>
+            <span className="sf-max-toast-icon">!</span>
+            <span>{maxHit.text}<small>Quita una para elegir otra</small></span>
+          </div>
+        )}
         {chipNutritionPreview && (
           <div
             className="sf-chip-nutrition-tip"
@@ -2463,8 +2477,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 <div className="sf-modal-chips sf-modal-wizard-chips">
                   {modalWizardStep.group.choices.map(normalizeChoice).map(c => (
                     <button
-                      key={c.value}
-                      className={`sf-modal-chip${c.imageUrl ? ' sf-chip-photo' : ''}${(modalVars[modalWizardStep.group.label] ?? []).includes(c.value) ? ' selected' : ''}`}
+                      key={maxHit?.key === `${modalWizardStep.group.label}::${c.value}` ? `${c.value}-${maxHit.n}` : c.value}
+                      className={`sf-modal-chip${c.imageUrl ? ' sf-chip-photo' : ''}${(modalVars[modalWizardStep.group.label] ?? []).includes(c.value) ? ' selected' : ''}${maxHit?.key === `${modalWizardStep.group.label}::${c.value}` ? ' sf-chip-shake' : ''}`}
                       style={c.imageUrl ? { backgroundImage: `linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0.05) 75%), url(${resizedImg(c.imageUrl, 400)})` } : undefined}
                       onClick={() => chipClick(() => {
                         toggleModalVar(modalWizardStep.group, c.value)
@@ -2552,8 +2566,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
                     <div className="sf-modal-chips">
                       {g.choices.map(normalizeChoice).map(c => (
                         <button
-                          key={c.value}
-                          className={`sf-modal-chip${c.imageUrl ? ' sf-chip-photo' : ''}${(modalVars[g.label] ?? []).includes(c.value) ? ' selected' : ''}`}
+                          key={maxHit?.key === `${g.label}::${c.value}` ? `${c.value}-${maxHit.n}` : c.value}
+                          className={`sf-modal-chip${c.imageUrl ? ' sf-chip-photo' : ''}${(modalVars[g.label] ?? []).includes(c.value) ? ' selected' : ''}${maxHit?.key === `${g.label}::${c.value}` ? ' sf-chip-shake' : ''}`}
                           style={c.imageUrl ? { backgroundImage: `linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0.05) 75%), url(${resizedImg(c.imageUrl, 400)})` } : undefined}
                           onClick={() => chipClick(() => toggleModalVar(g, c.value))}
                           onPointerDown={e => chipPressStart(e, c)}
@@ -2673,6 +2687,16 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // (or, for a max-1 group, replaces it — same as the old single-select).
   function toggleModalVar(group: VariableGroup, value: string) {
     const { max } = groupMinMax(group)
+    const picked = modalVars[group.label] ?? []
+    if (max > 1 && !picked.includes(value) && picked.length >= max) {
+      setMaxHit({
+        key: `${group.label}::${value}`,
+        text: `Ya alcanzaste el máximo de ${group.label} permitido (${max})`,
+        n: (maxHit?.n ?? 0) + 1,
+      })
+      try { navigator.vibrate?.(80) } catch {}
+      return
+    }
     setModalVars(v => {
       const current = v[group.label] ?? []
       if (max <= 1) return { ...v, [group.label]: current[0] === value ? [] : [value] }

@@ -1601,8 +1601,18 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
   // (so the store lays out exactly as on that screen) and are scaled down to
   // fit, like looking at that screen from a distance — instead of being
   // squeezed into the phone's portrait width.
-  const MINI_SIZE = { tablet: { w: 820, h: 1180 }, desktop: { w: 1280, h: 800 } } as const
-  const mini = vp.w > 0 && vp.w <= 800 && deviceType !== 'mobile' ? (() => {
+  const MINI_SIZE = { mobile: { w: 390, h: 844 }, tablet: { w: 820, h: 1180 }, desktop: { w: 1280, h: 800 } } as const
+  // A phone held sideways gets its own layout (see the landscape block in
+  // editor.css): tool rail on the right, tool panel beside it, and every
+  // preview — the phone one too — scaled to fit what's left on the left.
+  const landscapePhone = vp.w > vp.h && vp.h > 0 && vp.h <= 520
+  const mini = landscapePhone ? (() => {
+    const { w, h } = MINI_SIZE[deviceType]
+    const panelW = activeTool ? Math.min(320, vp.w * 0.42) : 0
+    const availW = vp.w - 60 - panelW - 24 - 52
+    const availH = vp.h - 20
+    return { w, h, scale: Math.min(availW / w, availH / h) }
+  })() : vp.w > 0 && vp.w <= 800 && deviceType !== 'mobile' ? (() => {
     const { w, h } = MINI_SIZE[deviceType]
     const availH = vp.h - 150 - (activeTool ? vp.h * 0.27 : 0)
     const scale = Math.min((vp.w - 24) / w, availH / h)
@@ -1617,6 +1627,7 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
     const panel = toolPanelRef.current
     if (!panel) return
     const paged = window.matchMedia('(max-width: 800px)').matches
+      && !window.matchMedia('(orientation: landscape) and (max-height: 520px)').matches
     let page = 0, seen = false
     const kids = Array.from(panel.children) as HTMLElement[]
     for (const el of kids) {

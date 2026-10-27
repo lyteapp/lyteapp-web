@@ -321,6 +321,7 @@
   transition: none !important;
 }
 .ed-device-mini.ed-device-tablet { border-radius: 28px; }
+.ed-device-mini.ed-device-mobile { border-radius: 44px; --ed-pv-scale: 1; }
 .ed-device-mini.ed-device-desktop { border-radius: 14px; }
 .ed-device-chrome {
   height: 36px;
@@ -2478,4 +2479,71 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
   .ed-unsaved-btn { padding: 7px 12px; font-size: 12px; }
   .ed-app-sheet-open .ed-unsaved { bottom: calc(72px + var(--ed-sheet-h) + 10px); }
   .ed-app-sheet-open:has(.ed-tool-panel-expanded) .ed-unsaved { bottom: calc(72px + 70dvh + 10px); }
+}
+
+/* ── Phone held sideways ──────────────────────────────── */
+/* Too short for the bottom bar + bottom sheet: the rail goes back to the
+   right side, the tool panel docks beside it at full height, the device
+   switch floats top-left, and the preview (scaled in JS, see `mini`) fills
+   what's left. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .ed-app {
+    grid-template-columns: 1fr 60px;
+    grid-template-rows: 1fr;
+    --ed-side-panel-w: min(320px, 42vw);
+  }
+  .ed-side-bar {
+    width: 60px; height: auto;
+    flex-direction: column; align-items: center;
+    border-top: none; border-left: 1px solid rgba(255,255,255,0.06);
+    padding: calc(env(safe-area-inset-top) + 8px) 0 8px;
+    gap: 2px; overflow-x: hidden; overflow-y: auto;
+  }
+  .ed-side-bar .ed-tool-btn { width: 44px; height: 44px; }
+  .ed-side-bar .ed-tool-btn svg { width: 22px; height: 22px; }
+  .ed-tool-exit { margin-top: auto; margin-left: 0; }
+
+  .ed-canvas-scroll {
+    position: relative;
+    padding: 10px 12px 10px 64px;
+    justify-content: center;
+  }
+  .ed-app-sheet-open .ed-canvas-scroll { padding-right: calc(var(--ed-side-panel-w) + 12px); padding-bottom: 10px; }
+  .ed-device-switch {
+    position: absolute; top: calc(env(safe-area-inset-top) + 10px); left: max(10px, env(safe-area-inset-left));
+    flex-direction: column; margin: 0; z-index: 2;
+  }
+
+  .ed-tool-panel {
+    top: 0; bottom: 0; right: 60px; left: auto;
+    width: var(--ed-side-panel-w); height: auto; max-height: none;
+    box-sizing: border-box;
+    border-radius: 16px 0 0 16px; border-bottom: 1px solid var(--ed-line);
+    padding: 0 14px 14px;
+    padding-top: env(safe-area-inset-top);
+    box-shadow: -6px 0 24px rgba(15,23,42,0.10);
+    transform: none;
+    animation: edPanelInSide 0.16s ease;
+  }
+  .ed-tool-panel.ed-tool-panel-expanded { height: auto; }
+  /* full height here, so no paging (see the layout effect) and no drag bar */
+  .ed-tool-panel .ed-tp-drag-handle { display: none; }
+  .ed-tool-panel .ed-tp-title { padding-top: 14px; }
+  .ed-tool-panel .ed-tp-swatches { grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 6px; }
+
+  .ed-unsaved { left: calc(50% - 30px); bottom: 12px; }
+  /* with the panel open there's little room left: dock it at the panel's
+     foot, buttons only */
+  .ed-app-sheet-open .ed-unsaved,
+  .ed-app-sheet-open:has(.ed-tool-panel-expanded) .ed-unsaved {
+    left: auto; right: 72px; bottom: 12px; transform: none;
+    animation: none;
+  }
+  .ed-app-sheet-open .ed-unsaved .ed-unsaved-text { display: none; }
+  .ed-app-sheet-open .ed-unsaved-done .ed-unsaved-text { display: inline; }
+  .ed-app-sheet-open .ed-tool-panel { padding-bottom: 64px; }
+}
+@keyframes edPanelInSide {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
 }

@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import PricingToggle from './components/PricingToggle'
 import NavMobile from './components/NavMobile'
 import { useT } from './lib/LocaleProvider'
 import './landing.css'
@@ -393,13 +392,11 @@ export default function Home() {
           {t('landing.pricing.promo')}
         </div>
 
-        <PricingToggle />
-
         <div className="pricing-grid">
           <div className="price-card">
             <div className="price-name">{t('landing.pricing.free.name')}</div>
-            <div className="price-amount"><span className="usd">$</span>0</div>
-            <div className="price-period">{t('landing.pricing.free.period')}</div>
+            <div className="price-soon">{t('landing.pricing.soon')}</div>
+            <div className="price-period">{t('landing.pricing.soonPeriod')}</div>
             <Link href="/registro" className="price-cta">{t('landing.pricing.free.cta')}</Link>
             <ul className="price-features">
               <li><CheckIcon /> {t('landing.pricing.free.f1')}</li>
@@ -413,9 +410,9 @@ export default function Home() {
           <div className="price-card featured">
             <span className="price-tag">{t('landing.pricing.pro.tag')}</span>
             <div className="price-name">{t('landing.pricing.pro.name')}</div>
-            <div className="price-amount"><span className="usd">$</span>15</div>
-            <div className="price-period">{t('landing.pricing.pro.period')}</div>
-            <Link href="/registro" className="price-cta">{t('landing.pricing.pro.cta')}</Link>
+            <div className="price-soon">{t('landing.pricing.soon')}</div>
+            <div className="price-period">{t('landing.pricing.soonPeriod')}</div>
+            <Link href="/registro" className="price-cta">{t('landing.pricing.free.cta')}</Link>
             <ul className="price-features">
               <li><CheckIcon /> {t('landing.pricing.pro.f1')}</li>
               <li><CheckIcon /> {t('landing.pricing.pro.f2')}</li>
@@ -428,9 +425,9 @@ export default function Home() {
 
           <div className="price-card">
             <div className="price-name">{t('landing.pricing.premium.name')}</div>
-            <div className="price-amount"><span className="usd">$</span>35</div>
-            <div className="price-period">{t('landing.pricing.premium.period')}</div>
-            <Link href="/registro" className="price-cta">{t('landing.pricing.premium.cta')}</Link>
+            <div className="price-soon">{t('landing.pricing.soon')}</div>
+            <div className="price-period">{t('landing.pricing.soonPeriod')}</div>
+            <Link href="/registro" className="price-cta">{t('landing.pricing.free.cta')}</Link>
             <ul className="price-features">
               <li><CheckIcon /> {t('landing.pricing.premium.f1')}</li>
               <li><CheckIcon /> {t('landing.pricing.premium.f2')}</li>

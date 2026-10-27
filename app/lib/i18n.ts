@@ -90,6 +90,8 @@ const en = {
   'landing.promo.short': 'Free until December',
   'landing.promo.ctaShort': 'Create store →',
   'landing.pricing.promo': 'Launch promo: use all of Lyte for free until December 31. No credit card.',
+  'landing.pricing.soon': 'Coming soon',
+  'landing.pricing.soonPeriod': 'Price to be announced · free until December',
 
   // ── Landing – hero ──────────────────────────────────────────
   'landing.hero.badge': 'Free',
@@ -452,6 +454,8 @@ const es: Record<Key, string> = {
   'landing.promo.short': 'Gratis hasta diciembre',
   'landing.promo.ctaShort': 'Crear tienda →',
   'landing.pricing.promo': 'Promoción de lanzamiento: usa Lyte completo, gratis, hasta el 31 de diciembre. Sin tarjeta de crédito.',
+  'landing.pricing.soon': 'Próximamente',
+  'landing.pricing.soonPeriod': 'Precio por anunciar · gratis hasta diciembre',
 
   // ── Landing – hero ──────────────────────────────────────────
   'landing.hero.badge': 'Gratis',

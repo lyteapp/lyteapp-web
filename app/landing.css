@@ -1192,3 +1192,17 @@ body {
   .pricing-promo { margin: -8px 16px 22px; font-size: 13.5px; }
 }
 @media (prefers-reduced-motion: reduce) { .lp-promo { animation: none; } }
+
+/* Prices: "coming soon" while Lyte is free */
+.price-soon {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin: 14px 0 6px; padding: 8px 16px; border-radius: 100px;
+  background: var(--violet-bg, #EEF2FF); color: var(--ink);
+  font-size: 20px; font-weight: 800; letter-spacing: -0.02em;
+}
+.price-soon::before {
+  content: ''; width: 8px; height: 8px; border-radius: 50%; background: #16A34A;
+  animation: lpSoonPulse 1.8s ease-in-out infinite;
+}
+.price-card.featured .price-soon { background: var(--violet); color: white; }
+@keyframes lpSoonPulse { 50% { opacity: 0.35; } }

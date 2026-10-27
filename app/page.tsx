@@ -151,7 +151,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* DEMO — a real store, live, inside a phone */}
+      {/* DEMO — a screen recording of a real store, inside a phone (a video,
+          not the live store: loads instantly and never hits the store) */}
       <section className="demo-section" id="demo">
         <div className="demo-copy">
           <span className="eyebrow">{t('landing.demo.eyebrow')}</span>
@@ -171,10 +172,10 @@ export default function Home() {
           <div className="demo-phone">
             <div className="demo-phone-notch" />
             <div className="demo-phone-screen">
-              <iframe src="/kosh-apparel?preview=1&demo=1" title="KOSH APPAREL — tienda de ejemplo" loading="lazy" />
+              <video src="/demo/kosh-demo.mp4" poster="/demo/kosh-demo-poster.jpg"
+                autoPlay muted loop playsInline preload="metadata" aria-label="KOSH APPAREL — tienda de ejemplo" />
             </div>
           </div>
-          <div className="demo-note">{t('landing.demo.note')}</div>
         </div>
       </section>
 

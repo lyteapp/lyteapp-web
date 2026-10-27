@@ -1232,13 +1232,11 @@ body {
   width: 92px; height: 26px; border-radius: 100px; background: #111827;
 }
 .demo-phone-screen { position: relative; width: 100%; height: 100%; overflow: hidden; border-radius: 37px; background: #111827; }
-.demo-phone-screen iframe {
+.demo-phone-screen video {
   /* below a status-bar strip, so the notch doesn't cover the store's top */
-  position: absolute; top: 30px; left: 0; border: 0;
-  width: 390px; height: calc(844px - 30px / var(--demo-scale));
-  transform: scale(var(--demo-scale)); transform-origin: 0 0;
+  position: absolute; top: 30px; left: 0; right: 0; bottom: 0;
+  width: 100%; height: calc(100% - 30px); object-fit: cover; object-position: top; display: block;
 }
-.demo-note { font-size: 12.5px; color: var(--ink-muted); }
 
 @media (max-width: 900px) {
   .demo-section { grid-template-columns: 1fr; gap: 40px; padding: 64px 20px; text-align: center; }

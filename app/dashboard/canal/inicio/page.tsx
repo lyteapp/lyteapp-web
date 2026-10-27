@@ -7,6 +7,7 @@ import { useDashboardStore } from '../../../lib/DashboardStoreProvider'
 import { REVEAL_FONTS, revealFontStack, loadRevealFont } from '../../../lib/revealFonts'
 import { isLightColor, poweredByColors } from '../../../lib/colorContrast'
 import Link from 'next/link'
+import UnsavedNotice, { stableJson } from '../UnsavedNotice'
 import '../canal.css'
 
 // The page's sections in order (their data-sec keys), for the phone
@@ -648,6 +649,11 @@ export default function InicioPage() {
   }, [])
   const phoneLayout = vp.w > 0 && vp.w <= 800 && vp.h > vp.w
 
+  // What's stored, for the "unsaved changes" notice (Cancelar puts it back)
+  const [savedConfig, setSavedConfig] = useState<HomePageConfig | null>(null)
+  const [justSaved, setJustSaved] = useState(false)
+  const hasUnsaved = !!savedConfig && stableJson(config) !== stableJson(savedConfig)
+
   useEffect(() => {
     if (!storeId) return
     supabase
@@ -661,17 +667,20 @@ export default function InicioPage() {
         setLogoUrl(data.logo_url ?? null)
         const cfg = (data.template_config ?? {}) as Record<string, unknown>
         setBaseConfig(cfg)
+        let loaded = DEFAULTS
         if (cfg.homePage) {
           const hp = cfg.homePage as Partial<HomePageConfig>
-          setConfig({
+          loaded = {
             ...DEFAULTS, ...hp,
             customerFields: { ...DEFAULTS.customerFields, ...(hp.customerFields ?? {}) },
             inactivityTimeout: { ...DEFAULTS.inactivityTimeout, ...(hp.inactivityTimeout ?? {}) },
             orderReturnTimeout: { ...DEFAULTS.orderReturnTimeout, ...(hp.orderReturnTimeout ?? {}) },
             elementSizes: { ...DEFAULTS.elementSizes, ...(hp.elementSizes ?? {}) },
             reveal: { ...DEFAULTS.reveal, ...(hp.reveal ?? {}) },
-          })
+          }
         }
+        setConfig(loaded)
+        setSavedConfig(loaded)
       })
   }, [storeId])
 
@@ -754,7 +763,12 @@ export default function InicioPage() {
     const template_config = { ...baseConfig, homePage: config }
     const { error: err } = await supabase.from('stores').update({ template_config }).eq('id', storeId)
     if (err) setError(err.message)
-    else setSuccess(true)
+    else {
+      setSuccess(true)
+      setBaseConfig(template_config)
+      setSavedConfig(config)
+      setJustSaved(true); setTimeout(() => setJustSaved(false), 2000)
+    }
     setSaving(false)
   }
 
@@ -1356,6 +1370,12 @@ export default function InicioPage() {
               </button>
             </div>
           </form>
+        </div>
+
+        <div onClick={e => e.stopPropagation()}>
+          <UnsavedNotice dirty={hasUnsaved} justSaved={justSaved} saving={saving}
+            onSave={() => save({ preventDefault() {} })}
+            onDiscard={() => { if (savedConfig) { setConfig(savedConfig); setSelectedEl(null); setSelectedImageId(null) } }} />
         </div>
 
         {phoneLayout && (() => {

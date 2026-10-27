@@ -643,3 +643,5 @@
 .cn-co-m .cn-unsaved { bottom: 84px; gap: 8px; font-size: 12px; padding-left: 12px; }
 .cn-co-m .cn-unsaved-btn { padding: 7px 12px; font-size: 12px; }
 .cn-co-m:not([data-sec="none"]) .cn-unsaved { bottom: calc(72px + 42dvh + 10px); }
+.cn-unsaved.cn-unsaved-raised { bottom: 92px; gap: 8px; font-size: 12px; padding-left: 12px; }
+.cn-unsaved-raised .cn-unsaved-btn { padding: 7px 12px; font-size: 12px; }

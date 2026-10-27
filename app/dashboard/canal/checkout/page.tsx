@@ -4,17 +4,8 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useDashboardStore } from '../../../lib/DashboardStoreProvider'
 import Link from 'next/link'
+import UnsavedNotice, { stableJson } from '../UnsavedNotice'
 import '../canal.css'
-
-// Key-sorted JSON, so two settings objects compare by value
-function stableJson(v: unknown): string {
-  if (Array.isArray(v)) return `[${v.map(stableJson).join(',')}]`
-  if (v && typeof v === 'object') {
-    return `{${Object.keys(v).sort().filter(k => (v as Record<string, unknown>)[k] !== undefined)
-      .map(k => `${JSON.stringify(k)}:${stableJson((v as Record<string, unknown>)[k])}`).join(',')}}`
-  }
-  return JSON.stringify(v) ?? 'null'
-}
 
 // The checkout's sections, in page order (their data-sec index), for the
 // phone layout's icon bar
@@ -830,22 +821,7 @@ export default function CheckoutPage() {
           )}
         </div>
 
-        {(hasUnsaved || justSaved) && (
-          <div className={`cn-unsaved${hasUnsaved ? '' : ' cn-unsaved-done'}`} role="status">
-            {hasUnsaved ? (
-              <>
-                <span className="cn-unsaved-dot" />
-                <span className="cn-unsaved-text">Tienes cambios sin guardar</span>
-                <button type="button" className="cn-unsaved-btn cn-unsaved-cancel" onClick={discardChanges} disabled={saving || savingPagos}>Cancelar</button>
-                <button type="button" className="cn-unsaved-btn" onClick={saveAll} disabled={saving || savingPagos}>
-                  {saving || savingPagos ? 'Guardando…' : 'Guardar'}
-                </button>
-              </>
-            ) : (
-              <span className="cn-unsaved-text">✓ Cambios guardados</span>
-            )}
-          </div>
-        )}
+        <UnsavedNotice dirty={hasUnsaved} justSaved={justSaved} saving={saving || savingPagos} onSave={saveAll} onDiscard={discardChanges} />
 
         {/* Phone: the picked section's header (‹ › between sections) and the icon bar */}
         {phoneLayout && mSec !== null && (

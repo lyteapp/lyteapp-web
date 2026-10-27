@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useDashboardStore } from '../../../lib/DashboardStoreProvider'
+import UnsavedNotice, { stableJson } from '../UnsavedNotice'
 import '../canal.css'
 
 type Category = { id: string; name: string }
@@ -178,6 +179,10 @@ export default function Apariencia() {
   const [isMobile, setIsMobile]             = useState(false)
   const [mobileTab, setMobileTab]           = useState<'preview' | 'config'>('preview')
   const [copiedUrl, setCopiedUrl]           = useState(false)
+  // What's stored, for the "unsaved changes" notice (Cancelar puts it back)
+  const [savedSnap, setSavedSnap] = useState<{ trConfig: TrackingConfig; variantShape: typeof variantShape; extraShape: typeof extraShape } | null>(null)
+  const [justSaved, setJustSaved] = useState(false)
+  const hasUnsaved = !!savedSnap && stableJson({ trConfig, variantShape, extraShape }) !== stableJson(savedSnap)
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768)
@@ -202,13 +207,18 @@ export default function Apariencia() {
         const cfg = (data.template_config ?? {}) as Record<string, unknown>
         setBaseConfig(cfg)
         if (cfg.categoryPhotoShapes) setCategoryShapes(cfg.categoryPhotoShapes as Record<string, string>)
-        if (cfg.variantShape) setVariantShape(cfg.variantShape as 'pill' | 'rounded' | 'square' | 'block')
-        if (cfg.extraShape)   setExtraShape(cfg.extraShape as 'rounded' | 'pill' | 'square')
+        const vs = (cfg.variantShape as 'pill' | 'rounded' | 'square' | 'block' | undefined) ?? 'pill'
+        const es = (cfg.extraShape as 'rounded' | 'pill' | 'square' | undefined) ?? 'rounded'
+        setVariantShape(vs)
+        setExtraShape(es)
+        let tr = DEFAULT_TR_CONFIG
         if (cfg.trackingConfig) {
           const raw = cfg.trackingConfig as Partial<TrackingConfig>
-          setTrConfig({ ...DEFAULT_TR_CONFIG, ...raw, queueBoard: { ...DEFAULT_QUEUE_BOARD, ...(raw.queueBoard ?? {}) } })
+          tr = { ...DEFAULT_TR_CONFIG, ...raw, queueBoard: { ...DEFAULT_QUEUE_BOARD, ...(raw.queueBoard ?? {}) } }
           if (raw.mode) setActivePanel(raw.mode)
         }
+        setTrConfig(tr)
+        setSavedSnap({ trConfig: tr, variantShape: vs, extraShape: es })
         const { data: cats } = await supabase
           .from('categories').select('id,name')
           .eq('store_id', data.id).order('position', { ascending: true })
@@ -250,9 +260,28 @@ export default function Apariencia() {
     }
     const { error: err } = await supabase.from('stores').update({ template, brand_color: color, template_config }).eq('id', storeId)
     if (err) setError(err.message)
-    else setSuccess(true)
+    else {
+      setSuccess(true)
+      setBaseConfig(template_config)
+      setSavedSnap({ trConfig, variantShape, extraShape })
+      setJustSaved(true); setTimeout(() => setJustSaved(false), 2000)
+    }
     setSaving(false)
   }
+
+  function discardChanges() {
+    if (!savedSnap) return
+    setTrConfig(savedSnap.trConfig)
+    setVariantShape(savedSnap.variantShape)
+    setExtraShape(savedSnap.extraShape)
+    setActivePanel(savedSnap.trConfig.mode ?? 'status')
+    setError('')
+  }
+  const unsavedNotice = (
+    <UnsavedNotice dirty={hasUnsaved} justSaved={justSaved} saving={saving}
+      onSave={() => save({ preventDefault() {} })} onDiscard={discardChanges}
+      className={isMobile ? 'cn-unsaved-raised' : ''} />
+  )
 
   function setQueueBoard<K extends keyof QueueBoardConfig>(key: K, value: QueueBoardConfig[K]) {
     setTrConfig(p => ({ ...p, queueBoard: { ...p.queueBoard, [key]: value } }))
@@ -1180,6 +1209,7 @@ export default function Apariencia() {
   if (isMobile) {
     return (
       <div style={{ margin: '-16px -16px', display: 'flex', flexDirection: 'column', height: 'calc(100dvh - 56px)', background: 'white' }}>
+      {unsavedNotice}
 
         {/* Tab bar */}
         <div style={{ display: 'flex', borderBottom: '1px solid rgba(15,23,42,0.08)', flexShrink: 0, background: 'white' }}>
@@ -1239,6 +1269,7 @@ export default function Apariencia() {
   // ── Desktop layout ────────────────────────────────────────────────────
   return (
     <div style={{ margin: '-28px -32px', display: 'flex', height: 'calc(100dvh - 56px)', overflow: 'hidden' }}>
+      {unsavedNotice}
 
       {/* Preview canvas */}
       <div style={{

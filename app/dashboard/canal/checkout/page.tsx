@@ -282,7 +282,7 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className={`cn-page${phoneLayout ? ' cn-co-m' : ''}`} style={{ maxWidth: 'none' }} data-sec={mSec ?? 'none'}>
+    <div className={`cn-page${phoneLayout ? ' cn-co-m cn-co-checkout' : ''}`} style={{ maxWidth: 'none' }} data-sec={mSec ?? 'none'}>
       <div className="cn-header">
         <div className="cn-title">Checkout</div>
         <div className="cn-desc">Configura el proceso de compra de tu tienda.</div>

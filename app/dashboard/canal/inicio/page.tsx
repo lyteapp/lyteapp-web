@@ -6,7 +6,22 @@ import { useAuth } from '../../../lib/auth'
 import { useDashboardStore } from '../../../lib/DashboardStoreProvider'
 import { REVEAL_FONTS, revealFontStack, loadRevealFont } from '../../../lib/revealFonts'
 import { isLightColor, poweredByColors } from '../../../lib/colorContrast'
+import Link from 'next/link'
 import '../canal.css'
+
+// The page's sections in order (their data-sec keys), for the phone
+// layout's icon bar — 'reveal' only exists with the animated welcome
+const IN_SECTIONS: { key: string; label: string; icon: React.ReactNode }[] = [
+  { key: 'on', label: 'Activar pagina de inicio', icon: <><rect x="2.5" y="7" width="19" height="10" rx="5" /><circle cx="16.5" cy="12" r="3" /></> },
+  { key: 'customer', label: 'Datos del cliente', icon: <><circle cx="12" cy="8" r="3.5" /><path d="M4.5 20a7.5 7.5 0 0115 0" /></> },
+  { key: 'content', label: 'Contenido', icon: <path d="M5 6h14M5 11h14M5 16h9" /> },
+  { key: 'links', label: 'Enlaces adicionales', icon: <><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1" /><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1" /></> },
+  { key: 'bg', label: 'Fondo', icon: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 16l5-5 4 4 3-3 6 6" /></> },
+  { key: 'photos', label: 'Fotos', icon: <><rect x="3" y="6" width="18" height="14" rx="2" /><circle cx="12" cy="13" r="3.5" /><path d="M8 6l1.5-2h5L16 6" /></> },
+  { key: 'transition', label: 'Transicion', icon: <><path d="M4 12h12M12 7l5 5-5 5" /><path d="M20 5v14" /></> },
+  { key: 'reveal', label: 'Bienvenida animada', icon: <path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z" /> },
+  { key: 'reset', label: 'Reinicio automatico', icon: <><path d="M20 11a8 8 0 10-2.3 5.7" /><path d="M20 5v6h-6" /></> },
+]
 
 interface HomePagePill {
   id: string
@@ -621,6 +636,18 @@ export default function InicioPage() {
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
   const [previewView, setPreviewView] = useState<'splash' | 'reveal'>('splash')
 
+  // Phone held upright: laid out like the Vitrina editor (miniature preview
+  // on top, section icons at the bottom, the picked section in a sheet)
+  const [vp, setVp] = useState({ w: 0, h: 0 })
+  const [mSec, setMSec] = useState<string | null>(null)
+  useEffect(() => {
+    const read = () => setVp({ w: window.innerWidth, h: window.innerHeight })
+    read()
+    window.addEventListener('resize', read)
+    return () => window.removeEventListener('resize', read)
+  }, [])
+  const phoneLayout = vp.w > 0 && vp.w <= 800 && vp.h > vp.w
+
   useEffect(() => {
     if (!storeId) return
     supabase
@@ -732,16 +759,16 @@ export default function InicioPage() {
   }
 
   return (
-    <div className="cn-page" style={{ maxWidth: 'none' }}>
+    <div className={`cn-page${phoneLayout ? ' cn-co-m' : ''}`} style={{ maxWidth: 'none' }} data-sec={mSec ?? 'none'}>
       <div className="cn-header">
         <div className="cn-title">Pagina de inicio</div>
         <div className="cn-desc">Una pantalla de bienvenida que se muestra antes de tu tienda, con un boton para entrar.</div>
       </div>
 
-      <div style={{ display: 'flex', gap: 0, alignItems: 'flex-start', position: 'relative' }} onClick={() => { setSelectedEl(null); setSelectedImageId(null) }}>
+      <div className="cn-inicio-split" style={{ display: 'flex', gap: 0, alignItems: 'flex-start', position: 'relative' }} onClick={() => { setSelectedEl(null); setSelectedImageId(null) }}>
 
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, position: 'sticky', top: 24, padding: '4px 24px 24px 0' }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+        <div className="cn-inicio-preview-col" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, position: 'sticky', top: 24, padding: '4px 24px 24px 0' }}>
+          <div className="cn-inicio-preview-hint" style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
             {previewView === 'splash'
               ? 'Vista previa · toca un elemento y arrastra su esquina para redimensionar'
               : 'Vista previa de la bienvenida animada'}
@@ -758,7 +785,8 @@ export default function InicioPage() {
             </div>
           )}
 
-          {previewView === 'reveal' && config.transition === 'reveal' ? (
+          {(() => {
+            const preview = previewView === 'reveal' && config.transition === 'reveal' ? (
             <RevealPreview config={config} storeName={storeName} logoUrl={logoUrl} />
           ) : (
             <SplashPreview
@@ -769,7 +797,17 @@ export default function InicioPage() {
               onSelectImage={setSelectedImageId}
               onUpdateImage={updateImage} onRemoveImage={removeImage}
             />
-          )}
+          )
+            if (!phoneLayout) return preview
+            // the previews are 380×780 phones; fit one above the sheet
+            const tabs = config.transition === 'reveal' ? 44 : 0
+            const sc = Math.min((vp.w - 32) / 380, (vp.h - 72 - (mSec ? vp.h * 0.42 : 0) - 28 - tabs) / 780)
+            return (
+              <div className="cn-co-stage" style={{ width: 380 * sc, height: 780 * sc }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, transform: `scale(${sc})`, transformOrigin: '0 0' }}>{preview}</div>
+              </div>
+            )
+          })()}
         </div>
 
         <button
@@ -786,7 +824,7 @@ export default function InicioPage() {
         <div className={`cn-sidebar${sidebarOpen ? ' open' : ''}`} onClick={e => e.stopPropagation()}>
           <form onSubmit={save}>
 
-            <div className="cn-section">
+            <div className="cn-section" data-sec="on">
               <div className="cn-section-head">
                 <div className="cn-section-icon">
                   <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" /></svg>
@@ -807,7 +845,7 @@ export default function InicioPage() {
               </div>
             </div>
 
-            <div className="cn-section">
+            <div className="cn-section" data-sec="customer">
               <div className="cn-section-head">
                 <div className="cn-section-icon">
                   <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
@@ -894,7 +932,7 @@ export default function InicioPage() {
               </div>
             </div>
 
-            <div className="cn-section">
+            <div className="cn-section" data-sec="content">
               <div className="cn-section-head">
                 <div className="cn-section-icon">
                   <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h6a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" /></svg>
@@ -948,7 +986,7 @@ export default function InicioPage() {
               </div>
             </div>
 
-            <div className="cn-section">
+            <div className="cn-section" data-sec="links">
               <div className="cn-section-head">
                 <div className="cn-section-icon">
                   <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clipRule="evenodd" /></svg>
@@ -996,7 +1034,7 @@ export default function InicioPage() {
               </div>
             </div>
 
-            <div className="cn-section">
+            <div className="cn-section" data-sec="bg">
               <div className="cn-section-head">
                 <div className="cn-section-icon">
                   <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" /></svg>
@@ -1051,7 +1089,7 @@ export default function InicioPage() {
               </div>
             </div>
 
-            <div className="cn-section">
+            <div className="cn-section" data-sec="photos">
               <div className="cn-section-head">
                 <div className="cn-section-icon">
                   <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm2 3a1 1 0 100 2 1 1 0 000-2zm-1 8l3.5-4.5 2.5 3 3-4L17 15H5z" clipRule="evenodd" /></svg>
@@ -1107,7 +1145,7 @@ export default function InicioPage() {
               </div>
             </div>
 
-            <div className="cn-section">
+            <div className="cn-section" data-sec="transition">
               <div className="cn-section-head">
                 <div className="cn-section-icon">
                   <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4.293 15.707a1 1 0 010-1.414L14.586 4H10a1 1 0 110-2h7a1 1 0 011 1v7a1 1 0 11-2 0V5.414L5.707 15.707a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
@@ -1146,7 +1184,7 @@ export default function InicioPage() {
             </div>
 
             {config.transition === 'reveal' && (
-              <div className="cn-section">
+              <div className="cn-section" data-sec="reveal">
                 <div className="cn-section-head">
                   <div className="cn-section-icon">
                     <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 2a1 1 0 01.967.744L14.146 15.2 17.5 13.134a1 1 0 11.998 1.732l-4.5 2.598a1 1 0 01-1.465-.744L10 7.8l-2.533 8.92a1 1 0 01-1.465.744l-4.5-2.598a1 1 0 11.998-1.732l3.354 2.066L9.033 2.744A1 1 0 0110 2z" clipRule="evenodd" /></svg>
@@ -1261,7 +1299,7 @@ export default function InicioPage() {
               </div>
             )}
 
-            <div className="cn-section">
+            <div className="cn-section" data-sec="reset">
               <div className="cn-section-head">
                 <div className="cn-section-icon">
                   <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" /></svg>
@@ -1319,6 +1357,35 @@ export default function InicioPage() {
             </div>
           </form>
         </div>
+
+        {phoneLayout && (() => {
+          const secs = IN_SECTIONS.filter(x => x.key !== 'reveal' || config.transition === 'reveal')
+          const i = secs.findIndex(x => x.key === mSec)
+          return (
+            <div onClick={e => e.stopPropagation()}>
+              {i >= 0 && (
+                <div className="cn-co-sheet-head">
+                  <button type="button" onClick={() => setMSec(secs[i - 1].key)} disabled={i === 0} aria-label="Anterior">‹</button>
+                  <span>{secs[i].label}<small>{i + 1}/{secs.length}</small></span>
+                  <button type="button" onClick={() => setMSec(secs[i + 1].key)} disabled={i === secs.length - 1} aria-label="Siguiente">›</button>
+                  <button type="button" className="cn-co-close" onClick={() => setMSec(null)} aria-label="Cerrar">✕</button>
+                </div>
+              )}
+              <nav className="cn-co-bar">
+                {secs.map(x => (
+                  <button key={x.key} type="button" title={x.label}
+                    className={`cn-co-bar-btn${mSec === x.key ? ' on' : ''}`}
+                    onClick={() => setMSec(mSec === x.key ? null : x.key)}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{x.icon}</svg>
+                  </button>
+                ))}
+                <Link href="/dashboard" title="Salir" className="cn-co-bar-btn cn-co-exit">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+                </Link>
+              </nav>
+            </div>
+          )
+        })()}
 
       </div>
     </div>

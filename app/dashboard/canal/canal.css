@@ -517,9 +517,17 @@
   --cn-bar-inset: calc(env(safe-area-inset-bottom, 0px) * 0.65);
   --cn-bar-h: calc(72px + var(--cn-bar-inset));
   position: fixed; inset: 0; z-index: 100;
+  /* Safari (iOS 26) tints its address bar from this box's background
+     color, so that's the tool bar's navy; the patterned backdrop is its
+     own layer above the bar */
+  background: var(--lyte-navy, #1C1B3A);
+  overflow: hidden;
+}
+.cn-co-m::before {
+  content: ''; position: fixed; left: 0; right: 0; top: 0; bottom: var(--cn-bar-h);
   background-color: var(--lyte-blue); background-image: url(/brand/lyte-pattern.png);
   background-size: 174px 328px;
-  overflow: hidden;
+  pointer-events: none;
 }
 .cn-co-m .cn-header { display: none; }
 .cn-co-m .cn-checkout-split { display: block; }

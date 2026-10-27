@@ -84,9 +84,16 @@ const en = {
   'landing.nav.startFree': 'Start free →',
   'landing.nav.haveAccount': 'I already have an account',
 
+  // ── Landing – launch promo ──────────────────────────────────
+  'landing.promo.bar': 'Lyte is free until December 31 — open your store today and pay nothing.',
+  'landing.promo.cta': 'Create my store →',
+  'landing.promo.short': 'Free until December',
+  'landing.promo.ctaShort': 'Create store →',
+  'landing.pricing.promo': 'Launch promo: use all of Lyte for free until December 31. No credit card.',
+
   // ── Landing – hero ──────────────────────────────────────────
-  'landing.hero.badge': 'New',
-  'landing.hero.label': 'Built for LATAM entrepreneurs',
+  'landing.hero.badge': 'Free',
+  'landing.hero.label': 'Every feature free until December',
   'landing.hero.title1': 'Your business.',
   'landing.hero.title2': 'Lighter. Faster.',
   'landing.hero.sub': 'The all-in-one platform to sell, collect payment and deliver without friction. Simpler than Shopify. More complete than a WhatsApp link.',
@@ -439,9 +446,16 @@ const es: Record<Key, string> = {
   'landing.nav.startFree': 'Empezar gratis →',
   'landing.nav.haveAccount': 'Ya tengo cuenta',
 
+  // ── Landing – promo de lanzamiento ──────────────────────────
+  'landing.promo.bar': 'Lyte es gratis hasta el 31 de diciembre. Crea tu tienda hoy sin pagar nada.',
+  'landing.promo.cta': 'Crear mi tienda →',
+  'landing.promo.short': 'Gratis hasta diciembre',
+  'landing.promo.ctaShort': 'Crear tienda →',
+  'landing.pricing.promo': 'Promoción de lanzamiento: usa Lyte completo, gratis, hasta el 31 de diciembre. Sin tarjeta de crédito.',
+
   // ── Landing – hero ──────────────────────────────────────────
-  'landing.hero.badge': 'Nuevo',
-  'landing.hero.label': 'Hecho para emprendedores LATAM',
+  'landing.hero.badge': 'Gratis',
+  'landing.hero.label': 'Todas las funciones gratis hasta diciembre',
   'landing.hero.title1': 'Tu negocio.',
   'landing.hero.title2': 'Más liviano. Más rápido.',
   'landing.hero.sub': 'La plataforma todo-en-uno para vender, cobrar y entregar sin fricción. Más simple que Shopify. Más completa que un link de WhatsApp.',

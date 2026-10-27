@@ -18,6 +18,16 @@ export default function Home() {
 
   return (
     <>
+      {/* Launch promo — free until December */}
+      <div className="lp-promo">
+        <span className="lp-promo-text lp-promo-long">{t('landing.promo.bar')}</span>
+        <span className="lp-promo-text lp-promo-short">{t('landing.promo.short')}</span>
+        <Link href="/registro" className="lp-promo-cta">
+          <span className="lp-promo-long">{t('landing.promo.cta')}</span>
+          <span className="lp-promo-short">{t('landing.promo.ctaShort')}</span>
+        </Link>
+      </div>
+
       {/* NAV */}
       <nav className="lp-nav">
         <Link href="/" className="logo">
@@ -35,7 +45,7 @@ export default function Home() {
 
       {/* HERO */}
       <section className="hero">
-        <div className="hero-label">
+        <div className="hero-label hero-label-promo">
           <span className="badge">{t('landing.hero.badge')}</span>
           {t('landing.hero.label')}
         </div>
@@ -376,6 +386,11 @@ export default function Home() {
           <span className="eyebrow">{t('landing.pricing.eyebrow')}</span>
           <h2 className="section-title">{t('landing.pricing.title')} <span className="serif">{t('landing.pricing.titleAccent')}</span></h2>
           <p className="section-subtitle">{t('landing.pricing.sub')}</p>
+        </div>
+
+        <div className="pricing-promo">
+          <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M5 5a3 3 0 015-2.236A3 3 0 0114.83 6H16a2 2 0 110 4h-5V9a1 1 0 10-2 0v1H4a2 2 0 110-4h1.17C5.06 5.687 5 5.35 5 5zm4 1V5a1 1 0 10-1 1h1zm3 0a1 1 0 10-1-1v1h1z" clipRule="evenodd" /><path d="M9 11H3v5a2 2 0 002 2h4v-7zM11 18h4a2 2 0 002-2v-5h-6v7z" /></svg>
+          {t('landing.pricing.promo')}
         </div>
 
         <PricingToggle />

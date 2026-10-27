@@ -1993,6 +1993,9 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
   .ed-device-content {
     overflow: hidden;
   }
+  /* On a phone the fake browser bar (dots + URL) above the preview is just
+     dead space — the store starts right at the top of the frame. */
+  .ed-device-chrome { display: none; }
   /* The phone preview is shown as a miniature: the frame is smaller, and the
      store inside still lays out at the phone's real width (the iframe is
      sized up by 1/scale and scaled back down), so it looks exactly like the
@@ -2487,6 +2490,7 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
    switch floats top-left, and the preview (scaled in JS, see `mini`) fills
    what's left. */
 @media (orientation: landscape) and (max-height: 520px) {
+  .ed-device-chrome { display: none; }
   .ed-app {
     grid-template-columns: 1fr 60px;
     grid-template-rows: 1fr;

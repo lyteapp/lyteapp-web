@@ -25,6 +25,22 @@ const TR_BG_PRESETS = [
   { color: '#FFF7ED', label: 'Naranja' },
   { color: '#F0FDF4', label: 'Menta'   },
 ]
+// Map mode's status half-sheet
+const TR_SHEET_PRESETS = [
+  { color: '#F5F3EF', label: 'Cálido' },
+  { color: '#FFFFFF', label: 'Blanco' },
+  { color: '#F8FAFC', label: 'Gris' },
+  { color: '#FFF7ED', label: 'Naranja' },
+  { color: '#F0FDF4', label: 'Menta' },
+  { color: '#1E293B', label: 'Pizarra' },
+  { color: '#0F172A', label: 'Noche' },
+]
+function isDarkHex(hex: string) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex)
+  if (!m) return false
+  const n = parseInt(m[1], 16)
+  return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255 < 0.55
+}
 const TR_FONTS = [
   { id: 'system',           name: 'Sistema'  },
   { id: 'Inter',            name: 'Inter'    },
@@ -69,6 +85,8 @@ interface TrackingConfig {
   mode: 'status' | 'location'
   accentColor: string
   bgColor: string
+  /** Map mode: background of the status half-sheet ('' = default) */
+  sheetBg?: string
   fontFamily: string
   fontSize: string
   mapStyle: string
@@ -265,6 +283,8 @@ export default function Apariencia() {
   const statusDotPreviewPx   = DOT_OPTS.find(o => o.id === trConfig.statusDotSize)?.statusPreviewPx   ?? 20
   const locationDotPreviewPx = DOT_OPTS.find(o => o.id === trConfig.locationDotSize)?.locPreviewPx    ?? 7
   const dotColor = trConfig.dotColor
+  const sheetBg = trConfig.sheetBg || '#F5F3EF'
+  const sheetDark = isDarkHex(sheetBg)
 
   async function save(e: { preventDefault(): void }) {
     e.preventDefault()
@@ -408,12 +428,12 @@ export default function Apariencia() {
           </div>
 
           {/* Map bottom fade */}
-          <div style={{ position: 'absolute', top: 'calc(56% - 40px)', left: 0, right: 0, height: 50, background: 'linear-gradient(transparent, #F5F3EF)', zIndex: 4 }} />
+          <div style={{ position: 'absolute', top: 'calc(56% - 40px)', left: 0, right: 0, height: 50, background: `linear-gradient(transparent, ${sheetBg})`, zIndex: 4 }} />
 
           {/* Bottom sheet */}
-          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '47%', background: '#F5F3EF', borderRadius: '20px 20px 0 0', zIndex: 10, overflowY: 'auto', scrollbarWidth: 'none' as const }}>
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '47%', background: sheetBg, borderRadius: '20px 20px 0 0', zIndex: 10, overflowY: 'auto', scrollbarWidth: 'none' as const }}>
             {/* Handle */}
-            <div style={{ width: 28, height: 3, background: 'rgba(15,23,42,0.15)', borderRadius: 100, margin: '8px auto 0' }} />
+            <div style={{ width: 28, height: 3, background: sheetDark ? 'rgba(255,255,255,0.25)' : 'rgba(15,23,42,0.15)', borderRadius: 100, margin: '8px auto 0' }} />
 
             {/* Status section */}
             <div style={{ padding: '10px 14px 8px' }}>
@@ -427,8 +447,8 @@ export default function Apariencia() {
                   <span style={{ fontSize: 7, color: '#10B981', fontWeight: 700 }}>Ubicacion en vivo</span>
                 </div>
               </div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A', letterSpacing: '-0.5px', lineHeight: 1.2, marginBottom: 3 }}>En preparacion en cocina</div>
-              <div style={{ fontSize: 8, color: '#475569', lineHeight: 1.5 }}>Estamos preparando tu pedido con mucho cuidado.</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: sheetDark ? '#F8FAFC' : '#0F172A', letterSpacing: '-0.5px', lineHeight: 1.2, marginBottom: 3 }}>En preparacion en cocina</div>
+              <div style={{ fontSize: 8, color: sheetDark ? 'rgba(241,245,249,0.72)' : '#475569', lineHeight: 1.5 }}>Estamos preparando tu pedido con mucho cuidado.</div>
             </div>
 
             {/* Horizontal timeline */}
@@ -446,7 +466,7 @@ export default function Apariencia() {
                     <div style={{ width: locationDotPreviewPx, height: locationDotPreviewPx, borderRadius: '50%', flexShrink: 0, background: (done || active) ? dotColor : '#CBD5E1', boxShadow: active ? `0 0 0 ${Math.round(locationDotPreviewPx * 0.43)}px ${dotColor}33` : 'none', zIndex: 1, transition: 'all 0.25s' }} />
                     {i < arr.length - 1 && <div style={{ flex: 1, height: locationConnH, background: (done && !active) ? dotColor : 'rgba(148,163,184,0.3)', borderRadius: locationConnH }} />}
                   </div>
-                  <span style={{ fontSize: 7, marginTop: 3, textAlign: 'center' as const, lineHeight: 1.2, color: done ? '#475569' : active ? dotColor : '#94A3B8', fontWeight: active ? 600 : 400 }}>{label}</span>
+                  <span style={{ fontSize: 7, marginTop: 3, textAlign: 'center' as const, lineHeight: 1.2, color: done ? (sheetDark ? 'rgba(241,245,249,0.8)' : '#475569') : active ? dotColor : (sheetDark ? 'rgba(241,245,249,0.45)' : '#94A3B8'), fontWeight: active ? 600 : 400 }}>{label}</span>
                 </div>
               ))}
             </div>
@@ -966,6 +986,36 @@ export default function Apariencia() {
             })}
           </div>
         </div>
+
+        {/* Status half-sheet color — map mode only */}
+        {trConfig.mode === 'location' && (
+          <div className="cn-field" data-tsec="colors">
+            <div className="cn-label">Color del panel de estatus</div>
+            <div className="cn-pill-row" style={{ flexWrap: 'wrap' }}>
+              {TR_SHEET_PRESETS.map(({ color: c, label }) => (
+                <button
+                  key={c}
+                  type="button"
+                  className={`cn-pill-btn${sheetBg.toUpperCase() === c ? ' selected' : ''}`}
+                  onClick={() => setTrConfig(p => ({ ...p, sheetBg: c === '#F5F3EF' ? undefined : c }))}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                >
+                  <div style={{ width: 12, height: 12, borderRadius: 3, background: c, border: '1px solid rgba(0,0,0,0.1)', flexShrink: 0 }} />
+                  {label}
+                </button>
+              ))}
+              <label className={`cn-pill-btn${TR_SHEET_PRESETS.some(p => p.color === sheetBg.toUpperCase()) ? '' : ' selected'}`}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, position: 'relative', cursor: 'pointer' }}>
+                <div style={{ width: 12, height: 12, borderRadius: 3, background: TR_SHEET_PRESETS.some(p => p.color === sheetBg.toUpperCase()) ? 'conic-gradient(#f87171, #fbbf24, #34d399, #60a5fa, #a78bfa, #f87171)' : sheetBg, border: '1px solid rgba(0,0,0,0.1)', flexShrink: 0 }} />
+                Otro
+                <input type="color" value={/^#[0-9a-f]{6}$/i.test(sheetBg) ? sheetBg : '#F5F3EF'}
+                  onChange={e => { const v = e.target.value.toUpperCase(); setTrConfig(p => ({ ...p, sheetBg: v })) }}
+                  style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }} />
+              </label>
+            </div>
+            <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 6 }}>Con un color oscuro, los textos del panel se ponen claros.</div>
+          </div>
+        )}
 
         {/* Background — status mode only */}
         {trConfig.mode === 'status' && (

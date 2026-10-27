@@ -43,6 +43,16 @@ interface TrackingConfig {
   dotColor?:              string
   statusDotSize?:         'sm' | 'md' | 'lg'
   locationDotSize?:       'sm' | 'md' | 'lg'
+  /** Map mode: background of the status half-sheet */
+  sheetBg?:               string
+}
+
+// Dark sheet colors flip its own text to light
+function isDarkHex(hex: string) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex)
+  if (!m) return false
+  const n = parseInt(m[1], 16)
+  return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255 < 0.55
 }
 
 const FONT_STACKS: Record<string, string> = {
@@ -355,6 +365,8 @@ export default function TrackingClient({
     const statusLabel = STATUS_LABELS[delivery.status] ?? 'en camino'
     const font       = FONT_STACKS[trackingConfig.fontFamily ?? 'system'] ?? FONT_STACKS.system
     const dotColor   = trackingConfig?.dotColor ?? '#10B981'
+    const sheetBg = trackingConfig?.sheetBg || '#F5F3EF'
+    const sheetDark = isDarkHex(sheetBg)
     const locDotSz   = parseInt(LOCATION_DOT_PX[trackingConfig?.locationDotSize ?? 'md'] ?? '9')
 
     const PEEK = 72
@@ -435,7 +447,7 @@ export default function TrackingClient({
           ref={sheetRef}
           style={{
             position: 'absolute', bottom: 0, left: 0, right: 0, height: '47%',
-            background: '#F5F3EF', borderRadius: '24px 24px 0 0', zIndex: 10,
+            background: sheetBg, borderRadius: '24px 24px 0 0', zIndex: 10,
             overflowY: sheetTranslateY > 0 ? 'hidden' : 'auto',
             scrollbarWidth: 'none' as const,
             transform: `translateY(${sheetTranslateY}px)`,
@@ -452,7 +464,7 @@ export default function TrackingClient({
             onPointerUp={onHandleUp}
             onPointerCancel={onHandleUp}
           >
-            <div style={{ width: 36, height: 4, background: 'rgba(15,23,42,0.15)', borderRadius: 100, margin: '0 auto' }} />
+            <div style={{ width: 36, height: 4, background: sheetDark ? 'rgba(255,255,255,0.25)' : 'rgba(15,23,42,0.15)', borderRadius: 100, margin: '0 auto' }} />
           </div>
 
           {/* Status */}
@@ -461,8 +473,8 @@ export default function TrackingClient({
               <div style={{ width: 7, height: 7, borderRadius: '50%', background: statusDot, flexShrink: 0 }} />
               <span style={{ fontSize: 11, color: statusDot, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>{statusLabel}</span>
             </div>
-            <div style={{ fontSize: 20, fontWeight: 600, color: '#0F172A', letterSpacing: '-0.5px', lineHeight: 1.2, marginBottom: 4 }}>{hero.title}</div>
-            <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.5 }}>{hero.sub}</div>
+            <div style={{ fontSize: 20, fontWeight: 600, color: sheetDark ? '#F8FAFC' : '#0F172A', letterSpacing: '-0.5px', lineHeight: 1.2, marginBottom: 4 }}>{hero.title}</div>
+            <div style={{ fontSize: 13, color: sheetDark ? 'rgba(241,245,249,0.72)' : '#475569', lineHeight: 1.5 }}>{hero.sub}</div>
           </div>
 
           {/* Horizontal timeline */}
@@ -491,7 +503,7 @@ export default function TrackingClient({
                       </div>
                     )}
                   </div>
-                  <span style={{ fontSize: 9, marginTop: 4, textAlign: 'center' as const, lineHeight: 1.2, color: active ? dotColor : done ? '#475569' : '#94A3B8', fontWeight: active ? 700 : 400 }}>{label}</span>
+                  <span style={{ fontSize: 9, marginTop: 4, textAlign: 'center' as const, lineHeight: 1.2, color: active ? dotColor : done ? (sheetDark ? 'rgba(241,245,249,0.8)' : '#475569') : (sheetDark ? 'rgba(241,245,249,0.45)' : '#94A3B8'), fontWeight: active ? 700 : 400 }}>{label}</span>
                 </div>
               )
             })}

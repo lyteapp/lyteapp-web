@@ -462,7 +462,7 @@ export default function Apariencia() {
               ].map(({ label, done, active }, i, arr) => (
                 <div key={label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <div style={{ width: '100%', display: 'flex', alignItems: 'center' }}>
-                    {i > 0 && <div style={{ flex: 1, height: locationConnH, background: done ? dotColor : 'rgba(148,163,184,0.3)', borderRadius: locationConnH }} />}
+                    {i > 0 && <div style={{ flex: 1, height: locationConnH, background: done || active ? dotColor : 'rgba(148,163,184,0.3)', borderRadius: locationConnH }} />}
                     <div style={{ width: locationDotPreviewPx, height: locationDotPreviewPx, borderRadius: '50%', flexShrink: 0, background: (done || active) ? dotColor : '#CBD5E1', boxShadow: active ? `0 0 0 ${Math.round(locationDotPreviewPx * 0.43)}px ${dotColor}33` : 'none', zIndex: 1, transition: 'all 0.25s' }} />
                     {i < arr.length - 1 && <div style={{ flex: 1, height: locationConnH, background: (done && !active) ? dotColor : 'rgba(148,163,184,0.3)', borderRadius: locationConnH }} />}
                   </div>

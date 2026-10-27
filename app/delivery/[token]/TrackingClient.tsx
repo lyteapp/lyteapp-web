@@ -485,11 +485,13 @@ export default function TrackingClient({
               return (
                 <div key={label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <div style={{ width: '100%', display: 'flex', alignItems: 'center' }}>
+                    {/* the half leading into this dot fills for the current
+                        step too, so the bar reaches the dot it's on */}
                     {i > 0 && (
                       <div className="tr-h-connector">
                         <div
-                          className={`tr-h-connector-fill${done ? ' done' : ''}`}
-                          style={done ? { animationDelay: `${(i - 1) * 0.07}s` } : undefined}
+                          className={`tr-h-connector-fill${done || active ? ' done' : ''}`}
+                          style={done || active ? { animationDelay: `${(i - 1) * 0.07}s` } : undefined}
                         />
                       </div>
                     )}

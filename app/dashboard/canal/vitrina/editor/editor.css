@@ -2518,6 +2518,11 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
     top: 0; bottom: 0; right: 60px; left: auto;
     width: var(--ed-side-panel-w); height: auto; max-height: none;
     box-sizing: border-box;
+    /* every tool scrolls here (wide phones skip the ≤800px rules that set it) */
+    overflow-y: auto; overflow-x: hidden;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
     border-radius: 16px 0 0 16px; border-bottom: 1px solid var(--ed-line);
     padding: 0 14px 14px;
     padding-top: env(safe-area-inset-top);

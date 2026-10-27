@@ -513,6 +513,9 @@
 /* ── CHECKOUT on a phone held upright: same layout as the Vitrina editor ──
    (classes set from JS — see phoneLayout in checkout/page.tsx) */
 .cn-co-m {
+  /* bottom bar, lifted over the iPhone's home bar in the home-screen app */
+  --cn-bar-inset: calc(env(safe-area-inset-bottom, 0px) * 0.65);
+  --cn-bar-h: calc(72px + var(--cn-bar-inset));
   position: fixed; inset: 0; z-index: 100;
   background-color: var(--lyte-blue); background-image: url(/brand/lyte-pattern.png);
   background-size: 174px 328px;
@@ -523,16 +526,16 @@
 /* preview: centred in what's left above the sheet and the bar */
 .cn-co-m .cn-checkout-preview-col {
   position: fixed !important; left: 0; right: 0; top: 0 !important;
-  bottom: 72px; padding: 14px 16px;
+  bottom: var(--cn-bar-h); padding: 14px 16px;
   justify-content: center; gap: 0 !important;
 }
-.cn-co-m:not([data-sec="none"]) .cn-checkout-preview-col { bottom: calc(72px + 42dvh); }
+.cn-co-m:not([data-sec="none"]) .cn-checkout-preview-col { bottom: calc(var(--cn-bar-h) + 42dvh); }
 .cn-co-m .cn-checkout-preview-col > div:first-child:not(.cn-co-stage) { display: none !important; }
 .cn-co-stage { position: relative; flex-shrink: 0; }
 .cn-co-m .cn-checkout-preview-frame { margin: 0; }
 /* sheet: the form column, showing only the picked section */
 .cn-co-m .cn-checkout-split > div:first-child {
-  position: fixed; left: 0; right: 0; bottom: 72px;
+  position: fixed; left: 0; right: 0; bottom: var(--cn-bar-h);
   height: 42vh; height: 42dvh;
   overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
   background: white; border-radius: 18px 18px 0 0;
@@ -556,7 +559,7 @@
   position: sticky; bottom: -16px; background: white; margin: 0 -12px -16px; padding: 10px 12px 16px;
 }
 .cn-co-sheet-head {
-  position: fixed; left: 0; right: 0; bottom: calc(72px + 42dvh - 46px); z-index: 2;
+  position: fixed; left: 0; right: 0; bottom: calc(var(--cn-bar-h) + 42dvh - 46px); z-index: 2;
   height: 46px; display: flex; align-items: center; gap: 6px; padding: 0 10px;
   background: white; border-radius: 18px 18px 0 0; border-bottom: 1px solid #F1F5F9;
 }
@@ -573,9 +576,9 @@
 .cn-co-sheet-head button:disabled { opacity: 0.3; cursor: default; }
 .cn-co-sheet-head .cn-co-close { font-size: 13px; background: #F1F5F9; color: #64748B; }
 .cn-co-bar {
-  position: fixed; left: 0; right: 0; bottom: 0; height: 72px; z-index: 3;
+  position: fixed; left: 0; right: 0; bottom: 0; height: var(--cn-bar-h); z-index: 3;
   display: flex; align-items: center; gap: 2px; padding: 0 6px;
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: var(--cn-bar-inset);
   background: var(--lyte-navy, #1C1B3A); overflow-x: auto; scrollbar-width: none;
 }
 .cn-co-bar::-webkit-scrollbar { display: none; }
@@ -602,13 +605,13 @@
 .cn-co-m[data-sec="reset"] .cn-section:not([data-sec="reset"]) { display: none; }
 .cn-co-m .cn-inicio-split { display: block; }
 .cn-co-m .cn-inicio-preview-col {
-  position: fixed !important; left: 0; right: 0; top: 0 !important; bottom: 72px;
+  position: fixed !important; left: 0; right: 0; top: 0 !important; bottom: var(--cn-bar-h);
   padding: 14px 16px !important; justify-content: center; gap: 10px !important;
 }
-.cn-co-m:not([data-sec="none"]) .cn-inicio-preview-col { bottom: calc(72px + 42dvh); }
+.cn-co-m:not([data-sec="none"]) .cn-inicio-preview-col { bottom: calc(var(--cn-bar-h) + 42dvh); }
 .cn-co-m .cn-inicio-preview-hint, .cn-co-m .cn-sidebar-toggle { display: none !important; }
 .cn-co-m .cn-sidebar {
-  position: fixed; left: 0; right: 0; bottom: 72px; top: auto;
+  position: fixed; left: 0; right: 0; bottom: var(--cn-bar-h); top: auto;
   width: auto !important; max-height: none; opacity: 1 !important; pointer-events: auto !important;
   height: 42vh; height: 42dvh;
   overflow-y: auto !important; overflow-x: hidden; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
@@ -640,20 +643,20 @@
 .cn-unsaved-btn.cn-unsaved-cancel { background: rgba(255,255,255,0.12); color: white; margin-right: -4px; }
 @keyframes cnUnsavedIn { from { opacity: 0; transform: translate(-50%, 14px) scale(0.96); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
 @keyframes cnUnsavedPulse { 50% { opacity: 0.35; } }
-.cn-co-m .cn-unsaved { bottom: 84px; gap: 8px; font-size: 12px; padding-left: 12px; }
+.cn-co-m .cn-unsaved { bottom: calc(var(--cn-bar-h) + 12px); gap: 8px; font-size: 12px; padding-left: 12px; }
 .cn-co-m .cn-unsaved-btn { padding: 7px 12px; font-size: 12px; }
-.cn-co-m:not([data-sec="none"]) .cn-unsaved { bottom: calc(72px + 42dvh + 10px); }
+.cn-co-m:not([data-sec="none"]) .cn-unsaved { bottom: calc(var(--cn-bar-h) + 42dvh + 10px); }
 .cn-unsaved.cn-unsaved-raised { bottom: 92px; gap: 8px; font-size: 12px; padding-left: 12px; }
 .cn-unsaved-raised .cn-unsaved-btn { padding: 7px 12px; font-size: 12px; }
 
 /* ── ORDER TRACKING editor on a phone (shares the cn-co-* layout) ── */
 .cn-tr-m .cn-tr-preview-col {
-  position: fixed; left: 0; right: 0; top: 0; bottom: 72px;
+  position: fixed; left: 0; right: 0; top: 0; bottom: var(--cn-bar-h);
   display: flex; align-items: center; justify-content: center; padding: 14px 16px;
 }
-.cn-tr-m:not([data-sec="none"]) .cn-tr-preview-col { bottom: calc(72px + 42dvh); }
+.cn-tr-m:not([data-sec="none"]) .cn-tr-preview-col { bottom: calc(var(--cn-bar-h) + 42dvh); }
 .cn-tr-m .cn-tr-sheet {
-  position: fixed; left: 0; right: 0; bottom: 72px;
+  position: fixed; left: 0; right: 0; bottom: var(--cn-bar-h);
   height: 42vh; height: 42dvh;
   display: flex; flex-direction: column;
   background: white; border-radius: 18px 18px 0 0;

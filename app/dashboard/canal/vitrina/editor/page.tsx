@@ -642,9 +642,12 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
   // Phone: which ends of the sideways-scrolling tool bar hide more tools
   const sideBarRef = useRef<HTMLElement>(null)
   const [barMore, setBarMore] = useState({ left: false, right: false })
+  // its real height (taller over the iPhone home bar in the home-screen app)
+  const [barH, setBarH] = useState(72)
   function readBarScroll() {
     const el = sideBarRef.current
     if (!el) return
+    setBarH(h => (h === el.offsetHeight ? h : el.offsetHeight))
     const left = el.scrollLeft > 4
     const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 4
     setBarMore(p => (p.left === left && p.right === right ? p : { left, right }))
@@ -1714,7 +1717,7 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
     return { w, h, scale: Math.min(availW / w, availH / h) }
   })() : vp.w > 0 && vp.w <= 800 && deviceType !== 'mobile' ? (() => {
     const { w, h } = MINI_SIZE[deviceType]
-    const availH = vp.h - 150 - (activeTool ? (sheetH || vp.h * 0.27) : 0)
+    const availH = vp.h - 78 - barH - (activeTool ? (sheetH || vp.h * 0.27) : 0)
     const scale = Math.min((vp.w - 24) / w, availH / h)
     return { w, h, scale }
   })() : null

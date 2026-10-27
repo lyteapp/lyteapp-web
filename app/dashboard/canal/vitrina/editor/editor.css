@@ -1960,16 +1960,22 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
 .ed-tp-drag-handle { display: none; }
 
 @media (max-width: 800px) {
+  /* Bottom bar height: lifted over the iPhone's home bar when the dashboard
+     runs as a home-screen app (env() is 0 in a normal Safari tab) */
+  .ed-app {
+    --ed-bar-inset: calc(env(safe-area-inset-bottom, 0px) * 0.65);
+    --ed-bar-h: calc(72px + var(--ed-bar-inset));
+  }
   /* The icon rail moves from a side column to a bottom tab bar, so the
      preview gets the phone's full width instead of sharing it with a
      56px-wide column down the side. */
   .ed-app {
     grid-template-columns: 1fr;
-    grid-template-rows: 1fr 72px;
+    grid-template-rows: 1fr var(--ed-bar-h);
   }
   .ed-side-bar {
     width: 100%;
-    height: 72px;
+    height: var(--ed-bar-h); padding-bottom: var(--ed-bar-inset) !important;
     flex-direction: row;
     align-items: center;
     border-left: none;
@@ -1987,8 +1993,8 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
   }
   .ed-device {
     max-width: calc(100vw - 16px);
-    height: calc(100vh - 108px);
-    height: calc(100dvh - 108px);
+    height: calc(100vh - 108px - var(--ed-bar-inset));
+    height: calc(100dvh - 108px - var(--ed-bar-inset));
     border-radius: 32px;
   }
   .ed-device-content {
@@ -2032,7 +2038,7 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
     left: 0;
     right: 0;
     top: auto;
-    bottom: 72px;
+    bottom: var(--ed-bar-h);
     transform: none;
     width: auto;
     /* as tall as the page shown (so it all fits), up to a cap; its measured
@@ -2056,8 +2062,8 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
   .ed-app-sheet-open .ed-canvas-scroll { padding-bottom: calc(var(--ed-sheet-h) + 6px); }
   .ed-tool-panel .ed-tp-swatches { grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 6px; }
   .ed-app-sheet-open .ed-device {
-    height: calc(100vh - 118px - var(--ed-sheet-h));
-    height: calc(100dvh - 118px - var(--ed-sheet-h));
+    height: calc(100vh - 118px - var(--ed-bar-inset) - var(--ed-sheet-h));
+    height: calc(100dvh - 118px - var(--ed-bar-inset) - var(--ed-sheet-h));
     transition: height 0.22s cubic-bezier(0.32, 0.72, 0, 1);
   }
   /* Dragged the handle up past the threshold — see renderPanelDragHandle. */
@@ -2488,10 +2494,10 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
 }
 @keyframes edUnsavedPulse { 50% { opacity: 0.35; } }
 @media (max-width: 800px) {
-  .ed-unsaved { left: 50%; bottom: 84px; gap: 8px; font-size: 12px; padding-left: 12px; }
+  .ed-unsaved { left: 50%; bottom: calc(var(--ed-bar-h) + 12px); gap: 8px; font-size: 12px; padding-left: 12px; }
   .ed-unsaved-btn { padding: 7px 12px; font-size: 12px; }
-  .ed-app-sheet-open .ed-unsaved { bottom: calc(72px + var(--ed-sheet-h) + 10px); }
-  .ed-app-sheet-open:has(.ed-tool-panel-expanded) .ed-unsaved { bottom: calc(72px + 70dvh + 10px); }
+  .ed-app-sheet-open .ed-unsaved { bottom: calc(var(--ed-bar-h) + var(--ed-sheet-h) + 10px); }
+  .ed-app-sheet-open:has(.ed-tool-panel-expanded) .ed-unsaved { bottom: calc(var(--ed-bar-h) + 70dvh + 10px); }
 }
 
 /* ── Phone held sideways ──────────────────────────────── */
@@ -2577,7 +2583,7 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
 /* ── Phone tool bar: "more tools this way" ── */
 .ed-bar-more {
   position: fixed; bottom: 0; z-index: 130;
-  width: 44px; height: 72px; padding: 0; border: none; cursor: pointer;
+  width: 44px; height: var(--ed-bar-h, 72px); padding-bottom: var(--ed-bar-inset, 0px) !important; padding: 0; border: none; cursor: pointer;
   display: flex; align-items: center; color: white;
   animation: edBarMoreIn 0.2s ease;
 }

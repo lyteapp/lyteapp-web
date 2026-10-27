@@ -35,6 +35,7 @@ export default function Home() {
         <ul className="nav-links">
           <li><a href="#features">{t('landing.nav.features')}</a></li>
           <li><a href="#how">{t('landing.nav.how')}</a></li>
+          <li><a href="#demo">{t('landing.nav.demo')}</a></li>
           <li><a href="#pricing">{t('landing.nav.pricing')}</a></li>
           <li><a href="#testimonials">{t('landing.nav.stories')}</a></li>
           <li><Link href="/login" className="cta-nav">{t('landing.nav.login')}</Link></li>
@@ -147,6 +148,33 @@ export default function Home() {
           <span>VERCEL</span>
           <span className="lux">Twilio</span>
           <span>OpenAI</span>
+        </div>
+      </section>
+
+      {/* DEMO — a real store, live, inside a phone */}
+      <section className="demo-section" id="demo">
+        <div className="demo-copy">
+          <span className="eyebrow">{t('landing.demo.eyebrow')}</span>
+          <h2 className="section-title">{t('landing.demo.title')}<span className="serif">{t('landing.demo.titleAccent')}</span></h2>
+          <p className="section-subtitle">{t('landing.demo.sub')}</p>
+          <ul className="demo-points">
+            <li><CheckIcon /> {t('landing.demo.p1')}</li>
+            <li><CheckIcon /> {t('landing.demo.p2')}</li>
+            <li><CheckIcon /> {t('landing.demo.p3')}</li>
+          </ul>
+          <div className="demo-actions">
+            <Link href="/registro" className="btn-primary">{t('landing.demo.cta')}</Link>
+            <a href="/kosh-apparel" target="_blank" rel="noopener" className="btn-secondary">{t('landing.demo.open')}</a>
+          </div>
+        </div>
+        <div className="demo-phone-wrap">
+          <div className="demo-phone">
+            <div className="demo-phone-notch" />
+            <div className="demo-phone-screen">
+              <iframe src="/kosh-apparel?preview=1&demo=1" title="KOSH APPAREL — tienda de ejemplo" loading="lazy" />
+            </div>
+          </div>
+          <div className="demo-note">{t('landing.demo.note')}</div>
         </div>
       </section>
 

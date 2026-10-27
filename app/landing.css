@@ -1206,3 +1206,46 @@ body {
 }
 .price-card.featured .price-soon { background: var(--violet); color: white; }
 @keyframes lpSoonPulse { 50% { opacity: 0.35; } }
+
+/* ── Example store: a real store live inside a phone ── */
+.demo-section {
+  max-width: 1180px; margin: 0 auto; padding: 100px 40px;
+  display: grid; grid-template-columns: 1fr auto; gap: 64px; align-items: center;
+}
+.demo-copy .section-subtitle { margin-bottom: 22px; }
+.demo-points { list-style: none; padding: 0; margin: 0 0 28px; display: flex; flex-direction: column; gap: 12px; }
+.demo-points li { display: flex; align-items: center; gap: 10px; font-size: 15.5px; color: var(--ink-soft); }
+.demo-points .check { width: 18px; height: 18px; color: #16A34A; flex-shrink: 0; }
+.demo-actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.demo-phone-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+/* the store renders at a real phone's 390×844 and the phone is scaled down */
+.demo-phone {
+  --demo-scale: 0.78;
+  position: relative;
+  width: calc(390px * var(--demo-scale) + 24px); height: calc(844px * var(--demo-scale) + 24px);
+  padding: 12px; box-sizing: border-box;
+  background: #111827; border-radius: 48px;
+  box-shadow: 0 0 0 2px #2A3242, 0 40px 90px rgba(15,23,42,0.35), 0 12px 30px rgba(15,23,42,0.18);
+}
+.demo-phone-notch {
+  position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 2;
+  width: 92px; height: 26px; border-radius: 100px; background: #111827;
+}
+.demo-phone-screen { position: relative; width: 100%; height: 100%; overflow: hidden; border-radius: 37px; background: #111827; }
+.demo-phone-screen iframe {
+  /* below a status-bar strip, so the notch doesn't cover the store's top */
+  position: absolute; top: 30px; left: 0; border: 0;
+  width: 390px; height: calc(844px - 30px / var(--demo-scale));
+  transform: scale(var(--demo-scale)); transform-origin: 0 0;
+}
+.demo-note { font-size: 12.5px; color: var(--ink-muted); }
+
+@media (max-width: 900px) {
+  .demo-section { grid-template-columns: 1fr; gap: 40px; padding: 64px 20px; text-align: center; }
+  .demo-points { align-items: center; }
+  .demo-actions { justify-content: center; }
+}
+@media (max-width: 480px) {
+  .demo-phone { --demo-scale: 0.7; border-radius: 42px; }
+  .demo-phone-screen { border-radius: 32px; }
+}

@@ -621,6 +621,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // a hand-built mockup — it opens straight into checkout with a sample cart
   // already in it, and handleSubmit refuses to actually place that order.
   const isCheckoutPreview = searchParams.get('previewCheckout') === '1'
+  // lyte-app.com's landing page shows a real store as an example with
+  // ?demo=1 — everything can be browsed, but no order is ever placed
+  const isDemo = searchParams.get('demo') === '1'
   // Inside a dashboard preview (an iframe) the device's notch inset means
   // nothing — zero it (see --sf-safe-top in store.css)
   useEffect(() => {
@@ -2817,6 +2820,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     // the owner can see their real checkout rendering — but it must never
     // actually place an order.
     if (isCheckoutPreview) { setError('Esto es una vista previa — los pedidos no se envian aqui.'); return }
+    if (isDemo) { setError('Esta es una tienda de ejemplo, el pedido no se envía. Crea la tuya gratis en lyte-app.com'); return }
     if (!customerName.trim() || !customerPhone.trim()) { setError(t('store.error.required')); return }
     if (deliveryType === 'delivery' && cs.showLocationBox !== false && !customerLat && !customerAddress.trim()) {
       setError('Ingresa tu direccion o comparte tu ubicacion GPS para continuar')

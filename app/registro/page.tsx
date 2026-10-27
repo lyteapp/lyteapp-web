@@ -21,6 +21,8 @@ export default function Registro() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [resending, setResending] = useState(false)
+  // The email already has an account: offer recovery instead of a code
+  const [exists, setExists] = useState<'no' | 'yes' | 'sending' | 'sent'>('no')
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 
   useEffect(() => {
@@ -34,6 +36,8 @@ export default function Registro() {
     setError('')
     setTermsAcceptedAt(new Date().toISOString())
     setLoading(true)
+    const { data: registered } = await supabase.rpc('email_registered', { p_email: email.trim() })
+    if (registered === true) { setExists('yes'); setLoading(false); return }
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
       options: { shouldCreateUser: true },
@@ -44,6 +48,15 @@ export default function Registro() {
       setStep('code')
     }
     setLoading(false)
+  }
+
+  async function sendRecovery() {
+    setExists('sending')
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/reset-password`,
+    })
+    if (error) { setExists('yes'); setError(error.message); return }
+    setExists('sent')
   }
 
   async function resendCode() {
@@ -131,11 +144,33 @@ export default function Registro() {
                   type="email"
                   placeholder="tucorreo@email.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => { setEmail(e.target.value); if (exists !== 'no') setExists('no') }}
                   autoFocus
                   required
                 />
               </div>
+
+              {exists !== 'no' && (
+                <div className="reg-exists" role="alert">
+                  {exists === 'sent' ? (
+                    <>
+                      <div className="reg-exists-title">Revisa tu correo</div>
+                      <div className="reg-exists-text">Te enviamos un enlace a <strong>{email.trim()}</strong> para crear una contraseña nueva.</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="reg-exists-title">Este correo ya está registrado</div>
+                      <div className="reg-exists-text">Ya hay una cuenta con <strong>{email.trim()}</strong>. ¿Quieres recuperar tu contraseña?</div>
+                      <div className="reg-exists-actions">
+                        <button type="button" className="reg-exists-primary" onClick={sendRecovery} disabled={exists === 'sending'}>
+                          {exists === 'sending' ? 'Enviando...' : 'Recuperar mi contraseña'}
+                        </button>
+                        <Link href={`/login?email=${encodeURIComponent(email.trim())}`} className="reg-exists-secondary">Iniciar sesión</Link>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
 
               <label className="reg-terms-check">
                 <input

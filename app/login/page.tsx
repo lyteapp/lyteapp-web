@@ -16,6 +16,13 @@ export default function Login() {
   const [mode, setMode] = useState<'login' | 'forgot' | 'sent'>('login')
   const [resetLoading, setResetLoading] = useState(false)
 
+  // Coming from sign-up with an email that already has an account
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get('email')
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (q) setEmail(q)
+  }, [])
+
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) return

@@ -232,3 +232,23 @@
   .reg-card { padding: 36px 24px; border-radius: 20px; }
   .otp-box { width: 44px; height: 52px; font-size: 18px; }
 }
+
+/* Email already has an account */
+.reg-exists {
+  background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 12px;
+  padding: 14px 16px; margin-bottom: 16px; text-align: left;
+  animation: regExistsIn 0.25s ease;
+}
+.reg-exists-title { font-size: 14px; font-weight: 700; color: #92400E; margin-bottom: 4px; }
+.reg-exists-text { font-size: 13px; color: #78350F; line-height: 1.45; word-break: break-word; }
+.reg-exists-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.reg-exists-primary {
+  border: none; border-radius: 100px; padding: 9px 16px; cursor: pointer;
+  background: var(--lyte-navy, #1C1B3A); color: white; font: inherit; font-size: 13px; font-weight: 700;
+}
+.reg-exists-primary:disabled { opacity: 0.7; cursor: progress; }
+.reg-exists-secondary {
+  border-radius: 100px; padding: 9px 16px; text-decoration: none;
+  background: white; border: 1px solid #FDE68A; color: #92400E; font-size: 13px; font-weight: 700;
+}
+@keyframes regExistsIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }

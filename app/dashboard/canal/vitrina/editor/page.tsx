@@ -56,6 +56,21 @@ async function uploadBlockImage(file: File, storeId: string, folder = 'blocks', 
   return supabase.storage.from('store-assets').getPublicUrl(path).data.publicUrl
 }
 
+// Per-key JSON (keys sorted, undefined dropped) so two configs compare by value
+function stableJson(v: unknown): string {
+  if (Array.isArray(v)) return `[${v.map(stableJson).join(',')}]`
+  if (v && typeof v === 'object') {
+    return `{${Object.keys(v).sort().filter(k => (v as Record<string, unknown>)[k] !== undefined)
+      .map(k => `${JSON.stringify(k)}:${stableJson((v as Record<string, unknown>)[k])}`).join(',')}}`
+  }
+  return JSON.stringify(v) ?? 'null'
+}
+function snapConfig(cfg: Record<string, unknown>): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const k of Object.keys(cfg)) if (cfg[k] !== undefined) out[k] = stableJson(cfg[k])
+  return out
+}
+
 const BG_COLORS = [
   { value: '#FFFFFF', label: 'Blanco',    light: true  },
   { value: '#0F172A', label: 'Negro',     light: false },
@@ -556,6 +571,11 @@ export default function EditorPage() {
   const [vp, setVp] = useState({ w: 0, h: 0 })
   const [saving, setSaving]         = useState(false)
   const [toolSaved, setToolSaved]   = useState(false)
+  // For the "unsaved changes" notice: bumped when the store finishes loading,
+  // and what the editor showed right then / the template last saved
+  const [loadedAt, setLoadedAt]     = useState(0)
+  const [loadSnap, setLoadSnap]     = useState<Record<string, string> | null>(null)
+  const [savedTemplate, setSavedTemplate] = useState<string | null>(null)
   const toolPanelRef = useRef<HTMLDivElement>(null)
   // Phone only: the tool sheet is a quarter of the screen under the preview,
   // so each tool is split into pages (one per subtitle section) with ‹ ›
@@ -698,6 +718,7 @@ export default function EditorPage() {
         }
         setCatProducts(byCat)
       }
+      setLoadedAt(n => n + 1)
     })()
   }, [activeStoreId])
 
@@ -1230,10 +1251,9 @@ export default function EditorPage() {
   }
 
   // ── Save all other settings to DB ─────────────────────
-  async function saveSettings() {
-    if (!storeId || saving) return
-    setSaving(true)
-    const template_config = {
+  // Everything the editor's Guardar button writes to template_config
+  function buildTemplateConfig() {
+    return {
       ...baseConfig,
       pageBg, cardBg: cardBg || undefined, catTitleColor: catTitleColor || undefined, pageFont, fontSizePx, textAlign,
       photoShape, photoSize,
@@ -1267,17 +1287,45 @@ export default function EditorPage() {
       responsiveSizes: (Object.keys(responsiveSizes.tablet).length > 0 || Object.keys(responsiveSizes.desktop).length > 0)
         ? responsiveSizes : undefined,
     }
+  }
+
+  async function saveSettings() {
+    if (!storeId || saving) return
+    setSaving(true)
+    const template_config = buildTemplateConfig()
     await supabase.from('stores').update({
       template,
       brand_color: accentColor,
       template_config,
     }).eq('id', storeId)
     setBaseConfig(template_config)
+    setLoadSnap(snapConfig(template_config))
+    setSavedTemplate(template)
     setSaving(false)
     setToolSaved(true)
     setIframeKey(k => k + 1)
     setTimeout(() => setToolSaved(false), 2000)
   }
+
+  // Unsaved = some setting differs both from what's stored and from what the
+  // editor showed on load (the latter covers defaults the store never saved).
+  // Settings that save on their own (logo position, category shapes…) update
+  // the stored config too, so they never count.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (loadedAt) { setLoadSnap(snapConfig(buildTemplateConfig())); setSavedTemplate(template) }
+  }, [loadedAt]) // eslint-disable-line react-hooks/exhaustive-deps
+  const hasUnsaved = (() => {
+    if (!loadSnap || !storeId) return false
+    if (savedTemplate !== null && template !== savedTemplate) return true
+    const now = snapConfig(buildTemplateConfig())
+    const stored = snapConfig(baseConfig)
+    const keys = new Set([...Object.keys(now), ...Object.keys(stored)])
+    for (const k of keys) {
+      if (now[k] !== stored[k] && now[k] !== loadSnap[k]) return true
+    }
+    return false
+  })()
 
   const isCustomBg    = !BG_COLORS.some(c => c.value === pageBg)
   const isCustomCard  = cardBg !== '' && cardBg !== 'transparent' && !BG_COLORS.some(c => c.value === cardBg)
@@ -1976,6 +2024,23 @@ export default function EditorPage() {
           </div>
         </div>
       </main>
+
+      {/* Unsaved-changes notice: shows as soon as something changes */}
+      {(hasUnsaved || toolSaved) && (
+        <div className={`ed-unsaved${hasUnsaved ? '' : ' ed-unsaved-done'}`} role="status">
+          {hasUnsaved ? (
+            <>
+              <span className="ed-unsaved-dot" />
+              <span className="ed-unsaved-text">Tienes cambios sin guardar</span>
+              <button type="button" className="ed-unsaved-btn" onClick={saveSettings} disabled={saving}>
+                {saving ? 'Guardando…' : 'Guardar'}
+              </button>
+            </>
+          ) : (
+            <span className="ed-unsaved-text">✓ Cambios guardados</span>
+          )}
+        </div>
+      )}
 
       {/* ── SIDE BAR ────────────────────────────────── */}
       <aside className="ed-side-bar">

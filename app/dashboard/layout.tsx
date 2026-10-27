@@ -103,8 +103,9 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   }, [unlock])
 
   useEffect(() => {
-    // Tint Safari's own toolbar to match the dashboard so it reads as
-    // one continuous surface instead of a different-colored bar.
+    // Tint Safari's own bar (the address strip above the page) the navy of
+    // the dashboard header, so the two read as one continuous surface
+    // instead of a white band over the header.
     let tag = document.querySelector('meta[name="theme-color"]')
     const existed = !!tag
     const prevContent = tag?.getAttribute('content') ?? null
@@ -113,7 +114,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
       tag.setAttribute('name', 'theme-color')
       document.head.appendChild(tag)
     }
-    tag.setAttribute('content', '#F8F7F4')
+    tag.setAttribute('content', '#1C1B3A')
     return () => {
       if (existed) tag!.setAttribute('content', prevContent!)
       else tag!.remove()

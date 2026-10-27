@@ -195,7 +195,7 @@ function compressImage(file: File, maxDim = 1920, quality = 0.82): Promise<File>
 async function uploadFile(file: File, userId: string, folder: string) {
   const ext = file.name.split('.').pop()
   const path = `${folder}/${userId}-${Date.now()}.${ext}`
-  const { error } = await supabase.storage.from('store-assets').upload(path, file, { upsert: true, contentType: file.type })
+  const { error } = await supabase.storage.from('store-assets').upload(path, file, { upsert: true, contentType: file.type, cacheControl: '31536000' })
   if (error) throw error
   return supabase.storage.from('store-assets').getPublicUrl(path).data.publicUrl
 }

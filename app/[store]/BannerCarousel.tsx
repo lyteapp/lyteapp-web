@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { isVideoUrl, resizedImg } from '../lib/storeImages'
+import { CachedVideo } from './videoCache'
 
 // The store banner: one photo/video, or several as a slideshow. The first
 // slide sets the banner's height (same as the single-banner layout); the rest
@@ -46,7 +47,7 @@ export default function BannerCarousel({ slides, alt }: { slides: string[]; alt:
       {slides.map((src, i) => {
         const cls = `sf-banner-slide${i === 0 ? ' sizer' : ''}${i === idx ? ' on' : ''}`
         return isVideoUrl(src) ? (
-          <video
+          <CachedVideo
             key={src + i}
             ref={el => { videos.current[i] = el }}
             src={src}

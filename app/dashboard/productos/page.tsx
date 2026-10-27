@@ -413,7 +413,7 @@ export default function ProductosPage() {
     setIsDirty(true)
     const ext  = file.name.split('.').pop()
     const path = `${storeId}-${Date.now()}.${ext}`
-    const { error: uploadError } = await supabase.storage.from('product-images').upload(path, file, { upsert: true, contentType: file.type })
+    const { error: uploadError } = await supabase.storage.from('product-images').upload(path, file, { upsert: true, contentType: file.type, cacheControl: '31536000' })
     if (!uploadError) {
       setImageUrl(supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl)
     }
@@ -436,7 +436,7 @@ export default function ProductosPage() {
     setChoiceImgUploading(`${target.gi}-${target.ci}`)
     const ext  = file.name.split('.').pop()
     const path = `${storeId}-choice-${Date.now()}.${ext}`
-    const { error } = await supabase.storage.from('product-images').upload(path, file, { upsert: true, contentType: file.type })
+    const { error } = await supabase.storage.from('product-images').upload(path, file, { upsert: true, contentType: file.type, cacheControl: '31536000' })
     if (!error) setChoiceImage(target.gi, target.ci, supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl)
     setChoiceImgUploading(null)
     setChoiceImgTarget(null)
@@ -449,7 +449,7 @@ export default function ProductosPage() {
     setVariantImgUploading(true)
     const ext  = file.name.split('.').pop()
     const path = `${storeId}-var-${Date.now()}.${ext}`
-    const { error } = await supabase.storage.from('product-images').upload(path, file, { upsert: true, contentType: file.type })
+    const { error } = await supabase.storage.from('product-images').upload(path, file, { upsert: true, contentType: file.type, cacheControl: '31536000' })
     if (!error) {
       const url = supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl
       setOptColorVariants(prev => prev.map((v, i) => i === variantImgUploadIdx ? { ...v, imageUrl: url } : v))
@@ -468,7 +468,7 @@ export default function ProductosPage() {
     for (const file of Array.from(files)) {
       const ext  = file.name.split('.').pop()
       const path = `${storeId}-gal-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`
-      const { error } = await supabase.storage.from('product-images').upload(path, file, { upsert: true, contentType: file.type })
+      const { error } = await supabase.storage.from('product-images').upload(path, file, { upsert: true, contentType: file.type, cacheControl: '31536000' })
       if (!error) uploaded.push(supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl)
     }
     setOptImages(prev => [...prev, ...uploaded])
@@ -489,7 +489,7 @@ export default function ProductosPage() {
     for (const file of Array.from(files)) {
       const ext  = file.name.split('.').pop()
       const path = `${storeId}-vargal-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`
-      const { error } = await supabase.storage.from('product-images').upload(path, file, { upsert: true, contentType: file.type })
+      const { error } = await supabase.storage.from('product-images').upload(path, file, { upsert: true, contentType: file.type, cacheControl: '31536000' })
       if (!error) uploaded.push(supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl)
     }
     setOptColorVariants(prev => prev.map((v, i) => i === idx ? { ...v, imageUrls: [...(v.imageUrls ?? []), ...uploaded] } : v))

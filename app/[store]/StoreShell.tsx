@@ -10,6 +10,7 @@ import { isLightColor, poweredByColors } from '../lib/colorContrast'
 import LocationMapPicker from './LocationMapPicker'
 import { isVideoUrl, resizedImg } from '../lib/storeImages'
 import BannerCarousel from './BannerCarousel'
+import { CachedVideo } from './videoCache'
 import { storeLoaderColor } from '../lib/storeTheme'
 
 const supabase = createClient(
@@ -1767,7 +1768,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
             if (p) openProductModal(p)
           } : undefined
           const img = isVideoFile ? (
-            <video
+            <CachedVideo
               src={block.content}
               className="sf-block-img"
               style={sharedStyle}
@@ -1800,7 +1801,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 allowFullScreen
               />
             ) : (
-              <video src={block.content} controls className="sf-block-video-el" />
+              <CachedVideo src={block.content} controls playsInline preload="metadata" className="sf-block-video-el" />
             )}
           </div>
         )}
@@ -3285,7 +3286,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
             same way normal flow does — that mismatch, not a height or
             overscroll issue, was the actual cause of the blank strip). */}
         {hp.imageUrl && isVideoUrl(hp.imageUrl) ? (
-          <video src={hp.imageUrl} autoPlay muted loop playsInline preload="auto" className="sf-splash-bg-img" />
+          <CachedVideo src={hp.imageUrl} autoPlay muted loop playsInline preload="auto" className="sf-splash-bg-img" />
         ) : hp.imageUrl ? (
           <img src={resizedImg(hp.imageUrl, 1400)} alt="" className="sf-splash-bg-img" />
         ) : (

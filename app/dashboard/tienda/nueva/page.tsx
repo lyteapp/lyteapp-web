@@ -87,7 +87,7 @@ export default function NuevaTiendaPage() {
     try {
       const ext = file.name.split('.').pop()
       const path = `logos/${user.id}-${Date.now()}.${ext}`
-      const { error: uploadErr } = await supabase.storage.from('store-assets').upload(path, file, { upsert: true, contentType: file.type })
+      const { error: uploadErr } = await supabase.storage.from('store-assets').upload(path, file, { upsert: true, contentType: file.type, cacheControl: '31536000' })
       if (uploadErr) throw uploadErr
       setLogoUrl(supabase.storage.from('store-assets').getPublicUrl(path).data.publicUrl)
     } catch { setError('No se pudo subir el logo.') }

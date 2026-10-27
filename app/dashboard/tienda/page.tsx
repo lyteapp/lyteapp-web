@@ -148,7 +148,7 @@ export default function TiendaPage() {
   async function uploadFile(file: File, bucket: string, folder: string) {
     const ext = file.name.split('.').pop()
     const path = `${folder}/${user!.id}-${Date.now()}.${ext}`
-    const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true, contentType: file.type })
+    const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true, contentType: file.type, cacheControl: '31536000' })
     if (error) throw error
     return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl
   }

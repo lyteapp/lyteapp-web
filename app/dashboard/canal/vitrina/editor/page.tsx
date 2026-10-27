@@ -50,7 +50,7 @@ async function uploadBlockImage(file: File, storeId: string) {
   // Chrome refuses to paint an <img> whose response content-type isn't
   // image/* and shows nothing. Deriving it from the extension avoids that.
   const contentType = IMAGE_MIME_BY_EXT[ext] || compressed.type || 'application/octet-stream'
-  const { error } = await supabase.storage.from('store-assets').upload(path, compressed, { upsert: true, contentType })
+  const { error } = await supabase.storage.from('store-assets').upload(path, compressed, { upsert: true, contentType, cacheControl: '31536000' })
   if (error) throw error
   return supabase.storage.from('store-assets').getPublicUrl(path).data.publicUrl
 }

@@ -51,7 +51,7 @@ export default function ProductosOnboardingPage() {
       if (imageFile) {
         const ext = imageFile.name.split('.').pop()
         const path = `${store.id}/${Date.now()}.${ext}`
-        await supabase.storage.from('product-images').upload(path, imageFile, { upsert: true, contentType: imageFile.type })
+        await supabase.storage.from('product-images').upload(path, imageFile, { upsert: true, contentType: imageFile.type, cacheControl: '31536000' })
         const { data: pub } = supabase.storage.from('product-images').getPublicUrl(path)
         image_url = pub.publicUrl
       }

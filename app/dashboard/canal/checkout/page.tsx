@@ -144,7 +144,7 @@ export default function CheckoutPage() {
     setAgencyUploading(true)
     const ext = file.name.split('.').pop()
     const path = `agencies/${storeId}-${Date.now()}.${ext}`
-    const { error } = await supabase.storage.from('store-assets').upload(path, file, { upsert: true, contentType: file.type })
+    const { error } = await supabase.storage.from('store-assets').upload(path, file, { upsert: true, contentType: file.type, cacheControl: '31536000' })
     if (!error) {
       const { data } = supabase.storage.from('store-assets').getPublicUrl(path)
       setNewAgencyLogo(data.publicUrl)

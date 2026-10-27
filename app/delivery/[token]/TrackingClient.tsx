@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { createClient } from '@supabase/supabase-js'
+import { trackText, TRACK_STATUS_ORDER, type TrackTexts } from '../../lib/trackingTexts'
 import './tracking.css'
 
 const TrackingMap = dynamic(() => import('./TrackingMap'), { ssr: false })
@@ -45,6 +46,8 @@ interface TrackingConfig {
   locationDotSize?:       'sm' | 'md' | 'lg'
   /** Map mode: background of the status half-sheet */
   sheetBg?:               string
+  /** The store's own wording per status (see lib/trackingTexts) */
+  texts?:                 TrackTexts
 }
 
 // Dark sheet colors flip its own text to light
@@ -332,18 +335,16 @@ export default function TrackingClient({
 
   const currentIdx = STATUS_ORDER[delivery.status] ?? 0
   const isCancelled = delivery.status === 'cancelled'
-  const hero = HERO[delivery.status] ?? HERO.preparing
+  const texts = trackingConfig?.texts
+  const hero = {
+    title: trackText(texts, HERO[delivery.status] ? delivery.status : 'preparing', 'title'),
+    sub: trackText(texts, HERO[delivery.status] ? delivery.status : 'preparing', 'sub'),
+  }
   const isDone = delivery.status === 'delivered'
   const accent = trackingConfig?.accentColor ?? '#7C3AED'
 
   if (trackingConfig?.mode === 'location') {
-    const tlSteps = [
-      { label: 'Recibido',   idx: 0 },
-      { label: 'Preparando', idx: 1 },
-      { label: 'Listo',      idx: 2 },
-      { label: 'En camino',  idx: 3 },
-      { label: 'Entregado',  idx: 4 },
-    ]
+    const tlSteps = TRACK_STATUS_ORDER.map((st, idx) => ({ label: trackText(texts, st, 'short'), idx }))
     const hasGps = driverLoc != null || (delivery.driver_lat != null && delivery.driver_lng != null)
     const STATUS_LABELS: Record<string, string> = {
       pending:   'recibido',
@@ -362,7 +363,7 @@ export default function TrackingClient({
       cancelled: '#EF4444',
     }
     const statusDot   = STATUS_DOTS[delivery.status]  ?? '#1D9E75'
-    const statusLabel = STATUS_LABELS[delivery.status] ?? 'en camino'
+    const statusLabel = STATUS_LABELS[delivery.status] ? trackText(texts, delivery.status, 'chip') : 'en camino'
     const font       = FONT_STACKS[trackingConfig.fontFamily ?? 'system'] ?? FONT_STACKS.system
     const dotColor   = trackingConfig?.dotColor ?? '#10B981'
     const sheetBg = trackingConfig?.sheetBg || '#F5F3EF'
@@ -712,8 +713,8 @@ export default function TrackingClient({
                   )}
                 </div>
                 <div className="tr-step-body">
-                  <div className="tr-step-label">{step.label}</div>
-                  {current && <div className="tr-step-desc">{step.desc}</div>}
+                  <div className="tr-step-label">{trackText(texts, step.key, 'step')}</div>
+                  {current && <div className="tr-step-desc">{trackText(texts, step.key, 'desc')}</div>}
                   {step.key === 'picked_up' && delivery.picked_up_at && done && (
                     <div className="tr-step-timestamp">{fmtTime(delivery.picked_up_at)}</div>
                   )}

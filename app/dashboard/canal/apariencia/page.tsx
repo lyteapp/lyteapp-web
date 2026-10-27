@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { supabase } from '../../../lib/supabase'
 import { useDashboardStore } from '../../../lib/DashboardStoreProvider'
 import UnsavedNotice, { stableJson } from '../UnsavedNotice'
+import { trackText, TRACK_STATUS_ORDER, TRACK_STATUS_NAMES, TRACK_TEXT_DEFAULTS, type TrackStatus, type TrackTextField, type TrackTexts } from '../../../lib/trackingTexts'
 import '../canal.css'
 
 type Category = { id: string; name: string }
@@ -87,6 +88,8 @@ interface TrackingConfig {
   bgColor: string
   /** Map mode: background of the status half-sheet ('' = default) */
   sheetBg?: string
+  /** The store's own wording per status (lib/trackingTexts) */
+  texts?: TrackTexts
   fontFamily: string
   fontSize: string
   mapStyle: string
@@ -127,13 +130,6 @@ const DOT_OPTS = [
 
 const DOT_COLOR_PRESETS = ['#10B981', '#7C3AED', '#2563EB', '#F59E0B', '#EF4444', '#0F172A']
 
-const STEPS_PREVIEW = [
-  { label: 'Pedido recibido', state: 'done'    },
-  { label: 'En preparacion',  state: 'current' },
-  { label: 'Siendo empacado', state: 'future'  },
-  { label: 'Tu pedido sale',  state: 'future'  },
-  { label: 'Entregado',       state: 'future'  },
-]
 
 const FONT_STACKS: Record<string, string> = {
   system:           'system-ui, -apple-system, sans-serif',
@@ -190,6 +186,8 @@ export default function Apariencia() {
   const [extraShape, setExtraShape]         = useState<'rounded' | 'pill' | 'square'>('rounded')
   const [trConfig, setTrConfig]             = useState<TrackingConfig>(DEFAULT_TR_CONFIG)
   const [activePanel, setActivePanel]       = useState<'status' | 'location' | 'queue'>('status')
+  // Status whose texts are being edited — the preview shows that status
+  const [textsStatus, setTextsStatus]       = useState<TrackStatus>('preparing')
   const [storeSlug, setStoreSlug]           = useState('')
   const [storeLogo, setStoreLogo]           = useState<string | null>(null)
   const [saving, setSaving]                 = useState(false)
@@ -284,6 +282,19 @@ export default function Apariencia() {
   const locationDotPreviewPx = DOT_OPTS.find(o => o.id === trConfig.locationDotSize)?.locPreviewPx    ?? 7
   const dotColor = trConfig.dotColor
   const sheetBg = trConfig.sheetBg || '#F5F3EF'
+  // preview's current step (cancelled: none reached)
+  const previewIdx = TRACK_STATUS_ORDER.indexOf(textsStatus)
+  function setText(field: TrackTextField, value: string) {
+    setTrConfig(p => {
+      const cur = { ...(p.texts?.[textsStatus] ?? {}) }
+      if (value) cur[field] = value
+      else delete cur[field]
+      const texts = { ...(p.texts ?? {}) }
+      if (Object.keys(cur).length) texts[textsStatus] = cur
+      else delete texts[textsStatus]
+      return { ...p, texts: Object.keys(texts).length ? texts : undefined }
+    })
+  }
   const sheetDark = isDarkHex(sheetBg)
 
   async function save(e: { preventDefault(): void }) {
@@ -329,6 +340,7 @@ export default function Apariencia() {
     { key: 'colors', label: 'Colores', icon: <><path d="M12 3a9 9 0 100 18c1.1 0 1.6-.8 1.6-1.6 0-1.2-1-1.6-1-2.6 0-1 .8-1.8 1.8-1.8H17a4 4 0 004-4C21 6.5 17 3 12 3z" /><circle cx="7.5" cy="11" r="1" /><circle cx="10" cy="7" r="1" /><circle cx="15" cy="7.5" r="1" /></> },
     { key: 'dots', label: 'Puntos y barra', icon: <><circle cx="5" cy="12" r="2.5" /><circle cx="19" cy="12" r="2.5" /><path d="M7.5 12h9" /></> },
     { key: 'text', label: 'Letras', icon: <path d="M5 19L11 5h2l6 14M8 14h8" /> },
+    { key: 'texts', label: 'Textos de los estatus', icon: <><path d="M4 5h16v11H9l-5 4z" /><path d="M8 9h8M8 12h5" /></> },
     { key: 'pills', label: 'Variables y extras', icon: <><rect x="2.5" y="8" width="9" height="8" rx="4" /><rect x="13.5" y="8" width="8" height="8" rx="2" /></> },
     { key: 'queue', label: 'Pantalla de turnos', icon: <><rect x="3" y="4" width="18" height="13" rx="2" /><path d="M8 21h8M12 17v4M7 9h4M7 12h6" /></> },
   ]
@@ -440,26 +452,23 @@ export default function Apariencia() {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                   <div style={{ width: 6, height: 6, borderRadius: '50%', background: trConfig.accentColor, flexShrink: 0 }} />
-                  <span style={{ fontSize: 8, color: trConfig.accentColor, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>en preparacion</span>
+                  <span style={{ fontSize: 8, color: trConfig.accentColor, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>{trackText(trConfig.texts, textsStatus, 'chip')}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 3, background: '#ECFDF5', borderRadius: 100, padding: '2px 7px' }}>
                   <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#10B981' }} />
                   <span style={{ fontSize: 7, color: '#10B981', fontWeight: 700 }}>Ubicacion en vivo</span>
                 </div>
               </div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: sheetDark ? '#F8FAFC' : '#0F172A', letterSpacing: '-0.5px', lineHeight: 1.2, marginBottom: 3 }}>En preparacion en cocina</div>
-              <div style={{ fontSize: 8, color: sheetDark ? 'rgba(241,245,249,0.72)' : '#475569', lineHeight: 1.5 }}>Estamos preparando tu pedido con mucho cuidado.</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: sheetDark ? '#F8FAFC' : '#0F172A', letterSpacing: '-0.5px', lineHeight: 1.2, marginBottom: 3 }}>{trackText(trConfig.texts, textsStatus, 'title')}</div>
+              <div style={{ fontSize: 8, color: sheetDark ? 'rgba(241,245,249,0.72)' : '#475569', lineHeight: 1.5 }}>{trackText(trConfig.texts, textsStatus, 'sub')}</div>
             </div>
 
             {/* Horizontal timeline */}
             <div style={{ padding: '4px 14px 8px', display: 'flex', alignItems: 'flex-start' }}>
-              {[
-                { label: 'Recibido',    done: true,  active: false },
-                { label: 'Preparando',  done: false, active: true  },
-                { label: 'Listo',       done: false, active: false },
-                { label: 'En camino',   done: false, active: false },
-                { label: 'Entregado',   done: false, active: false },
-              ].map(({ label, done, active }, i, arr) => (
+              {TRACK_STATUS_ORDER.map((st, i) => ({
+                label: trackText(trConfig.texts, st, 'short'),
+                done: i < previewIdx, active: i === previewIdx,
+              })).map(({ label, done, active }, i, arr) => (
                 <div key={label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <div style={{ width: '100%', display: 'flex', alignItems: 'center' }}>
                     {i > 0 && <div style={{ flex: 1, height: locationConnH, background: done || active ? dotColor : 'rgba(148,163,184,0.3)', borderRadius: locationConnH }} />}
@@ -525,11 +534,11 @@ export default function Apariencia() {
             </div>
             {/* .tr-hero-status: calc(20px*scale), weight 800, #0F172A, mb 8 */}
             <div style={{ fontSize: fs(15), fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', marginBottom: 6, lineHeight: 1.2 }}>
-              En preparacion en cocina
+              {trackText(trConfig.texts, textsStatus, 'title')}
             </div>
             {/* .tr-hero-sub: calc(14px*scale), #64748B, lh 1.5 */}
             <div style={{ fontSize: fs(11), color: '#64748B', lineHeight: 1.5 }}>
-              Estamos preparando tu pedido con mucho cuidado. Te avisamos cuando salga.
+              {trackText(trConfig.texts, textsStatus, 'sub')}
             </div>
           </div>
 
@@ -637,7 +646,10 @@ export default function Apariencia() {
               Progreso de tu pedido
             </div>
 
-            {STEPS_PREVIEW.map(({ label, state }, i, arr) => (
+            {TRACK_STATUS_ORDER.map((st, i) => ({
+              key: st, label: trackText(trConfig.texts, st, 'step'),
+              state: i < previewIdx ? 'done' : i === previewIdx ? 'current' : 'future',
+            })).map(({ key, label, state }, i, arr) => (
               <div key={label} style={{ display: 'flex', gap: 10 }}>
                 {/* .tr-step-left: flex col, center, width 28px → 20px */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0, width: 20 }}>
@@ -672,7 +684,7 @@ export default function Apariencia() {
                   {/* .tr-step-desc: calc(12px*scale), #64748B */}
                   {state === 'current' && (
                     <div style={{ fontSize: fs(9), color: '#64748B', marginTop: 2, lineHeight: 1.5 }}>
-                      Tu pedido esta en cocina, lo estan preparando con mucho cuidado.
+                      {trackText(trConfig.texts, key, 'desc')}
                     </div>
                   )}
                 </div>
@@ -1037,6 +1049,56 @@ export default function Apariencia() {
             </div>
           </div>
         )}
+
+        {/* Texts per status */}
+        <div className="cn-field" data-tsec="texts">
+          <div className="cn-label">Textos de los estatus</div>
+          <div className="cn-pill-row" style={{ flexWrap: 'wrap', marginBottom: 10 }}>
+            {([...TRACK_STATUS_ORDER, 'cancelled'] as TrackStatus[]).map(st => (
+              <button key={st} type="button"
+                className={`cn-pill-btn${textsStatus === st ? ' selected' : ''}`}
+                onClick={() => setTextsStatus(st)}>
+                {TRACK_STATUS_NAMES[st]}{trConfig.texts?.[st] ? ' •' : ''}
+              </button>
+            ))}
+          </div>
+          {([
+            { field: 'title', label: 'Titulo' },
+            { field: 'sub', label: 'Descripcion', long: true },
+            ...(trConfig.mode === 'status' && textsStatus !== 'cancelled' ? [
+              { field: 'step', label: 'Nombre en la lista de pasos' },
+              { field: 'desc', label: 'Detalle en la lista (paso actual)', long: true },
+            ] : []),
+            ...(trConfig.mode === 'location' ? [{ field: 'short', label: 'Nombre corto (barra y etiqueta)' }] : []),
+          ] as { field: TrackTextField; label: string; long?: boolean }[]).map(f => (
+            <div key={f.field} style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', marginBottom: 4 }}>{f.label}</div>
+              {f.long ? (
+                <textarea className="cn-input" rows={2} style={{ resize: 'vertical' }}
+                  placeholder={TRACK_TEXT_DEFAULTS[textsStatus][f.field]}
+                  value={trConfig.texts?.[textsStatus]?.[f.field] ?? ''}
+                  onChange={e => setText(f.field, e.target.value)} />
+              ) : (
+                <input className="cn-input"
+                  placeholder={TRACK_TEXT_DEFAULTS[textsStatus][f.field]}
+                  value={trConfig.texts?.[textsStatus]?.[f.field] ?? ''}
+                  onChange={e => setText(f.field, e.target.value)} />
+              )}
+            </div>
+          ))}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <span style={{ fontSize: 11, color: '#94A3B8' }}>Vacio = texto original. La vista previa muestra este estatus.</span>
+            {trConfig.texts?.[textsStatus] && (
+              <button type="button" onClick={() => setTrConfig(p => {
+                const texts = { ...(p.texts ?? {}) }
+                delete texts[textsStatus]
+                return { ...p, texts: Object.keys(texts).length ? texts : undefined }
+              })} style={{ border: 'none', background: 'none', color: 'var(--lyte-navy)', fontSize: 11, fontWeight: 700, cursor: 'pointer', padding: 0, flexShrink: 0 }}>
+                Restablecer
+              </button>
+            )}
+          </div>
+        </div>
 
         {/* Font family */}
         <div className="cn-field" data-tsec="text">

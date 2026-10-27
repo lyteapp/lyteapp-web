@@ -672,3 +672,4 @@
 .cn-tr-m[data-sec="text"] .cn-tr-sheet [data-tsec]:not([data-tsec="text"]) { display: none; }
 .cn-tr-m[data-sec="pills"] .cn-tr-sheet [data-tsec]:not([data-tsec="pills"]) { display: none; }
 .cn-tr-m[data-sec="queue"] .cn-tr-sheet [data-tsec]:not([data-tsec="queue"]) { display: none; }
+.cn-tr-m[data-sec="texts"] .cn-tr-sheet [data-tsec]:not([data-tsec="texts"]) { display: none; }

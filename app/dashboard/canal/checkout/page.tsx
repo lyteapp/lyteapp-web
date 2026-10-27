@@ -3,7 +3,20 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useDashboardStore } from '../../../lib/DashboardStoreProvider'
+import Link from 'next/link'
 import '../canal.css'
+
+// The checkout's sections, in page order (their data-sec index), for the
+// phone layout's icon bar
+const CO_SECTIONS: { label: string; icon: React.ReactNode }[] = [
+  { label: 'Metodos de pago', icon: <><rect x="2.5" y="5.5" width="19" height="13" rx="2" /><path d="M2.5 10h19M6 15h4" /></> },
+  { label: 'Campos del formulario', icon: <><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 8h8M8 12h8M8 16h5" /></> },
+  { label: 'Tipo de entrega', icon: <><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7" /><circle cx="7" cy="17.5" r="1.6" /><circle cx="17" cy="17.5" r="1.6" /></> },
+  { label: 'Reglas del pedido', icon: <><path d="M9 6h11M9 12h11M9 18h11" /><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2" /></> },
+  { label: 'Numeracion de pedidos', icon: <path d="M9 3L7 21M17 3l-2 18M4 8h17M3 16h17" /> },
+  { label: 'Color de acentos', icon: <><path d="M12 3a9 9 0 100 18c1.1 0 1.6-.8 1.6-1.6 0-1.2-1-1.6-1-2.6 0-1 .8-1.8 1.8-1.8H17a4 4 0 004-4C21 6.5 17 3 12 3z" /><circle cx="7.5" cy="11" r="1" /><circle cx="10" cy="7" r="1" /><circle cx="15" cy="7.5" r="1" /></> },
+  { label: 'Boton de WhatsApp', icon: <path d="M4 20l1.3-3.9A8 8 0 1112 20a8 8 0 01-3.9-1z" /> },
+]
 
 const ACCENT_PRESETS = ['#7C3AED', '#2563EB', '#DC2626', '#D97706', '#059669', '#DB2777', '#0F172A', '#64748B']
 
@@ -96,7 +109,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 // and jumps to the checkout view (see StoreShell's isCheckoutPreview). It
 // only reflects the last *saved* settings, so it reloads (via previewKey)
 // after a successful save rather than redrawing on every keystroke.
-function CheckoutPreview({ storeSlug, previewKey }: { storeSlug: string | null; previewKey: number }) {
+function CheckoutPreview({ storeSlug, previewKey, frameStyle }: { storeSlug: string | null; previewKey: number; frameStyle?: React.CSSProperties }) {
   const [loadId] = useState(() => Date.now())
   return (
     <div className="cn-checkout-preview-frame" style={{
@@ -104,6 +117,7 @@ function CheckoutPreview({ storeSlug, previewKey }: { storeSlug: string | null; 
       boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
       overflow: 'hidden', background: '#F8F7F4',
       height: 844, maxHeight: 844, display: 'flex', flexDirection: 'column',
+      ...frameStyle,
     }}>
       {storeSlug ? (
         <iframe
@@ -193,6 +207,23 @@ export default function CheckoutPage() {
   const [storeWhatsapp, setStoreWhatsapp] = useState<string | null>(null)
   const [previewKey, setPreviewKey] = useState(0)
 
+  // Phone held upright: laid out like the Vitrina editor — the preview as a
+  // phone in miniature on top, a bar of section icons at the bottom, and the
+  // picked section in a sheet above the bar (‹ › to go through them).
+  const [vp, setVp] = useState({ w: 0, h: 0 })
+  const [mSec, setMSec] = useState<number | null>(null)
+  useEffect(() => {
+    const read = () => setVp({ w: window.innerWidth, h: window.innerHeight })
+    read()
+    window.addEventListener('resize', read)
+    return () => window.removeEventListener('resize', read)
+  }, [])
+  const phoneLayout = vp.w > 0 && vp.w <= 800 && vp.h > vp.w
+  // the frame is 410×864 with its border; fit it in what's above the sheet
+  const pvScale = phoneLayout
+    ? Math.min((vp.w - 32) / 410, (vp.h - 72 - (mSec !== null ? vp.h * 0.42 : 0) - 28) / 864)
+    : 1
+
   useEffect(() => {
     if (!storeId) return
     async function load() {
@@ -251,7 +282,7 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="cn-page" style={{ maxWidth: 'none' }}>
+    <div className={`cn-page${phoneLayout ? ' cn-co-m' : ''}`} style={{ maxWidth: 'none' }} data-sec={mSec ?? 'none'}>
       <div className="cn-header">
         <div className="cn-title">Checkout</div>
         <div className="cn-desc">Configura el proceso de compra de tu tienda.</div>
@@ -263,7 +294,7 @@ export default function CheckoutPage() {
         <div style={{ flex: 1, minWidth: 0 }}>
 
           {/* ── Pagos ── */}
-          <div className="cn-section">
+          <div className="cn-section" data-sec="0">
             <div className="cn-section-head">
               <div className="cn-section-icon">
                 <svg viewBox="0 0 20 20" fill="currentColor">
@@ -327,7 +358,7 @@ export default function CheckoutPage() {
 
           {/* ── Checkout settings ── */}
           <form onSubmit={saveSettings}>
-            <div className="cn-section">
+            <div className="cn-section" data-sec="1">
               <div className="cn-section-head">
                 <div className="cn-section-icon">
                   <svg viewBox="0 0 20 20" fill="currentColor">
@@ -385,7 +416,7 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <div className="cn-section">
+            <div className="cn-section" data-sec="2">
               <div className="cn-section-head">
                 <div className="cn-section-icon">
                   <svg viewBox="0 0 20 20" fill="currentColor">
@@ -559,7 +590,7 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <div className="cn-section">
+            <div className="cn-section" data-sec="3">
               <div className="cn-section-head">
                 <div className="cn-section-icon">
                   <svg viewBox="0 0 20 20" fill="currentColor">
@@ -610,7 +641,7 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <div className="cn-section">
+            <div className="cn-section" data-sec="4">
               <div className="cn-section-head">
                 <div className="cn-section-icon">
                   <svg viewBox="0 0 20 20" fill="currentColor">
@@ -646,7 +677,7 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <div className="cn-section">
+            <div className="cn-section" data-sec="5">
               <div className="cn-section-head">
                 <div className="cn-section-icon">
                   <svg viewBox="0 0 20 20" fill="currentColor">
@@ -691,7 +722,7 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <div className="cn-section">
+            <div className="cn-section" data-sec="6">
               <div className="cn-section-head">
                 <div className="cn-section-icon">
                   <svg viewBox="0 0 20 20" fill="currentColor">
@@ -749,8 +780,42 @@ export default function CheckoutPage() {
               </svg>
             </button>
           </div>
-          <CheckoutPreview storeSlug={storeSlug} previewKey={previewKey} />
+          {phoneLayout ? (
+            <div className="cn-co-stage" style={{ width: 410 * pvScale, height: 864 * pvScale }}>
+              <CheckoutPreview storeSlug={storeSlug} previewKey={previewKey}
+                frameStyle={{ position: 'absolute', top: 0, left: 0, width: 390, transform: `scale(${pvScale})`, transformOrigin: '0 0', maxWidth: 'none' }} />
+            </div>
+          ) : (
+            <CheckoutPreview storeSlug={storeSlug} previewKey={previewKey} />
+          )}
         </div>
+
+        {/* Phone: the picked section's header (‹ › between sections) and the icon bar */}
+        {phoneLayout && mSec !== null && (
+          <div className="cn-co-sheet-head">
+            <button type="button" onClick={() => setMSec(Math.max(0, mSec - 1))} disabled={mSec === 0} aria-label="Anterior">‹</button>
+            <span>{CO_SECTIONS[mSec].label}<small>{mSec + 1}/{CO_SECTIONS.length}</small></span>
+            <button type="button" onClick={() => setMSec(Math.min(CO_SECTIONS.length - 1, mSec + 1))} disabled={mSec === CO_SECTIONS.length - 1} aria-label="Siguiente">›</button>
+            <button type="button" className="cn-co-close" onClick={() => setMSec(null)} aria-label="Cerrar">✕</button>
+          </div>
+        )}
+        {phoneLayout && (
+          <nav className="cn-co-bar">
+            {CO_SECTIONS.map((sec, i) => (
+              <button key={sec.label} type="button" title={sec.label}
+                className={`cn-co-bar-btn${mSec === i ? ' on' : ''}`}
+                onClick={() => setMSec(mSec === i ? null : i)}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{sec.icon}</svg>
+              </button>
+            ))}
+            <button type="button" title="Actualizar vista previa" className="cn-co-bar-btn" onClick={() => setPreviewKey(k => k + 1)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 11a8 8 0 10-2.3 5.7M20 5v6h-6" /></svg>
+            </button>
+            <Link href="/dashboard" title="Salir" className="cn-co-bar-btn cn-co-exit">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+            </Link>
+          </nav>
+        )}
 
       </div>
     </div>

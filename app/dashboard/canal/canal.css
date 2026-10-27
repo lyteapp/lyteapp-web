@@ -509,3 +509,83 @@
 .co-mark.complete:hover { background: #E2E8F0; }
 .co-mark.reopen   { background: #FEF3C7; color: #92400E; }
 .co-mark.reopen:hover   { background: #FDE68A; }
+
+/* ── CHECKOUT on a phone held upright: same layout as the Vitrina editor ──
+   (classes set from JS — see phoneLayout in checkout/page.tsx) */
+.cn-co-m {
+  position: fixed; inset: 0; z-index: 100;
+  background-color: var(--lyte-blue); background-image: url(/brand/lyte-pattern.png);
+  background-size: 174px 328px;
+  overflow: hidden;
+}
+.cn-co-m .cn-header { display: none; }
+.cn-co-m .cn-checkout-split { display: block; }
+/* preview: centred in what's left above the sheet and the bar */
+.cn-co-m .cn-checkout-preview-col {
+  position: absolute !important; left: 0; right: 0; top: 0;
+  bottom: 72px; padding: 14px 16px;
+  justify-content: center; gap: 0 !important;
+}
+.cn-co-m:not([data-sec="none"]) .cn-checkout-preview-col { bottom: calc(72px + 42dvh); }
+.cn-co-m .cn-checkout-preview-col > div:first-child:not(.cn-co-stage) { display: none !important; }
+.cn-co-stage { position: relative; flex-shrink: 0; }
+.cn-co-m .cn-checkout-preview-frame { margin: 0; }
+/* sheet: the form column, showing only the picked section */
+.cn-co-m .cn-checkout-split > div:first-child {
+  position: fixed; left: 0; right: 0; bottom: 72px;
+  height: 42vh; height: 42dvh;
+  overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  background: white; border-radius: 18px 18px 0 0;
+  box-shadow: 0 -6px 24px rgba(15,23,42,0.12);
+  padding: 52px 12px 16px;
+  animation: cnSheetIn 0.18s ease;
+}
+.cn-co-m[data-sec="none"] .cn-checkout-split > div:first-child { display: none; }
+.cn-co-m .cn-section { margin-bottom: 0; border: none; box-shadow: none; }
+.cn-co-m .cn-section-head { display: none; }
+.cn-co-m[data-sec="0"] .cn-section:not([data-sec="0"]) { display: none; }
+.cn-co-m[data-sec="1"] .cn-section:not([data-sec="1"]) { display: none; }
+.cn-co-m[data-sec="2"] .cn-section:not([data-sec="2"]) { display: none; }
+.cn-co-m[data-sec="3"] .cn-section:not([data-sec="3"]) { display: none; }
+.cn-co-m[data-sec="4"] .cn-section:not([data-sec="4"]) { display: none; }
+.cn-co-m[data-sec="5"] .cn-section:not([data-sec="5"]) { display: none; }
+.cn-co-m[data-sec="6"] .cn-section:not([data-sec="6"]) { display: none; }
+/* the form's own Guardar belongs to every section but Pagos (it has its own) */
+.cn-co-m[data-sec="0"] form > :not(.cn-section) { display: none; }
+.cn-co-m form > .cn-actions {
+  position: sticky; bottom: -16px; background: white; margin: 0 -12px -16px; padding: 10px 12px 16px;
+}
+.cn-co-sheet-head {
+  position: fixed; left: 0; right: 0; bottom: calc(72px + 42dvh - 46px); z-index: 2;
+  height: 46px; display: flex; align-items: center; gap: 6px; padding: 0 10px;
+  background: white; border-radius: 18px 18px 0 0; border-bottom: 1px solid #F1F5F9;
+}
+.cn-co-sheet-head span {
+  flex: 1; min-width: 0; text-align: center; font-size: 13px; font-weight: 700; color: #0F172A;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cn-co-sheet-head small { margin-left: 6px; font-size: 11px; font-weight: 600; color: #94A3B8; }
+.cn-co-sheet-head button {
+  width: 34px; height: 32px; border: none; border-radius: 9px; cursor: pointer; flex-shrink: 0;
+  background: var(--lyte-lavender-soft, #F1F5F9); color: var(--lyte-navy, #1C1B3A);
+  font-size: 20px; line-height: 1; font-weight: 600; padding: 0;
+}
+.cn-co-sheet-head button:disabled { opacity: 0.3; cursor: default; }
+.cn-co-sheet-head .cn-co-close { font-size: 13px; background: #F1F5F9; color: #64748B; }
+.cn-co-bar {
+  position: fixed; left: 0; right: 0; bottom: 0; height: 72px; z-index: 3;
+  display: flex; align-items: center; gap: 2px; padding: 0 6px;
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--lyte-navy, #1C1B3A); overflow-x: auto; scrollbar-width: none;
+}
+.cn-co-bar::-webkit-scrollbar { display: none; }
+.cn-co-bar-btn {
+  flex: 1 1 0; min-width: 36px; max-width: 48px; height: 48px; border: none; border-radius: 13px;
+  background: transparent; color: var(--lyte-blue, #9AB7FD); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; padding: 0;
+}
+.cn-co-bar-btn svg { width: 24px; height: 24px; }
+.cn-co-bar-btn.on { background: rgba(255,255,255,0.14); }
+.cn-co-bar { justify-content: space-between; }
+.cn-co-m .cn-save-btn { width: 100%; }
+@keyframes cnSheetIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }

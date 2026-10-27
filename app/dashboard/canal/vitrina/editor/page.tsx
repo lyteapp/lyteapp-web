@@ -639,6 +639,19 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
   // so each tool is split into pages (one per subtitle section) with ‹ ›
   const [tpPage, setTpPage] = useState(0)
   const [tpPages, setTpPages] = useState(1)
+  // Phone: which ends of the sideways-scrolling tool bar hide more tools
+  const sideBarRef = useRef<HTMLElement>(null)
+  const [barMore, setBarMore] = useState({ left: false, right: false })
+  function readBarScroll() {
+    const el = sideBarRef.current
+    if (!el) return
+    const left = el.scrollLeft > 4
+    const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 4
+    setBarMore(p => (p.left === left && p.right === right ? p : { left, right }))
+  }
+  function scrollBar(dir: -1 | 1) {
+    sideBarRef.current?.scrollBy({ left: dir * 180, behavior: 'smooth' })
+  }
   // Phone: measured height of the open tool sheet (see the layout effect)
   const [sheetH, setSheetH] = useState(0)
   const panelDragStartY = useRef(0)
@@ -1745,6 +1758,25 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
     return () => ro.disconnect()
   }, [activeTool])
 
+  // Check the bar's ends on size changes, and once per visit nudge it
+  // sideways and back so it's clear it scrolls
+  useEffect(() => {
+    const el = sideBarRef.current
+    if (!el || !portraitPhone) return
+    readBarScroll()
+    const ro = new ResizeObserver(readBarScroll)
+    ro.observe(el)
+    let t1: ReturnType<typeof setTimeout> | undefined, t2: ReturnType<typeof setTimeout> | undefined
+    let seen = false
+    try { seen = sessionStorage.getItem('ed-bar-nudged') === '1' } catch {}
+    if (!seen && el.scrollWidth > el.clientWidth + 4) {
+      t1 = setTimeout(() => { el.scrollTo({ left: 70, behavior: 'smooth' }) }, 900)
+      t2 = setTimeout(() => { el.scrollTo({ left: 0, behavior: 'smooth' }) }, 1600)
+      try { sessionStorage.setItem('ed-bar-nudged', '1') } catch {}
+    }
+    return () => { ro.disconnect(); clearTimeout(t1); clearTimeout(t2) }
+  }, [portraitPhone]) // eslint-disable-line react-hooks/exhaustive-deps
+
   function goTpPage(d: number) {
     setTpPage(p => Math.max(0, Math.min(tpPages - 1, p + d)))
     toolPanelRef.current?.scrollTo({ top: 0 })
@@ -2171,7 +2203,7 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
       )}
 
       {/* ── SIDE BAR ────────────────────────────────── */}
-      <aside className="ed-side-bar">
+      <aside className="ed-side-bar" ref={sideBarRef} onScroll={readBarScroll}>
 
         {/* Color de fondo */}
         <button
@@ -4848,6 +4880,19 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
         )}
 
       </aside>
+
+      {/* Phone: the tool bar scrolls sideways — fade + arrow on whichever
+          side has more tools (tap to scroll there) */}
+      {portraitPhone && barMore.left && (
+        <button type="button" className="ed-bar-more ed-bar-more-left" aria-label="Ver más herramientas" onClick={() => scrollBar(-1)}>
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M12.7 5.3a1 1 0 010 1.4L9.4 10l3.3 3.3a1 1 0 01-1.4 1.4l-4-4a1 1 0 010-1.4l4-4a1 1 0 011.4 0z" clipRule="evenodd"/></svg>
+        </button>
+      )}
+      {portraitPhone && barMore.right && (
+        <button type="button" className="ed-bar-more ed-bar-more-right" aria-label="Ver más herramientas" onClick={() => scrollBar(1)}>
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M7.3 14.7a1 1 0 010-1.4l3.3-3.3-3.3-3.3a1 1 0 011.4-1.4l4 4a1 1 0 010 1.4l-4 4a1 1 0 01-1.4 0z" clipRule="evenodd"/></svg>
+        </button>
+      )}
     </div>
   )
 }

@@ -2573,3 +2573,26 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
   background: var(--lyte-lavender-soft, #F3F4FF); border-radius: 8px;
   padding: 7px 10px; margin-bottom: 10px;
 }
+
+/* ── Phone tool bar: "more tools this way" ── */
+.ed-bar-more {
+  position: fixed; bottom: 0; z-index: 130;
+  width: 44px; height: 72px; padding: 0; border: none; cursor: pointer;
+  display: flex; align-items: center; color: white;
+  animation: edBarMoreIn 0.2s ease;
+}
+.ed-bar-more svg { width: 20px; height: 20px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.35)); }
+.ed-bar-more-right {
+  right: 0; justify-content: flex-end; padding-right: 4px;
+  background: linear-gradient(90deg, transparent, var(--lyte-navy) 70%);
+}
+.ed-bar-more-left {
+  left: 0; justify-content: flex-start; padding-left: 4px;
+  background: linear-gradient(270deg, transparent, var(--lyte-navy) 70%);
+}
+.ed-bar-more-right svg { animation: edBarMoreNudge 1.6s ease-in-out infinite; }
+.ed-bar-more-left svg { animation: edBarMoreNudgeL 1.6s ease-in-out infinite; }
+@keyframes edBarMoreIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes edBarMoreNudge { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(3px); } }
+@keyframes edBarMoreNudgeL { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-3px); } }
+@media (prefers-reduced-motion: reduce) { .ed-bar-more svg { animation: none; } }

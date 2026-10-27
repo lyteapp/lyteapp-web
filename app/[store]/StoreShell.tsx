@@ -3283,7 +3283,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
             device/iOS combo does NOT size against the true viewport the
             same way normal flow does — that mismatch, not a height or
             overscroll issue, was the actual cause of the blank strip). */}
-        {hp.imageUrl ? (
+        {hp.imageUrl && isVideoUrl(hp.imageUrl) ? (
+          <video src={hp.imageUrl} autoPlay muted loop playsInline preload="auto" className="sf-splash-bg-img" />
+        ) : hp.imageUrl ? (
           <img src={resizedImg(hp.imageUrl, 1400)} alt="" className="sf-splash-bg-img" />
         ) : (
           <div className="sf-splash-bg-img" style={{ background: hp.bgColor || '#0F172A' }} />

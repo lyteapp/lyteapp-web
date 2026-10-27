@@ -159,6 +159,10 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
   )
 }
 
+// The welcome background can be a photo or a short looping video (told apart
+// by extension, like product media)
+const isVideo = (url?: string | null) => !!url && /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url)
+
 // Downscales + re-encodes as JPEG so a high-resolution photo picked straight
 // off a phone doesn't ship as a multi-MB background the splash screen has to
 // fully download before it can paint. Falls back to the original file on any
@@ -384,12 +388,18 @@ function SplashPreview({
         boxShadow: '0 30px 80px rgba(0,0,0,0.3)',
         overflow: 'hidden', aspectRatio: '380/780',
         display: 'flex', flexDirection: 'column',
-        background: config.imageUrl
+        background: config.imageUrl && !isVideo(config.imageUrl)
           ? `linear-gradient(rgba(15,23,42,0.25), rgba(15,23,42,0.55)), url(${config.imageUrl}) center/cover no-repeat`
           : config.bgColor,
         position: 'relative',
       }}
     >
+      {isVideo(config.imageUrl) && (
+        <>
+          <video src={config.imageUrl!} autoPlay muted loop playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0, pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(rgba(15,23,42,0.25), rgba(15,23,42,0.55))', zIndex: 0, pointerEvents: 'none' }} />
+        </>
+      )}
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
         {images.map(img => (
           <PhotoItem
@@ -688,6 +698,13 @@ export default function InicioPage() {
     const file = e.target.files?.[0]
     if (!file || !user) return
     setUploading(true)
+    if (file.type.startsWith('video/')) {
+      if (file.size > 30_000_000) { setError('El video pesa más de 30 MB. Usa uno más corto o comprimido.'); setUploading(false); return }
+      try { set('imageUrl', await uploadFile(file, user.id, 'homepage')) }
+      catch { setError('No se pudo subir el video.') }
+      setUploading(false)
+      return
+    }
     try { set('imageUrl', await uploadFile(await compressImage(file), user.id, 'homepage')) }
     catch { setError('No se pudo subir la imagen.') }
     setUploading(false)
@@ -986,31 +1003,33 @@ export default function InicioPage() {
                 </div>
                 <div>
                   <div className="cn-section-title">Fondo</div>
-                  <div className="cn-section-sub">Una foto de fondo o un color solido</div>
+                  <div className="cn-section-sub">Una foto o un video de fondo, o un color solido</div>
                 </div>
               </div>
               <div className="cn-section-body">
                 <div className="cn-upload-row">
                   <div className="cn-upload-preview cn-upload-wide" onClick={() => fileRef.current?.click()}>
                     {config.imageUrl
-                      ? <img src={config.imageUrl} alt="" className="cn-upload-img" />
-                      : <div className="cn-upload-empty">🖼️<span>Subir foto</span></div>
+                      ? isVideo(config.imageUrl)
+                        ? <video src={config.imageUrl} autoPlay muted loop playsInline className="cn-upload-img" />
+                        : <img src={config.imageUrl} alt="" className="cn-upload-img" />
+                      : <div className="cn-upload-empty">🖼️<span>Foto o video</span></div>
                     }
                     <div className="cn-upload-overlay">{uploading ? '...' : '✎'}</div>
                   </div>
                   <div className="cn-upload-info">
-                    <div className="cn-upload-title">Imagen de fondo</div>
-                    <div className="cn-upload-hint">Opcional. Recomendado 800 × 1600 px. Si no subes una, se usa el color solido.</div>
+                    <div className="cn-upload-title">Foto o video de fondo</div>
+                    <div className="cn-upload-hint">Opcional. Foto vertical (800 × 1600 px) o un video corto MP4 de hasta 30 MB, que se repite sin sonido. Si no subes nada, se usa el color sólido.</div>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button type="button" className="cn-upload-btn" onClick={() => fileRef.current?.click()} disabled={uploading}>
-                        {uploading ? 'Subiendo...' : config.imageUrl ? 'Cambiar' : 'Subir imagen'}
+                        {uploading ? 'Subiendo...' : config.imageUrl ? 'Cambiar' : 'Subir foto o video'}
                       </button>
                       {config.imageUrl && (
                         <button type="button" className="cn-upload-btn" onClick={() => set('imageUrl', null)}>Quitar</button>
                       )}
                     </div>
                   </div>
-                  <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleUpload} />
+                  <input ref={fileRef} type="file" accept="image/*,video/mp4,video/webm,video/quicktime" style={{ display: 'none' }} onChange={handleUpload} />
                 </div>
 
                 <div style={{ marginTop: 18 }}>

@@ -338,7 +338,9 @@ html, body {
 .db-sidebar-head {
   position: relative;
   display: flex; align-items: center; justify-content: center;
-  min-height: 56px; padding: env(safe-area-inset-top) 20px 0;
+  /* 56px bar *below* the notch, same as .db-topbar — with border-box a
+     plain 56px min-height included the inset, squeezing the logo off-centre */
+  min-height: calc(56px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 20px 0;
   background: var(--lyte-navy);
   border-bottom: 1px solid rgba(255,255,255,0.06);
   box-sizing: border-box;
@@ -778,7 +780,8 @@ html, body {
 
   /* Pinned to the right so the logo stays centered in the drawer header. */
   .db-sidebar-close {
-    position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+    /* centred on the bar below the notch, level with the logo */
+    position: absolute; right: 16px; top: calc(50% + env(safe-area-inset-top) / 2); transform: translateY(-50%);
     display: flex;
     align-items: center;
     gap: 8px;

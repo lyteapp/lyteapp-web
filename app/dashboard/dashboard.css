@@ -3,6 +3,13 @@
 html, body {
   background: #F8F7F4;
 }
+/* Full-screen editors (Vitrina, and on phones checkout / inicio / rastreo)
+   end in the navy tool bar — Safari tints its address bar from the page
+   background, so match it instead of a white band under the tools. */
+html:has(.ed-app), html:has(.ed-app) body,
+html:has(.cn-co-m), html:has(.cn-co-m) body {
+  background: #1C1B3A;
+}
 /* The page doesn't stretch past its top (the header) or its bottom */
 html.db-shell, html.db-shell body {
   overscroll-behavior-y: none;

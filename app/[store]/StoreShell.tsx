@@ -381,6 +381,7 @@ type TemplateConfig = {
   headerIconColor?: string
   cardBg?: string
   catTitleColor?: string
+  textColor?: string
   catTitleFont?: string
   productNameFont?: string
   accentColor?: string
@@ -1691,6 +1692,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     ...(cs.accentColor ? { '--sf-checkout-accent-color': cs.accentColor } : {}),
     ...(cfg.pageBg      ? { '--sf-page-bg':      cfg.pageBg      } : {}),
     ...(cfg.catTitleColor ? { '--sf-cat-title-color': cfg.catTitleColor } : {}),
+    ...(cfg.textColor ? { '--sf-text-color': cfg.textColor } : {}),
     ...(cfg.categorySpacing !== undefined ? { '--sf-cat-spacing': `${cfg.categorySpacing}px` } : {}),
     ...(cfg.headerHeightPx !== undefined ? { '--sf-header-height': `${cfg.headerHeightPx}px` } : {}),
     ...(cfg.headerIconColor ? { '--sf-header-icon-color': cfg.headerIconColor } : {}),

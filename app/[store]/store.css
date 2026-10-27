@@ -2619,3 +2619,14 @@ video.sf-banner-img { object-fit: cover; }
 @media (prefers-reduced-motion: reduce) {
   .sf-modal-chip.sf-chip-shake { animation: none; }
 }
+
+/* Vitrina → Letras → "Color de las letras": the catalog's names, descriptions
+   and titles (the modal and checkout keep their own colors). The editor's
+   preview turns it on/off with html[data-ed-text]. */
+:is(html:not([data-ed-text]) .sf-page[style*="--sf-text-color"], html[data-ed-text="on"] .sf-page) :is(.sf-store-name, .sf-card-name, .sf-esc-name, .sf-cat-name, .sf-vit-hero-name, .sf-vit-more-title, .sf-empty-title) {
+  color: var(--sf-text-color) !important;
+}
+:is(html:not([data-ed-text]) .sf-page[style*="--sf-text-color"], html[data-ed-text="on"] .sf-page) .sf-section-title { color: var(--sf-cat-title-color, var(--sf-text-color)) !important; }
+:is(html:not([data-ed-text]) .sf-page[style*="--sf-text-color"], html[data-ed-text="on"] .sf-page) :is(.sf-store-desc, .sf-card-desc, .sf-esc-desc, .sf-cat-desc, .sf-vit-hero-desc) {
+  color: color-mix(in srgb, var(--sf-text-color) 68%, transparent) !important;
+}

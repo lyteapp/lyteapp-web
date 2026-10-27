@@ -82,6 +82,10 @@ const BG_COLORS = [
   { value: '#1E3A5F', label: 'Marino',    light: false },
 ]
 
+const TEXT_COLORS = [
+  '#0F172A', '#1E293B', '#475569', '#FFFFFF',
+  '#F5F0E8', '#3F2A1D', '#1E3A8A', '#14532D',
+]
 const ACCENT_COLORS = [
   '#7C3AED', '#2563EB', '#DC2626', '#D97706',
   '#059669', '#DB2777', '#0F172A', '#475569',
@@ -421,6 +425,7 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
   const [accentColor, setAccentColor] = useState('#7C3AED')
   const [priceColor,  setPriceColor]  = useState('#7C3AED')
   const [catTitleColor, setCatTitleColor] = useState('')
+  const [textColor, setTextColor] = useState('')
   const [priceSize, setPriceSize]   = useState<'small' | 'medium' | 'large'>('medium')
   const [priceFont, setPriceFont]   = useState('')
   const [catTitleFont, setCatTitleFont]     = useState('')
@@ -661,6 +666,7 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
       if (cfg.pageBg)  setPageBg(cfg.pageBg as string)
       if ((cfg as Record<string,unknown>).cardBg !== undefined) setCardBg((cfg as Record<string,unknown>).cardBg as string)
       if ((cfg as Record<string,unknown>).catTitleColor !== undefined) setCatTitleColor((cfg as Record<string,unknown>).catTitleColor as string)
+      if (typeof cfg.textColor === 'string') setTextColor(cfg.textColor)
       if (Array.isArray(cfg.customFonts)) {
         const fonts = (cfg.customFonts as CustomFont[]).filter(f => f && f.id && f.url)
         registerCustomFonts(fonts)
@@ -872,6 +878,7 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
         font-size: ${effFontSizePx}px !important;
         --sf-price-color: ${priceColor} !important;
         --sf-accent-color: ${accentColor} !important;
+        ${textColor ? `--sf-text-color: ${textColor} !important;` : ''}
         --sf-price-font: ${font};
       }
       .sf-nav-name       { font-size: ${(effFontSizePx * 1.07).toFixed(1)}px !important; }
@@ -949,6 +956,8 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
     // the "Bloque" variable look is a layout, not just a radius, so the
     // store's own CSS carries it — this tells it which look to preview
     doc.documentElement.dataset.edVshape = variantShape
+    // same for the text color: on/off overrides what's saved
+    doc.documentElement.dataset.edText = textColor ? 'on' : 'off'
 
     // Live draft preview for a block being composed in "Bloques de contenido"
     // — a floating card in the iframe so text styling, or the chosen button
@@ -1210,7 +1219,7 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
   useEffect(() => {
     applyPreview()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageBg, cardBg, catTitleColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, variantShape, variantSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, headerBg, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign, newBlockFont, contentBlocks, blockGroups, newBlockButtons, newBlockButtonStyle, newBlockButtonSize, newBlockButtonWidth, editingBlockId, newBlockImageSize, enableReorder, reorderBannerEnabled, reorderPosition, reorderTitle, reorderImageUrl, reorderFontSize, reorderFontWeight, reorderColor, reorderFont, reorderButtonStyle, reorderButtonSize, reorderButtonColor, reorderScale, reorderInset, ads, deviceType, responsiveSizes])
+  }, [pageBg, cardBg, catTitleColor, textColor, pageFont, fontSizePx, textAlign, photoShape, photoSize, variantShape, variantSize, accentColor, priceColor, priceSize, priceFont, catTitleFont, productNameFont, categoryNavStyle, categorySpacing, logoShape, logoSizePx, headerHeightPx, headerIconColor, headerBg, activeTool, newBlockType, newBlockContent, newBlockFontSize, newBlockFontWeight, newBlockColor, newBlockAlign, newBlockFont, contentBlocks, blockGroups, newBlockButtons, newBlockButtonStyle, newBlockButtonSize, newBlockButtonWidth, editingBlockId, newBlockImageSize, enableReorder, reorderBannerEnabled, reorderPosition, reorderTitle, reorderImageUrl, reorderFontSize, reorderFontWeight, reorderColor, reorderFont, reorderButtonStyle, reorderButtonSize, reorderButtonColor, reorderScale, reorderInset, ads, deviceType, responsiveSizes])
 
   // ── Auto-save category shape (reloads iframe immediately) ─
   async function saveBrandMedia(logo: string, slides: string[]) {
@@ -1326,7 +1335,7 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
   function buildTemplateConfig() {
     return {
       ...baseConfig,
-      pageBg, cardBg: cardBg || undefined, catTitleColor: catTitleColor || undefined, pageFont, fontSizePx, textAlign,
+      pageBg, cardBg: cardBg || undefined, catTitleColor: catTitleColor || undefined, textColor: textColor || undefined, pageFont, fontSizePx, textAlign,
       photoShape, photoSize,
       priceColor, accentColor, priceFont: priceFont || pageFont, priceSize,
       catTitleFont: catTitleFont || undefined, productNameFont: productNameFont || undefined,
@@ -2578,34 +2587,9 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
               </button>
             </div>
 
-            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Color de acento</div>
-            <div className="ed-tp-swatches" style={{ position: 'relative' }}>
-              {ACCENT_COLORS.map(c => (
-                <button
-                  key={c}
-                  className={`ed-tp-swatch${accentColor === c ? ' ed-tp-active' : ''}`}
-                  style={{ background: c }}
-                  onClick={() => setAccentColor(c)}
-                />
-              ))}
-              <label
-                className={`ed-tp-swatch ed-tp-custom${isCustomAc ? ' ed-tp-active' : ''}`}
-                style={isCustomAc ? { background: accentColor } : undefined}
-                title="Personalizado"
-              >
-                {!isCustomAc && (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                    <path d="M12 5v14M5 12h14" />
-                  </svg>
-                )}
-                <input
-                  type="color"
-                  value={isCustomAc ? accentColor : '#7C3AED'}
-                  onChange={e => setAccentColor(e.target.value)}
-                  className="ed-tp-custom-input"
-                />
-              </label>
-            </div>
+            <div className="ed-tp-subtitle" style={{ marginTop: 14 }}>Color de las letras</div>
+            <ColorSwatches value={textColor} onChange={setTextColor} palette={TEXT_COLORS} autoLabel="Automático (el de la plantilla)" />
+            <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 4 }}>Nombres, descripciones y titulos de la tienda. El color de acento esta en Colores.</div>
 
             <PanelSave />
           </div>

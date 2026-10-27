@@ -448,7 +448,7 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
   const [showMinHint, setShowMinHint] = useState(false)
   const [modalSize, setModalSize] = useState<'full' | 'half'>('full')
   const [modalBg, setModalBg] = useState('')
-  const [variantShape, setVariantShape] = useState<'pill' | 'rounded' | 'square'>('pill')
+  const [variantShape, setVariantShape] = useState<'pill' | 'rounded' | 'square' | 'block'>('pill')
   const [variantBg, setVariantBg] = useState('')
   const [variantSelBg, setVariantSelBg] = useState('')
   const [variantSize, setVariantSize] = useState<'small' | 'medium' | 'large'>('medium')
@@ -676,7 +676,7 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
       if (cfg.showMinHint !== undefined) setShowMinHint(cfg.showMinHint as boolean)
       if (cfg.modalSize) setModalSize(cfg.modalSize as 'full' | 'half')
       setModalBg(typeof cfg.modalBg === 'string' ? cfg.modalBg : '')
-      if (cfg.variantShape) setVariantShape(cfg.variantShape as 'pill' | 'rounded' | 'square')
+      if (cfg.variantShape) setVariantShape(cfg.variantShape as 'pill' | 'rounded' | 'square' | 'block')
       setVariantBg(typeof cfg.variantBg === 'string' ? cfg.variantBg : '')
       setVariantSelBg(typeof cfg.variantSelBg === 'string' ? cfg.variantSelBg : '')
       if (cfg.variantSize) setVariantSize(cfg.variantSize as 'small' | 'medium' | 'large')
@@ -905,6 +905,9 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
       doc.head.appendChild(el)
     }
     el.textContent = buildPreviewCSS()
+    // the "Bloque" variable look is a layout, not just a radius, so the
+    // store's own CSS carries it — this tells it which look to preview
+    doc.documentElement.dataset.edVshape = variantShape
 
     // Live draft preview for a block being composed in "Bloques de contenido"
     // — a floating card in the iframe so text styling, or the chosen button
@@ -3904,6 +3907,7 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
                 { id: 'pill',    label: 'Redonda',   icon: <rect x="3" y="8" width="18" height="8" rx="4" /> },
                 { id: 'rounded', label: 'Suave',      icon: <rect x="3" y="8" width="18" height="8" rx="2" /> },
                 { id: 'square',  label: 'Cuadrada',   icon: <rect x="3" y="8" width="18" height="8" rx="0.5" /> },
+                { id: 'block',   label: 'Bloque',     icon: <><rect x="2" y="5" width="9" height="6" rx="1.5" fill="currentColor" /><rect x="13" y="5" width="9" height="6" rx="1.5" /><rect x="2" y="14" width="9" height="6" rx="1.5" /><rect x="13" y="14" width="9" height="6" rx="1.5" /></> },
               ] as const).map(s => (
                 <button
                   key={s.id}

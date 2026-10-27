@@ -353,7 +353,7 @@ type TemplateConfig = {
   categoryLayouts?: Record<string, string>
   categorySpacing?: number
   categoryNavStyle?: string
-  variantShape?: 'pill' | 'rounded' | 'square'
+  variantShape?: 'pill' | 'rounded' | 'square' | 'block'
   variantSize?: 'small' | 'medium' | 'large'
   extraShape?: 'rounded' | 'pill' | 'square'
   // Per-breakpoint overrides for a handful of size/spacing settings, set

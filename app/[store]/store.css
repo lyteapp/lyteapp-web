@@ -1981,6 +1981,41 @@ video.sf-banner-img { object-fit: cover; }
 .sf-vshape-rounded .sf-modal-chip { border-radius: 10px; }
 .sf-vshape-square  .sf-modal-chip { border-radius: 4px; }
 
+/* "Bloque": choices as a two-column grid of big uppercase tiles; the picked
+   one turns dark with an offset shadow in the store's accent color. In the
+   Vitrina editor's preview the look being edited comes from
+   html[data-ed-vshape], so it overrides the saved one. */
+:is(html:not([data-ed-vshape]) .sf-vshape-block, html[data-ed-vshape="block"]) .sf-modal-chips {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;
+}
+:is(html:not([data-ed-vshape]) .sf-vshape-block, html[data-ed-vshape="block"]) .sf-modal-chip:not(.sf-chip-photo) {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  min-height: 72px; padding: 14px 10px;
+  border-radius: 16px;
+  border: 2.5px solid var(--sf-chip-border, #D1D5DB);
+  text-transform: uppercase; letter-spacing: 0.09em; font-weight: 700; line-height: 1.2;
+  text-align: center; overflow-wrap: anywhere;
+  color: var(--sf-chip-text, #1C1D2E);
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s, border-color 0.15s;
+}
+:is(html:not([data-ed-vshape]) .sf-vshape-block, html[data-ed-vshape="block"]) .sf-modal-chip:not(.sf-chip-photo):hover {
+  border-color: color-mix(in srgb, var(--sf-chip-text, #1C1D2E) 45%, transparent);
+  color: var(--sf-chip-text, #1C1D2E);
+}
+:is(html:not([data-ed-vshape]) .sf-vshape-block, html[data-ed-vshape="block"]) .sf-modal-chip:not(.sf-chip-photo).selected {
+  background: var(--sf-chip-sel-bg, #1C1D2E);
+  border-color: var(--sf-chip-sel-bg, #1C1D2E);
+  color: var(--sf-chip-sel-text, white);
+  box-shadow: 8px 9px 0 var(--sf-accent-color, #C2508A);
+  transform: translate(-2px, -2px);
+}
+:is(html:not([data-ed-vshape]) .sf-vshape-block, html[data-ed-vshape="block"]) .sf-modal-chip .sf-modal-chip-price {
+  margin-left: 0; font-size: 0.88em; font-weight: 700; letter-spacing: 0.08em; opacity: 0.6;
+}
+:is(html:not([data-ed-vshape]) .sf-vshape-block, html[data-ed-vshape="block"]) .sf-modal-chip.selected .sf-modal-chip-price { opacity: 0.75; }
+:is(html:not([data-ed-vshape]) .sf-vshape-block, html[data-ed-vshape="block"]) .sf-modal-chip .sf-chip-diets { margin-left: 0; }
+:is(html:not([data-ed-vshape]) .sf-vshape-block, html[data-ed-vshape="block"]) .sf-modal-chip.sf-chip-photo { width: 100%; min-width: 0; }
+
 /* Variant chip size overrides (default = medium, 8px 16px / 14px) */
 .sf-vsize-small .sf-modal-chip { padding: 6px 12px; font-size: 12px; }
 .sf-vsize-large .sf-modal-chip { padding: 10px 20px; font-size: 16px; }

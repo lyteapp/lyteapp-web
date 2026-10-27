@@ -166,7 +166,7 @@ export default function Apariencia() {
   const [baseConfig, setBaseConfig]         = useState<Record<string, unknown>>({})
   const [categories, setCategories]         = useState<Category[]>([])
   const [categoryShapes, setCategoryShapes] = useState<Record<string, string>>({})
-  const [variantShape, setVariantShape]     = useState<'pill' | 'rounded' | 'square'>('pill')
+  const [variantShape, setVariantShape]     = useState<'pill' | 'rounded' | 'square' | 'block'>('pill')
   const [extraShape, setExtraShape]         = useState<'rounded' | 'pill' | 'square'>('rounded')
   const [trConfig, setTrConfig]             = useState<TrackingConfig>(DEFAULT_TR_CONFIG)
   const [activePanel, setActivePanel]       = useState<'status' | 'location' | 'queue'>('status')
@@ -202,7 +202,7 @@ export default function Apariencia() {
         const cfg = (data.template_config ?? {}) as Record<string, unknown>
         setBaseConfig(cfg)
         if (cfg.categoryPhotoShapes) setCategoryShapes(cfg.categoryPhotoShapes as Record<string, string>)
-        if (cfg.variantShape) setVariantShape(cfg.variantShape as 'pill' | 'rounded' | 'square')
+        if (cfg.variantShape) setVariantShape(cfg.variantShape as 'pill' | 'rounded' | 'square' | 'block')
         if (cfg.extraShape)   setExtraShape(cfg.extraShape as 'rounded' | 'pill' | 'square')
         if (cfg.trackingConfig) {
           const raw = cfg.trackingConfig as Partial<TrackingConfig>

@@ -95,7 +95,10 @@ export default function TiendaPage() {
   const [showWhatsapp, setShowWhatsapp] = useState(true)
   const [showInstagram, setShowInstagram] = useState(true)
   const [logoUrl, setLogoUrl] = useState('')
-  const [bannerUrl, setBannerUrl] = useState('')
+  // Banner photos/videos in order; the first is the main banner (banner_url),
+  // all of them go to template_config.bannerSlides when there's more than one
+  const [bannerSlides, setBannerSlides] = useState<string[]>([])
+  const bannerUrl = bannerSlides[0] ?? ''
   const [pwaIconUrl, setPwaIconUrl] = useState('')
   const [logoUploading, setLogoUploading]   = useState(false)
   const [bannerUploading, setBannerUploading] = useState(false)
@@ -123,7 +126,11 @@ export default function TiendaPage() {
         setShowWhatsapp(data.template_config?.showWhatsapp !== false)
         setShowInstagram(data.template_config?.showInstagram !== false)
         setLogoUrl(data.logo_url ?? '')
-        setBannerUrl(data.banner_url ?? '')
+        {
+          const extra = data.template_config?.bannerSlides
+          const list = Array.isArray(extra) ? (extra as unknown[]).filter((u): u is string => typeof u === 'string' && !!u) : []
+          setBannerSlides(list.length ? list : data.banner_url ? [data.banner_url] : [])
+        }
         setPwaIconUrl((data.template_config?.pwaIconUrl as string | undefined) ?? '')
         setStoreAddress(data.store_address ?? '')
         setStoreLat(data.store_lat ?? null)
@@ -155,14 +162,26 @@ export default function TiendaPage() {
     setLogoUploading(false)
   }
 
-  async function handleBannerUpload(e: { target: { files: FileList | null } }) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setBannerUploading(true)
-    try { setBannerUrl(await uploadFile(file, 'store-assets', 'banners')) }
-    catch { setError('No se pudo subir el banner.') }
+  async function handleBannerUpload(e: { target: { files: FileList | null; value?: string } }) {
+    const files = Array.from(e.target.files ?? [])
+    if (!files.length) return
+    const tooBig = files.find(f => f.type.startsWith('video/') && f.size > 30_000_000)
+    if (tooBig) { setError(`"${tooBig.name}" pesa más de 30 MB. Usa un video más corto o comprimido.`); return }
+    setBannerUploading(true); setError('')
+    try {
+      const urls: string[] = []
+      for (const f of files) urls.push(await uploadFile(f, 'store-assets', 'banners'))
+      setBannerSlides(prev => [...prev, ...urls])
+    } catch { setError('No se pudo subir el banner.') }
     setBannerUploading(false)
+    if (bannerRef.current) bannerRef.current.value = ''
   }
+  const moveSlide = (i: number, d: -1 | 1) => setBannerSlides(prev => {
+    const j = i + d
+    if (j < 0 || j >= prev.length) return prev
+    const next = [...prev]; [next[i], next[j]] = [next[j], next[i]]; return next
+  })
+  const isVid = (u: string) => /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(u)
 
   async function handlePwaIconUpload(e: { target: { files: FileList | null } }) {
     const file = e.target.files?.[0]
@@ -222,6 +241,7 @@ export default function TiendaPage() {
         showWhatsapp,
         showInstagram,
         pwaIconUrl: pwaIconUrl || undefined,
+        bannerSlides: bannerSlides.length > 1 ? bannerSlides : undefined,
       },
     }
     const { error: err, data } = await supabase.from('stores').update(payload).eq('id', storeId).select().single()
@@ -345,19 +365,21 @@ export default function TiendaPage() {
       {/* ── BANNER ── */}
       <div className="ts-banner" onClick={() => bannerRef.current?.click()}>
         {bannerUrl
-          ? <img src={bannerUrl} alt="Banner" className="ts-banner-img" />
+          ? isVid(bannerUrl)
+            ? <video src={bannerUrl} autoPlay muted loop playsInline className="ts-banner-img" />
+            : <img src={bannerUrl} alt="Banner" className="ts-banner-img" />
           : (
             <div className="ts-banner-empty">
               <div className="ts-up-icon">🖼️</div>
               <div className="ts-up-text">Subir banner</div>
-              <div className="ts-up-hint">Recomendado 1200 × 400 px · JPG o PNG</div>
+              <div className="ts-up-hint">Recomendado 1200 × 400 px · fotos o videos</div>
             </div>
           )
         }
         {bannerUploading && <div className="ts-overlay">Subiendo...</div>}
-        {bannerUrl && !bannerUploading && <div className="ts-banner-hint">Haz clic para cambiar el banner</div>}
+        {bannerUrl && !bannerUploading && <div className="ts-banner-hint">{bannerSlides.length > 1 ? `${bannerSlides.length} fotos/videos · se pasan solos en la tienda` : 'Haz clic para agregar más fotos o videos'}</div>}
       </div>
-      <input ref={bannerRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleBannerUpload} />
+      <input ref={bannerRef} type="file" accept="image/*,video/mp4,video/webm,video/quicktime" multiple style={{ display: 'none' }} onChange={handleBannerUpload} />
       <input ref={pwaIconRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePwaIconUpload} />
 
       <div className="ts-body">
@@ -417,20 +439,31 @@ export default function TiendaPage() {
               </div>
             </div>
 
-            <div className="ts-photo-card" onClick={() => bannerRef.current?.click()}>
-              <div className="ts-photo-preview ts-photo-wide">
-                {bannerUrl
-                  ? <img src={bannerUrl} alt="Banner" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 10 }} />
-                  : <div className="ts-photo-empty"><span>🖼️</span><span>Banner</span></div>
-                }
-                {bannerUploading && <div className="ts-photo-uploading">Subiendo...</div>}
-              </div>
-              <div className="ts-photo-info">
-                <div className="ts-photo-label">Banner principal</div>
-                <div className="ts-photo-hint">Horizontal · JPG o PNG · recomendado 1200×400</div>
-                <button className="ts-photo-btn" onClick={e => { e.stopPropagation(); bannerRef.current?.click() }}>
-                  {bannerUrl ? 'Cambiar banner' : 'Subir banner'}
-                </button>
+            <div className="ts-photo-card ts-banner-slides">
+              <div className="ts-photo-info" style={{ width: '100%' }}>
+                <div className="ts-photo-label">Banner</div>
+                <div className="ts-photo-hint">Horizontal (recomendado 1200×400) · fotos o videos MP4 hasta 30 MB. Con varios, la tienda los pasa como presentación; el primero es el principal.</div>
+                <div className="ts-slides">
+                  {bannerSlides.map((u, i) => (
+                    <div key={u + i} className="ts-slide">
+                      {isVid(u)
+                        ? <video src={u} muted playsInline autoPlay loop />
+                        // eslint-disable-next-line @next/next/no-img-element
+                        : <img src={u} alt="" />}
+                      {i === 0 && <span className="ts-slide-main">Principal</span>}
+                      {isVid(u) && <span className="ts-slide-vid">▶</span>}
+                      <div className="ts-slide-actions">
+                        <button type="button" onClick={() => moveSlide(i, -1)} disabled={i === 0} aria-label="Mover a la izquierda">‹</button>
+                        <button type="button" onClick={() => setBannerSlides(prev => prev.filter((_, j) => j !== i))} aria-label="Quitar">✕</button>
+                        <button type="button" onClick={() => moveSlide(i, 1)} disabled={i === bannerSlides.length - 1} aria-label="Mover a la derecha">›</button>
+                      </div>
+                    </div>
+                  ))}
+                  <button type="button" className="ts-slide ts-slide-add" onClick={() => bannerRef.current?.click()} disabled={bannerUploading}>
+                    <span>{bannerUploading ? '…' : '+'}</span>
+                    <small>{bannerUploading ? 'Subiendo' : 'Foto o video'}</small>
+                  </button>
+                </div>
               </div>
             </div>
 

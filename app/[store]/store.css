@@ -192,6 +192,22 @@ html, body { overflow-x: clip; }
 .sf-banner-wrap { position: relative; }
 .sf-banner { width: 100%; }
 .sf-banner-img { width: 100%; height: auto; display: block; }
+/* several slides: the first sets the height, the rest fade in on top */
+.sf-banner-slides { position: relative; overflow: hidden; }
+.sf-banner-slides.many .sf-banner-slide { transition: opacity 0.7s ease; }
+.sf-banner-slides.many .sf-banner-slide:not(.sizer) { position: absolute; inset: 0; height: 100%; object-fit: cover; opacity: 0; }
+.sf-banner-slides.many .sf-banner-slide.sizer:not(.on) { opacity: 0; }
+.sf-banner-slides.many .sf-banner-slide.on { opacity: 1; }
+video.sf-banner-img { object-fit: cover; }
+.sf-banner-dots {
+  position: absolute; left: 0; right: 0; bottom: 10px; z-index: 2;
+  display: flex; justify-content: center; gap: 6px; pointer-events: none;
+}
+.sf-banner-dots button {
+  width: 7px; height: 7px; border-radius: 50%; border: none; padding: 0; cursor: pointer; pointer-events: auto;
+  background: rgba(255,255,255,0.55); box-shadow: 0 1px 3px rgba(0,0,0,0.35); transition: transform 0.2s, background 0.2s;
+}
+.sf-banner-dots button.on { background: white; transform: scale(1.35); }
 
 /* ── STORE HEADER ── */
 .sf-header { background: white; border-bottom: 1px solid rgba(15,23,42,0.07); }

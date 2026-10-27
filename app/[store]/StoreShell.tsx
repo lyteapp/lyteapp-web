@@ -9,6 +9,7 @@ import { revealFontStack, loadRevealFont } from '../lib/revealFonts'
 import { isLightColor, poweredByColors } from '../lib/colorContrast'
 import LocationMapPicker from './LocationMapPicker'
 import { isVideoUrl, resizedImg } from '../lib/storeImages'
+import BannerCarousel from './BannerCarousel'
 import { storeLoaderColor } from '../lib/storeTheme'
 
 const supabase = createClient(
@@ -5182,7 +5183,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
       <>
       {store.banner_url && tpl !== 'vitrina' && tpl !== 'catalogo' && (
         <div className="sf-banner-wrap">
-          <div className="sf-banner"><img src={resizedImg(store.banner_url, 1600)} alt="Banner" className="sf-banner-img" /></div>
+          <BannerCarousel alt="Banner" slides={(() => {
+            // several banner photos/videos (Mi tienda) live in template_config.bannerSlides
+            const extra = (cfg as { bannerSlides?: unknown }).bannerSlides
+            const list = Array.isArray(extra) ? (extra as unknown[]).filter((u): u is string => typeof u === 'string' && !!u) : []
+            return list.length ? list : [store.banner_url!]
+          })()} />
         </div>
       )}
       {cfgCatNavOverBanner && catNavEl}

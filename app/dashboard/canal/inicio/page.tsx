@@ -801,7 +801,7 @@ export default function InicioPage() {
             if (!phoneLayout) return preview
             // the previews are 380×780 phones; fit one above the sheet
             const tabs = config.transition === 'reveal' ? 44 : 0
-            const sc = Math.min((vp.w - 32) / 380, (vp.h - 72 - (mSec ? vp.h * 0.42 : 0) - 28 - tabs) / 780)
+            const sc = Math.min((vp.w - 32) * 0.72 / 380, (vp.h - 72 - (mSec ? vp.h * 0.42 : 0) - 40 - tabs) / 780)
             return (
               <div className="cn-co-stage" style={{ width: 380 * sc, height: 780 * sc }}>
                 <div style={{ position: 'absolute', top: 0, left: 0, transform: `scale(${sc})`, transformOrigin: '0 0' }}>{preview}</div>

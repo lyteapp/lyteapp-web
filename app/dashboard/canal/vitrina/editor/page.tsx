@@ -552,6 +552,8 @@ export default function EditorPage() {
   // Preview-only — resizes the device frame so the owner can check how the
   // storefront looks on each screen size; never saved or sent to the store.
   const [deviceType, setDeviceType] = useState<'mobile' | 'tablet' | 'desktop'>('mobile')
+  // Viewport size, for the phone's "seen from afar" tablet/desktop preview
+  const [vp, setVp] = useState({ w: 0, h: 0 })
   const [saving, setSaving]         = useState(false)
   const [toolSaved, setToolSaved]   = useState(false)
   const toolPanelRef = useRef<HTMLDivElement>(null)
@@ -1528,6 +1530,25 @@ export default function EditorPage() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setTpPage(0) }, [activeTool])
 
+  useEffect(() => {
+    const read = () => setVp({ w: window.innerWidth, h: window.innerHeight })
+    read()
+    window.addEventListener('resize', read)
+    return () => window.removeEventListener('resize', read)
+  }, [])
+
+  // On a phone, the tablet and desktop previews render at their real size
+  // (so the store lays out exactly as on that screen) and are scaled down to
+  // fit, like looking at that screen from a distance — instead of being
+  // squeezed into the phone's portrait width.
+  const MINI_SIZE = { tablet: { w: 820, h: 1180 }, desktop: { w: 1280, h: 800 } } as const
+  const mini = vp.w > 0 && vp.w <= 800 && deviceType !== 'mobile' ? (() => {
+    const { w, h } = MINI_SIZE[deviceType]
+    const availH = vp.h - 150 - (activeTool ? vp.h * 0.27 : 0)
+    const scale = Math.min((vp.w - 24) / w, availH / h)
+    return { w, h, scale }
+  })() : null
+
   // Splits the open panel into pages at each section subtitle (direct
   // children only, so panels without them stay one scrolling page) and hides
   // every section but the current one. Runs after each render because a
@@ -1903,7 +1924,14 @@ export default function EditorPage() {
               </button>
             ))}
           </div>
-          <div className={`ed-device ed-device-${deviceType}`}>
+          <div
+            className={`ed-device-stage${mini ? ' ed-device-stage-mini' : ''}`}
+            style={mini ? { width: mini.w * mini.scale, height: mini.h * mini.scale } : undefined}
+          >
+          <div
+            className={`ed-device ed-device-${deviceType}${mini ? ' ed-device-mini' : ''}`}
+            style={mini ? { width: mini.w, height: mini.h, transform: `scale(${mini.scale})` } : undefined}
+          >
             <div className="ed-device-chrome">
               <div className="ed-device-chrome-dots">
                 <span className="ed-dot" /><span className="ed-dot" /><span className="ed-dot" />
@@ -1944,6 +1972,7 @@ export default function EditorPage() {
                 <div className="ed-home-bar" />
               </div>
             )}
+          </div>
           </div>
         </div>
       </main>

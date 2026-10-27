@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../../../lib/supabase'
@@ -549,6 +549,10 @@ export default function EditorPage() {
   const [saving, setSaving]         = useState(false)
   const [toolSaved, setToolSaved]   = useState(false)
   const toolPanelRef = useRef<HTMLDivElement>(null)
+  // Phone only: the tool sheet is a quarter of the screen under the preview,
+  // so each tool is split into pages (one per subtitle section) with ‹ ›
+  const [tpPage, setTpPage] = useState(0)
+  const [tpPages, setTpPages] = useState(1)
   const panelDragStartY = useRef(0)
   const panelDragging = useRef(false)
 
@@ -1465,6 +1469,39 @@ export default function EditorPage() {
   // a time, so a single ref/set of handlers (rather than one per panel) is
   // enough, and switching tools always remounts back to collapsed since
   // each panel is a fresh element.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setTpPage(0) }, [activeTool])
+
+  // Splits the open panel into pages at each section subtitle (direct
+  // children only, so panels without them stay one scrolling page) and hides
+  // every section but the current one. Runs after each render because a
+  // panel's sections change as its options do.
+  useLayoutEffect(() => {
+    const panel = toolPanelRef.current
+    if (!panel) return
+    const paged = window.matchMedia('(max-width: 800px)').matches
+    let page = 0, seen = false
+    const kids = Array.from(panel.children) as HTMLElement[]
+    for (const el of kids) {
+      if (el.matches('.ed-tp-drag-handle, .ed-tp-title')) continue
+      if (el.matches('.ed-tp-subtitle') && seen) page++
+      seen = true
+      el.dataset.tpPage = String(page)
+    }
+    const count = paged ? page + 1 : 1
+    const cur = Math.min(tpPage, count - 1)
+    for (const el of kids) {
+      if (el.dataset.tpPage == null) continue
+      el.toggleAttribute('data-tp-off', paged && Number(el.dataset.tpPage) !== cur)
+    }
+    if (count !== tpPages) setTpPages(count)
+  })
+
+  function goTpPage(d: number) {
+    setTpPage(p => Math.max(0, Math.min(tpPages - 1, p + d)))
+    toolPanelRef.current?.scrollTo({ top: 0 })
+  }
+
   function panelDragPointerDown(e: React.PointerEvent) {
     panelDragStartY.current = e.clientY
     panelDragging.current = true
@@ -1501,6 +1538,17 @@ export default function EditorPage() {
         onPointerUp={panelDragPointerUp}
       >
         <div className="ed-tp-drag-bar" />
+        {tpPages > 1 && (
+          <div className="ed-tp-pager" onPointerDown={e => e.stopPropagation()}>
+            <button type="button" onClick={() => goTpPage(-1)} disabled={tpPage === 0} aria-label="Anterior">
+              <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M12.7 5.3a1 1 0 010 1.4L9.4 10l3.3 3.3a1 1 0 01-1.4 1.4l-4-4a1 1 0 010-1.4l4-4a1 1 0 011.4 0z" clipRule="evenodd"/></svg>
+            </button>
+            <span>{Math.min(tpPage, tpPages - 1) + 1}/{tpPages}</span>
+            <button type="button" onClick={() => goTpPage(1)} disabled={tpPage >= tpPages - 1} aria-label="Siguiente">
+              <svg viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M7.3 14.7a1 1 0 010-1.4l3.3-3.3-3.3-3.3a1 1 0 011.4-1.4l4 4a1 1 0 010 1.4l-4 4a1 1 0 01-1.4 0z" clipRule="evenodd"/></svg>
+            </button>
+          </div>
+        )}
       </div>
     )
   }
@@ -1771,7 +1819,7 @@ export default function EditorPage() {
   flatSection('bottom', 'Al final')
 
   return (
-    <div className="ed-app">
+    <div className={`ed-app${activeTool ? ' ed-app-sheet-open' : ''}`}>
 
       {/* ── CANVAS ──────────────────────────────────── */}
       <main className="ed-canvas">

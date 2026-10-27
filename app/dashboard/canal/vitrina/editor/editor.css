@@ -1941,6 +1941,8 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
 .ed-tool-panel-type { width: 224px; }
 
 /* ── RESPONSIVE ───────────────────────────────────────── */
+.ed-tp-drag-handle { display: none; }
+
 @media (max-width: 800px) {
   /* The icon rail moves from a side column to a bottom tab bar, so the
      preview gets the phone's full width instead of sharing it with a
@@ -1982,35 +1984,76 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
      becomes a full-width bottom sheet instead, with its own height cap
      (not .ed-tool-panel-lg's, sized for the *side* popover) and scroll —
      anchored above the bottom tab bar rather than the screen edge. */
+  /* Docked under the preview, a quarter of the screen tall, so the
+     preview above stays fully visible (it shrinks to fit, see
+     .ed-app-sheet-open). Long tools are split into pages with the ‹ ›
+     pager in the handle row; dragging the handle up still expands it. */
   .ed-tool-panel {
-    left: 12px;
-    right: 12px;
+    left: 0;
+    right: 0;
     top: auto;
-    bottom: 68px;
+    bottom: 60px;
     transform: none;
     width: auto;
-    max-height: 60vh;
-    max-height: 60dvh;
+    height: var(--ed-sheet-h);
+    max-height: none;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 18px 18px 0 0;
+    border-bottom: none;
+    padding: 0 16px 14px;
+    box-shadow: 0 -6px 24px rgba(15,23,42,0.10);
     animation: edPanelInMobile 0.16s ease;
-    transition: max-height 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+    transition: height 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  .ed-tool-panel-type { width: auto; }
+  .ed-app { --ed-sheet-h: 27vh; --ed-sheet-h: 27dvh; }
+  /* centre the preview in what's left above the sheet, not behind it */
+  .ed-app-sheet-open .ed-canvas-scroll { padding-bottom: calc(var(--ed-sheet-h) + 6px); }
+  .ed-tool-panel .ed-tp-swatches { grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 6px; }
+  .ed-app-sheet-open .ed-device {
+    height: calc(100vh - 96px - var(--ed-sheet-h));
+    height: calc(100dvh - 96px - var(--ed-sheet-h));
+    transition: height 0.22s cubic-bezier(0.32, 0.72, 0, 1);
   }
   /* Dragged the handle up past the threshold — see renderPanelDragHandle. */
   .ed-tool-panel.ed-tool-panel-expanded {
-    max-height: 88vh;
-    max-height: 88dvh;
+    height: 70vh;
+    height: 70dvh;
   }
+  .ed-tool-panel .ed-tp-title { margin-bottom: 8px; }
+  .ed-tool-panel [data-tp-off] { display: none !important; }
+  .ed-tool-panel .ed-tp-divider { display: none; }
   /* Grabbed to swipe the sheet closed (or up to expand it) and reveal the
      preview underneath — hidden on desktop, where the panel is a side
      popover, not a sheet. */
   .ed-tp-drag-handle {
     display: flex;
     justify-content: center;
-    padding: 2px 0 12px;
-    margin: -4px 0 4px;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    min-height: 38px;
+    margin: 0 -16px 2px;
+    background: var(--ed-surface);
     cursor: grab;
     touch-action: none;
   }
+  .ed-tp-pager {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    display: flex; align-items: center; gap: 2px;
+    font-size: 12px; font-weight: 600; color: var(--ed-ink-soft);
+    cursor: default;
+  }
+  .ed-tp-pager button {
+    width: 32px; height: 30px; border-radius: 8px; border: none;
+    background: var(--ed-violet-bg, #F1F5F9); color: var(--ed-violet, #1C1B3A);
+    display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
+  }
+  .ed-tp-pager button:disabled { opacity: 0.3; cursor: default; }
+  .ed-tp-pager svg { width: 16px; height: 16px; }
+  .ed-tp-pager span { min-width: 30px; text-align: center; }
   .ed-tp-drag-bar {
     width: 36px;
     height: 4px;
@@ -2019,7 +2062,6 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
   }
 }
 
-.ed-tp-drag-handle { display: none; }
 
 @keyframes edPanelInMobile {
   from { opacity: 0; transform: translateY(16px); }

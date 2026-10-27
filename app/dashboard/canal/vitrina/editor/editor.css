@@ -1977,6 +1977,26 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
   .ed-device-content {
     overflow: hidden;
   }
+  /* The phone preview is shown as a miniature: the frame is smaller, and the
+     store inside still lays out at the phone's real width (the iframe is
+     sized up by 1/scale and scaled back down), so it looks exactly like the
+     real thing, just smaller. */
+  .ed-app { --ed-pv-scale: 0.78; }
+  .ed-device.ed-device-mobile {
+    width: calc((100vw - 16px) * var(--ed-pv-scale));
+    max-width: none;
+    max-height: calc((100vw - 16px) * var(--ed-pv-scale) * 2.05);
+    border-radius: 26px;
+    flex-shrink: 0;
+  }
+  .ed-device-mobile .ed-device-content { position: relative; }
+  .ed-device-mobile .ed-preview-iframe {
+    position: absolute; top: 0; left: 0;
+    width: calc(100% / var(--ed-pv-scale));
+    height: calc(100% / var(--ed-pv-scale));
+    transform: scale(var(--ed-pv-scale));
+    transform-origin: 0 0;
+  }
   /* The floating side popover (sized for a mouse-width desktop screen)
      doesn't leave enough room on a phone — panels like "Bloques de
      contenido" got squeezed to 172px and ran out of vertical space with

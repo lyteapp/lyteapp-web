@@ -9,37 +9,37 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 // itself. "Saltar" ends it from any step; once finished or skipped it's
 // marked done (see onDone) and never comes back on its own.
 
-type Step = { target?: string; emoji: string; title: string; text: string; menu?: 'open' | 'closed' }
+type Step = { target?: string; title: string; text: string; menu?: 'open' | 'closed' }
 
 const DESKTOP_STEPS: Step[] = [
-  { emoji: '👋', title: '¡Bienvenido a Lyte!', text: 'Te mostramos en menos de un minuto dónde está todo. Puedes saltar el tutorial cuando quieras.' },
-  { target: 'store', emoji: '🏪', title: 'Tu tienda', text: 'Aquí ves la tienda que estás manejando. Haz clic para cambiar entre tus tiendas o crear una nueva.' },
-  { target: 'orders', emoji: '🛒', title: 'Pedidos', text: 'Cada pedido nuevo llega aquí al instante, con un sonido para que no se te escape ninguno.' },
-  { target: 'caja', emoji: '💵', title: 'Caja', text: 'Registra las ventas en persona y lleva el cuadre del día.' },
-  { target: 'delivery', emoji: '🛵', title: 'Delivery', text: 'Asigna repartidores, sigue las entregas en el mapa en vivo y define tus zonas y tarifas.' },
-  { target: 'products', emoji: '🍰', title: 'Productos', text: 'Crea tus productos con fotos, variables (sabores, tamaños) y extras, y ordénalos por categorías.' },
-  { target: 'inventario', emoji: '📦', title: 'Inventario', text: 'Controla almacenes, compras e ingredientes. Cada venta descuenta sola de tu almacén.' },
-  { target: 'finanzas', emoji: '📊', title: 'Finanzas', text: 'Tus cuentas, ingresos y gastos en un solo lugar.' },
-  { target: 'design', emoji: '🎨', title: 'Diseño', text: 'Personaliza cómo se ve tu tienda: vitrina, página de inicio, checkout y rastreo del pedido.' },
-  { target: 'analytics', emoji: '📈', title: 'Analíticas', text: 'Mira cuánto vendes, tus productos estrella y cómo crece tu negocio.' },
-  { target: 'assistant', emoji: '✨', title: 'Asistente', text: '¿Tienes dudas? Pregúntale al asistente cómo hacer cualquier cosa en Lyte.' },
-  { emoji: '🎉', title: '¡Todo listo!', text: 'Ya conoces lo básico. Un buen primer paso: crea tu primer producto o diseña tu tienda.' },
+  { title: '¡Bienvenido a Lyte!', text: 'Te mostramos en menos de un minuto dónde está todo. Puedes saltar el tutorial cuando quieras.' },
+  { target: 'store', title: 'Tu tienda', text: 'Aquí ves la tienda que estás manejando. Haz clic para cambiar entre tus tiendas o crear una nueva.' },
+  { target: 'orders', title: 'Pedidos', text: 'Cada pedido nuevo llega aquí al instante, con un sonido para que no se te escape ninguno.' },
+  { target: 'caja', title: 'Caja', text: 'Registra las ventas en persona y lleva el cuadre del día.' },
+  { target: 'delivery', title: 'Delivery', text: 'Asigna repartidores, sigue las entregas en el mapa en vivo y define tus zonas y tarifas.' },
+  { target: 'products', title: 'Productos', text: 'Crea tus productos con fotos, variables (sabores, tamaños) y extras, y ordénalos por categorías.' },
+  { target: 'inventario', title: 'Inventario', text: 'Controla almacenes, compras e ingredientes. Cada venta descuenta sola de tu almacén.' },
+  { target: 'finanzas', title: 'Finanzas', text: 'Tus cuentas, ingresos y gastos en un solo lugar.' },
+  { target: 'design', title: 'Diseño', text: 'Personaliza cómo se ve tu tienda: vitrina, página de inicio, checkout y rastreo del pedido.' },
+  { target: 'analytics', title: 'Analíticas', text: 'Mira cuánto vendes, tus productos estrella y cómo crece tu negocio.' },
+  { target: 'assistant', title: 'Asistente', text: '¿Tienes dudas? Pregúntale al asistente cómo hacer cualquier cosa en Lyte.' },
+  { title: '¡Todo listo!', text: 'Ya conoces lo básico. Un buen primer paso: crea tu primer producto o diseña tu tienda.' },
 ]
 
 const PHONE_STEPS: Step[] = [
-  { emoji: '👋', title: '¡Bienvenido a Lyte!', text: 'Te mostramos en menos de un minuto dónde está todo. Puedes saltar el tutorial cuando quieras.', menu: 'closed' },
-  { target: 'menu', emoji: '☰', title: 'Tu menú', text: 'Todas las secciones están aquí. Tócalo cuando quieras ir a otra parte. Te las mostramos.', menu: 'closed' },
-  { target: 'store', emoji: '🏪', title: 'Tu tienda', text: 'La tienda que estás manejando. Tócala para cambiar entre tus tiendas o crear una nueva.', menu: 'open' },
-  { target: 'orders', emoji: '🛒', title: 'Pedidos', text: 'Cada pedido nuevo llega aquí al instante, con un sonido para que no se te escape.', menu: 'open' },
-  { target: 'caja', emoji: '💵', title: 'Caja', text: 'Registra ventas en persona y lleva el cuadre del día.', menu: 'open' },
-  { target: 'delivery', emoji: '🛵', title: 'Delivery', text: 'Asigna repartidores y sigue las entregas en el mapa en vivo.', menu: 'open' },
-  { target: 'products', emoji: '🍰', title: 'Productos', text: 'Tus productos con fotos, variables y extras, ordenados por categorías.', menu: 'open' },
-  { target: 'inventario', emoji: '📦', title: 'Inventario', text: 'Almacenes, compras e ingredientes. Cada venta descuenta sola.', menu: 'open' },
-  { target: 'finanzas', emoji: '📊', title: 'Finanzas', text: 'Tus cuentas, ingresos y gastos.', menu: 'open' },
-  { target: 'design', emoji: '🎨', title: 'Diseño', text: 'Cómo se ve tu tienda: vitrina, inicio, checkout y rastreo. Se edita cómodo desde el teléfono.', menu: 'open' },
-  { target: 'analytics', emoji: '📈', title: 'Analíticas', text: 'Cuánto vendes y tus productos estrella.', menu: 'open' },
-  { target: 'assistant', emoji: '✨', title: 'Asistente', text: '¿Dudas? Toca aquí y pregúntale al asistente cómo hacer cualquier cosa.', menu: 'closed' },
-  { emoji: '🎉', title: '¡Todo listo!', text: 'Ya conoces lo básico. Un buen primer paso: crea tu primer producto.', menu: 'closed' },
+  { title: '¡Bienvenido a Lyte!', text: 'Te mostramos en menos de un minuto dónde está todo. Puedes saltar el tutorial cuando quieras.', menu: 'closed' },
+  { target: 'menu', title: 'Tu menú', text: 'Todas las secciones están aquí. Tócalo cuando quieras ir a otra parte. Te las mostramos.', menu: 'closed' },
+  { target: 'store', title: 'Tu tienda', text: 'La tienda que estás manejando. Tócala para cambiar entre tus tiendas o crear una nueva.', menu: 'open' },
+  { target: 'orders', title: 'Pedidos', text: 'Cada pedido nuevo llega aquí al instante, con un sonido para que no se te escape.', menu: 'open' },
+  { target: 'caja', title: 'Caja', text: 'Registra ventas en persona y lleva el cuadre del día.', menu: 'open' },
+  { target: 'delivery', title: 'Delivery', text: 'Asigna repartidores y sigue las entregas en el mapa en vivo.', menu: 'open' },
+  { target: 'products', title: 'Productos', text: 'Tus productos con fotos, variables y extras, ordenados por categorías.', menu: 'open' },
+  { target: 'inventario', title: 'Inventario', text: 'Almacenes, compras e ingredientes. Cada venta descuenta sola.', menu: 'open' },
+  { target: 'finanzas', title: 'Finanzas', text: 'Tus cuentas, ingresos y gastos.', menu: 'open' },
+  { target: 'design', title: 'Diseño', text: 'Cómo se ve tu tienda: vitrina, inicio, checkout y rastreo. Se edita cómodo desde el teléfono.', menu: 'open' },
+  { target: 'analytics', title: 'Analíticas', text: 'Cuánto vendes y tus productos estrella.', menu: 'open' },
+  { target: 'assistant', title: 'Asistente', text: '¿Dudas? Toca aquí y pregúntale al asistente cómo hacer cualquier cosa.', menu: 'closed' },
+  { title: '¡Todo listo!', text: 'Ya conoces lo básico. Un buen primer paso: crea tu primer producto.', menu: 'closed' },
 ]
 
 const PAD = 6 // spotlight margin around the target
@@ -129,7 +129,6 @@ export default function DashboardTour({ phone, onMenu, onDone }: {
         ? <div className="db-tour-spot" style={{ left: rect.left - PAD, top: rect.top - PAD, width: rect.width + PAD * 2, height: rect.height + PAD * 2 }} />
         : <div className="db-tour-dim" />}
       <div ref={cardRef} key={i} className="db-tour-card" style={{ ...cardStyle, width: cardW }}>
-        <div className="db-tour-emoji" aria-hidden="true">{step.emoji}</div>
         <div className="db-tour-title">{step.title}</div>
         <div className="db-tour-text">{step.text}</div>
         <div className="db-tour-dots" aria-label={`Paso ${i + 1} de ${steps.length}`}>

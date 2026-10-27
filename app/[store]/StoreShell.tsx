@@ -3254,7 +3254,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
         className={`sf-logo-morph${logoMorphFlying ? ' flying' : ''}`}
         style={{
           top: rect.top, left: rect.left, width: rect.width, height: rect.height,
-          borderRadius: logoMorphFlying ? (logoShapeRadius[cfgLogoShape] ?? '8px') : '20px',
+          borderRadius: logoMorphFlying ? (logoShapeRadius[cfgLogoShape] ?? '8px') : '0px',
         }}
         onTransitionEnd={() => {
           if (logoMorphFlying) { setLogoMorphStart(null); setLogoMorphEnd(null); setLogoMorphFlying(false) }

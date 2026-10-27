@@ -218,7 +218,7 @@ video.sf-banner-img { object-fit: cover; }
 .sf-header-inner-compact { padding: 14px 20px; }
 .sf-logo-wrap {
   width: 76px; height: 76px; border-radius: 14px;
-  background: white; border: 1px solid rgba(15,23,42,0.1);
+  background: transparent;
   overflow: hidden; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
 }
@@ -806,14 +806,15 @@ video.sf-banner-img { object-fit: cover; }
 }
 .sf-splash-content::-webkit-scrollbar { display: none; }
 .sf-splash-logo {
-  width: 72px; height: 72px; border-radius: 20px; object-fit: contain;
-  margin: 0 auto 24px; display: block; box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  /* no box around the logo: the shadow follows a transparent PNG's own shape */
+  width: 72px; height: 72px; object-fit: contain;
+  margin: 0 auto 24px; display: block; filter: drop-shadow(0 4px 14px rgba(0,0,0,0.28));
 }
 .sf-splash-logo-hidden { opacity: 0; }
 .sf-nav-logo-hidden { opacity: 0; }
 .sf-logo-morph {
   position: fixed; z-index: 500; object-fit: contain; margin: 0;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.3); pointer-events: none;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.25)); pointer-events: none;
   transition: top 0.6s cubic-bezier(0.4,0,0.2,1), left 0.6s cubic-bezier(0.4,0,0.2,1),
               width 0.6s cubic-bezier(0.4,0,0.2,1), height 0.6s cubic-bezier(0.4,0,0.2,1),
               border-radius 0.6s cubic-bezier(0.4,0,0.2,1);

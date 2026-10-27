@@ -639,6 +639,8 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
   // so each tool is split into pages (one per subtitle section) with ‹ ›
   const [tpPage, setTpPage] = useState(0)
   const [tpPages, setTpPages] = useState(1)
+  // Phone: measured height of the open tool sheet (see the layout effect)
+  const [sheetH, setSheetH] = useState(0)
   const panelDragStartY = useRef(0)
   const panelDragging = useRef(false)
 
@@ -1639,10 +1641,8 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
 
   function PanelSave() {
     return (
+      // Guardar lives in the unsaved-changes notice now; this keeps the X
       <div className="ed-tp-actions">
-        <button className="ed-tp-save" onClick={saveSettings} disabled={saving}>
-          {toolSaved ? 'Guardado' : saving ? 'Guardando...' : 'Guardar'}
-        </button>
         <button className="ed-tp-close" onClick={() => setActiveTool(null)} title="Cerrar">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -1692,6 +1692,7 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
   // editor.css): tool rail on the right, tool panel beside it, and every
   // preview — the phone one too — scaled to fit what's left on the left.
   const landscapePhone = vp.w > vp.h && vp.h > 0 && vp.h <= 520
+  const portraitPhone = vp.w > 0 && vp.w <= 800 && !landscapePhone
   const mini = landscapePhone ? (() => {
     const { w, h } = MINI_SIZE[deviceType]
     const panelW = activeTool ? Math.min(320, vp.w * 0.42) : 0
@@ -1700,7 +1701,7 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
     return { w, h, scale: Math.min(availW / w, availH / h) }
   })() : vp.w > 0 && vp.w <= 800 && deviceType !== 'mobile' ? (() => {
     const { w, h } = MINI_SIZE[deviceType]
-    const availH = vp.h - 150 - (activeTool ? vp.h * 0.27 : 0)
+    const availH = vp.h - 150 - (activeTool ? (sheetH || vp.h * 0.27) : 0)
     const scale = Math.min((vp.w - 24) / w, availH / h)
     return { w, h, scale }
   })() : null
@@ -1730,6 +1731,19 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
     }
     if (count !== tpPages) setTpPages(count)
   })
+
+  // Phone: the sheet is as tall as the page of the tool it shows (capped in
+  // CSS), and the preview above takes whatever that leaves
+  useLayoutEffect(() => {
+    const el = toolPanelRef.current
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!el) { setSheetH(0); return }
+    const read = () => setSheetH(el.offsetHeight)
+    read()
+    const ro = new ResizeObserver(read)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [activeTool])
 
   function goTpPage(d: number) {
     setTpPage(p => Math.max(0, Math.min(tpPages - 1, p + d)))
@@ -2053,7 +2067,8 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
   flatSection('bottom', 'Al final')
 
   return (
-    <div className={`ed-app${activeTool ? ' ed-app-sheet-open' : ''}`}>
+    <div className={`ed-app${activeTool ? ' ed-app-sheet-open' : ''}`}
+      style={portraitPhone && activeTool && sheetH ? { '--ed-sheet-h': `${sheetH}px` } as React.CSSProperties : undefined}>
 
       {/* ── CANVAS ──────────────────────────────────── */}
       <main className="ed-canvas">

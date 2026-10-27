@@ -1796,6 +1796,7 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
 .ed-tp-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
   margin-top: 16px;
 }
@@ -2034,8 +2035,12 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
     bottom: 72px;
     transform: none;
     width: auto;
-    height: var(--ed-sheet-h);
-    max-height: none;
+    /* as tall as the page shown (so it all fits), up to a cap; its measured
+       height becomes --ed-sheet-h on .ed-app for the preview above */
+    height: auto;
+    min-height: 120px;
+    max-height: 64vh;
+    max-height: 64dvh;
     overflow-y: auto;
     overscroll-behavior: contain;
     border-radius: 18px 18px 0 0;
@@ -2051,8 +2056,8 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
   .ed-app-sheet-open .ed-canvas-scroll { padding-bottom: calc(var(--ed-sheet-h) + 6px); }
   .ed-tool-panel .ed-tp-swatches { grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 6px; }
   .ed-app-sheet-open .ed-device {
-    height: calc(100vh - 108px - var(--ed-sheet-h));
-    height: calc(100dvh - 108px - var(--ed-sheet-h));
+    height: calc(100vh - 118px - var(--ed-sheet-h));
+    height: calc(100dvh - 118px - var(--ed-sheet-h));
     transition: height 0.22s cubic-bezier(0.32, 0.72, 0, 1);
   }
   /* Dragged the handle up past the threshold — see renderPanelDragHandle. */
@@ -2062,6 +2067,11 @@ textarea.ed-field-input { resize: vertical; min-height: 60px; }
   }
   .ed-tool-panel .ed-tp-title { margin-bottom: 8px; }
   .ed-tool-panel [data-tp-off] { display: none !important; }
+  /* denser grids so a page fits the sheet */
+  .ed-tool-panel .ed-cat-style-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .ed-tool-panel .ed-cat-style-name { font-size: 10px; padding: 4px 6px; }
+  /* the sheet closes from its handle / the tool bar; saving is the notice's */
+  .ed-tool-panel .ed-tp-actions { display: none !important; }
   .ed-tool-panel .ed-tp-divider { display: none; }
   /* Grabbed to swipe the sheet closed (or up to expand it) and reveal the
      preview underneath — hidden on desktop, where the panel is a side

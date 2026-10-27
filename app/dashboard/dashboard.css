@@ -797,6 +797,8 @@ html, body {
     transition: color 0.15s;
   }
   .db-sidebar-close:hover { color: #FFFFFF; }
+  /* the wordmark reads a touch low in the drawer bar — nudge it up */
+  .db-sidebar-head .db-brand-link { position: relative; top: -4px; }
   .db-sidebar-close svg { width: 18px; height: 18px; }
 
   .db-main { margin-left: 0; }

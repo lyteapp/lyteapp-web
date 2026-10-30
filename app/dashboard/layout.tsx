@@ -90,18 +90,24 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   const [toursDone, setToursDone] = useState<string[] | null>(null)
   const { play, unlock } = useLyteSound()
 
+  // Seen tours of *this* account: its user_metadata plus this device's copy,
+  // which is keyed by user id — a device-wide flag made every new account
+  // signed in on a phone that had already seen the tour skip it too
+  const tourUserId = user?.id
   useEffect(() => {
-    if (!user || toursDone) return
+    if (!user) return
     const meta = user.user_metadata ?? {}
     const done = new Set<string>(Array.isArray(meta.tours_done) ? meta.tours_done : [])
     if (meta.tour_done) done.add('intro')
     try {
-      for (const id of JSON.parse(localStorage.getItem('lyte-tours-done') || '[]')) done.add(id)
-      if (localStorage.getItem('lyte-tour-done') === '1') done.add('intro')
+      for (const id of JSON.parse(localStorage.getItem(`lyte-tours-done:${user.id}`) || '[]')) done.add(id)
+      // the old device-wide flags can't tell accounts apart — drop them
+      localStorage.removeItem('lyte-tours-done')
+      localStorage.removeItem('lyte-tour-done')
     } catch {}
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setToursDone([...done])
-  }, [user, toursDone])
+  }, [tourUserId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (loading || storeLoading || !user || stores.length === 0 || !toursDone || tour) return
@@ -116,7 +122,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
     const done = [...new Set([...(toursDone ?? []), tour.id])]
     setTour(null)
     setToursDone(done)
-    try { localStorage.setItem('lyte-tours-done', JSON.stringify(done)) } catch {}
+    try { if (user) localStorage.setItem(`lyte-tours-done:${user.id}`, JSON.stringify(done)) } catch {}
     supabase.auth.updateUser({ data: { tours_done: done } }).catch(() => {})
   }
 

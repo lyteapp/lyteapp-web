@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import MapGL, { Marker } from 'react-map-gl'
 import type { MapRef } from 'react-map-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
+import './lyteMap.css'
 import LyteLeafLoader from '../../components/LyteLeafLoader'
 import { PIN_STATUS_COLOR, PIN_STATUS_LABEL, isActiveStatus } from './deliveryStatus'
 
@@ -154,6 +155,7 @@ export default function MapView({ inRoute, driverLocations, drivers, customerPin
   for (const d of inRoute) { if (d.driver_id) inRouteByDriver[d.driver_id] = d }
 
   return (
+    <div className="lyte-map">
     <MapGL
       ref={mapRef}
       initialViewState={{ longitude: pos[1], latitude: pos[0], zoom: 14, pitch: 0, bearing: 0 }}
@@ -297,5 +299,6 @@ export default function MapView({ inRoute, driverLocations, drivers, customerPin
       })}
 
     </MapGL>
+    </div>
   )
 }

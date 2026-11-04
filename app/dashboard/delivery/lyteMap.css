@@ -1,0 +1,9 @@
+/* The dashboard's Mapbox maps in Lyte's colors: the map drawing itself
+   (only the canvas — markers, the recenter button and popups are separate
+   elements and keep their own colors) turned into a soft lavender-blue
+   monochrome, so the navy driver markers and the colored order pins stand
+   out on it. */
+.lyte-map { position: relative; flex: 1; width: 100%; height: 100%; min-height: 0; }
+.lyte-map .mapboxgl-canvas {
+  filter: grayscale(1) sepia(0.4) hue-rotate(195deg) saturate(1.7) brightness(1.03) contrast(0.95);
+}

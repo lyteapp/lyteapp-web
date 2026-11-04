@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '../lib/supabase'
 
@@ -25,7 +25,37 @@ const money = (n: number) => `$${n.toLocaleString('en', { minimumFractionDigits:
 const startOfToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d }
 const daysAgo = (n: number) => { const d = startOfToday(); d.setDate(d.getDate() - n); return d }
 
-function Head({ title, meta, href, link }: { title: string; meta?: string; href?: string; link?: string }) {
+// A number that counts up to its value (from 0 the first time, then from
+// the previous value when it changes), easing out over ~1 s.
+function useCountUp(target: number, ms = 1100): number {
+  const [v, setV] = useState(0)
+  const from = useRef(0)
+  useEffect(() => {
+    const reduce = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const start = from.current
+    if (reduce || start === target) { from.current = target; setV(target); return }
+    let raf = 0
+    const t0 = performance.now()
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - t0) / ms)
+      const e = 1 - Math.pow(1 - p, 3)
+      const cur = start + (target - start) * e
+      setV(cur)
+      from.current = cur
+      if (p < 1) raf = requestAnimationFrame(tick)
+      else from.current = target
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [target, ms])
+  return v
+}
+function Num({ value, money: isMoney }: { value: number; money?: boolean }) {
+  const v = useCountUp(value)
+  return <>{isMoney ? money(v) : Math.round(v).toLocaleString('en')}</>
+}
+
+function Head({ title, meta, href, link }: { title: string; meta?: React.ReactNode; href?: string; link?: string }) {
   return (
     <div className="dh-section-head dw-head">
       <div className="dh-section-title">{title}{meta && <span className="dh-meta">{meta}</span>}</div>
@@ -77,22 +107,33 @@ function Summary({ storeId }: WidgetProps) {
           ))}
         </div>
       </div>
-      <div className="dw-kpis">
+      {/* total sales, big, like an account balance */}
+      <div className="dw-balance">
+        <div className="dw-balance-label">Ventas · {label}</div>
+        <div className="dw-balance-value"><Balance value={s.sales} /></div>
+      </div>
+      <div className="dw-subkpis">
         {[
-          { k: 'Ventas', v: money(s.sales), hero: true },
-          { k: 'Pedidos', v: String(s.orders) },
-          { k: 'Ticket promedio', v: money(s.ticket) },
-          { k: 'Clientes nuevos', v: String(s.newCustomers) },
+          { k: 'Pedidos', v: <Num value={s.orders} /> },
+          { k: 'Ticket promedio', v: <Num value={s.ticket} money /> },
+          { k: 'Clientes nuevos', v: <Num value={s.newCustomers} /> },
         ].map(x => (
-          <div key={x.k} className={`dw-kpi${x.hero ? ' hero' : ''}`}>
-            <div className="dh-kpi-label">{x.k}</div>
-            <div className="dw-kpi-value">{x.v}</div>
-            <div className="dw-kpi-foot">{label}</div>
+          <div key={x.k} className="dw-subkpi">
+            <span>{x.k}</span>
+            <b>{x.v}</b>
           </div>
         ))}
       </div>
     </>
   )
+}
+
+// "$1,234" big with ".56" small, counting up
+function Balance({ value }: { value: number }) {
+  const v = useCountUp(value, 1300)
+  const whole = Math.floor(v)
+  const cents = String(Math.floor((v - whole) * 100 + 1e-6)).padStart(2, '0')
+  return <><span className="dw-cur">$</span>{whole.toLocaleString('en')}<span className="dw-cents">.{cents}</span></>
 }
 
 // ── Pedidos en curso ─────────────────────────────────────────────────────
@@ -124,7 +165,7 @@ function ActiveOrders({ storeId }: WidgetProps) {
         {counts.map(c => (
           <div key={c.k} className="dw-pill">
             <span className="dw-dot" style={{ background: ORDER_STATUS[c.k].color }} />
-            <b>{c.n}</b> {ORDER_STATUS[c.k].label}
+            <b><Num value={c.n} /></b> {ORDER_STATUS[c.k].label}
           </div>
         ))}
       </div>
@@ -168,7 +209,7 @@ function SalesWeek({ storeId }: WidgetProps) {
   const sum = days.reduce((a, d) => a + d.total, 0)
   return (
     <>
-      <Head title="Ventas de la semana" meta={money(sum)} href="/dashboard/analitics" link="Analíticas" />
+      <Head title="Ventas de la semana" meta={<Num value={sum} money />} href="/dashboard/analitics" link="Analíticas" />
       <div className="dw-bars">
         {days.map((d, i) => (
           <div key={d.label + i} className="dw-bar-col" title={money(d.total)}>
@@ -215,7 +256,7 @@ function TopProducts({ storeId }: WidgetProps) {
               <div className="dh-top-name">{p.name}</div>
               <div className="dh-top-bar"><div className="dh-top-fill" style={{ width: `${(p.qty / max) * 100}%` }} /></div>
             </div>
-            <div className="dh-top-meta">{p.qty}<span>vendidos</span></div>
+            <div className="dh-top-meta"><Num value={p.qty} /><span>vendidos</span></div>
           </div>
         ))}
       </div>
@@ -269,7 +310,7 @@ function DeliveryTimes({ storeId }: WidgetProps) {
         ].map(x => (
           <div key={x.k} className="dw-stat">
             <div className="dw-stat-k">{x.k}</div>
-            <div className="dw-stat-v">{x.v ?? '—'}{x.v !== null && <small>min</small>}</div>
+            <div className="dw-stat-v">{x.v === null ? '—' : <><Num value={x.v} /><small>min</small></>}</div>
             <div className="dw-stat-sub">{x.sub} · {x.n}</div>
           </div>
         ))}
@@ -280,7 +321,7 @@ function DeliveryTimes({ storeId }: WidgetProps) {
             <div key={b.label} className="dw-hbar">
               <span>{b.label}</span>
               <div className="dw-hbar-track"><div style={{ width: `${(counts[i] / cmax) * 100}%` }} /></div>
-              <b>{counts[i]}</b>
+              <b><Num value={counts[i]} /></b>
             </div>
           ))}
         </div>
@@ -316,14 +357,14 @@ function CashToday({ storeId }: WidgetProps) {
   const sum = (rows ?? []).reduce((a, r) => a + r.total, 0)
   return (
     <>
-      <Head title="Caja de hoy" meta={money(sum)} href="/dashboard/caja" link="Ir a caja" />
+      <Head title="Caja de hoy" meta={<Num value={sum} money />} href="/dashboard/caja" link="Ir a caja" />
       {rows && rows.length === 0 && <Empty>Aún no hay cobros hoy.</Empty>}
       <div className="dw-list">
         {(rows ?? []).map(r => (
           <div key={r.method} className="dw-row static">
             <span className="dw-row-name">{r.method}</span>
             <span className="dw-row-sub">{r.n} {r.n === 1 ? 'pedido' : 'pedidos'}</span>
-            <span className="dw-row-amount">{money(r.total)}</span>
+            <span className="dw-row-amount"><Num value={r.total} money /></span>
           </div>
         ))}
       </div>
@@ -359,7 +400,7 @@ function DeliveryLive({ storeId }: WidgetProps) {
           { k: 'En preparación', v: c.waiting }, { k: 'Listos para salir', v: c.ready },
           { k: 'En camino', v: c.route }, { k: 'Entregados', v: c.done },
         ].map(x => (
-          <div key={x.k} className="dw-mini"><b>{x.v}</b><span>{x.k}</span></div>
+          <div key={x.k} className="dw-mini"><b><Num value={x.v} /></b><span>{x.k}</span></div>
         ))}
       </div>
     </>
@@ -388,7 +429,7 @@ function LowStock({ storeId }: WidgetProps) {
   }, [storeId])
   return (
     <>
-      <Head title="Inventario bajo" meta={rows ? `${rows.length}` : undefined} href="/dashboard/inventario" link="Inventario" />
+      <Head title="Inventario bajo" meta={rows ? <Num value={rows.length} /> : undefined} href="/dashboard/inventario" link="Inventario" />
       {rows && rows.length === 0 && <Empty>Todo en orden. Ningún artículo bajo el mínimo.</Empty>}
       <div className="dw-list">
         {(rows ?? []).slice(0, 6).map(r => (

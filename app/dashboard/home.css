@@ -611,3 +611,47 @@
 }
 .dw-menu-row button:disabled { opacity: 0.4; cursor: default; }
 .dw-menu-row button.danger { color: #DC2626; background: #FEF2F2; border-color: #FECACA; }
+
+/* ── Resumen: total sales big, like an account balance ── */
+.dw-balance { padding: 4px 2px 18px; }
+.dw-balance-label { font-size: 12px; font-weight: 600; color: #64748B; letter-spacing: 0.02em; margin-bottom: 4px; }
+.dw-balance-value {
+  font-size: clamp(40px, 6vw, 60px); font-weight: 800; color: var(--lyte-navy); line-height: 1.05;
+  letter-spacing: -0.045em; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.dw-cur { font-size: 0.55em; font-weight: 700; vertical-align: 0.55em; margin-right: 2px; opacity: 0.7; }
+.dw-cents { font-size: 0.45em; font-weight: 700; opacity: 0.55; margin-left: 1px; }
+.dw-subkpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.dw-subkpi {
+  display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; border-radius: 12px; min-width: 0;
+  background: rgba(255,255,255,0.45); border: 1px solid rgba(255,255,255,0.7);
+}
+.dw-subkpi span { font-size: 10.5px; font-weight: 600; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dw-subkpi b { font-size: 17px; font-weight: 800; color: #0F172A; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+@media (max-width: 760px) {
+  .dw-balance-value { font-size: 44px; }
+  .dw-subkpi { padding: 9px 10px; }
+  .dw-subkpi span { font-size: 9.5px; }
+  .dw-subkpi b { font-size: 15px; }
+}
+.dw-md .dw-balance-value { font-size: clamp(36px, 4vw, 48px); }
+
+/* numbers tick up; bars grow in when the dashboard opens */
+.dw-card :is(.dw-mini b, .dw-stat-v, .dw-row-amount, .dw-pill b, .dh-top-meta) { font-variant-numeric: tabular-nums; }
+.dw-bar { transform-origin: bottom; animation: dwGrowY 0.9s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.dw-bar-col:nth-child(2) .dw-bar { animation-delay: 0.05s; }
+.dw-bar-col:nth-child(3) .dw-bar { animation-delay: 0.1s; }
+.dw-bar-col:nth-child(4) .dw-bar { animation-delay: 0.15s; }
+.dw-bar-col:nth-child(5) .dw-bar { animation-delay: 0.2s; }
+.dw-bar-col:nth-child(6) .dw-bar { animation-delay: 0.25s; }
+.dw-bar-col:nth-child(7) .dw-bar { animation-delay: 0.3s; }
+.dw-card :is(.dw-hbar-track div, .dh-top-fill) { transform-origin: left; animation: dwGrowX 1s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes dwGrowY { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes dwGrowX { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .dw-bar, .dw-card :is(.dw-hbar-track div, .dh-top-fill) { animation: none; }
+}
+.dw-card .dw-bar.today { background: var(--lyte-navy); }
+@media (max-width: 760px) {
+  .dw-subkpi span { white-space: normal; line-height: 1.2; min-height: 2.4em; display: flex; align-items: flex-end; }
+}

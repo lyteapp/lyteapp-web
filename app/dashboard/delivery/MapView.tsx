@@ -51,6 +51,9 @@ type Props = {
   focusId?: string | null
   /** Extra space kept clear at the top/bottom when framing (overlays). */
   framePadding?: { top: number; bottom: number }
+  /** Where to center when the browser won't share its location (e.g. the
+      store's own position); without one, the first order/driver is used. */
+  fallbackCenter?: [number, number] | null
 }
 
 // Driver's profile photo inside the marker circle (initials without one)
@@ -71,7 +74,7 @@ const STATUS_COLORS = {
   late:      { border: '#B45309', bg: '#FFFBEB', text: '#B45309', dot: '#B45309' },
 }
 
-export default function MapView({ inRoute, driverLocations, drivers, customerPins, mapboxToken, labeled = false, focusId = null, framePadding }: Props) {
+export default function MapView({ inRoute, driverLocations, drivers, customerPins, mapboxToken, labeled = false, focusId = null, framePadding, fallbackCenter = null }: Props) {
   const mapRef = useRef<MapRef>(null)
   const [pos, setPos]     = useState<[number, number] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -100,14 +103,29 @@ export default function MapView({ inRoute, driverLocations, drivers, customerPin
     )
   }
 
+  // Center on this device's location; without permission, on the store or
+  // the first order/driver on the map — only with nothing at all to show
+  // does it fall back to asking for the permission.
   useEffect(() => {
-    if (!navigator.geolocation) { setError('Geolocalización no disponible'); return }
+    const fallback = (): [number, number] | null => {
+      if (fallbackCenter) return fallbackCenter
+      const pin = customerPins[0]
+      if (pin) return [pin.customer_lat, pin.customer_lng]
+      const drv = driverLocations.find(d => d.lat !== 0 || d.lng !== 0)
+      return drv ? [drv.lat, drv.lng] : null
+    }
+    const denied = (msg: string) => {
+      const f = fallback()
+      if (f) setPos(f)
+      else setError(msg)
+    }
+    if (!navigator.geolocation) { denied('Geolocalización no disponible'); return }
     navigator.geolocation.getCurrentPosition(
       p => setPos([p.coords.latitude, p.coords.longitude]),
-      () => setError('Permiso de ubicacion denegado. Activa la ubicacion en tu navegador.'),
+      () => denied('Permiso de ubicacion denegado. Activa la ubicacion en tu navegador.'),
       { enableHighAccuracy: true },
     )
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (error) return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#E8EEF4', padding: 24, textAlign: 'center' }}>

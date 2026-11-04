@@ -2,7 +2,15 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { supabase } from '../lib/supabase'
+
+// The live delivery map (same one as the Delivery section), loaded only
+// when its widget is on the home
+const MapView = dynamic(() => import('./delivery/MapView'), {
+  ssr: false,
+  loading: () => <div className="dw-map-loading">Cargando mapa…</div>,
+})
 
 // The dashboard home's widgets: each one loads its own data for the store
 // and renders in a card. The home page (page.tsx) decides which ones show,
@@ -488,6 +496,74 @@ function QuickActions() {
   )
 }
 
+// ── Mapa de deliverys (en vivo) ──────────────────────────────────────────
+type MapDelivery = {
+  id: string; customer_name: string; delivery_address: string; status: string
+  driver_id: string | null; picked_up_at: string | null
+  customer_lat: number | null; customer_lng: number | null
+}
+type MapDriverLoc = { driver_id: string; lat: number; lng: number; is_sharing: boolean; updated_at: string }
+function DeliveryMap({ storeId }: WidgetProps) {
+  const [dels, setDels] = useState<MapDelivery[]>([])
+  const [drivers, setDrivers] = useState<{ id: string; name: string; avatar_url?: string | null }[]>([])
+  const [locs, setLocs] = useState<MapDriverLoc[]>([])
+  const [storePos, setStorePos] = useState<[number, number] | null>(null)
+  const [ready, setReady] = useState(false)
+  useEffect(() => {
+    let off = false
+    supabase.from('stores').select('store_lat, store_lng').eq('id', storeId).maybeSingle().then(({ data }) => {
+      if (!off && data?.store_lat != null && data?.store_lng != null) setStorePos([data.store_lat, data.store_lng])
+    })
+    const load = async () => {
+      const [{ data: d }, { data: dr }, { data: l }] = await Promise.all([
+        supabase.from('deliveries').select('id, customer_name, delivery_address, status, driver_id, picked_up_at, customer_lat, customer_lng')
+          .eq('store_id', storeId).gte('created_at', startOfToday().toISOString()).limit(300),
+        supabase.from('delivery_drivers').select('id, name, avatar_url').eq('store_id', storeId),
+        supabase.from('driver_locations').select('*').eq('store_id', storeId),
+      ])
+      if (off) return
+      setDels((d as MapDelivery[]) ?? []); setDrivers(dr ?? []); setLocs((l as MapDriverLoc[]) ?? [])
+      setReady(true)
+    }
+    load()
+    // live: new/updated deliveries and drivers moving
+    const ch = supabase.channel(`home-map-${storeId}-${Math.random().toString(36).slice(2, 7)}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'deliveries', filter: `store_id=eq.${storeId}` }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'driver_locations', filter: `store_id=eq.${storeId}` }, payload => {
+        const row = payload.new as MapDriverLoc
+        if (row?.driver_id) setLocs(prev => (prev.some(x => x.driver_id === row.driver_id) ? prev.map(x => (x.driver_id === row.driver_id ? row : x)) : [...prev, row]))
+      })
+      .subscribe()
+    return () => { off = true; supabase.removeChannel(ch) }
+  }, [storeId])
+  const name = (id: string | null) => drivers.find(x => x.id === id)?.name ?? null
+  const inRoute = dels.filter(d => d.status === 'picked_up')
+  const waiting = dels.filter(d => ['pending', 'preparing', 'ready'].includes(d.status)).length
+  return (
+    <>
+      <Head title="Mapa de deliverys" meta="en vivo" href="/dashboard/delivery" link="Abrir mapa" />
+      <div className="dw-map-pills">
+        <div className="dw-pill"><span className="dw-dot" style={{ background: '#1C1B3A' }} /><b><Num value={inRoute.length} /></b> En camino</div>
+        <div className="dw-pill"><span className="dw-dot" style={{ background: '#F59E0B' }} /><b><Num value={waiting} /></b> Por salir</div>
+        <div className="dw-pill"><span className="dw-dot" style={{ background: '#15803D' }} /><b><Num value={locs.filter(l => l.is_sharing).length} /></b> Repartidores activos</div>
+      </div>
+      <div className="dw-map">
+        {ready && <MapView
+          inRoute={inRoute.map(d => ({ id: d.id, customer_name: d.customer_name, driver_name: name(d.driver_id), driver_id: d.driver_id, picked_up_at: d.picked_up_at }))}
+          driverLocations={locs}
+          drivers={drivers}
+          customerPins={dels.filter(d => d.customer_lat != null && d.customer_lng != null).map(d => ({
+            id: d.id, customer_name: d.customer_name, delivery_address: d.delivery_address, status: d.status,
+            customer_lat: d.customer_lat!, customer_lng: d.customer_lng!,
+          }))}
+          mapboxToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ''}
+          fallbackCenter={storePos}
+        />}
+      </div>
+    </>
+  )
+}
+
 const I = (d: React.ReactNode) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{d}</svg>
 
 export const WIDGETS: WidgetDef[] = [
@@ -497,6 +573,7 @@ export const WIDGETS: WidgetDef[] = [
   { id: 'top-products', title: 'Lo más vendido', desc: 'Tus 5 productos estrella de los últimos 30 días.', size: 'md', sizes: ['md', 'lg', 'sm'], icon: I(<path d="M12 2l3 6.5 7 .9-5.1 4.8 1.3 7L12 17.8 5.8 21.2l1.3-7L2 9.4l7-.9z" />), Component: TopProducts },
   { id: 'cash-today', title: 'Caja de hoy', desc: 'Cuánto entró hoy por cada método de pago.', size: 'md', sizes: ['md', 'lg', 'sm'], icon: I(<><rect x="2.5" y="5.5" width="19" height="13" rx="2" /><path d="M2.5 10h19" /></>), Component: CashToday },
   { id: 'delivery-times', title: 'Tiempos de entrega', desc: 'Cuánto tardan tus entregas de hoy.', size: 'md', sizes: ['md', 'lg'], icon: I(<><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>), Component: DeliveryTimes },
+  { id: 'delivery-map', title: 'Mapa de deliverys', desc: 'El mapa en vivo con tus repartidores y las entregas de hoy.', size: 'lg', sizes: ['lg', 'md'], icon: I(<><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z" /><path d="M9 4v14M15 6v14" /></>), Component: DeliveryMap },
   { id: 'delivery-live', title: 'Delivery de hoy', desc: 'Entregas en preparación, listas, en camino y entregadas.', size: 'sm', sizes: ['sm', 'md'], icon: I(<><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7" /><circle cx="7" cy="17.5" r="1.6" /><circle cx="17" cy="17.5" r="1.6" /></>), Component: DeliveryLive },
   { id: 'low-stock', title: 'Inventario bajo', desc: 'Artículos por debajo de su stock mínimo.', size: 'md', sizes: ['md', 'lg', 'sm'], icon: I(<><path d="M21 8l-9-5-9 5 9 5 9-5z" /><path d="M3 8v8l9 5 9-5V8" /></>), Component: LowStock },
   { id: 'store-link', title: 'Tu tienda pública', desc: 'El enlace de tu tienda para copiar, verla o editar su diseño.', size: 'sm', sizes: ['sm', 'md'], icon: I(<><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" /></>), Component: StoreLink },

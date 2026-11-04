@@ -502,3 +502,64 @@
 }
 .dw-quick-btn span { color: #94A3B8; }
 .dw-quick-btn:hover { border-color: var(--lyte-navy); }
+
+/* ── Frosted glass widgets ──
+   Soft color blobs behind the home (in the dashboard theme's colors) so
+   the translucent, blurred cards have something to frost over. */
+.dh-content:has(.dw-grid) { position: relative; isolation: isolate; }
+.dh-content:has(.dw-grid)::before,
+.dh-content:has(.dw-grid)::after {
+  content: ''; position: absolute; z-index: -1; pointer-events: none;
+  border-radius: 50%; filter: blur(60px); opacity: 1;
+  animation: dwBlobDrift 22s ease-in-out infinite alternate;
+}
+.dh-content:has(.dw-grid)::before {
+  width: 520px; height: 520px; top: 120px; left: -80px;
+  background: radial-gradient(circle at 30% 30%, var(--lyte-blue, #9AB7FD), transparent 66%),
+              radial-gradient(circle at 75% 70%, #F5B3D3, transparent 62%);
+}
+.dh-content:has(.dw-grid)::after {
+  width: 600px; height: 600px; top: 420px; right: -120px;
+  background: radial-gradient(circle at 40% 40%, var(--lyte-blue, #9AB7FD), transparent 64%),
+              radial-gradient(circle at 70% 75%, #FCD49A, transparent 60%);
+  animation-delay: -11s;
+}
+@keyframes dwBlobDrift {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(60px, 40px) scale(1.08); }
+}
+
+.dh-card.dw-card {
+  background: rgba(255, 255, 255, 0.42);
+  -webkit-backdrop-filter: blur(18px) saturate(170%);
+  backdrop-filter: blur(18px) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow:
+    0 10px 34px rgba(28, 27, 58, 0.08),
+    0 1px 2px rgba(28, 27, 58, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+/* pieces inside the cards: lighter glass */
+.dw-card :is(.dw-kpi, .dw-stat, .dw-mini, .dw-pill, .dw-quick-btn, .dw-link-box, .dw-btn:not(.dark), .dw-tools) {
+  background: rgba(255, 255, 255, 0.45);
+  border-color: rgba(255, 255, 255, 0.7);
+}
+.dw-card .dw-kpi.hero {
+  background: linear-gradient(160deg, rgba(255,255,255,0.7), rgba(233,234,255,0.55));
+}
+.dw-card .dw-seg { background: rgba(255, 255, 255, 0.4); }
+.dw-card .dw-seg button.on { background: rgba(255, 255, 255, 0.95); }
+.dw-card .dw-row { border-top-color: rgba(15, 23, 42, 0.06); }
+.dw-card .dw-row:not(.static):hover { background: rgba(255, 255, 255, 0.5); }
+.dw-card :is(.dw-hbar-track, .dh-top-bar) { background: rgba(15, 23, 42, 0.07); }
+.dw-card .dw-bar { background: color-mix(in srgb, var(--lyte-blue, #9AB7FD) 70%, white); }
+.dw-add { background: rgba(255, 255, 255, 0.25) !important; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+
+@media (max-width: 760px) {
+  .dh-content:has(.dw-grid)::before { width: 340px; height: 340px; left: -120px; top: 160px; }
+  .dh-content:has(.dw-grid)::after { width: 380px; height: 380px; right: -160px; top: 620px; }
+  .dh-card.dw-card { -webkit-backdrop-filter: blur(14px) saturate(160%); backdrop-filter: blur(14px) saturate(160%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dh-content:has(.dw-grid)::before, .dh-content:has(.dw-grid)::after { animation: none; }
+}

@@ -1,43 +1,70 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { useDashboardStore } from '../lib/DashboardStoreProvider'
 import { useT } from '../lib/LocaleProvider'
-import { WIDGETS, DEFAULT_WIDGETS } from './widgets'
+import { WIDGETS, DEFAULT_WIDGETS, type WidgetSize } from './widgets'
 import './home.css'
 
 // The dashboard home: a greeting, then the owner's own pick of widgets
-// (widgets.tsx). "Personalizar" adds, removes and reorders them; the
-// layout is kept per account and per store (user_metadata.home_widgets,
-// plus this device's copy so it shows right away).
+// (widgets.tsx). "Personalizar" adds, removes, resizes and reorders them;
+// on a phone, pressing and holding a widget lifts it — drag it to move it,
+// or let go to get its menu (size, move, remove). The layout is kept per
+// account and per store (user_metadata.home_widgets, plus this device's
+// copy so it shows right away), as "id" or "id@size" strings.
 
-const known = new Set(WIDGETS.map(w => w.id))
-const clean = (ids: unknown): string[] | null =>
-  Array.isArray(ids) ? ids.filter((x): x is string => typeof x === 'string' && known.has(x)) : null
+type Item = { id: string; size: WidgetSize }
+const byId = new Map(WIDGETS.map(w => [w.id, w]))
+const SIZE_NAME: Record<WidgetSize, string> = { sm: 'Pequeño', md: 'Mediano', lg: 'Grande' }
+
+function parse(raw: unknown): Item[] | null {
+  if (!Array.isArray(raw)) return null
+  const out: Item[] = []
+  for (const x of raw) {
+    if (typeof x !== 'string') continue
+    const [id, size] = x.split('@')
+    const w = byId.get(id)
+    if (!w || out.some(o => o.id === id)) continue
+    out.push({ id, size: w.sizes.includes(size as WidgetSize) ? size as WidgetSize : w.size })
+  }
+  return out
+}
+const serialize = (items: Item[]) => items.map(i => (i.size === byId.get(i.id)!.size ? i.id : `${i.id}@${i.size}`))
+const defaults = () => parse(DEFAULT_WIDGETS)!
+
+const HOLD_MS = 450
+const MOVE_TOLERANCE = 10
 
 export default function Dashboard() {
   const { user } = useAuth()
   const t = useT()
   const { storeId, store } = useDashboardStore()
   const storeSlug = store?.slug ?? ''
-  const [layout, setLayout] = useState<string[] | null>(null)
+  const [layout, setLayout] = useState<Item[] | null>(null)
   const [editing, setEditing] = useState(false)
   const [library, setLibrary] = useState(false)
+  const [menu, setMenu] = useState<string | null>(null) // phone: widget whose menu is open
   const [todayOrders, setTodayOrders] = useState(0)
+  // phone press-and-hold / drag
+  const [lifted, setLifted] = useState<string | null>(null)
+  const [dropOn, setDropOn] = useState<string | null>(null)
+  const [drag, setDrag] = useState({ x: 0, y: 0 })
+  const press = useRef<{ id: string; x: number; y: number; timer: ReturnType<typeof setTimeout> | null; lifted: boolean; moved: boolean } | null>(null)
+  const swallowClick = useRef(false)
 
   const cacheKey = user && storeId ? `lyte-home-widgets:${user.id}:${storeId}` : ''
 
   // Load this store's layout: the account's saved one, else this device's, else the default
   useEffect(() => {
     if (!user || !storeId) return
-    const saved = clean((user.user_metadata?.home_widgets ?? {})[storeId])
-    let local: string[] | null = null
-    try { local = clean(JSON.parse(localStorage.getItem(cacheKey) || 'null')) } catch {}
+    const saved = parse((user.user_metadata?.home_widgets ?? {})[storeId])
+    let local: Item[] | null = null
+    try { local = parse(JSON.parse(localStorage.getItem(cacheKey) || 'null')) } catch {}
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLayout(saved ?? local ?? DEFAULT_WIDGETS)
+    setLayout(saved ?? local ?? defaults())
   }, [user, storeId, cacheKey])
 
   useEffect(() => {
@@ -48,26 +75,102 @@ export default function Dashboard() {
       .then(({ count }) => setTodayOrders(count ?? 0))
   }, [storeId])
 
-  function save(next: string[]) {
+  function save(next: Item[]) {
     setLayout(next)
     if (!user || !storeId) return
-    try { localStorage.setItem(cacheKey, JSON.stringify(next)) } catch {}
-    const all = { ...(user.user_metadata?.home_widgets ?? {}), [storeId]: next }
+    const raw = serialize(next)
+    try { localStorage.setItem(cacheKey, JSON.stringify(raw)) } catch {}
+    const all = { ...(user.user_metadata?.home_widgets ?? {}), [storeId]: raw }
     supabase.auth.updateUser({ data: { home_widgets: all } }).catch(() => {})
   }
-  const move = (i: number, d: -1 | 1) => {
+  const indexOf = (id: string) => (layout ?? []).findIndex(i => i.id === id)
+  const move = (id: string, d: -1 | 1) => {
     if (!layout) return
-    const j = i + d
-    if (j < 0 || j >= layout.length) return
+    const i = indexOf(id), j = i + d
+    if (i < 0 || j < 0 || j >= layout.length) return
     const next = [...layout]; [next[i], next[j]] = [next[j], next[i]]
     save(next)
   }
-  const remove = (id: string) => layout && save(layout.filter(x => x !== id))
-  const add = (id: string) => { if (layout && !layout.includes(id)) save([...layout, id]); setLibrary(false) }
+  const moveTo = (id: string, targetId: string) => {
+    if (!layout || id === targetId) return
+    const from = indexOf(id), to = indexOf(targetId)
+    const next = [...layout]
+    const [it] = next.splice(from, 1)
+    next.splice(to, 0, it)
+    save(next)
+  }
+  const resize = (id: string, size: WidgetSize) => layout && save(layout.map(i => (i.id === id ? { ...i, size } : i)))
+  const cycleSize = (id: string) => {
+    const it = layout?.find(i => i.id === id); const w = byId.get(id)
+    if (!it || !w) return
+    resize(id, w.sizes[(w.sizes.indexOf(it.size) + 1) % w.sizes.length])
+  }
+  const remove = (id: string) => { if (layout) save(layout.filter(i => i.id !== id)); setMenu(null) }
+  const add = (id: string) => {
+    const w = byId.get(id)
+    if (layout && w && !layout.some(i => i.id === id)) save([...layout, { id, size: w.size }])
+    setLibrary(false)
+  }
+
+  // ── Phone: press and hold a widget ─────────────────────────────────────
+  function onTouchStart(id: string, e: React.TouchEvent) {
+    if (e.touches.length !== 1) return
+    const tch = e.touches[0]
+    const p = { id, x: tch.clientX, y: tch.clientY, timer: null as ReturnType<typeof setTimeout> | null, lifted: false, moved: false }
+    p.timer = setTimeout(() => {
+      p.lifted = true
+      swallowClick.current = true
+      try { navigator.vibrate?.(30) } catch {}
+      setLifted(id); setDrag({ x: 0, y: 0 })
+    }, HOLD_MS)
+    press.current = p
+  }
+  // a non-passive listener, so a lifted widget can stop the page from scrolling
+  useEffect(() => {
+    const onMove = (e: TouchEvent) => {
+      const p = press.current
+      if (!p) return
+      const tch = e.touches[0]
+      const dx = tch.clientX - p.x, dy = tch.clientY - p.y
+      if (!p.lifted) {
+        if (Math.hypot(dx, dy) > MOVE_TOLERANCE) { if (p.timer) clearTimeout(p.timer); press.current = null }
+        return
+      }
+      e.preventDefault()
+      if (Math.hypot(dx, dy) > MOVE_TOLERANCE) p.moved = true
+      // near the top/bottom edge, scroll the page so it can go further
+      const edge = 90
+      const step = tch.clientY < edge ? -14 : tch.clientY > window.innerHeight - edge ? 14 : 0
+      if (step) { window.scrollBy(0, step); p.y -= step }
+      setDrag({ x: dx, y: tch.clientY - p.y })
+      // which widget is under the finger
+      const under = document.elementsFromPoint(tch.clientX, tch.clientY)
+        .map(el => (el as HTMLElement).closest<HTMLElement>('[data-wid]'))
+        .find(el => el && el.dataset.wid !== p.id)
+      setDropOn(under?.dataset.wid ?? null)
+    }
+    document.addEventListener('touchmove', onMove, { passive: false })
+    return () => document.removeEventListener('touchmove', onMove)
+  }, [])
+  function onTouchEnd(e: React.TouchEvent) {
+    const p = press.current
+    press.current = null
+    if (!p) return
+    if (p.timer) clearTimeout(p.timer)
+    if (!p.lifted) return
+    // no tap/click from this touch (it would land on the menu's backdrop)
+    if (e.cancelable) e.preventDefault()
+    if (p.moved && dropOn) moveTo(p.id, dropOn)
+    else if (!p.moved) setMenu(p.id)
+    setLifted(null); setDropOn(null); setDrag({ x: 0, y: 0 })
+    setTimeout(() => { swallowClick.current = false }, 350)
+  }
 
   const firstName = user?.email?.split('@')[0] ?? ''
   const today = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-  const available = WIDGETS.filter(w => !(layout ?? []).includes(w.id))
+  const available = WIDGETS.filter(w => !(layout ?? []).some(i => i.id === w.id))
+  const menuItem = menu ? layout?.find(i => i.id === menu) : null
+  const menuDef = menu ? byId.get(menu) : null
 
   return (
     <div className="dh-content">
@@ -97,24 +200,42 @@ export default function Dashboard() {
 
       {editing && (
         <div className="dw-editbar">
-          <span>Agrega, quita y ordena los widgets de tu inicio.</span>
-          <button type="button" onClick={() => save(DEFAULT_WIDGETS)}>Restablecer</button>
+          <span>Agrega, quita, cambia el tamaño y ordena tus widgets.</span>
+          <button type="button" onClick={() => save(defaults())}>Restablecer</button>
         </div>
       )}
 
       {/* ── WIDGETS ── */}
-      <div className={`dw-grid${editing ? ' editing' : ''}`}>
-        {storeId && (layout ?? []).map((id, i) => {
-          const w = WIDGETS.find(x => x.id === id)
+      <div
+        className={`dw-grid${editing ? ' editing' : ''}${lifted ? ' dragging' : ''}`}
+        onClickCapture={e => { if (swallowClick.current) { e.preventDefault(); e.stopPropagation() } }}
+      >
+        {storeId && (layout ?? []).map((item, i) => {
+          const w = byId.get(item.id)
           if (!w) return null
+          const isLifted = lifted === item.id
           return (
-            <section key={id} className={`dh-card dw-card dw-${w.size}`}>
+            <section
+              key={item.id}
+              data-wid={item.id}
+              className={`dh-card dw-card dw-${item.size}${isLifted ? ' lifted' : ''}${dropOn === item.id ? ' drop-target' : ''}`}
+              style={isLifted ? { transform: `translate(${drag.x}px, ${drag.y}px) scale(1.03)` } : undefined}
+              onTouchStart={e => onTouchStart(item.id, e)}
+              onTouchEnd={onTouchEnd}
+              onTouchCancel={onTouchEnd}
+              onContextMenu={e => e.preventDefault()}
+            >
               {editing && (
                 <div className="dw-tools">
                   <span className="dw-tools-name">{w.title}</span>
-                  <button type="button" onClick={() => move(i, -1)} disabled={i === 0} aria-label="Mover antes">←</button>
-                  <button type="button" onClick={() => move(i, 1)} disabled={i === layout!.length - 1} aria-label="Mover después">→</button>
-                  <button type="button" className="dw-tools-x" onClick={() => remove(id)} aria-label="Quitar">✕</button>
+                  {w.sizes.length > 1 && (
+                    <button type="button" className="dw-tools-size" onClick={() => cycleSize(item.id)} aria-label="Cambiar tamaño" title={`Tamaño: ${SIZE_NAME[item.size]}`}>
+                      {item.size === 'sm' ? 'S' : item.size === 'md' ? 'M' : 'L'}
+                    </button>
+                  )}
+                  <button type="button" onClick={() => move(item.id, -1)} disabled={i === 0} aria-label="Mover antes">←</button>
+                  <button type="button" onClick={() => move(item.id, 1)} disabled={i === layout!.length - 1} aria-label="Mover después">→</button>
+                  <button type="button" className="dw-tools-x" onClick={() => remove(item.id)} aria-label="Quitar">✕</button>
                 </div>
               )}
               <w.Component storeId={storeId} storeSlug={storeSlug} />
@@ -128,6 +249,43 @@ export default function Dashboard() {
           </button>
         )}
       </div>
+      {layout && layout.length > 0 && !editing && (
+        <div className="dw-hint">Mantén presionado un widget para moverlo, cambiarle el tamaño o quitarlo.</div>
+      )}
+
+      {/* ── PHONE: a widget's menu (after press and hold) ── */}
+      {menuItem && menuDef && (
+        <div className="dw-lib-backdrop" onClick={() => { if (!swallowClick.current) setMenu(null) }}>
+          <div className="dw-lib dw-menu" onClick={e => e.stopPropagation()} role="dialog" aria-label={menuDef.title}>
+            <div className="dw-lib-head">
+              <div className="dw-menu-title"><span className="dw-lib-icon">{menuDef.icon}</span><b>{menuDef.title}</b></div>
+              <button type="button" className="dw-lib-close" onClick={() => setMenu(null)} aria-label="Cerrar">✕</button>
+            </div>
+            {menuDef.sizes.length > 1 && (
+              <>
+                <div className="dw-menu-label">Tamaño</div>
+                <div className="dw-menu-sizes">
+                  {menuDef.sizes.slice().sort((a, b) => ['sm', 'md', 'lg'].indexOf(a) - ['sm', 'md', 'lg'].indexOf(b)).map(sz => (
+                    <button key={sz} type="button" className={menuItem.size === sz ? 'on' : ''} onClick={() => resize(menuItem.id, sz)}>
+                      <span className={`dw-size-ico ${sz}`} />
+                      {SIZE_NAME[sz]}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+            <div className="dw-menu-label">Posición</div>
+            <div className="dw-menu-row">
+              <button type="button" onClick={() => move(menuItem.id, -1)} disabled={indexOf(menuItem.id) === 0}>↑ Subir</button>
+              <button type="button" onClick={() => move(menuItem.id, 1)} disabled={indexOf(menuItem.id) === (layout?.length ?? 1) - 1}>↓ Bajar</button>
+            </div>
+            <div className="dw-menu-row">
+              <button type="button" onClick={() => { setMenu(null); setEditing(true) }}>Editar inicio</button>
+              <button type="button" className="danger" onClick={() => remove(menuItem.id)}>Quitar widget</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── WIDGET LIBRARY ── */}
       {library && (

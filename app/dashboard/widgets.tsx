@@ -15,6 +15,8 @@ export type WidgetDef = {
   title: string
   desc: string
   size: WidgetSize
+  /** sizes the owner can pick for it (default size first) */
+  sizes: WidgetSize[]
   icon: React.ReactNode
   Component: (p: WidgetProps) => React.ReactNode
 }
@@ -448,16 +450,16 @@ function QuickActions() {
 const I = (d: React.ReactNode) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{d}</svg>
 
 export const WIDGETS: WidgetDef[] = [
-  { id: 'summary', title: 'Resumen', desc: 'Ventas, pedidos, ticket promedio y clientes nuevos del día, la semana o el mes.', size: 'lg', icon: I(<><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></>), Component: Summary },
-  { id: 'active-orders', title: 'Pedidos en curso', desc: 'Los pedidos nuevos, en proceso y listos, al momento.', size: 'md', icon: I(<><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" /><path d="M3 6h18" /></>), Component: ActiveOrders },
-  { id: 'sales-week', title: 'Ventas de la semana', desc: 'Lo que vendiste cada día de los últimos 7 días.', size: 'md', icon: I(<><rect x="3" y="12" width="4" height="8" rx="1" /><rect x="10" y="7" width="4" height="13" rx="1" /><rect x="17" y="3" width="4" height="17" rx="1" /></>), Component: SalesWeek },
-  { id: 'top-products', title: 'Lo más vendido', desc: 'Tus 5 productos estrella de los últimos 30 días.', size: 'md', icon: I(<path d="M12 2l3 6.5 7 .9-5.1 4.8 1.3 7L12 17.8 5.8 21.2l1.3-7L2 9.4l7-.9z" />), Component: TopProducts },
-  { id: 'cash-today', title: 'Caja de hoy', desc: 'Cuánto entró hoy por cada método de pago.', size: 'md', icon: I(<><rect x="2.5" y="5.5" width="19" height="13" rx="2" /><path d="M2.5 10h19" /></>), Component: CashToday },
-  { id: 'delivery-times', title: 'Tiempos de entrega', desc: 'Cuánto tardan tus entregas de hoy.', size: 'md', icon: I(<><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>), Component: DeliveryTimes },
-  { id: 'delivery-live', title: 'Delivery de hoy', desc: 'Entregas en preparación, listas, en camino y entregadas.', size: 'sm', icon: I(<><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7" /><circle cx="7" cy="17.5" r="1.6" /><circle cx="17" cy="17.5" r="1.6" /></>), Component: DeliveryLive },
-  { id: 'low-stock', title: 'Inventario bajo', desc: 'Artículos por debajo de su stock mínimo.', size: 'md', icon: I(<><path d="M21 8l-9-5-9 5 9 5 9-5z" /><path d="M3 8v8l9 5 9-5V8" /></>), Component: LowStock },
-  { id: 'store-link', title: 'Tu tienda pública', desc: 'El enlace de tu tienda para copiar, verla o editar su diseño.', size: 'sm', icon: I(<><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" /></>), Component: StoreLink },
-  { id: 'quick-actions', title: 'Accesos rápidos', desc: 'Atajos a lo que más usas.', size: 'sm', icon: I(<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" />), Component: QuickActions },
+  { id: 'summary', title: 'Resumen', desc: 'Ventas, pedidos, ticket promedio y clientes nuevos del día, la semana o el mes.', size: 'lg', sizes: ['lg', 'md'], icon: I(<><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></>), Component: Summary },
+  { id: 'active-orders', title: 'Pedidos en curso', desc: 'Los pedidos nuevos, en proceso y listos, al momento.', size: 'md', sizes: ['md', 'lg', 'sm'], icon: I(<><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" /><path d="M3 6h18" /></>), Component: ActiveOrders },
+  { id: 'sales-week', title: 'Ventas de la semana', desc: 'Lo que vendiste cada día de los últimos 7 días.', size: 'md', sizes: ['md', 'lg', 'sm'], icon: I(<><rect x="3" y="12" width="4" height="8" rx="1" /><rect x="10" y="7" width="4" height="13" rx="1" /><rect x="17" y="3" width="4" height="17" rx="1" /></>), Component: SalesWeek },
+  { id: 'top-products', title: 'Lo más vendido', desc: 'Tus 5 productos estrella de los últimos 30 días.', size: 'md', sizes: ['md', 'lg', 'sm'], icon: I(<path d="M12 2l3 6.5 7 .9-5.1 4.8 1.3 7L12 17.8 5.8 21.2l1.3-7L2 9.4l7-.9z" />), Component: TopProducts },
+  { id: 'cash-today', title: 'Caja de hoy', desc: 'Cuánto entró hoy por cada método de pago.', size: 'md', sizes: ['md', 'lg', 'sm'], icon: I(<><rect x="2.5" y="5.5" width="19" height="13" rx="2" /><path d="M2.5 10h19" /></>), Component: CashToday },
+  { id: 'delivery-times', title: 'Tiempos de entrega', desc: 'Cuánto tardan tus entregas de hoy.', size: 'md', sizes: ['md', 'lg'], icon: I(<><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>), Component: DeliveryTimes },
+  { id: 'delivery-live', title: 'Delivery de hoy', desc: 'Entregas en preparación, listas, en camino y entregadas.', size: 'sm', sizes: ['sm', 'md'], icon: I(<><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7" /><circle cx="7" cy="17.5" r="1.6" /><circle cx="17" cy="17.5" r="1.6" /></>), Component: DeliveryLive },
+  { id: 'low-stock', title: 'Inventario bajo', desc: 'Artículos por debajo de su stock mínimo.', size: 'md', sizes: ['md', 'lg', 'sm'], icon: I(<><path d="M21 8l-9-5-9 5 9 5 9-5z" /><path d="M3 8v8l9 5 9-5V8" /></>), Component: LowStock },
+  { id: 'store-link', title: 'Tu tienda pública', desc: 'El enlace de tu tienda para copiar, verla o editar su diseño.', size: 'sm', sizes: ['sm', 'md'], icon: I(<><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" /></>), Component: StoreLink },
+  { id: 'quick-actions', title: 'Accesos rápidos', desc: 'Atajos a lo que más usas.', size: 'sm', sizes: ['sm', 'md'], icon: I(<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" />), Component: QuickActions },
 ]
 
 export const DEFAULT_WIDGETS = ['summary', 'active-orders', 'sales-week', 'top-products', 'cash-today', 'store-link']

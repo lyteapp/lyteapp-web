@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import Link from 'next/link'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { useDashboardStore } from '../lib/DashboardStoreProvider'
@@ -186,10 +185,6 @@ export default function Dashboard() {
               : <em>{t('dash.startSelling')}</em>}
           </h1>
           <div className="dh-cta">
-            {storeSlug && <Link href={`/${storeSlug}`} target="_blank" className="dh-btn-secondary">{t('dash.viewPublicStore')}</Link>}
-            <button className="dh-btn-ghost" onClick={() => { if (storeSlug) navigator.clipboard.writeText(`https://lyte-app.com/${storeSlug}`) }}>
-              {t('dash.shareLink')}
-            </button>
             <button type="button" className={`dh-btn-ghost dw-customize${editing ? ' on' : ''}`} onClick={() => setEditing(e => !e)}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><path d="M17.5 14v7M14 17.5h7" /></svg>
               {editing ? 'Listo' : 'Personalizar'}

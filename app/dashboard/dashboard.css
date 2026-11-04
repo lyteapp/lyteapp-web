@@ -10,9 +10,13 @@ html:has(.ed-app), html:has(.ed-app) body,
 html:has(.cn-co-m), html:has(.cn-co-m) body {
   background: #1C1B3A;
 }
-/* The page doesn't stretch past its top (the header) or its bottom */
-html.db-shell, html.db-shell body {
-  overscroll-behavior-y: none;
+/* The page doesn't stretch past its top (the header) or its bottom — on
+   touch screens only: desktop Safari stops mouse/trackpad scrolling
+   altogether with overscroll-behavior set here (and has no bounce to stop) */
+@media (pointer: coarse) {
+  html.db-shell, html.db-shell body {
+    overscroll-behavior-y: none;
+  }
 }
 
 /* ===== DASHBOARD SHELL ===== */

@@ -1,114 +1,73 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { useDashboardStore } from '../lib/DashboardStoreProvider'
 import { useT } from '../lib/LocaleProvider'
+import { WIDGETS, DEFAULT_WIDGETS } from './widgets'
 import './home.css'
 
-const BUCKETS = [
-  { label: '0–15 min', min: 0,  max: 15  },
-  { label: '15–30 min', min: 15, max: 30  },
-  { label: '30–45 min', min: 30, max: 45  },
-  { label: '+45 min',   min: 45, max: Infinity },
-]
+// The dashboard home: a greeting, then the owner's own pick of widgets
+// (widgets.tsx). "Personalizar" adds, removes and reorders them; the
+// layout is kept per account and per store (user_metadata.home_widgets,
+// plus this device's copy so it shows right away).
 
+const known = new Set(WIDGETS.map(w => w.id))
+const clean = (ids: unknown): string[] | null =>
+  Array.isArray(ids) ? ids.filter((x): x is string => typeof x === 'string' && known.has(x)) : null
 
 export default function Dashboard() {
   const { user } = useAuth()
   const t = useT()
   const { storeId, store } = useDashboardStore()
   const storeSlug = store?.slug ?? ''
-  const [period, setPeriod] = useState<'day' | 'week' | 'month'>('day')
-  const [orderCount, setOrderCount] = useState(0)
-  const [totalSales, setTotalSales] = useState(0)
-  const [avgTicket, setAvgTicket] = useState(0)
-  const [productCount, setProductCount] = useState(0)
-  const [driverMins,   setDriverMins]   = useState<number[]>([])
-  const [instoreMins,  setInstoreMins]  = useState<number[]>([])
-  const [totalMins,    setTotalMins]    = useState<number[]>([])
+  const [layout, setLayout] = useState<string[] | null>(null)
+  const [editing, setEditing] = useState(false)
+  const [library, setLibrary] = useState(false)
+  const [todayOrders, setTodayOrders] = useState(0)
 
-  const loadDeliveryTimes = useCallback(async (sid: string) => {
-    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
+  const cacheKey = user && storeId ? `lyte-home-widgets:${user.id}:${storeId}` : ''
 
-    // Dispatch time (delivery.created_at → delivered_at), split by driver presence
-    const { data: dels } = await supabase
-      .from('deliveries')
-      .select('created_at, delivered_at, driver_id')
-      .eq('store_id', sid)
-      .not('delivered_at', 'is', null)
-      .gte('delivered_at', todayStart.toISOString())
-
-    const calcMins = (a: string, b: string) =>
-      Math.round((new Date(b).getTime() - new Date(a).getTime()) / 60000)
-
-    setDriverMins((dels ?? []).filter(d => d.driver_id).map(d => calcMins(d.created_at, d.delivered_at)))
-    setInstoreMins((dels ?? []).filter(d => !d.driver_id).map(d => calcMins(d.created_at, d.delivered_at)))
-
-    // Total time = from when order was placed (orders.created_at) to delivered_at
-    const { data: withOrder } = await supabase
-      .from('deliveries')
-      .select('delivered_at, order:order_id(created_at)')
-      .eq('store_id', sid)
-      .not('delivered_at', 'is', null)
-      .not('order_id', 'is', null)
-      .gte('delivered_at', todayStart.toISOString())
-
-    setTotalMins((withOrder ?? []).map(d => {
-      const orderCreated = (d.order as unknown as { created_at: string } | null)?.created_at
-      if (!orderCreated) return 0
-      return calcMins(orderCreated, d.delivered_at)
-    }).filter(m => m > 0))
-  }, [])
-
-  const loadStats = useCallback(async (sid: string, p: 'day' | 'week' | 'month') => {
-    const start = new Date()
-    if (p === 'day')   { start.setHours(0, 0, 0, 0) }
-    if (p === 'week')  { start.setDate(start.getDate() - start.getDay()); start.setHours(0, 0, 0, 0) }
-    if (p === 'month') { start.setDate(1); start.setHours(0, 0, 0, 0) }
-    const { data: orders } = await supabase
-      .from('orders')
-      .select('id, total')
-      .eq('store_id', sid)
-      .gte('created_at', start.toISOString())
-    const count = orders?.length ?? 0
-    const sum   = (orders ?? []).reduce((acc, o) => acc + Number(o.total ?? 0), 0)
-    setOrderCount(count)
-    setTotalSales(sum)
-    setAvgTicket(count > 0 ? sum / count : 0)
-  }, [])
+  // Load this store's layout: the account's saved one, else this device's, else the default
+  useEffect(() => {
+    if (!user || !storeId) return
+    const saved = clean((user.user_metadata?.home_widgets ?? {})[storeId])
+    let local: string[] | null = null
+    try { local = clean(JSON.parse(localStorage.getItem(cacheKey) || 'null')) } catch {}
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLayout(saved ?? local ?? DEFAULT_WIDGETS)
+  }, [user, storeId, cacheKey])
 
   useEffect(() => {
     if (!storeId) return
-    supabase.from('products').select('id', { count: 'exact' }).eq('store_id', storeId).then(({ count }) => setProductCount(count ?? 0))
+    const start = new Date(); start.setHours(0, 0, 0, 0)
+    supabase.from('orders').select('id', { count: 'exact', head: true })
+      .eq('store_id', storeId).gte('created_at', start.toISOString()).neq('status', 'cancelled')
+      .then(({ count }) => setTodayOrders(count ?? 0))
   }, [storeId])
 
-  useEffect(() => {
-    // period defaults to 'day', so this also covers the initial load —
-    // no need for a separate first-load call.
-    if (!storeId) return
-    loadStats(storeId, period)
-  }, [storeId, period, loadStats])
-
-  useEffect(() => {
-    if (!storeId) return
-    Promise.resolve().then(() => loadDeliveryTimes(storeId))
-    const interval = setInterval(() => loadDeliveryTimes(storeId), 60000)
-    return () => clearInterval(interval)
-  }, [storeId, loadDeliveryTimes])
-
-  const avgOf = (arr: number[]) => arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : null
-  const avgDriver  = avgOf(driverMins)
-  const avgInstore = avgOf(instoreMins)
-  const avgTotal   = avgOf(totalMins)
-  const allMins    = [...driverMins, ...instoreMins]
-  const bucketCounts = BUCKETS.map(b => allMins.filter((m: number) => m >= b.min && m < b.max).length)
-  const bucketMax = Math.max(...bucketCounts, 1)
+  function save(next: string[]) {
+    setLayout(next)
+    if (!user || !storeId) return
+    try { localStorage.setItem(cacheKey, JSON.stringify(next)) } catch {}
+    const all = { ...(user.user_metadata?.home_widgets ?? {}), [storeId]: next }
+    supabase.auth.updateUser({ data: { home_widgets: all } }).catch(() => {})
+  }
+  const move = (i: number, d: -1 | 1) => {
+    if (!layout) return
+    const j = i + d
+    if (j < 0 || j >= layout.length) return
+    const next = [...layout]; [next[i], next[j]] = [next[j], next[i]]
+    save(next)
+  }
+  const remove = (id: string) => layout && save(layout.filter(x => x !== id))
+  const add = (id: string) => { if (layout && !layout.includes(id)) save([...layout, id]); setLibrary(false) }
 
   const firstName = user?.email?.split('@')[0] ?? ''
   const today = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const available = WIDGETS.filter(w => !(layout ?? []).includes(w.id))
 
   return (
     <div className="dh-content">
@@ -119,242 +78,84 @@ export default function Dashboard() {
           <div className="dh-eyebrow">{today}</div>
           <h1 className="dh-headline">
             {t('dash.hello')} {firstName}.<br />
-            {orderCount > 0
-              ? <em>{t('dash.ordersToday', { n: String(orderCount) })}</em>
-              : <em>{t('dash.startSelling')}</em>
-            }
+            {todayOrders > 0
+              ? <em>{t('dash.ordersToday', { n: String(todayOrders) })}</em>
+              : <em>{t('dash.startSelling')}</em>}
           </h1>
-
           <div className="dh-cta">
-            {storeSlug && (
-              <Link href={`/${storeSlug}`} target="_blank" className="dh-btn-secondary">{t('dash.viewPublicStore')}</Link>
-            )}
+            {storeSlug && <Link href={`/${storeSlug}`} target="_blank" className="dh-btn-secondary">{t('dash.viewPublicStore')}</Link>}
             <button className="dh-btn-ghost" onClick={() => { if (storeSlug) navigator.clipboard.writeText(`https://lyte-app.com/${storeSlug}`) }}>
               {t('dash.shareLink')}
+            </button>
+            <button type="button" className={`dh-btn-ghost dw-customize${editing ? ' on' : ''}`} onClick={() => setEditing(e => !e)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><path d="M17.5 14v7M14 17.5h7" /></svg>
+              {editing ? 'Listo' : 'Personalizar'}
             </button>
           </div>
         </div>
       </section>
 
-      {/* ── KPI STRIP ── */}
-      <div className="dh-section-head">
-        <div className="dh-section-title">{t('dash.summary')}</div>
-        <div style={{ display: 'flex', gap: 4, background: '#F1F5F9', borderRadius: 8, padding: 3 }}>
-          {(['day', 'week', 'month'] as const).map(p => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              style={{
-                padding: '4px 12px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
-                background: period === p ? 'white' : 'transparent',
-                color: period === p ? '#0F172A' : '#64748B',
-                boxShadow: period === p ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                transition: 'all 0.15s',
-              }}
-            >
-              {p === 'day' ? 'Dia' : p === 'week' ? 'Semana' : 'Mes'}
-            </button>
-          ))}
+      {editing && (
+        <div className="dw-editbar">
+          <span>Agrega, quita y ordena los widgets de tu inicio.</span>
+          <button type="button" onClick={() => save(DEFAULT_WIDGETS)}>Restablecer</button>
         </div>
-      </div>
+      )}
 
-      <div className="dh-kpi-grid">
-        <div className="dh-kpi dh-kpi-hero">
-          <div className="dh-kpi-head">
-            <span className="dh-kpi-label">{t('dash.kpi.sales')}</span>
-            <span className="dh-kpi-icon">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-            </span>
-          </div>
-          <div className="dh-kpi-value">${Math.floor(totalSales)}<span className="dh-kpi-unit">.{String(Math.round((totalSales % 1) * 100)).padStart(2, '0')}</span></div>
-          <svg className="dh-spark" viewBox="0 0 200 28" preserveAspectRatio="none">
-            <path d="M0,24 L40,22 L80,20 L120,16 L160,12 L200,8" stroke="#1C1B3A" strokeWidth="1.8" fill="none" strokeLinecap="round"/>
-            <path d="M0,24 L40,22 L80,20 L120,16 L160,12 L200,8 L200,28 L0,28 Z" fill="url(#sf)" opacity="0.12"/>
-            <defs>
-              <linearGradient id="sf" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stopColor="#1C1B3A"/>
-                <stop offset="1" stopColor="#1C1B3A" stopOpacity="0"/>
-              </linearGradient>
-            </defs>
-          </svg>
-          {totalSales <= 0 && (
-            <div className="dh-kpi-foot">
-              <span className="dh-delta-flat">{t('dash.kpi.noSales')}</span>
-            </div>
-          )}
-        </div>
-
-        <div className="dh-kpi">
-          <div className="dh-kpi-head">
-            <span className="dh-kpi-label">{t('nav.orders')}</span>
-            <span className="dh-kpi-icon">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>
-            </span>
-          </div>
-          <div className="dh-kpi-value">{orderCount}</div>
-          <div className="dh-kpi-foot">
-            <span className="dh-delta-flat">{t('dash.kpi.today')}</span>
-          </div>
-        </div>
-
-        <div className="dh-kpi">
-          <div className="dh-kpi-head">
-            <span className="dh-kpi-label">Ticket promedio</span>
-            <span className="dh-kpi-icon">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 20h20M5 20V10l7-7 7 7v10"/><path d="M9 20v-5h6v5"/></svg>
-            </span>
-          </div>
-          <div className="dh-kpi-value">${avgTicket.toFixed(2)}</div>
-          <div className="dh-kpi-foot">
-            <span className="dh-delta-flat">Hoy</span>
-          </div>
-        </div>
-
-        <div className="dh-kpi">
-          <div className="dh-kpi-head">
-            <span className="dh-kpi-label">{t('dash.kpi.newCustomers')}</span>
-            <span className="dh-kpi-icon">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
-            </span>
-          </div>
-          <div className="dh-kpi-value">0</div>
-          <div className="dh-kpi-foot">
-            <span className="dh-delta-flat">{t('dash.kpi.thisMonth')}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* ── MAIN GRID ── */}
-      <div className="dh-grid">
-
-        {/* Delivery times summary */}
-        <div className="dh-card dh-orders">
-          <div className="dh-section-head" style={{ marginBottom: 20 }}>
-            <div className="dh-section-title">Tiempos de entrega <span className="dh-meta">hoy</span></div>
-            <Link href="/dashboard/analitics" className="dh-section-link">Ver detalle</Link>
-          </div>
-
-          {/* Three avg stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 }}>
-            {[
-              { label: 'Delivery', sub: 'con despachador', value: avgDriver, count: driverMins.length },
-              { label: 'En tienda', sub: 'sin despachador', value: avgInstore, count: instoreMins.length },
-              { label: 'Total', sub: 'pedido a entrega', value: avgTotal, count: totalMins.length },
-            ].map(stat => (
-              <div key={stat.label} style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: '14px 12px' }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>{stat.label}</div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 3, marginBottom: 3 }}>
-                  <span style={{ fontSize: 28, fontWeight: 800, color: '#0F172A', letterSpacing: '-1px', lineHeight: 1 }}>
-                    {stat.value !== null ? stat.value : '—'}
-                  </span>
-                  {stat.value !== null && <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--lyte-navy)' }}>min</span>}
+      {/* ── WIDGETS ── */}
+      <div className={`dw-grid${editing ? ' editing' : ''}`}>
+        {storeId && (layout ?? []).map((id, i) => {
+          const w = WIDGETS.find(x => x.id === id)
+          if (!w) return null
+          return (
+            <section key={id} className={`dh-card dw-card dw-${w.size}`}>
+              {editing && (
+                <div className="dw-tools">
+                  <span className="dw-tools-name">{w.title}</span>
+                  <button type="button" onClick={() => move(i, -1)} disabled={i === 0} aria-label="Mover antes">←</button>
+                  <button type="button" onClick={() => move(i, 1)} disabled={i === layout!.length - 1} aria-label="Mover después">→</button>
+                  <button type="button" className="dw-tools-x" onClick={() => remove(id)} aria-label="Quitar">✕</button>
                 </div>
-                <div style={{ fontSize: 10, color: '#94A3B8' }}>{stat.sub}</div>
-                <div style={{ fontSize: 10, color: '#CBD5E1', marginTop: 2 }}>{stat.count} entregas</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Distribution (dispatch time across all types) */}
-          {allMins.length > 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {BUCKETS.map((b, i) => {
-                const count = bucketCounts[i]
-                const pct = Math.round((count / bucketMax) * 100)
-                return (
-                  <div key={b.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 76, fontSize: 11, color: '#64748B', flexShrink: 0 }}>{b.label}</div>
-                    <div style={{ flex: 1, background: '#F1F5F9', borderRadius: 4, height: 7, overflow: 'hidden' }}>
-                      <div style={{ width: `${pct}%`, height: '100%', background: 'var(--lyte-navy)', borderRadius: 4, transition: 'width 0.4s ease' }} />
-                    </div>
-                    <div style={{ width: 20, fontSize: 11, fontWeight: 600, color: '#475569', textAlign: 'right', flexShrink: 0 }}>{count}</div>
-                  </div>
-                )
-              })}
-            </div>
-          ) : (
-            <div style={{ textAlign: 'center', padding: '24px 0', color: '#94A3B8', fontSize: 13 }}>
-              Sin entregas completadas hoy
-            </div>
-          )}
-        </div>
-
+              )}
+              <w.Component storeId={storeId} storeSlug={storeSlug} />
+            </section>
+          )
+        })}
+        {(editing || (layout && layout.length === 0)) && (
+          <button type="button" className="dh-card dw-card dw-sm dw-add" onClick={() => setLibrary(true)}>
+            <span>+</span>
+            Agregar widget
+          </button>
+        )}
       </div>
 
-      {/* ── BOTTOM GRID ── */}
-      <div className="dh-bottom-grid">
-        {/* Top products */}
-        <div className="dh-card" style={{ padding: '22px 24px' }}>
-          <div className="dh-section-head" style={{ marginBottom: 6 }}>
-            <div className="dh-section-title">{t('dash.topProducts')}</div>
-            <Link href="/dashboard/productos" className="dh-section-link">{t('dash.viewAll')}</Link>
-          </div>
-          {productCount === 0 ? (
-            <div className="dh-bottom-empty">
-              <span>{t('dash.topEmpty')}</span>
-              <Link href="/dashboard/productos">{t('dash.addArrow')}</Link>
-            </div>
-          ) : (
-            <div className="dh-top-list">
-              {[1,2,3].map(i => (
-                <div key={i} className="dh-top-row">
-                  <div className="dh-top-rank">0{i}</div>
-                  <div>
-                    <div className="dh-top-name">Producto {i}</div>
-                    <div className="dh-top-bar"><div className="dh-top-fill" style={{ width: `${90 - i * 20}%` }} /></div>
-                  </div>
-                  <div className="dh-top-meta">—<span>{t('dash.sold')}</span></div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Store link card */}
-        <div className="dh-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: 0 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>Tu tienda publica</div>
-
-          {storeSlug ? (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 10, padding: '10px 14px', marginBottom: 16 }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                <span style={{ flex: 1, fontSize: 12, color: '#475569', fontFamily: 'var(--lyte-font-body)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  lyte-app.com/{storeSlug}
-                </span>
-                <button
-                  onClick={() => navigator.clipboard.writeText(`https://lyte-app.com/${storeSlug}`)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: '#94A3B8', display: 'flex', alignItems: 'center' }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                </button>
+      {/* ── WIDGET LIBRARY ── */}
+      {library && (
+        <div className="dw-lib-backdrop" onClick={() => setLibrary(false)}>
+          <div className="dw-lib" onClick={e => e.stopPropagation()} role="dialog" aria-label="Agregar widget">
+            <div className="dw-lib-head">
+              <div>
+                <div className="dw-lib-title">Agregar widget</div>
+                <div className="dw-lib-sub">Elige qué quieres ver en tu inicio.</div>
               </div>
-              <Link
-                href={`/${storeSlug}`}
-                target="_blank"
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, background: '#0F172A', color: 'white', borderRadius: 10, padding: '11px 0', fontSize: 13, fontWeight: 600, textDecoration: 'none', marginBottom: 8 }}
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                Ver tienda
-              </Link>
-              <Link
-                href="/dashboard/canal/vitrina/editor"
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, background: '#F8FAFC', color: '#475569', border: '1px solid #E2E8F0', borderRadius: 10, padding: '10px 0', fontSize: 13, fontWeight: 500, textDecoration: 'none' }}
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                Editar diseño
-              </Link>
-            </>
-          ) : (
-            <>
-              <div style={{ fontSize: 13, color: '#94A3B8', marginBottom: 16 }}>{t('dash.setupFirst')}</div>
-              <Link href="/dashboard/canal/vitrina" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0F172A', color: 'white', borderRadius: 10, padding: '11px 0', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
-                {t('dash.configure')}
-              </Link>
-            </>
-          )}
+              <button type="button" className="dw-lib-close" onClick={() => setLibrary(false)} aria-label="Cerrar">✕</button>
+            </div>
+            {available.length === 0 ? (
+              <div className="dw-empty">Ya tienes todos los widgets en tu inicio.</div>
+            ) : (
+              <div className="dw-lib-list">
+                {available.map(w => (
+                  <button key={w.id} type="button" className="dw-lib-item" onClick={() => add(w.id)}>
+                    <span className="dw-lib-icon">{w.icon}</span>
+                    <span className="dw-lib-text"><b>{w.title}</b><small>{w.desc}</small></span>
+                    <span className="dw-lib-add">Agregar</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-
+      )}
     </div>
   )
 }

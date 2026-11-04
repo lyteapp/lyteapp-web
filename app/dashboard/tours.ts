@@ -42,9 +42,8 @@ export const TOURS: Tour[] = [
     id: 'home', match: p => p === '/dashboard',
     steps: [
       { sel: '.dh-cta', title: 'Tu tienda en línea', text: 'Abre tu tienda como la ven tus clientes, o copia su enlace para compartirlo por WhatsApp o redes.' },
-      { sel: '.dh-kpi-grid', title: 'El resumen de hoy', text: 'Ventas, pedidos y ticket promedio del día, actualizados en vivo.' },
-      { sel: '.dh-grid', title: 'Tiempos y delivery', text: 'Cuánto tardan tus pedidos en estar listos y en entregarse hoy.' },
-      { sel: '.dh-bottom-grid', title: 'Lo que más se vende', text: 'Tus productos estrella y la actividad reciente de la tienda.' },
+      { sel: '.dw-grid', title: 'Tus widgets', text: 'Ventas, pedidos en curso, caja, delivery, inventario y más, con los datos de tu tienda al momento.' },
+      { sel: '.dw-customize', title: 'Arma tu inicio', text: 'Toca Personalizar para agregar los widgets que quieras, quitar los que no uses y ordenarlos a tu gusto.' },
     ],
   },
   {

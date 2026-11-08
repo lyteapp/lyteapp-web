@@ -9,7 +9,7 @@ import './editor.css'
 
 // Shrinks an uploaded content-block image client-side before it goes to
 // storage — mirrors the same helper in canal/inicio/page.tsx.
-function compressBlockImage(file: File, maxDim = 1920, quality = 0.82): Promise<File> {
+function compressBlockImage(file: File, maxDim = 2400, quality = 0.82): Promise<File> {
   return new Promise(resolve => {
     // GIFs pass through untouched too — drawing one to a canvas and
     // re-exporting only captures its first frame, so compressing a GIF
@@ -391,7 +391,7 @@ function FontSelect({
 
 type EditorKeep = { activeTool?: ToolId | null; deviceType?: DeviceId; storeSlug?: string | null }
 type ToolId = 'colors' | 'text' | 'shape' | 'price' | 'categories' | 'brand' | 'blocks' | 'product' | 'reorder' | 'ads'
-type DeviceId = 'mobile' | 'tablet' | 'desktop'
+type DeviceId = 'mobile' | 'tablet' | 'tablet-h' | 'desktop'
 
 // "Cancelar" in the unsaved-changes notice remounts the editor, so every
 // setting goes back to what's stored (and the preview with it); the open
@@ -486,23 +486,23 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
   const [responsiveSizes, setResponsiveSizes] = useState<{ tablet: SizeOverrides; desktop: SizeOverrides }>({ tablet: {}, desktop: {} })
 
   function sizeValue<K extends keyof SizeOverrides>(key: K, mobileValue: NonNullable<SizeOverrides[K]>): NonNullable<SizeOverrides[K]> {
-    if (deviceType === 'mobile') return mobileValue
+    if (sizeDevice === 'mobile') return mobileValue
     // tablet rules apply on wider screens too, so desktop inherits them
-    return responsiveSizes[deviceType][key] ?? (deviceType === 'desktop' ? responsiveSizes.tablet[key] : undefined) ?? mobileValue
+    return responsiveSizes[sizeDevice][key] ?? (sizeDevice === 'desktop' ? responsiveSizes.tablet[key] : undefined) ?? mobileValue
   }
 
   // A content block's size on the device being edited
   function blockSize(b: ContentBlock, key: BlockSizeKey): number {
-    if (deviceType === 'mobile') return blockBaseSize(b, key)
-    return b.sizes?.[deviceType]?.[key] ?? (deviceType === 'desktop' ? b.sizes?.tablet?.[key] : undefined) ?? blockBaseSize(b, key)
+    if (sizeDevice === 'mobile') return blockBaseSize(b, key)
+    return b.sizes?.[sizeDevice]?.[key] ?? (sizeDevice === 'desktop' ? b.sizes?.tablet?.[key] : undefined) ?? blockBaseSize(b, key)
   }
   // Applies edited fields to a block: on phone they're the block's own
   // values; on tablet/desktop, size changes go to that device's overrides
   // (an override equal to the phone value is dropped) and the rest as usual.
   function withBlockSizes(existing: ContentBlock, fields: Partial<ContentBlock>): ContentBlock {
-    if (deviceType === 'mobile') return { ...existing, ...fields }
+    if (sizeDevice === 'mobile') return { ...existing, ...fields }
     const next: ContentBlock = { ...existing, ...fields }
-    const own: BlockSizes = { ...existing.sizes?.[deviceType] }
+    const own: BlockSizes = { ...existing.sizes?.[sizeDevice] }
     for (const k of BLOCK_SIZE_KEYS) {
       if (!(k in fields)) continue
       const raw = fields[k]
@@ -512,28 +512,28 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
       if (v === blockBaseSize(existing, k)) delete own[k]
       else own[k] = v
     }
-    const sizes = { ...existing.sizes, [deviceType]: Object.keys(own).length ? own : undefined }
+    const sizes = { ...existing.sizes, [sizeDevice]: Object.keys(own).length ? own : undefined }
     next.sizes = sizes.tablet || sizes.desktop ? sizes : undefined
     return next
   }
   function setSizeValue<K extends keyof SizeOverrides>(key: K, value: NonNullable<SizeOverrides[K]>, mobileSetter: (v: NonNullable<SizeOverrides[K]>) => void) {
-    if (deviceType === 'mobile') { mobileSetter(value); return }
-    setResponsiveSizes(prev => ({ ...prev, [deviceType]: { ...prev[deviceType], [key]: value } }))
+    if (sizeDevice === 'mobile') { mobileSetter(value); return }
+    setResponsiveSizes(prev => ({ ...prev, [sizeDevice]: { ...prev[sizeDevice], [key]: value } }))
   }
   function clearSizeOverride<K extends keyof SizeOverrides>(key: K) {
-    if (deviceType === 'mobile') return
+    if (sizeDevice === 'mobile') return
     setResponsiveSizes(prev => {
-      const next = { ...prev[deviceType] }
+      const next = { ...prev[sizeDevice] }
       delete next[key]
-      return { ...prev, [deviceType]: next }
+      return { ...prev, [sizeDevice]: next }
     })
   }
   function hasSizeOverride<K extends keyof SizeOverrides>(key: K): boolean {
-    return deviceType !== 'mobile' && responsiveSizes[deviceType][key] !== undefined
+    return sizeDevice !== 'mobile' && responsiveSizes[sizeDevice][key] !== undefined
   }
   function renderDeviceOverrideHint<K extends keyof SizeOverrides>(key: K) {
-    if (deviceType === 'mobile') return null
-    const deviceLabel = deviceType === 'tablet' ? 'tablet' : 'computadora'
+    if (sizeDevice === 'mobile') return null
+    const deviceLabel = sizeDevice === 'tablet' ? 'tablet' : 'iPad horizontal y computadora'
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontSize: 11, color: '#94A3B8' }}>
         {hasSizeOverride(key)
@@ -625,6 +625,9 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
   // Preview-only — resizes the device frame so the owner can check how the
   // storefront looks on each screen size; never saved or sent to the store.
   const [deviceType, setDeviceType] = useState<DeviceId>(keep.deviceType ?? 'mobile')
+  // Which saved sizes this view edits: a landscape iPad is 1024px+ wide, so
+  // on the live store it gets the desktop ones
+  const sizeDevice: 'mobile' | 'tablet' | 'desktop' = deviceType === 'tablet-h' ? 'desktop' : deviceType
   // Viewport size, for the phone's "seen from afar" tablet/desktop preview
   const [vp, setVp] = useState({ w: 0, h: 0 })
   const [saving, setSaving]         = useState(false)
@@ -1703,7 +1706,7 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
   // (so the store lays out exactly as on that screen) and are scaled down to
   // fit, like looking at that screen from a distance — instead of being
   // squeezed into the phone's portrait width.
-  const MINI_SIZE = { mobile: { w: 390, h: 844 }, tablet: { w: 820, h: 1180 }, desktop: { w: 1280, h: 800 } } as const
+  const MINI_SIZE = { mobile: { w: 390, h: 844 }, tablet: { w: 820, h: 1180 }, 'tablet-h': { w: 1180, h: 820 }, desktop: { w: 1280, h: 800 } } as const
   // A phone held sideways gets its own layout (see the landscape block in
   // editor.css): tool rail on the right, tool panel beside it, and every
   // preview — the phone one too — scaled to fit what's left on the left.
@@ -1720,6 +1723,11 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
     const availH = vp.h - 78 - barH - (activeTool ? (sheetH || vp.h * 0.27) : 0)
     const scale = Math.min((vp.w - 24) / w, availH / h)
     return { w, h, scale }
+  })() : deviceType === 'tablet-h' && vp.w > 0 && (vp.w - 116 < 1180 || vp.h - 90 < 820) ? (() => {
+    // computer window too small for it: scaled, so the store still lays out
+    // at the iPad's real width
+    const { w, h } = MINI_SIZE['tablet-h']
+    return { w, h, scale: Math.min((vp.w - 116) / w, (vp.h - 90) / h) }
   })() : null
 
   // Splits the open panel into pages at each section subtitle (direct
@@ -2113,7 +2121,10 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
               { id: 'desktop', label: 'Computadora', icon: (
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="12" rx="1.5" /><path d="M8 20h8M12 16v4" /></svg>
               )},
-              { id: 'tablet', label: 'Tablet', icon: (
+              { id: 'tablet-h', label: 'iPad horizontal', icon: (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="M18 12h.01" /></svg>
+              )},
+              { id: 'tablet', label: 'iPad vertical', icon: (
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" /><path d="M12 18h.01" /></svg>
               )},
               { id: 'mobile', label: 'Telefono', icon: (
@@ -3414,7 +3425,7 @@ function Editor({ keep, onDiscard }: { keep: EditorKeep; onDiscard: (keep: Edito
             {deviceType !== 'mobile' && (
               <div className="ed-device-note">
                 {editingBlockId
-                  ? `Los tamaños (letra, imagen, botones, separación) que cambies aquí son solo para ${deviceType === 'tablet' ? 'tablet' : 'computadora'}.`
+                  ? `Los tamaños (letra, imagen, botones, separación) que cambies aquí son solo para ${sizeDevice === 'tablet' ? 'tablet' : 'iPad horizontal y computadora'}.`
                   : 'Un bloque nuevo usa estos tamaños en todas las versiones; luego puedes editarlo para ajustarlo solo aquí.'}
               </div>
             )}

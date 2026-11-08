@@ -183,7 +183,7 @@ const isVideo = (url?: string | null) => !!url && /\.(mp4|webm|mov|m4v)(\?|#|$)/
 // off a phone doesn't ship as a multi-MB background the splash screen has to
 // fully download before it can paint. Falls back to the original file on any
 // failure — never blocks the upload.
-function compressImage(file: File, maxDim = 1920, quality = 0.82): Promise<File> {
+function compressImage(file: File, maxDim = 2400, quality = 0.82): Promise<File> {
   return new Promise(resolve => {
     if (!file.type.startsWith('image/') || file.type === 'image/svg+xml') { resolve(file); return }
     const img = new Image()
@@ -224,15 +224,20 @@ const SIZE_LIMITS: Record<SelectableId, [number, number]> = {
 }
 
 // The preview's screens. The stored sizes and photo positions are on a 380px
-// phone; like the real page (StoreShell's splashScale) they grow with the
-// screen's width on the bigger ones, while the content stays a 420px column.
-type PreviewDevice = 'mobile' | 'tablet' | 'desktop'
+// phone; like the real page (StoreShell's splashScale) they grow on bigger
+// screens, while the content stays a 420px column.
+type PreviewDevice = 'mobile' | 'tablet' | 'tablet-h' | 'desktop'
 const PV_DEVICES: Record<PreviewDevice, { w: number; h: number; border: number; radius: number }> = {
   mobile: { w: 380, h: 780, border: 10, radius: 44 },
   tablet: { w: 844, h: 1204, border: 12, radius: 30 },   // iPad, 820×1180
+  'tablet-h': { w: 1204, h: 844, border: 12, radius: 30 }, // iPad sideways, 1180×820
   desktop: { w: 1296, h: 816, border: 8, radius: 14 },   // 1280×800
 }
-const sizeScale = (d: PreviewDevice) => (d === 'mobile' ? 1 : (PV_DEVICES[d].w - PV_DEVICES[d].border * 2) / 380)
+const pvInner = (d: PreviewDevice) => ({ w: PV_DEVICES[d].w - PV_DEVICES[d].border * 2, h: PV_DEVICES[d].h - PV_DEVICES[d].border * 2 })
+// same as the real page: capped by the screen's height, never below phone size
+const sizeScale = (d: PreviewDevice) => (d === 'mobile' ? 1 : Math.max(1, Math.min(pvInner(d).w / 380, pvInner(d).h / 780)))
+// …with the photos keeping their arrangement, centered
+const photoOffset = (d: PreviewDevice) => (d === 'mobile' ? 0 : (pvInner(d).w - 380 * sizeScale(d)) / 2)
 
 function ResizeHandle({ onDrag }: { onDrag: (delta: number) => void }) {
   function handlePointerDown(e: React.PointerEvent) {
@@ -298,11 +303,12 @@ const photoIconBtnStyle: React.CSSProperties = {
 }
 
 function PhotoItem({
-  img, selected, onSelect, onUpdate, onRemove, k, dragScale,
+  img, selected, onSelect, onUpdate, onRemove, k, ox, dragScale,
 }: {
   img: HomePageImage
   /** the screen's size multiplier / on-screen px per stored px */
   k: number
+  ox: number
   dragScale: number
   selected: boolean
   onSelect: () => void
@@ -341,7 +347,7 @@ function PhotoItem({
       onPointerDown={handlePointerDown}
       onClick={e => e.stopPropagation()}
       style={{
-        position: 'absolute', left: img.x * k, top: img.y * k, width: img.width * k, height: img.height * k,
+        position: 'absolute', left: ox + img.x * k, top: img.y * k, width: img.width * k, height: img.height * k,
         pointerEvents: 'auto', cursor: 'move',
         outline: selected ? '2px dashed var(--lyte-navy)' : 'none', outlineOffset: 3,
       }}
@@ -441,7 +447,7 @@ function SplashPreview({
         {images.map(img => (
           <PhotoItem
             key={img.id} img={img} selected={selectedImageId === img.id}
-            k={k} dragScale={dragScale}
+            k={k} ox={photoOffset(device)} dragScale={dragScale}
             onSelect={() => onSelectImage(img.id)}
             onUpdate={patch => onUpdateImage(img.id, patch)}
             onRemove={() => onRemoveImage(img.id)}
@@ -830,7 +836,8 @@ export default function InicioPage() {
           <div className="cn-device-switch" onClick={e => e.stopPropagation()}>
             {([
               { id: 'mobile', label: 'Teléfono', icon: <><rect x="7" y="2" width="10" height="20" rx="2" /><path d="M11 18h2" /></> },
-              { id: 'tablet', label: 'iPad', icon: <><rect x="4" y="2" width="16" height="20" rx="2" /><path d="M12 18h.01" /></> },
+              { id: 'tablet', label: 'iPad vertical', icon: <><rect x="4" y="2" width="16" height="20" rx="2" /><path d="M12 18h.01" /></> },
+              { id: 'tablet-h', label: 'iPad horizontal', icon: <><rect x="2" y="4" width="20" height="16" rx="2" /><path d="M18 12h.01" /></> },
               { id: 'desktop', label: 'Computadora', icon: <><rect x="3" y="4" width="18" height="12" rx="1.5" /><path d="M8 20h8M12 16v4" /></> },
             ] as const).map(d => (
               <button key={d.id} type="button" title={d.label} aria-label={d.label}

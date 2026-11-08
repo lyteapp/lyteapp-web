@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { isVideoUrl, resizedImg } from '../lib/storeImages'
+import { isVideoUrl, resizedImg, imgSrcSet } from '../lib/storeImages'
 import { CachedVideo } from './videoCache'
 
 // The store banner: one photo/video, or several as a slideshow. The first
@@ -58,7 +58,7 @@ export default function BannerCarousel({ slides, alt }: { slides: string[]; alt:
           />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
-          <img key={src + i} src={resizedImg(src, 1600)} alt={i === 0 ? alt : ''} className={`sf-banner-img ${cls}`} loading={i === 0 ? 'eager' : 'lazy'} />
+          <img key={src + i} src={resizedImg(src, 1600)} srcSet={imgSrcSet(src, [800, 1200, 1600, 2000, 2400])} sizes="100vw" alt={i === 0 ? alt : ''} className={`sf-banner-img ${cls}`} loading={i === 0 ? 'eager' : 'lazy'} />
         )
       })}
       {many && (

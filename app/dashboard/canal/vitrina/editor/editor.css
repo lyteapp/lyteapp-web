@@ -306,6 +306,14 @@
     0 0 0 6px rgba(15, 23, 42, 0.06),
     0 30px 60px -10px rgba(15, 23, 42, 0.2);
 }
+.ed-device-tablet-h {
+  max-width: min(1180px, calc(100vw - 68px - 48px));
+  max-height: 820px;
+  border-radius: 20px;
+  box-shadow:
+    0 0 0 6px rgba(15, 23, 42, 0.06),
+    0 30px 60px -10px rgba(15, 23, 42, 0.2);
+}
 .ed-device-desktop {
   max-width: min(1240px, calc(100vw - 68px - 48px));
   border-radius: 10px;
@@ -321,6 +329,7 @@
   transition: none !important;
 }
 .ed-device-mini.ed-device-tablet { border-radius: 28px; }
+.ed-device-mini.ed-device-tablet-h { border-radius: 28px; }
 .ed-device-mini.ed-device-mobile { border-radius: 44px; --ed-pv-scale: 1; }
 .ed-device-mini.ed-device-desktop { border-radius: 14px; }
 .ed-device-chrome {

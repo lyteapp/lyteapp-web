@@ -29,3 +29,11 @@ export function resizedImg(url: string | null | undefined, width: number): strin
   // ratio instead of a scaled-down version of the original.
   return `${rendered}${sep}width=${width}&quality=70&resize=contain`
 }
+
+// A srcset of resized versions, so each screen downloads the resolution it
+// needs (a retina iPad wants about twice its layout width, a phone far less).
+// undefined when the url can't be resized (GIF, SVG, video, not in Storage).
+export function imgSrcSet(url: string | null | undefined, widths: number[]): string | undefined {
+  if (!url || resizedImg(url, widths[0]) === url) return undefined
+  return widths.map(w => `${resizedImg(url, w)} ${w}w`).join(', ')
+}

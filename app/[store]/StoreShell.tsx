@@ -8,7 +8,7 @@ import { useT } from '../lib/LocaleProvider'
 import { revealFontStack, loadRevealFont } from '../lib/revealFonts'
 import { isLightColor, poweredByColors } from '../lib/colorContrast'
 import LocationMapPicker from './LocationMapPicker'
-import { isVideoUrl, resizedImg } from '../lib/storeImages'
+import { isVideoUrl, resizedImg, imgSrcSet } from '../lib/storeImages'
 import BannerCarousel from './BannerCarousel'
 import { CachedVideo } from './videoCache'
 import { storeLoaderColor } from '../lib/storeTheme'
@@ -727,11 +727,19 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // splash screen's real width and scales those pixel values to match it.
   const splashScreenRef = useRef<HTMLDivElement>(null)
   const [splashScale, setSplashScale] = useState(1)
+  const [splashOffsetX, setSplashOffsetX] = useState(0)
   useEffect(() => {
     if (view !== 'splash') return
     const measure = () => {
       const w = splashScreenRef.current?.getBoundingClientRect().width
-      if (w) setSplashScale(w / 380)
+      if (!w) return
+      // The design is a 380×780 phone. Phones scale by width as always; on
+      // bigger screens it's capped by the height too (scaling by width alone
+      // made a landscape iPad's logo, titles and photos gigantic) and the
+      // photos keep their arrangement, centered.
+      const s = w < 600 ? w / 380 : Math.max(1, Math.min(w / 380, window.innerHeight / 780))
+      setSplashScale(s)
+      setSplashOffsetX(w < 600 ? 0 : (w - 380 * s) / 2)
     }
     measure()
     window.addEventListener('resize', measure)
@@ -1847,6 +1855,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
           ) : (
             <img
               src={resizedImg(block.content, 1200)}
+              srcSet={imgSrcSet(block.content, [600, 900, 1200, 1800, 2400])}
+              sizes={`${block.imageSize ?? 100}vw`}
               alt=""
               className="sf-block-img"
               style={sharedStyle}
@@ -3372,7 +3382,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
         {hp.imageUrl && isVideoUrl(hp.imageUrl) ? (
           <CachedVideo src={hp.imageUrl} autoPlay muted loop playsInline preload="auto" className="sf-splash-bg-img" />
         ) : hp.imageUrl ? (
-          <img src={resizedImg(hp.imageUrl, 1400)} alt="" className="sf-splash-bg-img" />
+          <img src={resizedImg(hp.imageUrl, 1400)} srcSet={imgSrcSet(hp.imageUrl, [800, 1400, 2000, 2400])} sizes="100vw" alt="" className="sf-splash-bg-img" />
         ) : (
           <div className="sf-splash-bg-img" style={{ background: hp.bgColor || '#0F172A' }} />
         )}
@@ -3384,7 +3394,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 key={img.id} src={img.url} alt=""
                 className="sf-splash-photo"
                 style={{
-                  left: img.x * splashScale, top: img.y * splashScale,
+                  left: splashOffsetX + img.x * splashScale, top: img.y * splashScale,
                   width: img.width * splashScale, height: img.height * splashScale,
                   transform: img.flipped ? 'scaleX(-1)' : undefined,
                 }}
@@ -4410,7 +4420,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 <div key={i} className="sf-lightbox-frame" style={{ width: `${100 / lightbox.images.length}%` }}>
                   {isVideoUrl(img)
                     ? <video src={img} autoPlay muted loop playsInline className="sf-lightbox-img" />
-                    : <img src={resizedImg(img, 1200)} alt="" className="sf-lightbox-img" />}
+                    : <img src={resizedImg(img, 1200)} srcSet={imgSrcSet(img, [1200, 1800, 2400])} sizes="100vw" alt="" className="sf-lightbox-img" />}
                 </div>
               ))}
             </div>
@@ -5339,7 +5349,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                       {vitHero.image_url
                         ? (isVideoUrl(vitHero.image_url)
                             ? <video src={vitHero.image_url} autoPlay muted loop playsInline className="sf-vit-hero-img" />
-                            : <img src={resizedImg(vitHero.image_url, 1100)} alt={vitHero.name} className="sf-vit-hero-img" />)
+                            : <img src={resizedImg(vitHero.image_url, 1100)} srcSet={imgSrcSet(vitHero.image_url, [800, 1100, 1800, 2400])} sizes="100vw" alt={vitHero.name} className="sf-vit-hero-img" />)
                         : <div className="sf-vit-hero-img-empty">{PLACEHOLDER}</div>
                       }
                       {getProdQty(vitHero.id) > 0 && <div className="sf-card-badge sf-vit-badge">{getProdQty(vitHero.id)}</div>}
@@ -5549,7 +5559,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 <div key={i} className="sf-lightbox-frame" style={{ width: `${100 / lightbox.images.length}%` }}>
                   {isVideoUrl(img)
                     ? <video src={img} autoPlay muted loop playsInline className="sf-lightbox-img" />
-                    : <img src={resizedImg(img, 1200)} alt="" className="sf-lightbox-img" />}
+                    : <img src={resizedImg(img, 1200)} srcSet={imgSrcSet(img, [1200, 1800, 2400])} sizes="100vw" alt="" className="sf-lightbox-img" />}
                 </div>
               ))}
             </div>

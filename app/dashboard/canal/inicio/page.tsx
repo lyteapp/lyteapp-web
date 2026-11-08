@@ -223,6 +223,17 @@ const SIZE_LIMITS: Record<SelectableId, [number, number]> = {
   fields: [10, 22],
 }
 
+// The preview's screens. The stored sizes and photo positions are on a 380px
+// phone; like the real page (StoreShell's splashScale) they grow with the
+// screen's width on the bigger ones, while the content stays a 420px column.
+type PreviewDevice = 'mobile' | 'tablet' | 'desktop'
+const PV_DEVICES: Record<PreviewDevice, { w: number; h: number; border: number; radius: number }> = {
+  mobile: { w: 380, h: 780, border: 10, radius: 44 },
+  tablet: { w: 844, h: 1204, border: 12, radius: 30 },   // iPad, 820×1180
+  desktop: { w: 1296, h: 816, border: 8, radius: 14 },   // 1280×800
+}
+const sizeScale = (d: PreviewDevice) => (d === 'mobile' ? 1 : (PV_DEVICES[d].w - PV_DEVICES[d].border * 2) / 380)
+
 function ResizeHandle({ onDrag }: { onDrag: (delta: number) => void }) {
   function handlePointerDown(e: React.PointerEvent) {
     e.stopPropagation()
@@ -287,9 +298,12 @@ const photoIconBtnStyle: React.CSSProperties = {
 }
 
 function PhotoItem({
-  img, selected, onSelect, onUpdate, onRemove,
+  img, selected, onSelect, onUpdate, onRemove, k, dragScale,
 }: {
   img: HomePageImage
+  /** the screen's size multiplier / on-screen px per stored px */
+  k: number
+  dragScale: number
   selected: boolean
   onSelect: () => void
   onUpdate: (patch: Partial<HomePageImage>) => void
@@ -303,7 +317,7 @@ function PhotoItem({
     const startPosX = img.x
     const startPosY = img.y
     function onMove(ev: PointerEvent) {
-      onUpdate({ x: startPosX + (ev.clientX - startX), y: startPosY + (ev.clientY - startY) })
+      onUpdate({ x: Math.round(startPosX + (ev.clientX - startX) / dragScale), y: Math.round(startPosY + (ev.clientY - startY) / dragScale) })
     }
     function onUp() {
       window.removeEventListener('pointermove', onMove)
@@ -317,8 +331,8 @@ function PhotoItem({
     const startW = img.width
     const startH = img.height
     return (dx: number, dy: number) => onUpdate({
-      width: Math.max(30, Math.round(startW + dx)),
-      height: Math.max(30, Math.round(startH + dy)),
+      width: Math.max(30, Math.round(startW + dx / dragScale)),
+      height: Math.max(30, Math.round(startH + dy / dragScale)),
     })
   }
 
@@ -327,7 +341,7 @@ function PhotoItem({
       onPointerDown={handlePointerDown}
       onClick={e => e.stopPropagation()}
       style={{
-        position: 'absolute', left: img.x, top: img.y, width: img.width, height: img.height,
+        position: 'absolute', left: img.x * k, top: img.y * k, width: img.width * k, height: img.height * k,
         pointerEvents: 'auto', cursor: 'move',
         outline: selected ? '2px dashed var(--lyte-navy)' : 'none', outlineOffset: 3,
       }}
@@ -366,9 +380,12 @@ function PhotoItem({
 
 function SplashPreview({
   config, storeName, logoUrl, selected, onSelect, onResize,
-  images, selectedImageId, onSelectImage, onUpdateImage, onRemoveImage,
+  images, selectedImageId, onSelectImage, onUpdateImage, onRemoveImage, device, fitScale,
 }: {
   config: HomePageConfig; storeName: string; logoUrl: string | null
+  device: PreviewDevice
+  /** how much the whole preview is shrunk to fit */
+  fitScale: number
   selected: SelectableId | null
   onSelect: (id: SelectableId | null) => void
   onResize: (id: SelectableId, size: number) => void
@@ -378,10 +395,14 @@ function SplashPreview({
   onUpdateImage: (id: string, patch: Partial<HomePageImage>) => void
   onRemoveImage: (id: string) => void
 }) {
+  const frame = PV_DEVICES[device]
+  const k = sizeScale(device)
+  const dragScale = k * fitScale
+
   function startResize(id: SelectableId) {
     const [min, max] = SIZE_LIMITS[id]
     const startSize = config.elementSizes[id]
-    return (delta: number) => onResize(id, Math.min(max, Math.max(min, Math.round(startSize + delta))))
+    return (delta: number) => onResize(id, Math.min(max, Math.max(min, Math.round(startSize + delta / dragScale))))
   }
 
   function selectableStyle(id: SelectableId, extraOffset = 4): React.CSSProperties {
@@ -399,10 +420,10 @@ function SplashPreview({
     <div
       onClick={() => { onSelect(null); onSelectImage(null) }}
       style={{
-        width: 380, flexShrink: 0,
-        border: '10px solid #1E1E2E', borderRadius: 44,
+        width: frame.w, height: frame.h, flexShrink: 0,
+        border: `${frame.border}px solid #1E1E2E`, borderRadius: frame.radius,
         boxShadow: '0 30px 80px rgba(0,0,0,0.3)',
-        overflow: 'hidden', aspectRatio: '380/780',
+        overflow: 'hidden',
         display: 'flex', flexDirection: 'column',
         background: config.imageUrl && !isVideo(config.imageUrl)
           ? `linear-gradient(rgba(15,23,42,0.25), rgba(15,23,42,0.55)), url(${config.imageUrl}) center/cover no-repeat`
@@ -420,24 +441,27 @@ function SplashPreview({
         {images.map(img => (
           <PhotoItem
             key={img.id} img={img} selected={selectedImageId === img.id}
+            k={k} dragScale={dragScale}
             onSelect={() => onSelectImage(img.id)}
             onUpdate={patch => onUpdateImage(img.id, patch)}
             onRemove={() => onRemoveImage(img.id)}
           />
         ))}
       </div>
-      <div style={{ position: 'absolute', top: 14, left: 26, right: 26, display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 1 }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: 'white' }}>9:41</span>
-        <span style={{ fontSize: 12, color: 'white' }}>●●●</span>
-      </div>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 30px', textAlign: 'center', position: 'relative', zIndex: 1, pointerEvents: 'none' }}>
+      {device !== 'desktop' && (
+        <div style={{ position: 'absolute', top: 14, left: 26, right: 26, display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 1 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'white' }}>9:41</span>
+          <span style={{ fontSize: 12, color: 'white' }}>●●●</span>
+        </div>
+      )}
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: device === 'mobile' ? '40px 30px' : '40px max(24px, calc((100% - 420px) / 2))', textAlign: 'center', position: 'relative', zIndex: 1, pointerEvents: 'none' }}>
 
         {logoUrl && config.showLogo && (
           <div
             onClick={e => { e.stopPropagation(); onSelect('logo') }}
             style={{ ...selectableStyle('logo'), marginBottom: 22, borderRadius: 14 }}
           >
-            <img src={logoUrl} alt="" style={{ width: sizes.logo, height: sizes.logo, borderRadius: 14, objectFit: 'cover', display: 'block', boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }} />
+            <img src={logoUrl} alt="" style={{ width: sizes.logo * k, height: sizes.logo * k, borderRadius: 14, objectFit: 'cover', display: 'block', boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }} />
             {selected === 'logo' && <ResizeHandle onDrag={startResize('logo')} />}
           </div>
         )}
@@ -446,7 +470,7 @@ function SplashPreview({
           onClick={e => { e.stopPropagation(); onSelect('title') }}
           style={{ ...selectableStyle('title'), marginBottom: 10 }}
         >
-          <div style={{ fontSize: sizes.title, fontWeight: 800, color: 'white', letterSpacing: '-0.03em', lineHeight: 1.15 }}>
+          <div style={{ fontSize: sizes.title * k, fontWeight: 800, color: 'white', letterSpacing: '-0.03em', lineHeight: 1.15 }}>
             {config.title || storeName || 'Tu tienda'}
           </div>
           {selected === 'title' && <ResizeHandle onDrag={startResize('title')} />}
@@ -457,7 +481,7 @@ function SplashPreview({
             onClick={e => { e.stopPropagation(); onSelect('subtitle') }}
             style={{ ...selectableStyle('subtitle'), marginBottom: 26 }}
           >
-            <div style={{ fontSize: sizes.subtitle, color: 'rgba(255,255,255,0.75)', lineHeight: 1.5 }}>
+            <div style={{ fontSize: sizes.subtitle * k, color: 'rgba(255,255,255,0.75)', lineHeight: 1.5 }}>
               {config.subtitle}
             </div>
             {selected === 'subtitle' && <ResizeHandle onDrag={startResize('subtitle')} />}
@@ -537,7 +561,8 @@ function PoweredByBadge({ isLight }: { isLight: boolean }) {
 
 const REVEAL_PREVIEW_NAME = 'Ana'
 
-function RevealPreview({ config, storeName, logoUrl }: { config: HomePageConfig; storeName: string; logoUrl: string | null }) {
+function RevealPreview({ config, storeName, logoUrl, device }: { config: HomePageConfig; storeName: string; logoUrl: string | null; device: PreviewDevice }) {
+  const frame = PV_DEVICES[device]
   const rv = config.reveal
   const font = revealFontStack(rv.fontFamily)
   const letters = REVEAL_PREVIEW_NAME.split('')
@@ -547,20 +572,22 @@ function RevealPreview({ config, storeName, logoUrl }: { config: HomePageConfig;
   return (
     <div
       style={{
-        width: 380, flexShrink: 0,
-        border: '10px solid #1E1E2E', borderRadius: 44,
+        width: frame.w, height: frame.h, flexShrink: 0,
+        border: `${frame.border}px solid #1E1E2E`, borderRadius: frame.radius,
         boxShadow: '0 30px 80px rgba(0,0,0,0.3)',
-        overflow: 'hidden', aspectRatio: '380/780',
+        overflow: 'hidden',
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
         position: 'relative', textAlign: 'center', padding: '40px 24px',
         background: rv.bgColor || '#111111',
       }}
     >
-      <div style={{ position: 'absolute', top: 14, left: 26, right: 26, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: 'white' }}>9:41</span>
-        <span style={{ fontSize: 12, color: 'white' }}>●●●</span>
-      </div>
+      {device !== 'desktop' && (
+        <div style={{ position: 'absolute', top: 14, left: 26, right: 26, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'white' }}>9:41</span>
+          <span style={{ fontSize: 12, color: 'white' }}>●●●</span>
+        </div>
+      )}
 
       <div
         style={{
@@ -579,7 +606,8 @@ function RevealPreview({ config, storeName, logoUrl }: { config: HomePageConfig;
             style={{
               display: 'inline-block', whiteSpace: 'pre',
               fontFamily: font ?? "var(--font-fraunces), serif", fontWeight: 500,
-              fontSize: 56, lineHeight: 1, color: rv.nameColor || '#FAF9F7',
+              // the real page's clamp(40px, 12vw, 88px): tops out on big screens
+              fontSize: device === 'mobile' ? 56 : 88, lineHeight: 1, color: rv.nameColor || '#FAF9F7',
             }}
           >
             {char}
@@ -636,6 +664,17 @@ export default function InicioPage() {
   const [selectedEl, setSelectedEl] = useState<SelectableId | null>(null)
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
   const [previewView, setPreviewView] = useState<'splash' | 'reveal'>('splash')
+  const [pvDevice, setPvDevice] = useState<PreviewDevice>('mobile')
+  // width of the preview column, to fit the iPad / desktop screens in it
+  const pvColRef = useRef<HTMLDivElement>(null)
+  const [pvColW, setPvColW] = useState(0)
+  useEffect(() => {
+    const el = pvColRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setPvColW(el.clientWidth))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   // Phone held upright: laid out like the Vitrina editor (miniature preview
   // on top, section icons at the bottom, the picked section in a sheet)
@@ -781,11 +820,24 @@ export default function InicioPage() {
 
       <div className="cn-inicio-split" style={{ display: 'flex', gap: 0, alignItems: 'flex-start', position: 'relative' }} onClick={() => { setSelectedEl(null); setSelectedImageId(null) }}>
 
-        <div className="cn-inicio-preview-col" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, position: 'sticky', top: 24, padding: '4px 24px 24px 0' }}>
+        <div className="cn-inicio-preview-col" ref={pvColRef} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, position: 'sticky', top: 24, padding: '4px 24px 24px 0' }}>
           <div className="cn-inicio-preview-hint" style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
             {previewView === 'splash'
               ? 'Vista previa · toca un elemento y arrastra su esquina para redimensionar'
               : 'Vista previa de la bienvenida animada'}
+          </div>
+
+          <div className="cn-device-switch" onClick={e => e.stopPropagation()}>
+            {([
+              { id: 'mobile', label: 'Teléfono', icon: <><rect x="7" y="2" width="10" height="20" rx="2" /><path d="M11 18h2" /></> },
+              { id: 'tablet', label: 'iPad', icon: <><rect x="4" y="2" width="16" height="20" rx="2" /><path d="M12 18h.01" /></> },
+              { id: 'desktop', label: 'Computadora', icon: <><rect x="3" y="4" width="18" height="12" rx="1.5" /><path d="M8 20h8M12 16v4" /></> },
+            ] as const).map(d => (
+              <button key={d.id} type="button" title={d.label} aria-label={d.label}
+                className={pvDevice === d.id ? 'on' : ''} onClick={() => setPvDevice(d.id)}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{d.icon}</svg>
+              </button>
+            ))}
           </div>
 
           {config.transition === 'reveal' && (
@@ -800,25 +852,30 @@ export default function InicioPage() {
           )}
 
           {(() => {
-            const preview = previewView === 'reveal' && config.transition === 'reveal' ? (
-            <RevealPreview config={config} storeName={storeName} logoUrl={logoUrl} />
-          ) : (
-            <SplashPreview
-              config={config} storeName={storeName} logoUrl={logoUrl}
-              selected={selectedEl} onSelect={setSelectedEl}
-              onResize={setElementSize}
-              images={config.images} selectedImageId={selectedImageId}
-              onSelectImage={setSelectedImageId}
-              onUpdateImage={updateImage} onRemoveImage={removeImage}
-            />
-          )
-            if (!phoneLayout) return preview
-            // the previews are 380×780 phones; fit one above the sheet
+            const frame = PV_DEVICES[pvDevice]
             const tabs = config.transition === 'reveal' ? 44 : 0
-            const sc = Math.min((vp.w - 32) * 0.72 / 380, (vp.h - 72 - (mSec ? vp.h * 0.42 : 0) - 40 - tabs) / 780)
+            // shrink to fit: above the sheet on a phone; in the column on a
+            // computer (the phone preview keeps its real size there)
+            const fit = phoneLayout
+              ? Math.min((vp.w - 32) * (pvDevice === 'mobile' ? 0.72 : 1) / frame.w, (vp.h - 72 - (mSec ? vp.h * 0.42 : 0) - 40 - tabs - 46) / frame.h)
+              : pvDevice === 'mobile' ? 1 : Math.min(1, Math.max(120, pvColW - 28) / frame.w, Math.max(240, vp.h - 275 - tabs) / frame.h)
+            const preview = previewView === 'reveal' && config.transition === 'reveal' ? (
+              <RevealPreview config={config} storeName={storeName} logoUrl={logoUrl} device={pvDevice} />
+            ) : (
+              <SplashPreview
+                config={config} storeName={storeName} logoUrl={logoUrl}
+                device={pvDevice} fitScale={fit}
+                selected={selectedEl} onSelect={setSelectedEl}
+                onResize={setElementSize}
+                images={config.images} selectedImageId={selectedImageId}
+                onSelectImage={setSelectedImageId}
+                onUpdateImage={updateImage} onRemoveImage={removeImage}
+              />
+            )
+            if (fit === 1) return preview
             return (
-              <div className="cn-co-stage" style={{ width: 380 * sc, height: 780 * sc }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, transform: `scale(${sc})`, transformOrigin: '0 0' }}>{preview}</div>
+              <div className="cn-co-stage" style={{ width: frame.w * fit, height: frame.h * fit }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, transform: `scale(${fit})`, transformOrigin: '0 0' }}>{preview}</div>
               </div>
             )
           })()}

@@ -38,6 +38,7 @@ interface Order {
   total: number
   created_at: string
   delivery_type?: string | null
+  service_type?: string | null
   items?: OrderItem[]
   delivery_info?: { zone_name: string | null; zone_color: string | null; driver_name: string | null } | null
 }
@@ -49,6 +50,7 @@ interface DisplayOrder {
   created_at: string
   ready_at?: string | null
   delivery_type?: string | null
+  service_type?: string | null
   customer_name: string
   customer_phone: string
   customer_notes: string | null
@@ -109,6 +111,16 @@ function elapsedLabel(createdAt: string, now: number, warnMins: number, alertMin
   const label = mins < 1 ? '< 1 min' : mins < 60 ? `${mins} min` : `${Math.floor(mins / 60)}h ${mins % 60}m`
   const level = mins >= alertMins ? 'alert' : mins >= warnMins ? 'warn' : 'ok'
   return { label, level }
+}
+
+// Eat in / take away, for stores that ask for it on their welcome page
+function ServiceTag({ type, big }: { type?: string | null; big?: boolean }) {
+  if (type !== 'dine_in' && type !== 'takeout') return null
+  return (
+    <div className={`pd-service ${type}${big ? ' big' : ''}`}>
+      {type === 'dine_in' ? 'Comer aquí' : 'Para llevar'}
+    </div>
+  )
 }
 
 export default function PedidosPage() {
@@ -397,7 +409,7 @@ export default function PedidosPage() {
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
     const { data } = await supabase
       .from('orders')
-      .select('id, order_number, locker_number, created_at, ready_at, delivery_type, customer_name, customer_phone, customer_notes, payment_method, total, status, order_items(product_name, quantity, subtotal, selected_options)')
+      .select('id, order_number, locker_number, created_at, ready_at, delivery_type, service_type, customer_name, customer_phone, customer_notes, payment_method, total, status, order_items(product_name, quantity, subtotal, selected_options)')
       .eq('store_id', storeId)
       .not('status', 'in', '(delivered,cancelled,completed)')
       .gte('created_at', todayStart.toISOString())
@@ -653,6 +665,7 @@ export default function PedidosPage() {
                     </span>
                   </div>
                   <div className="pd-comanda-customer">
+                    <ServiceTag type={order.service_type} big />
                     <div className="pd-comanda-name">{order.customer_name}</div>
                     <div className="pd-comanda-phone">{order.customer_phone}</div>
                   </div>
@@ -802,6 +815,7 @@ export default function PedidosPage() {
                   />
                   <div className="pd-order-id">#{order.order_number ?? order.id.slice(0, 8).toUpperCase()}</div>
                   <div className="pd-customer">
+                    <ServiceTag type={order.service_type} />
                     <div className="pd-customer-name">{order.customer_name}</div>
                     <div className="pd-customer-phone">{order.customer_phone}</div>
                   </div>

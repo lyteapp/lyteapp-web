@@ -1152,6 +1152,25 @@ video.sf-banner-img { object-fit: cover; }
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
 }
 .sf-splash-btn-arrow { flex-shrink: 0; transition: transform 0.2s; }
+
+/* Welcome page: eat in / take away */
+.sf-splash-service { width: 100%; max-width: 340px; margin: 0 auto 16px; }
+.sf-splash-service-row { display: flex; gap: 10px; }
+.sf-splash-service-btn {
+  flex: 1; min-width: 0; padding: 14px 8px; border-radius: 16px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  background: color-mix(in srgb, var(--sf-splash-input-bg, white) 12%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--sf-splash-input-bg, white) 28%, transparent);
+  color: var(--sf-splash-input-color, white);
+  font-size: 14px; font-weight: 600; font-family: var(--font-geist-sans), sans-serif;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+.sf-splash-service-btn:active { transform: scale(0.97); }
+.sf-splash-service-btn.on {
+  background: var(--sf-splash-service-on, #7C3AED);
+  border-color: var(--sf-splash-service-on, #7C3AED);
+  color: white; font-weight: 700;
+}
 .sf-splash-btn:hover:not(:disabled) .sf-splash-btn-arrow { transform: translateX(3px); }
 .sf-splash-btn:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.05); }
 .sf-splash-btn:active:not(:disabled) { transform: translateY(0) scale(0.97); }

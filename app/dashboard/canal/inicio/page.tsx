@@ -90,6 +90,7 @@ interface HomePageConfig {
   pills: HomePagePill[]
   transition: string
   collectCustomerData: boolean
+  askServiceType: boolean
   customerFields: CustomerFields
   inputTextColor: string
   inputBgColor: string
@@ -113,6 +114,7 @@ const DEFAULTS: HomePageConfig = {
   pills: [],
   transition: 'slide',
   collectCustomerData: true,
+  askServiceType: false,
   customerFields: { name: true, phone: true, address: true },
   inputTextColor: '#FFFFFF',
   inputBgColor: '#FFFFFF',
@@ -491,6 +493,21 @@ function SplashPreview({
               {config.subtitle}
             </div>
             {selected === 'subtitle' && <ResizeHandle onDrag={startResize('subtitle')} />}
+          </div>
+        )}
+
+        {config.askServiceType && (
+          <div style={{ width: '100%', display: 'flex', gap: 8, marginBottom: 14 }}>
+            {['Comer aquí', 'Para llevar'].map(label => (
+              <div key={label} style={{
+                flex: 1, padding: '12px 6px', borderRadius: 14, textAlign: 'center',
+                fontSize: 13, fontWeight: 600, color: config.inputTextColor || '#FFFFFF',
+                background: `color-mix(in srgb, ${config.inputBgColor || '#FFFFFF'} 12%, transparent)`,
+                border: `1.5px solid color-mix(in srgb, ${config.inputBgColor || '#FFFFFF'} 28%, transparent)`,
+              }}>
+                {label}
+              </div>
+            ))}
           </div>
         )}
 
@@ -920,6 +937,15 @@ export default function InicioPage() {
                   </div>
                   <Toggle checked={config.enabled} onChange={v => set('enabled', v)} />
                 </div>
+                {config.enabled && (
+                  <div className="cn-toggle-row">
+                    <div className="cn-toggle-info">
+                      <div className="cn-toggle-label">Preguntar si es para comer aquí o para llevar</div>
+                      <div className="cn-toggle-hint">Ideal para restaurantes. El cliente elige al entrar y lo verás en cada pedido</div>
+                    </div>
+                    <Toggle checked={config.askServiceType} onChange={v => set('askServiceType', v)} />
+                  </div>
+                )}
               </div>
             </div>
 

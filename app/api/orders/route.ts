@@ -6,7 +6,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const {
       id, store_id, customer_name, customer_phone, customer_notes,
-      payment_method, total, delivery_type, payment_proof_url, items,
+      payment_method, total, delivery_type, service_type, payment_proof_url, items,
     } = body
 
     if (!id || !store_id || !customer_name || !customer_phone) {
@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
       payment_method: payment_method || null,
       total, status: 'pending',
       delivery_type,
+      service_type: service_type === 'dine_in' || service_type === 'takeout' ? service_type : null,
       order_number: orderNumber ?? null,
       payment_proof_url: payment_proof_url || null,
       payment_status: payment_proof_url ? 'pending' : null,

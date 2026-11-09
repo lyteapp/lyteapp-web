@@ -430,6 +430,8 @@ type TemplateConfig = {
     pills?: { id: string; label: string; url: string; color?: string }[]
     transition?: string
     collectCustomerData?: boolean
+    /** Restaurants: ask on the welcome page if it's to eat in or to take away */
+    askServiceType?: boolean
     customerFields?: { name?: boolean; phone?: boolean; address?: boolean }
     inputTextColor?: string
     inputBgColor?: string
@@ -607,6 +609,21 @@ const IG_ICON = (
     <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" />
   </svg>
 )
+
+const SERVICE_OPTIONS: { id: 'dine_in' | 'takeout'; label: string }[] = [
+  { id: 'dine_in', label: 'Comer aquí' },
+  { id: 'takeout', label: 'Para llevar' },
+]
+
+function ServiceIcon({ id, size }: { id: 'dine_in' | 'takeout'; size: number }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width={size} height={size} aria-hidden="true">
+      {id === 'dine_in'
+        ? <path d="M7 2v7a2 2 0 0 0 2 2v11M5 2v5M9 2v5M17 2c-2 1-3 4-3 7 0 2 1 3 3 3v10" />
+        : <><path d="M5 8h14l1 13H4L5 8Z" /><path d="M9 11V6a3 3 0 0 1 6 0v5" /></>}
+    </svg>
+  )
+}
 
 export default function StoreShell({ store, products, categories = [], initialBcvRate = null, initialDeliveryZones = [], mapboxToken = '' }: { store: Store; products: Product[]; categories: { id: string; name: string; position: number }[]; initialBcvRate?: number | null; initialDeliveryZones?: DeliveryZone[]; mapboxToken?: string }) {
   const t = useT()
@@ -1037,6 +1054,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
     if (dt?.national) return 'national'
     return 'delivery'
   })
+  // Eat in / take away, when the store asks for it on its welcome page
+  const [serviceType, setServiceType] = useState<'dine_in' | 'takeout' | null>(null)
+  const [serviceMissing, setServiceMissing] = useState(false)
   const [installPrompt, setInstallPrompt] = useState<Event & { prompt(): void } | null>(null)
   const [showIosHint, setShowIosHint] = useState(false)
   const [isIos, setIsIos]   = useState(false)
@@ -2852,7 +2872,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
       setError('Ingresa la direccion de la agencia')
       return
     }
-    if (deliveryType === 'pickup' && pickupLocations.length > 0 && !selectedPickupLocationId) {
+    if (askServiceType && !serviceType) {
+      setServiceMissing(true)
+      setError('Elige si tu pedido es para comer aquí o para llevar')
+      return
+    }
+    if (deliveryType === 'pickup' && serviceType !== 'dine_in' && pickupLocations.length > 0 && !selectedPickupLocationId) {
       setError('Selecciona la tienda donde vas a retirar tu pedido')
       return
     }
@@ -2900,6 +2925,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           customer_notes: customerNotes.trim() || null,
           payment_method: paymentLabel || null, total: orderTotal,
           delivery_type: isPickup ? 'pickup' : isNational ? 'national' : 'delivery',
+          service_type: askServiceType ? serviceType : null,
           payment_proof_url: proofUrl,
           items: cartItems.map(i => ({
             product_id: i.productId ?? i.id,
@@ -2941,7 +2967,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
         `*${cs.orderTitle?.trim() || 'Comanda'} #${orderNumber ?? newOrderId.slice(0, 8).toUpperCase()}*`,
         new Date().toLocaleString('es-VE', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
         '', `*Nombre:* ${customerName}`, `*Telefono:* ${customerPhone}`,
-        ...(multiTypes ? [`*Tipo:* ${isPickup ? 'Retiro en tienda' : isNational ? 'Envio nacional' : 'Domicilio'}`] : []),
+        ...(askServiceType && serviceType ? [`*Servicio:* ${serviceType === 'dine_in' ? 'PARA COMER AQUÍ' : 'PARA LLEVAR'}`] : []),
+        ...(multiTypes && serviceType !== 'dine_in' ? [`*Tipo:* ${isPickup ? 'Retiro en tienda' : isNational ? 'Envio nacional' : 'Domicilio'}`] : []),
         ...(deliveryType === 'delivery' && customerAddress.trim() ? [`*Direccion:* ${customerAddress.trim()}`] : []),
         ...(deliveryType === 'delivery' && cs.showLocationLink && customerLat !== null && customerLng !== null
           ? [`*Ubicacion GPS:* https://www.google.com/maps?q=${customerLat},${customerLng}`] : []),
@@ -3042,10 +3069,19 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const hp = store.template_config?.homePage ?? {}
   const transitionId = hp.transition || 'slide'
   const collectCustomerData = !!hp.enabled && hp.collectCustomerData !== false
+  const askServiceType = !!hp.enabled && !!hp.askServiceType
   const customerFields = {
     name: hp.customerFields?.name !== false,
     phone: hp.customerFields?.phone !== false,
-    address: hp.customerFields?.address !== false,
+    // Someone eating at the table has no address to give
+    address: hp.customerFields?.address !== false && serviceType !== 'dine_in',
+  }
+
+  // Eating in needs no delivery at all. Taking away leaves the checkout's
+  // usual choices, starting on store pickup when the store offers it.
+  function chooseService(next: 'dine_in' | 'takeout') {
+    setServiceType(next); setServiceMissing(false); setError('')
+    setDeliveryType(next === 'dine_in' || puOn ? 'pickup' : dtOn ? 'delivery' : natOn ? 'national' : 'delivery')
   }
 
   // Kiosk-style reset: clears the session and sends the screen back to the
@@ -3065,6 +3101,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     setPaymentProofFile(null); setPaymentProofPreview(null)
     setOrderId(''); setError(''); setSplashError('')
     setSplashLeaving(false); setCatalogEnter(false)
+    setServiceType(null); setServiceMissing(false)
     // The welcome overlay sits at the top of the document over the store.
     if (hp.enabled) window.scrollTo(0, 0)
     setView(hp.enabled ? 'splash' : 'catalog')
@@ -3326,6 +3363,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
   async function handleSplashStart() {
     setSplashError('')
+    if (askServiceType && !serviceType) { setServiceMissing(true); return }
     const cedula = customerCedula.trim()
 
     if (!collectCustomerData) { proceedToTransition(); return }
@@ -3412,6 +3450,33 @@ export default function StoreShell({ store, products, categories = [], initialBc
           )}
           {hp.title && <h1 className="sf-splash-title" style={hp.elementSizes?.title ? { fontSize: hp.elementSizes.title * splashScale } : undefined}>{hp.title}</h1>}
           {hp.subtitle && <p className="sf-splash-sub" style={hp.elementSizes?.subtitle ? { fontSize: hp.elementSizes.subtitle * splashScale } : undefined}>{hp.subtitle}</p>}
+
+          {askServiceType && (
+            <div
+              className="sf-splash-service"
+              role="group"
+              aria-label="Para comer aquí o para llevar"
+              style={{
+                '--sf-splash-input-color': hp.inputTextColor || '#FFFFFF',
+                '--sf-splash-input-bg': hp.inputBgColor || '#FFFFFF',
+                '--sf-splash-service-on': hp.buttonColor || 'var(--sf-accent-color, #7C3AED)',
+              } as React.CSSProperties}
+            >
+              <div className="sf-splash-service-row">
+                {SERVICE_OPTIONS.map(o => (
+                  <button
+                    key={o.id} type="button" aria-pressed={serviceType === o.id}
+                    className={`sf-splash-service-btn${serviceType === o.id ? ' on' : ''}`}
+                    onClick={() => chooseService(o.id)}
+                  >
+                    <ServiceIcon id={o.id} size={22} />
+                    <span>{o.label}</span>
+                  </button>
+                ))}
+              </div>
+              {serviceMissing && <div className="sf-splash-cedula-hint error">Elige una opción para continuar</div>}
+            </div>
+          )}
 
           {collectCustomerData && (
             <div
@@ -3831,8 +3896,37 @@ export default function StoreShell({ store, products, categories = [], initialBc
           )}
         </div>
 
+        {/* Eat in / take away — the store asks for it on its welcome page */}
+        {askServiceType && (
+          <div className="sf-co-section">
+            <h3 className="sf-co-section-title">¿Para comer aquí o para llevar? <span style={{ color: '#EF4444' }}>*</span></h3>
+            <div style={{ display: 'flex', gap: 10 }}>
+              {SERVICE_OPTIONS.map(o => {
+                const on = serviceType === o.id
+                return (
+                  <button
+                    key={o.id} type="button" aria-pressed={on}
+                    onClick={() => chooseService(o.id)}
+                    style={{
+                      flex: 1, padding: '12px 8px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                      background: on ? coAccentTint : '#F8FAFC',
+                      outline: `2px solid ${on ? coAccent : serviceMissing ? '#EF4444' : '#E2E8F0'}`,
+                      color: on ? coAccent : '#94A3B8',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    <ServiceIcon id={o.id} size={20} />
+                    <span style={{ fontSize: 13, fontWeight: on ? 700 : 500, color: on ? coAccent : '#64748B' }}>{o.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Delivery type selector */}
-        {multiTypes && (
+        {multiTypes && serviceType !== 'dine_in' && (
           <div className="sf-co-section">
             <h3 className="sf-co-section-title">Tipo de entrega</h3>
             <div style={{ display: 'flex', gap: 10 }}>
@@ -4122,7 +4216,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
         )}
 
         {/* Tienda de retiro — solo para retiro en tienda, cuando la tienda configuro mas de una ubicacion */}
-        {deliveryType === 'pickup' && pickupLocations.length > 0 && (
+        {deliveryType === 'pickup' && serviceType !== 'dine_in' && pickupLocations.length > 0 && (
           <div className="sf-co-section">
             <h3 className="sf-co-section-title">
               Tienda de retiro <span style={{ color: '#EF4444' }}>*</span>

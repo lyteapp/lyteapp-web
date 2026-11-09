@@ -130,6 +130,13 @@
   flex-shrink: 0;
 }
 
+.pd-service {
+  display: inline-block; margin-bottom: 4px; padding: 2px 8px; border-radius: 100px;
+  font-size: 11px; font-weight: 700; white-space: nowrap;
+}
+.pd-service.dine_in { background: #FFEDD5; color: #C2410C; }
+.pd-service.takeout { background: #DBEAFE; color: #1D4ED8; }
+.pd-service.big { display: block; width: fit-content; margin-bottom: 8px; padding: 5px 14px; font-size: 15px; font-weight: 800; }
 .pd-status {
   font-size: 11px; font-weight: 700;
   padding: 4px 10px; border-radius: 100px;

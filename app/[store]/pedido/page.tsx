@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@supabase/supabase-js'
-import { QRCodeSVG } from 'qrcode.react'
+import QueueQr from '../QueueQr'
 import '../store.css'
 
 const supabase = createClient(
@@ -130,19 +130,7 @@ function PedidoContent() {
           </a>
         )}
 
-        {settingsLoaded && queueBoard?.enabled && origin && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 4, marginBottom: 12 }}>
-            <div style={{ fontSize: 17, fontWeight: 700, color: '#0F172A', marginBottom: 14, lineHeight: 1.4 }}>
-              Escanea aqui para saber el estatus de tu pedido
-            </div>
-            <QRCodeSVG
-              value={`${origin}/${storeSlug}/estado`}
-              size={160}
-              bgColor="#ffffff"
-              fgColor="#0F172A"
-            />
-          </div>
-        )}
+        {settingsLoaded && queueBoard?.enabled && origin && <QueueQr url={`${origin}/${storeSlug}/estado`} />}
 
         {settingsLoaded && showWhatsappBtn && waParam && (
           <a href={waParam} className="sf-confirm-wa">

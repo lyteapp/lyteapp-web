@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useLayoutEffect, useRef, Fragment } from 'react'
 import { createClient } from '@supabase/supabase-js'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useT } from '../lib/LocaleProvider'
@@ -12,6 +13,8 @@ import { isVideoUrl, resizedImg, imgSrcSet } from '../lib/storeImages'
 import BannerCarousel from './BannerCarousel'
 import { CachedVideo } from './videoCache'
 import { storeLoaderColor } from '../lib/storeTheme'
+
+const QueueQr = dynamic(() => import('./QueueQr'), { ssr: false })
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -3004,8 +3007,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
         ...(vesAmount ? [`*Total Bs: ${vesAmount.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${rateLabel} ${bcvRate!.toFixed(4)})*`] : []),
         ...(proofUrl ? ['', `*Comprobante:* ${proofUrl}`] : []),
         ...(customerNotes ? ['', `*Notas:* ${customerNotes}`] : []),
-        ...(cs.showTrackBtn !== false && newDeliveryId ? ['', 'Rastrea tu pedido en tiempo real:', `https://lyte-app.com/delivery/${newDeliveryId}`] : []),
-        ...(cs.showTrackBtn !== false && isPickup ? ['', 'Sigue el estado de tu pedido:', `https://lyte-app.com/order/${newOrderId}`] : []),
+        ...(showTrackLinks && newDeliveryId ? ['', 'Rastrea tu pedido en tiempo real:', `https://lyte-app.com/delivery/${newDeliveryId}`] : []),
+        ...(showTrackLinks && isPickup ? ['', 'Sigue el estado de tu pedido:', `https://lyte-app.com/order/${newOrderId}`] : []),
       ]
 
       // Create delivery record only for domicilio (local courier) — not
@@ -3046,10 +3049,6 @@ export default function StoreShell({ store, products, categories = [], initialBc
         // instantly instead of re-fetching the store row it just came from.
         const csAny = (store.checkout_settings ?? {}) as Record<string, unknown>
         const mapUrlAny = (store as unknown as { map_url?: string | null }).map_url ?? ''
-        const queueBoardEnabled = Boolean(
-          (store.template_config as unknown as { trackingConfig?: { queueBoard?: { enabled?: boolean } } })
-            ?.trackingConfig?.queueBoard?.enabled
-        )
         const returnTimeout = hp.orderReturnTimeout
         const settingsParams =
           `&swa=${csAny.showWhatsappBtn === false ? 0 : 1}` +
@@ -3073,6 +3072,13 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const transitionId = hp.transition || 'slide'
   const collectCustomerData = !!hp.enabled && hp.collectCustomerData !== false
   const askServiceType = !!hp.enabled && !!hp.askServiceType
+  // With the public queue on, the customer follows the order on its board
+  // (a QR on the confirmation) instead of a tracking link of their own.
+  const queueBoardEnabled = Boolean(
+    (store.template_config as unknown as { trackingConfig?: { queueBoard?: { enabled?: boolean } } })
+      ?.trackingConfig?.queueBoard?.enabled
+  )
+  const showTrackLinks = cs.showTrackBtn !== false && !queueBoardEnabled
   const customerFields = {
     name: hp.customerFields?.name !== false,
     phone: hp.customerFields?.phone !== false,
@@ -3734,7 +3740,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
         {returnCountdown !== null && (
           <div className="sf-confirm-countdown">Volviendo al inicio en {returnCountdown}s</div>
         )}
-        {deliveryTrackId && (
+        {queueBoardEnabled && <QueueQr url={`${window.location.origin}/${store.slug}/estado`} />}
+        {showTrackLinks && deliveryTrackId && (
           <a
             href={`/delivery/${deliveryTrackId}`}
             style={{
@@ -3749,7 +3756,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
             Rastrear mi pedido
           </a>
         )}
-        {pickupTrackId && (
+        {showTrackLinks && pickupTrackId && (
           <a
             href={`/order/${pickupTrackId}`}
             style={{

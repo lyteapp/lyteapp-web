@@ -1153,16 +1153,17 @@ video.sf-banner-img { object-fit: cover; }
 }
 .sf-splash-btn-arrow { flex-shrink: 0; transition: transform 0.2s; }
 
-/* Welcome page: eat in / take away */
-.sf-splash-service { width: 100%; max-width: 340px; margin: 0 auto 16px; }
-.sf-splash-service-row { display: flex; gap: 10px; }
+/* Welcome page, step after its button: eat in / take away */
+.sf-splash-service { width: 100%; max-width: 380px; margin: 0 auto; animation: sfKeypadRevealIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.sf-splash-service-q { font-size: 26px; font-weight: 800; color: white; letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 24px; text-wrap: balance; }
+.sf-splash-service-row { display: flex; gap: 12px; }
 .sf-splash-service-btn {
-  flex: 1; min-width: 0; padding: 14px 8px; border-radius: 16px; cursor: pointer;
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  flex: 1; min-width: 0; min-height: 132px; padding: 18px 8px; border-radius: 20px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
   background: color-mix(in srgb, var(--sf-splash-input-bg, white) 12%, transparent);
   border: 1.5px solid color-mix(in srgb, var(--sf-splash-input-bg, white) 28%, transparent);
   color: var(--sf-splash-input-color, white);
-  font-size: 14px; font-weight: 600; font-family: var(--font-geist-sans), sans-serif;
+  font-size: 16px; font-weight: 700; font-family: var(--font-geist-sans), sans-serif;
   transition: background 0.15s, border-color 0.15s, transform 0.15s;
 }
 .sf-splash-service-btn:active { transform: scale(0.97); }
@@ -1171,6 +1172,11 @@ video.sf-banner-img { object-fit: cover; }
   border-color: var(--sf-splash-service-on, #7C3AED);
   color: white; font-weight: 700;
 }
+.sf-splash-service-back {
+  margin-top: 20px; padding: 8px 18px; background: none; border: none; cursor: pointer;
+  color: rgba(255,255,255,0.75); font-size: 14px; font-weight: 600; font-family: var(--font-geist-sans), sans-serif;
+}
+.sf-splash-service-back:disabled { opacity: 0.5; cursor: default; }
 .sf-splash-btn:hover:not(:disabled) .sf-splash-btn-arrow { transform: translateX(3px); }
 .sf-splash-btn:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.05); }
 .sf-splash-btn:active:not(:disabled) { transform: translateY(0) scale(0.97); }

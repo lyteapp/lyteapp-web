@@ -1057,6 +1057,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // Eat in / take away, when the store asks for it on its welcome page
   const [serviceType, setServiceType] = useState<'dine_in' | 'takeout' | null>(null)
   const [serviceMissing, setServiceMissing] = useState(false)
+  // With the question on, the welcome page has a second step after its button
+  const [splashStep, setSplashStep] = useState<'welcome' | 'service'>('welcome')
+  const servicePicked = useRef(false)
   const [installPrompt, setInstallPrompt] = useState<Event & { prompt(): void } | null>(null)
   const [showIosHint, setShowIosHint] = useState(false)
   const [isIos, setIsIos]   = useState(false)
@@ -3073,15 +3076,30 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const customerFields = {
     name: hp.customerFields?.name !== false,
     phone: hp.customerFields?.phone !== false,
-    // Someone eating at the table has no address to give
-    address: hp.customerFields?.address !== false && serviceType !== 'dine_in',
+    address: hp.customerFields?.address !== false,
   }
+  // The question comes after these fields, and someone eating in has no
+  // address to give: the checkout asks for it if the order is delivered.
+  const askAddressOnSplash = customerFields.address && !askServiceType
 
   // Eating in needs no delivery at all. Taking away leaves the checkout's
   // usual choices, starting on store pickup when the store offers it.
   function chooseService(next: 'dine_in' | 'takeout') {
     setServiceType(next); setServiceMissing(false); setError('')
     setDeliveryType(next === 'dine_in' || puOn ? 'pickup' : dtOn ? 'delivery' : natOn ? 'national' : 'delivery')
+  }
+
+  // The welcome page's button: straight in, or on to the question first
+  function afterWelcome() {
+    if (askServiceType) { servicePicked.current = false; setSplashStep('service'); return }
+    proceedToTransition()
+  }
+
+  function pickServiceAndEnter(next: 'dine_in' | 'takeout') {
+    if (servicePicked.current) return // a double tap must not enter twice
+    servicePicked.current = true
+    chooseService(next)
+    proceedToTransition()
   }
 
   // Kiosk-style reset: clears the session and sends the screen back to the
@@ -3101,7 +3119,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     setPaymentProofFile(null); setPaymentProofPreview(null)
     setOrderId(''); setError(''); setSplashError('')
     setSplashLeaving(false); setCatalogEnter(false)
-    setServiceType(null); setServiceMissing(false)
+    setServiceType(null); setServiceMissing(false); setSplashStep('welcome')
     // The welcome overlay sits at the top of the document over the store.
     if (hp.enabled) window.scrollTo(0, 0)
     setView(hp.enabled ? 'splash' : 'catalog')
@@ -3116,7 +3134,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     setMenuOpen(false)
     setFocusCategory(null)
     if (hp.enabled) {
-      setSplashLeaving(false); setCatalogEnter(false)
+      setSplashLeaving(false); setCatalogEnter(false); setSplashStep('welcome')
       window.scrollTo(0, 0)
     }
     setView(hp.enabled ? 'splash' : 'catalog')
@@ -3316,7 +3334,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     if (status === 'new') {
       if (customerFields.name && !customerName.trim())   { setSplashError('Ingresa tu nombre para continuar'); return }
       if (customerFields.phone && !customerPhone.trim()) { setSplashError('Ingresa tu telefono para continuar'); return }
-      if (customerFields.address && !customerAddress.trim() && customerLat === null) {
+      if (askAddressOnSplash && !customerAddress.trim() && customerLat === null) {
         setSplashError('Comparte tu ubicacion o ingresa tu direccion para continuar'); return
       }
     }
@@ -3358,15 +3376,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
         } catch {}
       }
     }
-    proceedToTransition()
+    afterWelcome()
   }
 
   async function handleSplashStart() {
     setSplashError('')
-    if (askServiceType && !serviceType) { setServiceMissing(true); return }
     const cedula = customerCedula.trim()
 
-    if (!collectCustomerData) { proceedToTransition(); return }
+    if (!collectCustomerData) { afterWelcome(); return }
 
     if (!cedula) { setSplashError('Ingresa tu cedula para continuar'); return }
     if (cedulaStatus === 'found' || cedulaStatus === 'new') { enterStore(cedulaStatus); return }
@@ -3448,35 +3465,37 @@ export default function StoreShell({ store, products, categories = [], initialBc
               style={hp.elementSizes?.logo ? { width: hp.elementSizes.logo * splashScale, height: hp.elementSizes.logo * splashScale } : undefined}
             />
           )}
-          {hp.title && <h1 className="sf-splash-title" style={hp.elementSizes?.title ? { fontSize: hp.elementSizes.title * splashScale } : undefined}>{hp.title}</h1>}
-          {hp.subtitle && <p className="sf-splash-sub" style={hp.elementSizes?.subtitle ? { fontSize: hp.elementSizes.subtitle * splashScale } : undefined}>{hp.subtitle}</p>}
-
-          {askServiceType && (
+          {splashStep === 'service' ? (
             <div
               className="sf-splash-service"
-              role="group"
-              aria-label="Para comer aquí o para llevar"
               style={{
                 '--sf-splash-input-color': hp.inputTextColor || '#FFFFFF',
                 '--sf-splash-input-bg': hp.inputBgColor || '#FFFFFF',
                 '--sf-splash-service-on': hp.buttonColor || 'var(--sf-accent-color, #7C3AED)',
               } as React.CSSProperties}
             >
+              <h1 className="sf-splash-service-q">¿Para comer aquí o para llevar?</h1>
               <div className="sf-splash-service-row">
                 {SERVICE_OPTIONS.map(o => (
                   <button
                     key={o.id} type="button" aria-pressed={serviceType === o.id}
                     className={`sf-splash-service-btn${serviceType === o.id ? ' on' : ''}`}
-                    onClick={() => chooseService(o.id)}
+                    onClick={() => pickServiceAndEnter(o.id)}
                   >
-                    <ServiceIcon id={o.id} size={22} />
+                    {splashWaiting && serviceType === o.id
+                      ? <span className="sf-splash-btn-spinner" aria-label="Cargando" />
+                      : <ServiceIcon id={o.id} size={34} />}
                     <span>{o.label}</span>
                   </button>
                 ))}
               </div>
-              {serviceMissing && <div className="sf-splash-cedula-hint error">Elige una opción para continuar</div>}
+              <button type="button" className="sf-splash-service-back" disabled={splashWaiting} onClick={() => { servicePicked.current = false; setSplashStep('welcome') }}>
+                Atrás
+              </button>
             </div>
-          )}
+          ) : (<>
+          {hp.title && <h1 className="sf-splash-title" style={hp.elementSizes?.title ? { fontSize: hp.elementSizes.title * splashScale } : undefined}>{hp.title}</h1>}
+          {hp.subtitle && <p className="sf-splash-sub" style={hp.elementSizes?.subtitle ? { fontSize: hp.elementSizes.subtitle * splashScale } : undefined}>{hp.subtitle}</p>}
 
           {collectCustomerData && (
             <div
@@ -3571,7 +3590,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   value={customerPhone} onChange={e => setCustomerPhone(e.target.value)}
                 />
               )}
-              {cedulaStatus === 'new' && customerFields.address && (
+              {cedulaStatus === 'new' && askAddressOnSplash && (
                 <>
                   {locationState !== 'granted' && (
                     <button
@@ -3640,6 +3659,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
               ))}
             </div>
           )}
+          </>)}
         </div>
         <a className="sf-powered-by" href="https://lyte-app.com" target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ color: splashPoweredColors.text }}>
           <span>Powered by</span>

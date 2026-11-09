@@ -388,9 +388,11 @@ function PhotoItem({
 
 function SplashPreview({
   config, storeName, logoUrl, selected, onSelect, onResize,
-  images, selectedImageId, onSelectImage, onUpdateImage, onRemoveImage, device, fitScale,
+  images, selectedImageId, onSelectImage, onUpdateImage, onRemoveImage, device, fitScale, serviceStep,
 }: {
   config: HomePageConfig; storeName: string; logoUrl: string | null
+  /** Show the eat in / take away step instead of the welcome content */
+  serviceStep: boolean
   device: PreviewDevice
   /** how much the whole preview is shrunk to fit */
   fitScale: number
@@ -474,6 +476,31 @@ function SplashPreview({
           </div>
         )}
 
+        {serviceStep ? (
+          <div style={{ width: '100%' }}>
+            <div style={{ fontSize: 22 * k, fontWeight: 800, color: 'white', letterSpacing: '-0.02em', lineHeight: 1.2, marginBottom: 18 * k }}>
+              ¿Para comer aquí o para llevar?
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              {[
+                { label: 'Comer aquí', icon: <path d="M7 2v7a2 2 0 0 0 2 2v11M5 2v5M9 2v5M17 2c-2 1-3 4-3 7 0 2 1 3 3 3v10" /> },
+                { label: 'Para llevar', icon: <><path d="M5 8h14l1 13H4L5 8Z" /><path d="M9 11V6a3 3 0 0 1 6 0v5" /></> },
+              ].map(o => (
+                <div key={o.label} style={{
+                  flex: 1, minHeight: 112, padding: '14px 6px', borderRadius: 18, boxSizing: 'border-box',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  fontSize: 14, fontWeight: 700, color: config.inputTextColor || '#FFFFFF',
+                  background: `color-mix(in srgb, ${config.inputBgColor || '#FFFFFF'} 12%, transparent)`,
+                  border: `1.5px solid color-mix(in srgb, ${config.inputBgColor || '#FFFFFF'} 28%, transparent)`,
+                }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="30" height="30">{o.icon}</svg>
+                  {o.label}
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: 16, fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.75)' }}>Atrás</div>
+          </div>
+        ) : (<>
         <div
           onClick={e => { e.stopPropagation(); onSelect('title') }}
           style={{ ...selectableStyle('title'), marginBottom: 10 }}
@@ -493,21 +520,6 @@ function SplashPreview({
               {config.subtitle}
             </div>
             {selected === 'subtitle' && <ResizeHandle onDrag={startResize('subtitle')} />}
-          </div>
-        )}
-
-        {config.askServiceType && (
-          <div style={{ width: '100%', display: 'flex', gap: 8, marginBottom: 14 }}>
-            {['Comer aquí', 'Para llevar'].map(label => (
-              <div key={label} style={{
-                flex: 1, padding: '12px 6px', borderRadius: 14, textAlign: 'center',
-                fontSize: 13, fontWeight: 600, color: config.inputTextColor || '#FFFFFF',
-                background: `color-mix(in srgb, ${config.inputBgColor || '#FFFFFF'} 12%, transparent)`,
-                border: `1.5px solid color-mix(in srgb, ${config.inputBgColor || '#FFFFFF'} 28%, transparent)`,
-              }}>
-                {label}
-              </div>
-            ))}
           </div>
         )}
 
@@ -561,6 +573,7 @@ function SplashPreview({
             ))}
           </div>
         )}
+        </>)}
       </div>
       <PoweredByBadge isLight={!config.imageUrl && isLightColor(config.bgColor || '#0F172A')} />
     </div>
@@ -686,7 +699,7 @@ export default function InicioPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [selectedEl, setSelectedEl] = useState<SelectableId | null>(null)
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
-  const [previewView, setPreviewView] = useState<'splash' | 'reveal'>('splash')
+  const [previewView, setPreviewView] = useState<'splash' | 'service' | 'reveal'>('splash')
   const [pvDevice, setPvDevice] = useState<PreviewDevice>('mobile')
   // width of the preview column, to fit the iPad / desktop screens in it
   const pvColRef = useRef<HTMLDivElement>(null)
@@ -845,9 +858,11 @@ export default function InicioPage() {
 
         <div className="cn-inicio-preview-col" ref={pvColRef} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, position: 'sticky', top: 24, padding: '4px 24px 24px 0' }}>
           <div className="cn-inicio-preview-hint" style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-            {previewView === 'splash'
-              ? 'Vista previa · toca un elemento y arrastra su esquina para redimensionar'
-              : 'Vista previa de la bienvenida animada'}
+            {previewView === 'reveal'
+              ? 'Vista previa de la bienvenida animada'
+              : previewView === 'service' && config.askServiceType
+                ? 'Vista previa de la pregunta'
+                : 'Vista previa · toca un elemento y arrastra su esquina para redimensionar'}
           </div>
 
           <div className="cn-device-switch" onClick={e => e.stopPropagation()}>
@@ -864,20 +879,27 @@ export default function InicioPage() {
             ))}
           </div>
 
-          {config.transition === 'reveal' && (
+          {(config.transition === 'reveal' || config.askServiceType) && (
             <div className="cn-preview-tabs" onClick={e => e.stopPropagation()}>
               <button type="button" className={`cn-preview-tab${previewView === 'splash' ? ' active' : ''}`} onClick={() => setPreviewView('splash')}>
                 Pantalla de inicio
               </button>
-              <button type="button" className={`cn-preview-tab${previewView === 'reveal' ? ' active' : ''}`} onClick={() => setPreviewView('reveal')}>
-                Bienvenida animada
-              </button>
+              {config.askServiceType && (
+                <button type="button" className={`cn-preview-tab${previewView === 'service' ? ' active' : ''}`} onClick={() => setPreviewView('service')}>
+                  Pregunta
+                </button>
+              )}
+              {config.transition === 'reveal' && (
+                <button type="button" className={`cn-preview-tab${previewView === 'reveal' ? ' active' : ''}`} onClick={() => setPreviewView('reveal')}>
+                  Bienvenida animada
+                </button>
+              )}
             </div>
           )}
 
           {(() => {
             const frame = PV_DEVICES[pvDevice]
-            const tabs = config.transition === 'reveal' ? 44 : 0
+            const tabs = config.transition === 'reveal' || config.askServiceType ? 44 : 0
             // shrink to fit: above the sheet on a phone; in the column on a
             // computer (the phone preview keeps its real size there)
             const fit = phoneLayout
@@ -889,6 +911,7 @@ export default function InicioPage() {
               <SplashPreview
                 config={config} storeName={storeName} logoUrl={logoUrl}
                 device={pvDevice} fitScale={fit}
+                serviceStep={previewView === 'service' && config.askServiceType}
                 selected={selectedEl} onSelect={setSelectedEl}
                 onResize={setElementSize}
                 images={config.images} selectedImageId={selectedImageId}
@@ -941,9 +964,9 @@ export default function InicioPage() {
                   <div className="cn-toggle-row">
                     <div className="cn-toggle-info">
                       <div className="cn-toggle-label">Preguntar si es para comer aquí o para llevar</div>
-                      <div className="cn-toggle-hint">Ideal para restaurantes. El cliente elige al entrar y lo verás en cada pedido</div>
+                      <div className="cn-toggle-hint">Ideal para restaurantes. Sale como un paso aparte después del botón de entrar, y lo verás en cada pedido</div>
                     </div>
-                    <Toggle checked={config.askServiceType} onChange={v => set('askServiceType', v)} />
+                    <Toggle checked={config.askServiceType} onChange={v => { set('askServiceType', v); setPreviewView(v ? 'service' : 'splash') }} />
                   </div>
                 )}
               </div>

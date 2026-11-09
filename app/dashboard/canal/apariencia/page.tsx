@@ -84,6 +84,9 @@ const DEFAULT_QUEUE_BOARD: QueueBoardConfig = {
 
 interface TrackingConfig {
   mode: 'status' | 'location'
+  /** "Cola pública" was the option left picked in the style switch. Only the
+   *  editor reads it: customers' tracking page always follows `mode`. */
+  editorTab?: 'queue'
   accentColor: string
   bgColor: string
   /** Map mode: background of the status half-sheet ('' = default) */
@@ -250,7 +253,8 @@ export default function Apariencia() {
         if (cfg.trackingConfig) {
           const raw = cfg.trackingConfig as Partial<TrackingConfig>
           tr = { ...DEFAULT_TR_CONFIG, ...raw, queueBoard: { ...DEFAULT_QUEUE_BOARD, ...(raw.queueBoard ?? {}) } }
-          if (raw.mode) setActivePanel(raw.mode)
+          if (raw.editorTab === 'queue') setActivePanel('queue')
+          else if (raw.mode) setActivePanel(raw.mode)
         }
         setTrConfig(tr)
         setSavedSnap({ trConfig: tr, variantShape: vs, extraShape: es })
@@ -324,7 +328,7 @@ export default function Apariencia() {
     setTrConfig(savedSnap.trConfig)
     setVariantShape(savedSnap.variantShape)
     setExtraShape(savedSnap.extraShape)
-    setActivePanel(savedSnap.trConfig.mode ?? 'status')
+    setActivePanel(savedSnap.trConfig.editorTab ?? savedSnap.trConfig.mode ?? 'status')
     setError('')
   }
   const unsavedNotice = (
@@ -808,7 +812,9 @@ export default function Apariencia() {
               type="button"
               onClick={() => {
                 setActivePanel(opt.id)
-                if (opt.id !== 'queue') setTrConfig(p => ({ ...p, mode: opt.id }))
+                setTrConfig(p => opt.id === 'queue'
+                  ? { ...p, editorTab: 'queue' }
+                  : { ...p, mode: opt.id, editorTab: undefined })
               }}
               style={{
                 flex: 1, padding: '8px 0', borderRadius: 8, border: 'none', cursor: 'pointer',

@@ -8,7 +8,7 @@ body { background: #F1F5F9; }
   flex-direction: column;
   align-items: center;
   padding: 32px 16px calc(10px + env(safe-area-inset-bottom, 0px));
-  background: #F1F5F9;
+  position: relative;
 }
 
 .oq-state {
@@ -190,3 +190,13 @@ body { background: #F1F5F9; }
 @media (prefers-reduced-motion: reduce) {
   .oq-announce, .oq-announce-card, .oq-announce-locker-num { animation: none; }
 }
+
+/* Background (color or photo, see lib/queueSteps queueBackground), fixed
+   behind the board; on a dark one the titles and labels turn light */
+.oq-bg { position: fixed; inset: 0; z-index: -1; }
+.oq-dark .oq-title { color: #FFFFFF; }
+.oq-dark .oq-subtitle { color: rgba(255,255,255,0.75); }
+.oq-dark .oq-column-label { color: rgba(255,255,255,0.85); }
+.oq-dark .oq-footer { color: rgba(255,255,255,0.7); }
+.oq-dark .oq-footer a { color: #FFFFFF; }
+.oq-dark .oq-empty { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.22); color: rgba(255,255,255,0.65); }

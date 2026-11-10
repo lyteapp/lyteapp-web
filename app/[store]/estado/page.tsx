@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
-import { queueStep } from '../../lib/queueSteps'
+import { queueStep, queueBackground } from '../../lib/queueSteps'
 import './estado.css'
 
 const supabase = createClient(
@@ -25,6 +25,8 @@ type CustomerDisplay = 'firstName' | 'fullName' | 'code'
 
 type QueueBoardConfig = {
   enabled: boolean
+  bgColor?: string
+  bgImage?: string | null
   title: string
   subtitle: string
   preparingLabel: string
@@ -128,6 +130,8 @@ export default function EstadoPage() {
             readyLabel: qb.readyLabel || 'Listo',
             customerDisplay: qb.customerDisplay ?? 'firstName',
             showLogo: qb.showLogo !== false,
+            bgColor: qb.bgColor,
+            bgImage: qb.bgImage ?? null,
           },
         })
         setLoading(false)
@@ -215,12 +219,15 @@ export default function EstadoPage() {
   const preparing = orders.filter(o => o.status !== 'ready')
   const ready = orders.filter(o => o.status === 'ready')
   const font = FONT_STACKS[store.fontFamily] ?? FONT_STACKS.system
+  const bg = queueBackground(store.queueBoard)
 
   return (
     <div
-      className="oq-wrap"
+      className={`oq-wrap${bg.dark ? ' oq-dark' : ''}`}
       style={{ ['--oq-accent' as string]: store.accentColor, fontFamily: font }}
     >
+      {/* the background (color or photo) stays put while the list scrolls */}
+      <div className="oq-bg" style={{ background: bg.css }} aria-hidden="true" />
       <div className="oq-header">
         {store.queueBoard.showLogo && (
           store.logo_url

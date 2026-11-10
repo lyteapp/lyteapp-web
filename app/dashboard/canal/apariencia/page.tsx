@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { supabase } from '../../../lib/supabase'
 import { useDashboardStore } from '../../../lib/DashboardStoreProvider'
 import UnsavedNotice, { stableJson } from '../UnsavedNotice'
-import { queueStep } from '../../../lib/queueSteps'
+import { queueStep, queueBackground, QUEUE_BG_DEFAULT } from '../../../lib/queueSteps'
+import { shrinkImage } from '../../../lib/shrinkImage'
 import { trackText, TRACK_STATUS_ORDER, TRACK_STATUS_NAMES, TRACK_TEXT_DEFAULTS, type TrackStatus, type TrackTextField, type TrackTexts } from '../../../lib/trackingTexts'
 import '../canal.css'
 
@@ -65,6 +66,9 @@ const TR_SIZES = [
 
 interface QueueBoardConfig {
   enabled: boolean
+  /** Screen background: a color, or a photo on top of it */
+  bgColor: string
+  bgImage: string | null
   title: string
   subtitle: string
   preparingLabel: string
@@ -75,6 +79,8 @@ interface QueueBoardConfig {
 
 const DEFAULT_QUEUE_BOARD: QueueBoardConfig = {
   enabled: false,
+  bgColor: QUEUE_BG_DEFAULT,
+  bgImage: null,
   title: 'Estado de pedidos',
   subtitle: 'Actualizado en tiempo real',
   preparingLabel: 'En preparación',
@@ -163,6 +169,8 @@ const GOOGLE_FONT_URLS: Record<string, string> = {
   Ubuntu:           'https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;700&display=swap',
 }
 const FONT_SCALE_NUM: Record<string, number> = { sm: 0.875, md: 1, lg: 1.125 }
+
+const QUEUE_BG_PRESETS = ['#F1F5F9', '#FFFFFF', '#F1EFE9', '#0F172A', '#111111', '#1E3A8A', '#064E3B', '#7C2D12']
 
 const QUEUE_DISPLAY_OPTS = [
   { id: 'fullName' as const,  label: 'Nombre completo' },
@@ -356,6 +364,29 @@ export default function Apariencia() {
     else if (key && activePanel === 'queue') setActivePanel(trConfig.mode)
   }
 
+  // Queue screen background photo
+  const queueBgFileRef = useRef<HTMLInputElement>(null)
+  const [queueBgUploading, setQueueBgUploading] = useState(false)
+  async function onQueueBgFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || !storeId) return
+    setError(''); setQueueBgUploading(true)
+    try {
+      const small = await shrinkImage(file, 2000) // big enough for a TV
+      const ext = (small.name.split('.').pop() || 'jpg').toLowerCase()
+      const path = `queue/${storeId}-${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage.from('store-assets')
+        .upload(path, small, { upsert: true, contentType: small.type || 'image/jpeg', cacheControl: '31536000' })
+      if (upErr) throw upErr
+      setQueueBoard('bgImage', supabase.storage.from('store-assets').getPublicUrl(path).data.publicUrl)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo subir la foto')
+    }
+    setQueueBgUploading(false)
+  }
+  const queueBg = queueBackground(trConfig.queueBoard)
+
   function setQueueBoard<K extends keyof QueueBoardConfig>(key: K, value: QueueBoardConfig[K]) {
     setTrConfig(p => ({ ...p, queueBoard: { ...p.queueBoard, [key]: value } }))
   }
@@ -377,7 +408,7 @@ export default function Apariencia() {
       height: 580,
       position: 'relative',
       fontFamily: previewFont,
-      background: activePanel === 'location' ? mapPreset.bg : trConfig.bgColor,
+      background: activePanel === 'location' ? mapPreset.bg : activePanel === 'queue' ? queueBg.css : trConfig.bgColor,
     }}>
 
       {/* ── Location mode preview ── */}
@@ -721,10 +752,10 @@ export default function Apariencia() {
               }
             </div>
           )}
-          <div style={{ fontSize: fs(15), fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', textAlign: 'center', marginBottom: 3 }}>
+          <div style={{ fontSize: fs(15), fontWeight: 800, color: queueBg.dark ? '#FFFFFF' : '#0F172A', letterSpacing: '-0.02em', textAlign: 'center', marginBottom: 3 }}>
             {trConfig.queueBoard.title || 'Estado de pedidos'}
           </div>
-          <div style={{ fontSize: fs(10), color: '#94A3B8', textAlign: 'center', marginBottom: 16 }}>
+          <div style={{ fontSize: fs(10), color: queueBg.dark ? 'rgba(255,255,255,0.75)' : '#94A3B8', textAlign: 'center', marginBottom: 16 }}>
             {trConfig.queueBoard.subtitle || 'Actualizado en tiempo real'}
           </div>
 
@@ -736,7 +767,7 @@ export default function Apariencia() {
               <div key={col.label} style={{ width: '100%' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
                   <div style={{ width: 6, height: 6, borderRadius: '50%', background: col.color, flexShrink: 0 }} />
-                  <span style={{ fontSize: fs(9), fontWeight: 700, color: '#64748B', textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>
+                  <span style={{ fontSize: fs(9), fontWeight: 700, color: queueBg.dark ? 'rgba(255,255,255,0.85)' : '#64748B', textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>
                     {col.label}
                   </span>
                 </div>
@@ -766,8 +797,8 @@ export default function Apariencia() {
             ))}
           </div>
 
-          <div style={{ textAlign: 'center', fontSize: fs(9), color: '#94A3B8', marginTop: 18 }}>
-            Powered by <strong style={{ color: '#64748B' }}>LyteApp</strong>
+          <div style={{ textAlign: 'center', fontSize: fs(9), color: queueBg.dark ? 'rgba(255,255,255,0.7)' : '#94A3B8', marginTop: 18 }}>
+            Powered by <strong style={{ color: queueBg.dark ? '#FFFFFF' : '#64748B' }}>LyteApp</strong>
           </div>
         </div>
       )}
@@ -1319,6 +1350,36 @@ export default function Apariencia() {
             <div className="cn-toggle-label">Mostrar logo de la tienda</div>
           </div>
           <Toggle checked={trConfig.queueBoard.showLogo} onChange={v => setQueueBoard('showLogo', v)} />
+        </div>
+
+        {/* Screen background: a color or a photo */}
+        <div className="cn-field" data-tsec="queue">
+          <div className="cn-label">Fondo de la pantalla</div>
+          <div className="cn-colors">
+            {QUEUE_BG_PRESETS.map(c => (
+              <div key={c} className={`cn-color-swatch${!trConfig.queueBoard.bgImage && trConfig.queueBoard.bgColor === c ? ' selected' : ''}`}
+                style={{ background: c, boxShadow: 'inset 0 0 0 1px rgba(15,23,42,0.12)' }}
+                onClick={() => setQueueBoard('bgColor', c)} />
+            ))}
+            <label className="cn-color-custom"
+              style={{ background: QUEUE_BG_PRESETS.includes(trConfig.queueBoard.bgColor) ? undefined : trConfig.queueBoard.bgColor }}>
+              {QUEUE_BG_PRESETS.includes(trConfig.queueBoard.bgColor) ? '+' : null}
+              <input type="color" value={trConfig.queueBoard.bgColor} onChange={e => setQueueBoard('bgColor', e.target.value)} />
+            </label>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
+            {trConfig.queueBoard.bgImage && (
+              <img src={trConfig.queueBoard.bgImage} alt="" style={{ width: 64, height: 44, objectFit: 'cover', borderRadius: 10, flexShrink: 0 }} />
+            )}
+            <button type="button" className="cn-pill-btn" disabled={queueBgUploading} onClick={() => queueBgFileRef.current?.click()}>
+              {queueBgUploading ? 'Subiendo…' : trConfig.queueBoard.bgImage ? 'Cambiar foto' : 'Usar una foto'}
+            </button>
+            {trConfig.queueBoard.bgImage && (
+              <button type="button" className="cn-pill-btn" onClick={() => setQueueBoard('bgImage', null)}>Quitar foto</button>
+            )}
+            <input ref={queueBgFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onQueueBgFile} />
+          </div>
+          <div className="cn-toggle-hint" style={{ marginTop: 6 }}>Con una foto, se oscurece un poco para que los títulos se lean en blanco.</div>
         </div>
 
         {/* Public URL */}

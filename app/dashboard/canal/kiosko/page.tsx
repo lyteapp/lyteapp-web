@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useDashboardStore } from '../../../lib/DashboardStoreProvider'
 import UnsavedNotice, { stableJson } from '../UnsavedNotice'
+import { shrinkImage } from '../../../lib/shrinkImage'
 import '../canal.css'
 
 // Kiosk mode: tablets see the store as a full-screen ordering layout (big
@@ -30,24 +31,6 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
       <span className="cn-toggle-track" />
     </label>
   )
-}
-
-// Category pictures are shown about 150px wide: 900px is plenty for any
-// screen, and keeps a phone photo from weighing several MB. PNG/WebP keep
-// their transparency (a cut-out burger on the button's color looks great).
-async function shrinkImage(file: File, max = 900): Promise<File> {
-  if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return file
-  const bmp = await createImageBitmap(file).catch(() => null)
-  if (!bmp) return file
-  const scale = Math.min(1, max / Math.max(bmp.width, bmp.height))
-  const canvas = document.createElement('canvas')
-  canvas.width = Math.round(bmp.width * scale)
-  canvas.height = Math.round(bmp.height * scale)
-  canvas.getContext('2d')?.drawImage(bmp, 0, 0, canvas.width, canvas.height)
-  const type = file.type === 'image/jpeg' ? 'image/jpeg' : 'image/png'
-  const blob = await new Promise<Blob | null>(r => canvas.toBlob(r, type, 0.85))
-  if (!blob || blob.size >= file.size) return file
-  return new File([blob], `cat.${type === 'image/jpeg' ? 'jpg' : 'png'}`, { type })
 }
 
 export default function KioskPage() {

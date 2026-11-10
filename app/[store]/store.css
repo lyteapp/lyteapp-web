@@ -3004,3 +3004,18 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
   overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
   padding-left: max(24px, calc((100% - 552px) / 2)); padding-right: max(24px, calc((100% - 552px) / 2));
 }
+
+/* Kiosk: a bigger cedula keypad and number, easy to tap and read on a
+   tablet (a little smaller on a landscape tablet so it all still fits) */
+.sf-splash-kiosk { --sf-kp: clamp(80px, 9.5vh, 104px); }
+.sf-splash-kiosk .sf-splash-keypad { gap: calc(var(--sf-kp) * 0.14); max-width: calc(var(--sf-kp) * 3.6); margin-top: 12px; }
+.sf-splash-kiosk .sf-splash-keypad-btn,
+.sf-splash-kiosk .sf-splash-keypad-spacer { width: var(--sf-kp); height: var(--sf-kp); }
+.sf-splash-kiosk .sf-splash-keypad-btn { font-size: calc(var(--sf-kp) * 0.38); }
+.sf-splash-kiosk .sf-splash-keypad-back svg { width: calc(var(--sf-kp) * 0.3); height: calc(var(--sf-kp) * 0.3); }
+.sf-splash-kiosk .sf-splash-cedula-field .sf-splash-cedula {
+  font-size: max(30px, var(--sf-splash-input-size, 14px)); font-weight: 700; letter-spacing: 0.06em;
+  padding: 16px 60px;
+}
+.sf-splash-kiosk .sf-splash-cedula-field .sf-splash-cedula::placeholder { font-size: 20px; font-weight: 500; letter-spacing: 0; }
+.sf-splash-kiosk .sf-splash-cedula-edit { width: 44px; height: 44px; right: 10px; }

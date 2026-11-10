@@ -2972,3 +2972,15 @@ div.sf-footer-link:hover { color: inherit; }
 }
 .sf-co-steps > .sf-co-stepnav { margin-top: auto; }
 .sf-page:has(> .sf-checkout-wrap.sf-co-steps) { padding-bottom: 0; }
+
+/* Welcome page with its button at the bottom of the screen (above the Lyte
+   mark); the content keeps its centre in the space left above it */
+.sf-splash-screen.sf-splash-btn-bottom {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 72px + var(--sf-splash-cta-h, 68px));
+}
+.sf-splash-bottom {
+  position: absolute; left: 0; right: 0; z-index: 2;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 50px);
+  display: flex; justify-content: center; padding: 0 24px;
+}
+.sf-splash-bottom .sf-splash-slide-bar { width: 100%; margin-top: 0; }

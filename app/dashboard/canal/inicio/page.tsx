@@ -105,6 +105,8 @@ interface HomePageConfig {
   showLogo: boolean
   /** A logo just for the welcome page (null = the store's own logo) */
   logoUrl: string | null
+  /** Where the Empezar button sits */
+  buttonPosition: 'content' | 'bottom'
 }
 
 const DEFAULTS: HomePageConfig = {
@@ -141,6 +143,7 @@ const DEFAULTS: HomePageConfig = {
   images: [],
   showLogo: true,
   logoUrl: null,
+  buttonPosition: 'content',
 }
 
 function newImage(url: string): HomePageImage {
@@ -470,7 +473,7 @@ function SplashPreview({
           <span style={{ fontSize: 12, color: 'white' }}>●●●</span>
         </div>
       )}
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: device === 'mobile' ? '40px 30px' : '40px max(24px, calc((100% - 420px) / 2))', textAlign: 'center', position: 'relative', zIndex: 1, pointerEvents: 'none' }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: device === 'mobile' ? '40px 30px' : '40px max(24px, calc((100% - 420px) / 2))', textAlign: 'center', position: 'relative', zIndex: 1, pointerEvents: 'none' , ...(config.buttonPosition === 'bottom' ? { paddingBottom: 70 + sizes.button * k * 3.6 } : {}) }}>
 
         {logoUrl && config.showLogo && (
           <div
@@ -559,7 +562,10 @@ function SplashPreview({
 
         <div
           onClick={e => { e.stopPropagation(); onSelect('button') }}
-          style={{ ...selectableStyle('button', 6), borderRadius: 100 }}
+          style={{
+            ...selectableStyle('button', 6), borderRadius: 100,
+            ...(config.buttonPosition === 'bottom' ? { position: 'absolute', left: '50%', transform: 'translateX(-50%)', bottom: 50, zIndex: 2, whiteSpace: 'nowrap' } : {}),
+          }}
         >
           <div style={{
             background: config.buttonColor || '#7C3AED', color: 'white', fontSize: sizes.button * k, fontWeight: 700,
@@ -1182,6 +1188,23 @@ export default function InicioPage() {
                     <span style={{ fontSize: 18 }}>A</span>
                   </div>
                   <div className="cn-toggle-hint" style={{ marginTop: 4 }}>Tambien puedes tocar el logo o el boton en la vista previa y arrastrar su esquina.</div>
+                </div>
+                <div className="cn-field" style={{ marginTop: 16, marginBottom: 0 }}>
+                  <div className="cn-label">Posicion del boton</div>
+                  <div className="cn-pill-row" role="group" aria-label="Posicion del boton">
+                    {([
+                      { id: 'content', label: 'Debajo del texto' },
+                      { id: 'bottom', label: 'Abajo de la pantalla' },
+                    ] as const).map(o => (
+                      <button key={o.id} type="button" className={`cn-pill-btn${config.buttonPosition === o.id ? ' selected' : ''}`}
+                        onClick={() => set('buttonPosition', o.id)}>
+                        {o.label}
+                      </button>
+                    ))}
+                  </div>
+                  {config.buttonPosition === 'bottom' && config.collectCustomerData && (
+                    <div className="cn-toggle-hint" style={{ marginTop: 6 }}>La barra para deslizar la cedula tambien va abajo.</div>
+                  )}
                 </div>
               </div>
             </div>

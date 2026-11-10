@@ -466,6 +466,8 @@ type TemplateConfig = {
     showLogo?: boolean
     /** A logo just for the welcome page (else the store's) */
     logoUrl?: string | null
+    /** Where the Empezar button sits: under the text, or at the bottom of the screen */
+    buttonPosition?: 'content' | 'bottom'
     images?: { id: string; url: string; x: number; y: number; width: number; height: number; flipped?: boolean }[]
     inactivityTimeout?: { enabled?: boolean; minutes?: number }
     orderReturnTimeout?: { enabled?: boolean; seconds?: number }
@@ -3501,12 +3503,60 @@ export default function StoreShell({ store, products, categories = [], initialBc
   let welcomeOverlay: React.ReactNode = null
   if (view === 'splash') {
     const splashPoweredColors = poweredByColors(!hp.imageUrl && isLightColor(hp.bgColor || '#0F172A'))
+    // The slide-to-enter bar and the Empezar button: under the text, or
+    // (Pagina de inicio > posicion del boton) at the bottom of the screen
+    const btnBottom = hp.buttonPosition === 'bottom'
+    const slideBarEl = (
+      <div
+        ref={cedulaSlideBarRef}
+        className={`sf-splash-slide-bar${cedulaSliding ? ' sliding' : ' sf-splash-slide-hint'}`}
+        style={{
+          '--sf-slide-progress': cedulaSlideProgress,
+          ...(hp.buttonColor ? { background: hp.buttonColor } : {}),
+          ...(splashBtnScale !== 1 ? {
+            transform: `scale(${splashBtnScale})`,
+            marginTop: 6 + 34 * (splashBtnScale - 1), marginBottom: 34 * (splashBtnScale - 1),
+          } : {}),
+        } as React.CSSProperties}
+        onPointerDown={cedulaSlidePointerDown}
+        onPointerMove={cedulaSlidePointerMove}
+        onPointerUp={cedulaSlidePointerUp}
+        onPointerCancel={cedulaSlidePointerUp}
+      >
+        <div className="sf-splash-slide-fill" />
+        <span className="sf-splash-slide-label">Desliza para ingresar tu cedula</span>
+        <div className="sf-splash-slide-thumb">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="22" height="22">
+            <path d="M7 4l6 6-6 6" />
+          </svg>
+        </div>
+      </div>
+    )
+    const startBtnEl = (
+      <button
+        className={`sf-splash-btn${collectCustomerData ? ' sf-splash-btn-in' : ''}`}
+        style={{
+          ...(hp.buttonColor ? { background: hp.buttonColor } : {}),
+          ...(splashBtnPx ? { fontSize: splashBtnPx, padding: `${splashBtnPx}px ${splashBtnPx * 2.67}px` } : {}),
+        }}
+        disabled={cedulaStatus === 'checking' || splashWaiting}
+        onClick={handleSplashStart}
+      >
+        <span>{cedulaStatus === 'checking' ? 'Buscando...' : (hp.buttonLabel || 'Empezar')}</span>
+        {splashWaiting && <span className="sf-splash-btn-spinner" aria-label="Cargando" />}
+        {cedulaStatus !== 'checking' && !splashWaiting && (
+          <svg className="sf-splash-btn-arrow" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width={splashBtnPx ? splashBtnPx * 1.07 : 16} height={splashBtnPx ? splashBtnPx * 1.07 : 16}>
+            <path d="M4 10h12M12 5l5 5-5 5" />
+          </svg>
+        )}
+      </button>
+    )
     welcomeOverlay = (
       <>
       <div
         ref={splashScreenRef}
-        className={`sf-splash-screen sf-trans-${transitionId}${splashLeaving ? ' sf-splash-leaving' : ''}`}
-        style={{ ...pageStyle, background: 'transparent' }}
+        className={`sf-splash-screen sf-trans-${transitionId}${splashLeaving ? ' sf-splash-leaving' : ''}${btnBottom ? ' sf-splash-btn-bottom' : ''}`}
+        style={{ ...pageStyle, background: 'transparent', ...(btnBottom ? { '--sf-splash-cta-h': `${68 * splashBtnScale}px` } : {}) } as React.CSSProperties}
       >
         {/* A plain <img> instead of a CSS background, absolutely positioned
             within .sf-splash-screen — same normal-document-flow sizing as
@@ -3613,30 +3663,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 </div>
               )}
               {!keypadRevealed ? (
-                <div
-                  ref={cedulaSlideBarRef}
-                  className={`sf-splash-slide-bar${cedulaSliding ? ' sliding' : ' sf-splash-slide-hint'}`}
-                  style={{
-                    '--sf-slide-progress': cedulaSlideProgress,
-                    ...(hp.buttonColor ? { background: hp.buttonColor } : {}),
-                    ...(splashBtnScale !== 1 ? {
-                      transform: `scale(${splashBtnScale})`,
-                      marginTop: 6 + 34 * (splashBtnScale - 1), marginBottom: 34 * (splashBtnScale - 1),
-                    } : {}),
-                  } as React.CSSProperties}
-                  onPointerDown={cedulaSlidePointerDown}
-                  onPointerMove={cedulaSlidePointerMove}
-                  onPointerUp={cedulaSlidePointerUp}
-                  onPointerCancel={cedulaSlidePointerUp}
-                >
-                  <div className="sf-splash-slide-fill" />
-                  <span className="sf-splash-slide-label">Desliza para ingresar tu cedula</span>
-                  <div className="sf-splash-slide-thumb">
-                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="22" height="22">
-                      <path d="M7 4l6 6-6 6" />
-                    </svg>
-                  </div>
-                </div>
+                btnBottom ? null : slideBarEl
               ) : cedulaStatus !== 'new' && (
                 <div className="sf-splash-keypad sf-splash-keypad-in">
                   {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(d => (
@@ -3711,25 +3738,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
             </div>
           )}
 
-          {(!collectCustomerData || keypadRevealed) && (
-            <button
-              className={`sf-splash-btn${collectCustomerData ? ' sf-splash-btn-in' : ''}`}
-              style={{
-                ...(hp.buttonColor ? { background: hp.buttonColor } : {}),
-                ...(splashBtnPx ? { fontSize: splashBtnPx, padding: `${splashBtnPx}px ${splashBtnPx * 2.67}px` } : {}),
-              }}
-              disabled={cedulaStatus === 'checking' || splashWaiting}
-              onClick={handleSplashStart}
-            >
-              <span>{cedulaStatus === 'checking' ? 'Buscando...' : (hp.buttonLabel || 'Empezar')}</span>
-              {splashWaiting && <span className="sf-splash-btn-spinner" aria-label="Cargando" />}
-              {cedulaStatus !== 'checking' && !splashWaiting && (
-                <svg className="sf-splash-btn-arrow" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width={splashBtnPx ? splashBtnPx * 1.07 : 16} height={splashBtnPx ? splashBtnPx * 1.07 : 16}>
-                  <path d="M4 10h12M12 5l5 5-5 5" />
-                </svg>
-              )}
-            </button>
-          )}
+          {(!collectCustomerData || keypadRevealed) && !btnBottom && startBtnEl}
 
           {(hp.pills ?? []).filter(p => p.label?.trim() && p.url?.trim()).length > 0 && (
             <div className="sf-splash-pills">
@@ -3749,6 +3758,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
           )}
           </>)}
         </div>
+        {btnBottom && splashStep !== 'service' && (
+          <div className="sf-splash-bottom">
+            {collectCustomerData && !keypadRevealed ? slideBarEl : startBtnEl}
+          </div>
+        )}
         {/* in a kiosk the Lyte mark stays, but must not take anyone out of the store */}
         {kioskActive ? (
         <div className="sf-powered-by" style={{ color: splashPoweredColors.text }}>

@@ -3802,6 +3802,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     <>
     {installed && <div className="sf-statusbar-strip" />}
     <div className="sf-confirm-screen">
+      {kioskActive && <div className="sf-kiosk-powered sf-kiosk-powered-fixed"><span>Powered by</span><span className="sf-powered-by-logo" role="img" aria-label="Lyte app" /></div>}
       <div className="sf-confirm-card">
         <div className="sf-confirm-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 32, height: 32 }}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg></div>
         <h1 className="sf-confirm-title">{t('store.confirmed.title')}</h1>
@@ -4622,6 +4623,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
             ) : (
               <button type="button" className="sf-co-step-next" onClick={coNext}>Siguiente</button>
             )}
+            <div className="sf-kiosk-powered"><span>Powered by</span><span className="sf-powered-by-logo" role="img" aria-label="Lyte app" /></div>
           </div>
         ) : (
           <button className="sf-submit-btn" onClick={handleSubmit} disabled={submitDisabled}>
@@ -5511,6 +5513,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
             })}
           </nav>
         )}
+
+        <div className="sf-kiosk-powered"><span>Powered by</span><span className="sf-powered-by-logo" role="img" aria-label="Lyte app" /></div>
 
         {renderProductModal()}
       </div>

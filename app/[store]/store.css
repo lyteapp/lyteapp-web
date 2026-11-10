@@ -2782,7 +2782,7 @@ video.sf-banner-img { object-fit: cover; }
 
 .sf-kiosk-cats {
   flex-shrink: 0; display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none;
-  padding: 16px 28px calc(16px + env(safe-area-inset-bottom, 0px));
+  padding: 16px 28px 8px;
   background: var(--sf-card-bg, #FFFFFF); color: var(--sf-text-color, #0F172A);
   box-shadow: 0 -6px 24px rgba(15,23,42,0.06);
 }
@@ -2949,3 +2949,26 @@ div.sf-footer-link:hover { color: inherit; }
 .sf-cam-btn.primary { background: var(--sf-accent-color, #7C3AED); border-color: var(--sf-accent-color, #7C3AED); color: white; }
 .sf-cam-btn:disabled { opacity: 0.5; cursor: default; }
 .sf-cam-btn:active:not(:disabled) { transform: scale(0.97); }
+
+/* Kiosk: just "Powered by lyte app", small, at the very bottom of the screen
+   (not a link — nobody leaves the store from a kiosk) */
+.sf-kiosk-powered {
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 6px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+  font-family: var(--font-geist-sans), sans-serif; font-size: 11px; letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--sf-text-color, #0F172A) 45%, transparent);
+}
+.sf-kiosk-powered .sf-powered-by-logo { color: color-mix(in srgb, var(--sf-text-color, #0F172A) 70%, transparent); }
+.sf-page.sf-kiosk > .sf-kiosk-powered { background: var(--sf-card-bg, #FFFFFF); }
+.sf-co-stepnav { flex-wrap: wrap; padding-bottom: 0; }
+.sf-co-stepnav .sf-kiosk-powered { flex-basis: 100%; padding-top: 10px; }
+.sf-checkout-wrap.sf-co-steps ~ .sf-footer { display: none; }
+.sf-kiosk-powered-fixed { position: fixed; left: 0; right: 0; bottom: 0; z-index: 2; }
+/* the kiosk checkout fills the screen: Atrás / Siguiente and the Lyte mark
+   always sit at the bottom, however short the step is */
+.sf-checkout-wrap.sf-co-steps {
+  min-height: calc(100vh - 61px); min-height: calc(100dvh - 61px);
+  display: flex; flex-direction: column; padding-bottom: 0;
+}
+.sf-co-steps > .sf-co-stepnav { margin-top: auto; }
+.sf-page:has(> .sf-checkout-wrap.sf-co-steps) { padding-bottom: 0; }

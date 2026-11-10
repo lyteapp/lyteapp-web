@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../../../lib/supabase'
 import { useDashboardStore } from '../../../../lib/DashboardStoreProvider'
+import { fastStart } from '../../../../lib/faststart'
 import './editor.css'
 
 // Shrinks an uploaded content-block image client-side before it goes to
@@ -42,7 +43,8 @@ const IMAGE_MIME_BY_EXT: Record<string, string> = {
   mp4: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm', m4v: 'video/x-m4v',
 }
 async function uploadBlockImage(file: File, storeId: string, folder = 'blocks', compress = true) {
-  const compressed = compress ? await compressBlockImage(file) : file
+  // videos: index moved to the front so they start playing right away
+  const compressed = file.type.startsWith('video/') ? await fastStart(file) : compress ? await compressBlockImage(file) : file
   const ext = compressed.name.split('.').pop()?.toLowerCase() ?? ''
   const path = `${folder}/${storeId}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`
   // Some browsers report a blank or wrong File.type for a GIF (depends on how

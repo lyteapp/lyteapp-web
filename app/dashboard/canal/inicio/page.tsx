@@ -8,6 +8,7 @@ import { REVEAL_FONTS, revealFontStack, loadRevealFont } from '../../../lib/reve
 import { isLightColor, poweredByColors } from '../../../lib/colorContrast'
 import Link from 'next/link'
 import UnsavedNotice, { stableJson } from '../UnsavedNotice'
+import { fastStart } from '../../../lib/faststart'
 import '../canal.css'
 
 // The page's sections in order (their data-sec keys), for the phone
@@ -846,7 +847,8 @@ export default function InicioPage() {
     setUploading(true)
     if (file.type.startsWith('video/')) {
       if (file.size > 30_000_000) { setError('El video pesa más de 30 MB. Usa uno más corto o comprimido.'); setUploading(false); return }
-      try { set('imageUrl', await uploadFile(file, user.id, 'homepage')) }
+      // so it starts playing right away instead of after the whole file
+      try { set('imageUrl', await uploadFile(await fastStart(file), user.id, 'homepage')) }
       catch { setError('No se pudo subir el video.') }
       setUploading(false)
       return

@@ -59,10 +59,16 @@ export function warmVideo(src?: string | null) {
 
 /** A <video> that plays from the in-memory copy when there is one. Only a
  *  video that actually played gets kept (not a tap-to-play one left alone). */
-export function CachedVideo({ src, onPlaying, ...props }: React.VideoHTMLAttributes<HTMLVideoElement> & { src: string; ref?: React.Ref<HTMLVideoElement> }) {
+export function CachedVideo({ src, onPlaying, ref, alwaysPlay, ...props }: React.VideoHTMLAttributes<HTMLVideoElement> & {
+  src: string; ref?: React.Ref<HTMLVideoElement>
+  /** Never left stopped: nudged, retried and started by the first touch
+   *  (the welcome page's background). Not for videos paused on purpose. */
+  alwaysPlay?: boolean
+}) {
   // picked once per src, so a copy arriving mid-playback doesn't restart it
   const entry = useMemo(() => cache.get(src), [src])
   const played = useRef(false)
+  const el = useRef<HTMLVideoElement | null>(null)
   useEffect(() => {
     if (entry) use(src, 1)
     return () => {
@@ -70,8 +76,56 @@ export function CachedVideo({ src, onPlaying, ...props }: React.VideoHTMLAttribu
       else if (played.current) warmVideo(src)
     }
   }, [src, entry])
+
+  // An autoplaying video must start. The page arrives from the server
+  // without the `muted` attribute (React only sets it as a property, after
+  // the fact), so the browser tries to autoplay it WITH sound, refuses, and
+  // never tries again: it's made muted for real here and told to play.
+  // With alwaysPlay it's also nudged whenever it could play but isn't (data
+  // arrived, stalled, the tab came back), reloaded a few times on a network
+  // error, and if the device still won't autoplay (iPhone/iPad power
+  // saving), the first touch anywhere on the screen starts it.
+  const { autoPlay, muted } = props
+  useEffect(() => {
+    const v = el.current
+    if (!v || !autoPlay) return
+    if (muted) { v.muted = true; v.defaultMuted = true; v.setAttribute('muted', '') }
+    v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', '')
+    v.play().catch(() => {})
+    if (!alwaysPlay) return
+    let retries = 0
+    let retryTimer: ReturnType<typeof setTimeout> | undefined
+    const kick = () => { if (v.paused && !v.ended && v.readyState >= 2) v.play().catch(() => {}) }
+    const onError = () => {
+      if (retries >= 3) return
+      retries++
+      retryTimer = setTimeout(() => { v.load(); v.play().catch(() => {}) }, 1000 * retries)
+    }
+    const onVisible = () => { if (!document.hidden) kick() }
+    const onTouch = () => kick()
+    const events = ['loadeddata', 'canplay', 'canplaythrough', 'stalled', 'suspend'] as const
+    events.forEach(ev => v.addEventListener(ev, kick))
+    v.addEventListener('error', onError)
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('pointerdown', onTouch, { passive: true })
+    window.addEventListener('touchstart', onTouch, { passive: true })
+    return () => {
+      clearTimeout(retryTimer)
+      events.forEach(ev => v.removeEventListener(ev, kick))
+      v.removeEventListener('error', onError)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('pointerdown', onTouch)
+      window.removeEventListener('touchstart', onTouch)
+    }
+  }, [src, autoPlay, muted, alwaysPlay])
+
   return (
     <video
+      ref={node => {
+        el.current = node
+        if (typeof ref === 'function') ref(node)
+        else if (ref) (ref as React.RefObject<HTMLVideoElement | null>).current = node
+      }}
       src={entry?.url ?? src}
       onPlaying={e => { played.current = true; onPlaying?.(e) }}
       {...props}

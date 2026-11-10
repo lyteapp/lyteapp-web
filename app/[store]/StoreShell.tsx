@@ -350,6 +350,10 @@ type ResponsiveSizeOverrides = {
 // A content block's own sizes for tablet/desktop, when set there in the
 // Vitrina editor — unset keys use the block's (phone) value.
 type BlockSizeOverrides = { fontSize?: number; imageSize?: number; spacing?: number; buttonSize?: number; buttonWidth?: number }
+// Longest the loading screen waits for the welcome page's video to play
+// (a very slow connection still gets in; the video starts when it can)
+const VIDEO_BOOT_MAX = 12000
+
 // Kiosk checkout, one step at a time
 type CoStep = 'cart' | 'service' | 'delivery' | 'info' | 'pay'
 const CO_STEP_TITLES: Record<CoStep, string> = {
@@ -697,10 +701,25 @@ export default function StoreShell({ store, products, categories = [], initialBc
     const loaded = document.readyState === 'complete'
       ? Promise.resolve()
       : new Promise<void>(resolve => window.addEventListener('load', () => resolve(), { once: true }))
-    Promise.all([loaded, document.fonts?.ready ?? Promise.resolve()])
+    // A welcome page with a video background: the loading screen stays
+    // until the video is actually playing (not a blank or frozen frame). If
+    // the device won't autoplay it (power saving), having it ready to play
+    // is enough — the first touch starts it. Never more than VIDEO_BOOT_MAX.
+    const welcomeVideo = document.querySelector('.sf-splash-bg-img')
+    let videoGrace: ReturnType<typeof setTimeout> | undefined
+    const videoReady = welcomeVideo instanceof HTMLVideoElement
+      ? new Promise<void>(resolve => {
+          const v = welcomeVideo
+          if (!v.paused && v.readyState >= 3) { resolve(); return }
+          v.addEventListener('playing', () => resolve(), { once: true })
+          v.addEventListener('error', () => resolve(), { once: true })
+          v.addEventListener('canplay', () => { videoGrace = setTimeout(resolve, 1500) }, { once: true })
+        })
+      : Promise.resolve()
+    Promise.all([loaded, document.fonts?.ready ?? Promise.resolve(), videoReady])
       .then(() => requestAnimationFrame(() => requestAnimationFrame(hide)))
-    const cap = setTimeout(hide, 3500)
-    return () => clearTimeout(cap)
+    const cap = setTimeout(hide, welcomeVideo instanceof HTMLVideoElement ? VIDEO_BOOT_MAX : 3500)
+    return () => { clearTimeout(cap); clearTimeout(videoGrace) }
   }, [])
   const [cart, setCart]                   = useState<Record<string, CartItem>>(() => {
     if (!isCheckoutPreview) return {}
@@ -3593,7 +3612,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
             same way normal flow does — that mismatch, not a height or
             overscroll issue, was the actual cause of the blank strip). */}
         {hp.imageUrl && isVideoUrl(hp.imageUrl) ? (
-          <CachedVideo src={hp.imageUrl} autoPlay muted loop playsInline preload="auto" className="sf-splash-bg-img" />
+          <CachedVideo src={hp.imageUrl} autoPlay muted loop playsInline preload="auto" alwaysPlay className="sf-splash-bg-img" />
         ) : hp.imageUrl ? (
           <img src={resizedImg(hp.imageUrl, 1400)} srcSet={imgSrcSet(hp.imageUrl, [800, 1400, 2000, 2400])} sizes="100vw" alt="" className="sf-splash-bg-img" />
         ) : (

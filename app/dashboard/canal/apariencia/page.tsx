@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { supabase } from '../../../lib/supabase'
 import { useDashboardStore } from '../../../lib/DashboardStoreProvider'
 import UnsavedNotice, { stableJson } from '../UnsavedNotice'
+import { queueStep } from '../../../lib/queueSteps'
 import { trackText, TRACK_STATUS_ORDER, TRACK_STATUS_NAMES, TRACK_TEXT_DEFAULTS, type TrackStatus, type TrackTextField, type TrackTexts } from '../../../lib/trackingTexts'
 import '../canal.css'
 
@@ -729,8 +730,8 @@ export default function Apariencia() {
 
           <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 14 }}>
             {[
-              { label: trConfig.queueBoard.preparingLabel || 'En preparación', items: ['#A3F2', '#B190'], color: '#F59E0B' },
-              { label: trConfig.queueBoard.readyLabel || 'Listo',              items: ['#C204'],          color: '#10B981' },
+              { label: trConfig.queueBoard.preparingLabel || 'En preparación', items: [{ code: '#A3F2', status: 'processing' }, { code: '#B190', status: 'confirmed' }], color: '#F59E0B' },
+              { label: trConfig.queueBoard.readyLabel || 'Listo',              items: [{ code: '#C204', status: 'ready' }],                                             color: '#10B981' },
             ].map(col => (
               <div key={col.label} style={{ width: '100%' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
@@ -740,11 +741,12 @@ export default function Apariencia() {
                   </span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {col.items.map(code => (
+                  {col.items.map(({ code, status }) => {
+                    const step = queueStep(status)
+                    return (
                     <div key={code} style={{
                       width: '100%', background: 'white', borderRadius: 12, padding: '10px 12px',
                       boxShadow: '0 2px 10px rgba(15,23,42,0.06)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                         <span style={{ fontSize: fs(9), fontWeight: 700, color: trConfig.accentColor, background: trConfig.accentColor + '14', borderRadius: 5, padding: '2px 6px' }}>{code}</span>
@@ -752,8 +754,13 @@ export default function Apariencia() {
                           {trConfig.queueBoard.customerDisplay === 'code' ? '' : trConfig.queueBoard.customerDisplay === 'fullName' ? 'Maria Garcia' : 'Maria'}
                         </span>
                       </div>
+                      <div style={{ marginTop: 8, height: 5, borderRadius: 100, overflow: 'hidden', background: `color-mix(in srgb, ${trConfig.accentColor} 14%, #F1F5F9)` }}>
+                        <div className={status === 'ready' ? undefined : 'cn-oq-stripes'} style={{ width: `${step.pct}%`, height: '100%', borderRadius: 100, backgroundColor: trConfig.accentColor }} />
+                      </div>
+                      <div style={{ marginTop: 4, fontSize: fs(8), fontWeight: 700, color: trConfig.accentColor }}>{step.label}</div>
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             ))}

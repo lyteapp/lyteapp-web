@@ -46,7 +46,7 @@ body { background: #F1F5F9; }
 .oq-logo-fallback {
   width: 56px; height: 56px;
   border-radius: 16px;
-  background: #EDE9FE;
+  background: color-mix(in srgb, var(--oq-accent, #7C3AED) 12%, white);
   color: var(--oq-accent, #7C3AED);
   display: flex; align-items: center; justify-content: center;
   font-size: 19px; font-weight: 700; letter-spacing: -0.02em;
@@ -81,11 +81,43 @@ body { background: #F1F5F9; }
   border-radius: 16px;
   padding: 14px 16px;
   box-shadow: 0 2px 12px rgba(15,23,42,0.06);
+  animation: oq-card-in 0.3s ease both;
+}
+.oq-card-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  animation: oq-card-in 0.3s ease both;
+}
+
+/* Progress bar: fills in the store's color as the order moves along
+   (lib/queueSteps), with moving stripes while it is still being made */
+.oq-progress {
+  margin-top: 12px; height: 8px; border-radius: 100px; overflow: hidden;
+  background: color-mix(in srgb, var(--oq-accent, #7C3AED) 14%, #F1F5F9);
+}
+.oq-progress-fill {
+  height: 100%; border-radius: 100px;
+  background-color: var(--oq-accent, #7C3AED);
+  background-image: linear-gradient(135deg,
+    rgba(255,255,255,0.28) 25%, transparent 25%, transparent 50%,
+    rgba(255,255,255,0.28) 50%, rgba(255,255,255,0.28) 75%, transparent 75%);
+  background-size: 16px 16px;
+  transition: width 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: oq-progress-grow 1s cubic-bezier(0.22, 1, 0.36, 1) backwards, oq-progress-stripes 0.8s linear infinite;
+}
+.oq-progress.done .oq-progress-fill {
+  background-image: none;
+  animation: oq-progress-grow 1s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+@keyframes oq-progress-grow { from { width: 0; } }
+@keyframes oq-progress-stripes { to { background-position: 16px 0; } }
+.oq-progress-label {
+  margin-top: 6px; font-size: 11px; font-weight: 700;
+  color: var(--oq-accent, #7C3AED);
+}
+@media (prefers-reduced-motion: reduce) {
+  .oq-progress-fill { animation: none; transition: none; }
 }
 @keyframes oq-card-in {
   from { opacity: 0; transform: translateY(6px); }

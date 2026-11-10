@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
+import { queueStep } from '../../lib/queueSteps'
 import './estado.css'
 
 const supabase = createClient(
@@ -103,7 +104,7 @@ export default function EstadoPage() {
           id: data.id,
           name: data.name,
           logo_url: data.logo_url,
-          accentColor: (tracking.accentColor as string) || '#7C3AED',
+          accentColor: (tracking.accentColor as string) || (tc.accentColor as string) || '#7C3AED',
           fontFamily: (tracking.fontFamily as string) || 'system',
           queueBoard: {
             enabled: qb.enabled === true,
@@ -250,8 +251,11 @@ function QueueColumn({
         <span className="oq-column-count">{orders.length}</span>
       </div>
       {orders.length === 0 && <div className="oq-empty">Sin pedidos</div>}
-      {orders.map(o => (
+      {orders.map(o => {
+        const step = queueStep(o.status)
+        return (
         <div key={o.id} className="oq-card">
+          <div className="oq-card-row">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
             <span className="oq-card-code" style={{ color: accentColor, background: accentColor + '14' }}>
               {shortCode(o.id)}
@@ -266,8 +270,17 @@ function QueueColumn({
             )}
           </div>
           {showTime && <span className="oq-card-time">{minutesAgo(o.created_at)}</span>}
+          </div>
+          <div
+            className={`oq-progress${o.status === 'ready' ? ' done' : ''}`}
+            role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={step.pct} aria-label={step.label}
+          >
+            <div className="oq-progress-fill" style={{ width: `${step.pct}%` }} />
+          </div>
+          <div className="oq-progress-label">{step.label}</div>
         </div>
-      ))}
+        )
+      })}
     </div>
   )
 }

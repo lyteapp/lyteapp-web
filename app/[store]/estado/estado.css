@@ -143,3 +143,48 @@ body { background: #F1F5F9; }
 
 .oq-footer { margin-top: 32px; font-size: 11px; color: #94A3B8; }
 .oq-footer a { color: var(--oq-accent, #7C3AED); text-decoration: none; font-weight: 600; }
+
+/* "Retíralo en el casillero N": big, centred, for whoever is watching the
+   board; one at a time, closes by itself (the bar shows how long is left) */
+.oq-announce {
+  position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+  padding: 24px; background: rgba(15,23,42,0.55); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  animation: oq-announce-fade 0.25s ease both; cursor: pointer;
+}
+.oq-announce-card {
+  position: relative; overflow: hidden; width: min(560px, 100%);
+  padding: 40px 32px 44px; border-radius: 32px; background: white; text-align: center;
+  box-shadow: 0 30px 80px rgba(15,23,42,0.35);
+  animation: oq-announce-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.oq-announce-kicker {
+  font-size: 15px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--oq-accent, #7C3AED);
+}
+.oq-announce-name {
+  margin-top: 10px; font-size: clamp(40px, 9vw, 72px); font-weight: 800; letter-spacing: -0.03em;
+  line-height: 1.05; color: #0F172A; overflow-wrap: anywhere;
+}
+.oq-announce-code { margin-top: 6px; font-size: 18px; font-weight: 700; color: #94A3B8; }
+.oq-announce-locker { margin-top: 28px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.oq-announce-locker-label { font-size: 18px; font-weight: 600; color: #475569; }
+.oq-announce-locker-num {
+  min-width: 150px; height: 150px; padding: 0 28px; border-radius: 36px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--oq-accent, #7C3AED); color: white;
+  font-size: 96px; font-weight: 800; line-height: 1; letter-spacing: -0.04em;
+  box-shadow: 0 16px 40px color-mix(in srgb, var(--oq-accent, #7C3AED) 40%, transparent);
+  animation: oq-announce-pulse 1.4s ease-in-out 0.5s 3;
+}
+.oq-announce-timer {
+  position: absolute; left: 0; bottom: 0; height: 6px; width: 100%;
+  background: var(--oq-accent, #7C3AED); transform-origin: left;
+  animation-name: oq-announce-timer; animation-timing-function: linear; animation-fill-mode: both;
+}
+@keyframes oq-announce-fade { from { opacity: 0; } }
+@keyframes oq-announce-pop { from { opacity: 0; transform: scale(0.85) translateY(20px); } }
+@keyframes oq-announce-pulse { 50% { transform: scale(1.06); } }
+@keyframes oq-announce-timer { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .oq-announce, .oq-announce-card, .oq-announce-locker-num { animation: none; }
+}

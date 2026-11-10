@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 import { queueStep } from '../../lib/queueSteps'
@@ -59,6 +59,8 @@ const FONT_STACKS: Record<string, string> = {
 
 const ACTIVE_STATUSES: OrderStatus[] = ['pending', 'confirmed', 'processing', 'ready']
 const QUEUE_WINDOW_MS = 6 * 60 * 60 * 1000
+// How long each "go to locker N" announcement stays up (a tap closes it)
+const ANNOUNCE_MS = 9000
 
 function displayName(name: string, mode: CustomerDisplay): string {
   if (mode === 'firstName') return name.trim().split(/\s+/)[0] || name
@@ -86,6 +88,18 @@ export default function EstadoPage() {
   const [notFound, setNotFound] = useState(false)
   const [store, setStore] = useState<StoreInfo | null>(null)
   const [orders, setOrders] = useState<QueueOrder[]>([])
+  // Orders that just went into a locker, announced big one after another
+  const [announcements, setAnnouncements] = useState<QueueOrder[]>([])
+  const ordersRef = useRef<QueueOrder[]>([])
+  const announced = useRef(new Set<string>())
+  useEffect(() => { ordersRef.current = orders }, [orders])
+  const current = announcements[0] ?? null
+  const dismiss = useCallback(() => setAnnouncements(q => q.slice(1)), [])
+  useEffect(() => {
+    if (!current) return
+    const t = setTimeout(dismiss, ANNOUNCE_MS)
+    return () => clearTimeout(t)
+  }, [current, dismiss])
 
   useEffect(() => {
     let cancelled = false
@@ -159,7 +173,16 @@ export default function EstadoPage() {
             setOrders(prev => prev.filter(o => o.id !== old.id))
             return
           }
-          applyRow(payload.new as QueueOrder)
+          const row = payload.new as QueueOrder
+          // An order on the board that just got its locker (not one that
+          // already had it when the screen loaded)
+          const before = ordersRef.current.find(o => o.id === row.id)
+          if (row.locker_number != null && row.status === 'ready' && before && before.locker_number == null
+            && !announced.current.has(row.id)) {
+            announced.current.add(row.id)
+            setAnnouncements(q => [...q, row])
+          }
+          applyRow(row)
         }
       )
       .subscribe()
@@ -225,6 +248,23 @@ export default function EstadoPage() {
           accentColor={store.accentColor}
         />
       </div>
+
+      {current && (
+        <div className="oq-announce" role="alert" onClick={dismiss}>
+          <div className="oq-announce-card" key={current.id}>
+            <div className="oq-announce-kicker">Tu pedido está listo</div>
+            <div className="oq-announce-name">
+              {store.queueBoard.customerDisplay === 'code' ? shortCode(current.id) : displayName(current.customer_name, store.queueBoard.customerDisplay)}
+            </div>
+            {store.queueBoard.customerDisplay !== 'code' && <div className="oq-announce-code">{shortCode(current.id)}</div>}
+            <div className="oq-announce-locker">
+              <span className="oq-announce-locker-label">Retíralo en el casillero</span>
+              <span className="oq-announce-locker-num">{current.locker_number}</span>
+            </div>
+            <div className="oq-announce-timer" style={{ animationDuration: `${ANNOUNCE_MS}ms` }} />
+          </div>
+        </div>
+      )}
 
       <div className="oq-footer">
         Powered by <a href="https://lyte-app.com" target="_blank" rel="noreferrer">LyteApp</a>

@@ -3114,3 +3114,12 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
   background: color-mix(in srgb, var(--sf-accent-color, #7C3AED) 8%, #F1F5F9);
 }
 .sf-modal-kiosk-ph span { font-size: 120px; font-weight: 800; color: var(--sf-accent-color, #7C3AED); opacity: 0.45; }
+/* Kiosk: "Powered by lyte app" right at the bottom edge of every screen
+   (still clear of an iPad's home bar, via the safe area) */
+.sf-kiosk-powered { padding-top: 2px; padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px)); }
+.sf-co-stepnav .sf-kiosk-powered { padding-top: 6px; }
+.sf-splash-kiosk .sf-powered-by { bottom: calc(env(safe-area-inset-bottom, 0px) + 4px); }
+.sf-co-transition.sf-kiosk-loader .sf-powered-by { bottom: calc(env(safe-area-inset-bottom, 0px) + 4px); }
+@media (pointer: coarse) and (min-width: 600px) and (min-height: 600px) {
+  .sf-co-transition.sf-boot-kiosk-able .sf-powered-by { bottom: calc(env(safe-area-inset-bottom, 0px) + 4px); }
+}

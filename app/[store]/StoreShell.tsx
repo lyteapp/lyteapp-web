@@ -2417,6 +2417,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
   function renderProductModal() {
     if (!modalProduct) return null
+    // Kiosk: a product always opens big — full screen, large photo (beside
+    // the details on a landscape tablet), bigger text and buttons
+    const modalFull = cfgModalFull || kioskActive
     return (
       <div className="sf-modal-overlay" style={showHeaderAboveModal ? { top: modalTop } : undefined} onClick={() => setModalProduct(null)}>
         {maxHit && (
@@ -2436,7 +2439,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
             <div className="sf-chip-nutrition-tip-item"><strong>{Math.round(chipNutritionPreview.choice.carbs ?? 0)}g</strong><span>carbs</span></div>
           </div>
         )}
-        <div className={`sf-modal-wrap${cfgModalFull ? ' sf-modal-wrap-fullpage' : ''}`}>
+        <div className={`sf-modal-wrap${modalFull ? ' sf-modal-wrap-fullpage' : ''}`}>
           {modalNutritionEnabled && modalNutritionDisplay && (
             <div className="sf-modal-nutrition-badge sf-modal-nutrition-badge-float">
               <div className="sf-modal-nutrition-chart">
@@ -2482,7 +2485,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
             </div>
           )}
         <div
-          className={`sf-modal${cfgModalHalf ? ' sf-modal-half' : ''}${cfgModalFull ? ' sf-modal-fullpage' : ''}${cfgModalDark ? ' sf-modal-dark' : ''}`}
+          className={`sf-modal${cfgModalHalf ? ' sf-modal-half' : ''}${modalFull ? ' sf-modal-fullpage' : ''}${kioskActive ? ' sf-modal-kiosk' : ''}${cfgModalDark ? ' sf-modal-dark' : ''}`}
           style={{
             ...(showHeaderAboveModal ? { height: `calc(100dvh - ${modalTop}px)`, maxHeight: `calc(100dvh - ${modalTop}px)` } : {}),
             ...(cfgModalBg ? { background: cfgModalBg } : {}),
@@ -2547,16 +2550,22 @@ export default function StoreShell({ store, products, categories = [], initialBc
           {/* Full-page mode also closes by swiping from the left edge; its X
               sits over the photo, so it gets a dark translucent style. */}
           <button
-            className={`sf-modal-close${cfgModalFull ? ' sf-modal-close-full' : ''}`}
+            className={`sf-modal-close${modalFull ? ' sf-modal-close-full' : ''}`}
             onClick={() => setModalProduct(null)}
             aria-label="Cerrar"
           >
-            {cfgModalFull ? (
+            {modalFull ? (
               <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M15 5L5 15M5 5l10 10" /></svg>
             ) : '×'}
           </button>
 
-          <div className={`sf-modal-product-head${cfgModalFull ? ' sf-modal-product-head-hero' : ''}`}>
+          <div className={`sf-modal-product-head${modalFull ? ' sf-modal-product-head-hero' : ''}`}>
+            {!modalDisplayImage && kioskActive && (
+              // kiosk: no photo still gets the big picture area (its initial), like the cards
+              <div className="sf-modal-img-wrap sf-modal-kiosk-ph" aria-hidden="true">
+                <span>{modalProduct.name.trim().charAt(0).toUpperCase()}</span>
+              </div>
+            )}
             {modalDisplayImage && (() => {
               // Gallery for whatever is currently shown: the selected
               // color's own photos, or the product's own photos when no

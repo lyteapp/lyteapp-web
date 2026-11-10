@@ -3080,3 +3080,37 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
   .sf-co-transition.sf-boot-kiosk-able .sf-co-transition-bar { width: 200px; height: 8px; border-radius: 8px; }
   .sf-co-transition.sf-boot-kiosk-able .sf-co-transition-bar span { border-radius: 8px; }
 }
+
+/* Kiosk: the product opens big (full screen, see renderProductModal), with
+   text, options and buttons sized for a tablet at arm's length */
+.sf-modal.sf-modal-kiosk { font-size: 20px; }
+.sf-modal-kiosk .sf-modal-name { font-size: 36px; line-height: 1.15; }
+.sf-modal-kiosk .sf-modal-desc { font-size: 18px; margin-top: 8px; }
+.sf-modal-kiosk .sf-modal-base-price { font-size: 26px; margin-top: 10px; }
+.sf-modal-kiosk .sf-modal-product-head-hero .sf-modal-product-info { padding: 24px 32px 0; }
+.sf-modal-kiosk .sf-modal-body { padding: 18px 32px 12px; }
+.sf-modal-kiosk .sf-modal-section-title { font-size: 15px; }
+.sf-modal-kiosk .sf-modal-chip { font-size: 18px; padding: 14px 20px; }
+.sf-modal-kiosk .sf-modal-extra { font-size: 18px; padding-top: 14px; padding-bottom: 14px; }
+.sf-modal-kiosk .sf-modal-footer { gap: 16px; padding: 18px 32px max(22px, env(safe-area-inset-bottom, 22px)); }
+.sf-modal-kiosk .sf-modal-qty { border-radius: 18px; }
+.sf-modal-kiosk .sf-modal-qty button { width: 66px; height: 66px; font-size: 30px; }
+.sf-modal-kiosk .sf-modal-qty span { font-size: 24px; min-width: 44px; }
+.sf-modal-kiosk .sf-modal-confirm { height: 68px; border-radius: 18px; font-size: 21px; }
+.sf-modal-kiosk .sf-modal-close { width: 58px; height: 58px; top: 20px; right: 20px; font-size: 28px; }
+.sf-modal-kiosk .sf-modal-close svg { width: 26px; height: 26px; }
+@media (min-width: 1024px) and (orientation: landscape) {
+  .sf-modal-kiosk .sf-modal-product-info { padding: 40px 36px 0; }
+  .sf-modal-kiosk .sf-modal-body { padding: 18px 36px 12px; }
+}
+.sf-modal-kiosk .sf-modal-extra-name { font-size: 19px; }
+.sf-modal-kiosk .sf-modal-extra-price { font-size: 17px; }
+.sf-modal-kiosk .sf-modal-extra-check { width: 28px; height: 28px; border-radius: 8px; }
+.sf-modal-kiosk .sf-modal-chip-price { font-size: 15px; }
+/* prices in the store's own price color (or its main color), as on the kiosk cards */
+.sf-modal-kiosk :is(.sf-modal-base-price, .sf-modal-extra-price) { color: var(--sf-kiosk-price, var(--sf-price-color, #7C3AED)); }
+.sf-modal-kiosk-ph {
+  display: flex; align-items: center; justify-content: center; cursor: default;
+  background: color-mix(in srgb, var(--sf-accent-color, #7C3AED) 8%, #F1F5F9);
+}
+.sf-modal-kiosk-ph span { font-size: 120px; font-weight: 800; color: var(--sf-accent-color, #7C3AED); opacity: 0.45; }

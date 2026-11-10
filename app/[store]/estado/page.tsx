@@ -297,7 +297,6 @@ function QueueColumn({
         <span className="oq-column-label">{label}</span>
         <span className="oq-column-count">{orders.length}</span>
       </div>
-      {orders.length === 0 && <div className="oq-empty">Sin pedidos</div>}
       {orders.map(o => {
         const step = queueStep(o.status)
         return (

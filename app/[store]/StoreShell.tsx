@@ -3174,7 +3174,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     setPaymentProofFile(null); setPaymentProofPreview(null)
     setOrderId(''); setError(''); setSplashError('')
     setSplashLeaving(false); setCatalogEnter(false)
-    setServiceType(null); setServiceMissing(false); setSplashStep('welcome')
+    setServiceType(null); setServiceMissing(false); resetWelcomeSteps()
     // The next customer must never see, or repeat, the last one's order
     setLastOrder(null); setShowReorder(false); reorderCheckedRef.current = false
     setShowHeaderReorderHint(false); setHeaderReorderEmpty(false); headerReorderHintShownRef.current = false
@@ -3187,13 +3187,21 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // Clicking the header logo takes the customer back to the home page (or
   // the catalog, if this store doesn't use one) — unlike resetToHome, it
   // keeps their cart and any in-progress checkout info intact.
+  // Back to the welcome page's first screen: its button (or the slide to
+  // enter the cedula) again — not the keypad / question it was left on
+  function resetWelcomeSteps() {
+    setSplashStep('welcome'); servicePicked.current = false
+    setKeypadRevealed(false); setCedulaSlideProgress(0); setCedulaSliding(false)
+    cedulaSlideDraggingRef.current = false
+  }
+
   function goHome() {
     if (focusCategory && !hp.enabled) { closeFocusCategory(); return }
     setModalProduct(null)
     setMenuOpen(false)
     setFocusCategory(null)
     if (hp.enabled) {
-      setSplashLeaving(false); setCatalogEnter(false); setSplashStep('welcome')
+      setSplashLeaving(false); setCatalogEnter(false); resetWelcomeSteps()
       window.scrollTo(0, 0)
     }
     setView(hp.enabled ? 'splash' : 'catalog')
@@ -3632,24 +3640,24 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   </button>
                 </div>
               )}
-              {cedulaStatus === 'found' && <div className="sf-splash-cedula-hint found">Te reconocimos{customerName ? `, ${customerName.split(' ')[0]}` : ''}</div>}
-              {cedulaStatus === 'new' && <div className="sf-splash-cedula-hint">Eres nuevo por aqui, completa tus datos</div>}
+              {keypadRevealed && cedulaStatus === 'found' && <div className="sf-splash-cedula-hint found">Te reconocimos{customerName ? `, ${customerName.split(' ')[0]}` : ''}</div>}
+              {keypadRevealed && cedulaStatus === 'new' && <div className="sf-splash-cedula-hint">Eres nuevo por aqui, completa tus datos</div>}
 
-              {cedulaStatus === 'new' && customerFields.name && (
+              {keypadRevealed && cedulaStatus === 'new' && customerFields.name && (
                 <input
                   className="sf-splash-cedula" type="text" placeholder="Tu nombre completo"
                   style={{ marginTop: 10 }}
                   value={customerName} onChange={e => setCustomerName(e.target.value)}
                 />
               )}
-              {cedulaStatus === 'new' && customerFields.phone && (
+              {keypadRevealed && cedulaStatus === 'new' && customerFields.phone && (
                 <input
                   className="sf-splash-cedula" type="tel" placeholder="Tu telefono"
                   style={{ marginTop: 10 }}
                   value={customerPhone} onChange={e => setCustomerPhone(e.target.value)}
                 />
               )}
-              {cedulaStatus === 'new' && askAddressOnSplash && (
+              {keypadRevealed && cedulaStatus === 'new' && askAddressOnSplash && (
                 <>
                   {locationState !== 'granted' && (
                     <button

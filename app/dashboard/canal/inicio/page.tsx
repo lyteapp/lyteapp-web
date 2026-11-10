@@ -52,6 +52,8 @@ interface ElementSizes {
   title: number
   subtitle: number
   fields: number
+  /** the Empezar button's text size (its padding and the slide bar follow) */
+  button: number
 }
 
 interface HomePageImage {
@@ -64,7 +66,7 @@ interface HomePageImage {
   flipped: boolean
 }
 
-type SelectableId = 'logo' | 'title' | 'subtitle' | 'fields'
+type SelectableId = 'logo' | 'title' | 'subtitle' | 'fields' | 'button'
 
 interface RevealConfig {
   greeting: string
@@ -135,7 +137,7 @@ const DEFAULTS: HomePageConfig = {
     showSkip: true,
     logoInsteadOfText: false,
   },
-  elementSizes: { logo: 72, title: 30, subtitle: 15, fields: 14 },
+  elementSizes: { logo: 72, title: 30, subtitle: 15, fields: 14, button: 15 },
   images: [],
   showLogo: true,
   logoUrl: null,
@@ -222,10 +224,11 @@ async function uploadFile(file: File, userId: string, folder: string) {
 }
 
 const SIZE_LIMITS: Record<SelectableId, [number, number]> = {
-  logo: [32, 140],
+  logo: [32, 260],
   title: [16, 56],
   subtitle: [10, 28],
   fields: [10, 22],
+  button: [12, 26],
 }
 
 // The preview's screens. The stored sizes and photo positions are on a 380px
@@ -554,15 +557,21 @@ function SplashPreview({
           </div>
         )}
 
-        <div style={{
-          background: config.buttonColor || '#7C3AED', color: 'white', fontSize: 14, fontWeight: 700,
-          padding: '13px 32px', borderRadius: 100,
-          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-        }}>
-          <span>{config.buttonLabel || 'Empezar'}</span>
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15">
-            <path d="M4 10h12M12 5l5 5-5 5" />
-          </svg>
+        <div
+          onClick={e => { e.stopPropagation(); onSelect('button') }}
+          style={{ ...selectableStyle('button', 6), borderRadius: 100 }}
+        >
+          <div style={{
+            background: config.buttonColor || '#7C3AED', color: 'white', fontSize: sizes.button * k, fontWeight: 700,
+            padding: `${sizes.button * k}px ${sizes.button * k * 2.67}px`, borderRadius: 100,
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          }}>
+            <span>{config.buttonLabel || 'Empezar'}</span>
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width={sizes.button * k * 1.07} height={sizes.button * k * 1.07}>
+              <path d="M4 10h12M12 5l5 5-5 5" />
+            </svg>
+          </div>
+          {selected === 'button' && <ResizeHandle onDrag={startResize('button')} />}
         </div>
         {config.pills.filter(p => p.label.trim()).length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14, width: '100%' }}>
@@ -1122,6 +1131,14 @@ export default function InicioPage() {
                       {config.logoUrl ? 'Este logo es solo para la pantalla de inicio. Tu tienda sigue con su logo de siempre.' : 'Por ahora es el logo de tu tienda. Cámbialo si quieres uno distinto solo aquí.'}
                     </div>
                     <input ref={logoFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleLogoUpload} />
+                    <div className="cn-label" style={{ marginTop: 16 }}>Tamaño del logo</div>
+                    <div className="cn-size-row">
+                      <span>A</span>
+                      <input type="range" min={SIZE_LIMITS.logo[0]} max={SIZE_LIMITS.logo[1]} step={2}
+                        value={config.elementSizes.logo} onChange={e => setElementSize('logo', Number(e.target.value))}
+                        aria-label="Tamaño del logo" />
+                      <span style={{ fontSize: 18 }}>A</span>
+                    </div>
                   </div>
                 )}
                 <div className="cn-field">
@@ -1154,6 +1171,17 @@ export default function InicioPage() {
                       <input type="color" value={config.buttonColor} onChange={e => set('buttonColor', e.target.value)} />
                     </label>
                   </div>
+                </div>
+                <div className="cn-field" style={{ marginTop: 16, marginBottom: 0 }}>
+                  <div className="cn-label">Tamaño del boton</div>
+                  <div className="cn-size-row">
+                    <span>A</span>
+                    <input type="range" min={SIZE_LIMITS.button[0]} max={SIZE_LIMITS.button[1]} step={1}
+                      value={config.elementSizes.button} onChange={e => setElementSize('button', Number(e.target.value))}
+                      aria-label="Tamaño del boton" />
+                    <span style={{ fontSize: 18 }}>A</span>
+                  </div>
+                  <div className="cn-toggle-hint" style={{ marginTop: 4 }}>Tambien puedes tocar el logo o el boton en la vista previa y arrastrar su esquina.</div>
                 </div>
               </div>
             </div>

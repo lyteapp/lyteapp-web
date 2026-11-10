@@ -462,7 +462,7 @@ type TemplateConfig = {
     inputTextColor?: string
     inputBgColor?: string
     inputShape?: 'pill' | 'square' | 'outline'
-    elementSizes?: { logo?: number; title?: number; subtitle?: number; fields?: number }
+    elementSizes?: { logo?: number; title?: number; subtitle?: number; fields?: number; button?: number }
     showLogo?: boolean
     /** A logo just for the welcome page (else the store's) */
     logoUrl?: string | null
@@ -3128,6 +3128,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const collectCustomerData = !!hp.enabled && hp.collectCustomerData !== false
   // The welcome page can have its own logo (Pagina de inicio)
   const splashLogo = hp.logoUrl || store.logo_url
+  // Welcome page button size (Pagina de inicio), on the same scale as its other sizes
+  const splashBtnPx = hp.elementSizes?.button ? hp.elementSizes.button * splashScale : 0
+  // the slide bar (280px wide) grows with it, but never past the screen's edges
+  const splashBtnScale = splashBtnPx ? Math.min(splashBtnPx / 15, (380 * splashScale - 32) / 280) : 1
   const askServiceType = !!hp.enabled && !!hp.askServiceType
   // With the public queue on, the customer follows the order on its board
   // (a QR on the confirmation) instead of a tracking link of their own.
@@ -3615,6 +3619,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   style={{
                     '--sf-slide-progress': cedulaSlideProgress,
                     ...(hp.buttonColor ? { background: hp.buttonColor } : {}),
+                    ...(splashBtnScale !== 1 ? {
+                      transform: `scale(${splashBtnScale})`,
+                      marginTop: 6 + 34 * (splashBtnScale - 1), marginBottom: 34 * (splashBtnScale - 1),
+                    } : {}),
                   } as React.CSSProperties}
                   onPointerDown={cedulaSlidePointerDown}
                   onPointerMove={cedulaSlidePointerMove}
@@ -3706,14 +3714,17 @@ export default function StoreShell({ store, products, categories = [], initialBc
           {(!collectCustomerData || keypadRevealed) && (
             <button
               className={`sf-splash-btn${collectCustomerData ? ' sf-splash-btn-in' : ''}`}
-              style={hp.buttonColor ? { background: hp.buttonColor } : undefined}
+              style={{
+                ...(hp.buttonColor ? { background: hp.buttonColor } : {}),
+                ...(splashBtnPx ? { fontSize: splashBtnPx, padding: `${splashBtnPx}px ${splashBtnPx * 2.67}px` } : {}),
+              }}
               disabled={cedulaStatus === 'checking' || splashWaiting}
               onClick={handleSplashStart}
             >
               <span>{cedulaStatus === 'checking' ? 'Buscando...' : (hp.buttonLabel || 'Empezar')}</span>
               {splashWaiting && <span className="sf-splash-btn-spinner" aria-label="Cargando" />}
               {cedulaStatus !== 'checking' && !splashWaiting && (
-                <svg className="sf-splash-btn-arrow" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+                <svg className="sf-splash-btn-arrow" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width={splashBtnPx ? splashBtnPx * 1.07 : 16} height={splashBtnPx ? splashBtnPx * 1.07 : 16}>
                   <path d="M4 10h12M12 5l5 5-5 5" />
                 </svg>
               )}

@@ -50,6 +50,7 @@ const canalSubItems: { href: string; tKey: TranslationKey }[] = [
   { href: '/dashboard/canal/inicio',         tKey: 'nav.inicio' },
   { href: '/dashboard/canal/checkout',       tKey: 'nav.checkout' },
   { href: '/dashboard/canal/apariencia',     tKey: 'nav.apariencia' },
+  { href: '/dashboard/canal/kiosko',         tKey: 'nav.kiosko' },
 ]
 
 const settingsSubItems: { href: string; tKey: TranslationKey }[] = [
@@ -221,6 +222,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
     '/dashboard/canal/inicio': t('nav.inicio'),
     '/dashboard/canal/checkout': t('nav.checkout'),
     '/dashboard/canal/apariencia': t('nav.apariencia'),
+    '/dashboard/canal/kiosko': t('nav.kiosko'),
     '/dashboard/canal/menu': t('nav.menu'),
     '/dashboard/canal/resenas': t('nav.resenas'),
   }

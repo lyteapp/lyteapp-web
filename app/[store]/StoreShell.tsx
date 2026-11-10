@@ -349,6 +349,12 @@ type ResponsiveSizeOverrides = {
 // A content block's own sizes for tablet/desktop, when set there in the
 // Vitrina editor — unset keys use the block's (phone) value.
 type BlockSizeOverrides = { fontSize?: number; imageSize?: number; spacing?: number; buttonSize?: number; buttonWidth?: number }
+type KioskConfig = {
+  enabled?: boolean
+  /** Picture for each category's button (category id -> url) */
+  categoryImages?: Record<string, string>
+}
+
 type TemplateConfig = {
   pageBg?: string; pageFont?: string
   fontSize?: 'small' | 'medium' | 'large'
@@ -422,6 +428,8 @@ type TemplateConfig = {
   blockGroups?: BlockGroup[]
   ads?: Ad[]
   hiddenCategoryIds?: string[]
+  /** Kiosk mode: a full-screen ordering layout for tablets */
+  kiosk?: KioskConfig
   homePage?: {
     enabled?: boolean
     title?: string
@@ -1063,6 +1071,40 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // With the question on, the welcome page has a second step after its button
   const [splashStep, setSplashStep] = useState<'welcome' | 'service'>('welcome')
   const servicePicked = useRef(false)
+
+  // Kiosk mode: tablets (a touch screen whose shorter side is 600px or
+  // more, so never a phone turned sideways) get the kiosk layout, and so
+  // does any screen opened with ?kiosko=1 (kept for the visit, so it
+  // survives going to the order confirmation and back). The dashboard
+  // previews only show it when they ask for it with that same param.
+  const [kioskForced, setKioskForced] = useState(false)
+  const [tabletScreen, setTabletScreen] = useState(false)
+  const [kioskDraft, setKioskDraft] = useState<KioskConfig | null>(null)
+  const [kioskCatId, setKioskCatId] = useState<string | null>(null)
+  const kioskMainRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    let forced = searchParams.get('kiosko') === '1'
+    try {
+      if (forced && !isDashboardPreview) sessionStorage.setItem('lyte-kiosko', '1')
+      else if (!isDashboardPreview && sessionStorage.getItem('lyte-kiosko') === '1') forced = true
+    } catch {}
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setKioskForced(forced)
+    setTabletScreen(window.matchMedia('(pointer: coarse)').matches && Math.min(window.screen.width, window.screen.height) >= 600)
+  }, [searchParams, isDashboardPreview])
+  // The kiosk editor sends its unsaved settings to its preview
+  useEffect(() => {
+    if (!isDashboardPreview) return
+    const onMsg = (e: MessageEvent) => {
+      if (e.origin !== window.location.origin || e.data?.type !== 'lyte-kiosk-draft') return
+      setKioskDraft((e.data.kiosk as KioskConfig | null) ?? null)
+    }
+    window.addEventListener('message', onMsg)
+    if (window.parent !== window) window.parent.postMessage({ type: 'lyte-kiosk-ready' }, window.location.origin)
+    return () => window.removeEventListener('message', onMsg)
+  }, [isDashboardPreview])
+  const kioskCfg = kioskDraft ?? store.template_config?.kiosk
+  const kioskActive = !!kioskCfg?.enabled && (kioskForced || (tabletScreen && !isDashboardPreview && !isCheckoutPreview))
   const [installPrompt, setInstallPrompt] = useState<Event & { prompt(): void } | null>(null)
   const [showIosHint, setShowIosHint] = useState(false)
   const [isIos, setIsIos]   = useState(false)
@@ -5215,12 +5257,132 @@ export default function StoreShell({ store, products, categories = [], initialBc
     )
   }
 
+  const pageClass = `sf-page sf-tpl-${tpl} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize} sf-vshape-${cfgVariantShape} sf-vsize-${cfgVariantSize} sf-eshape-${cfgExtraShape}${catalogEnter ? ` sf-catalog-enter sf-trans-${store.template_config?.homePage?.transition || 'slide'}` : ''}`
+
+  // ── KIOSK ── one category at a time in big tiles, and every category as
+  // a big picture button along the bottom (its own image, or a photo of
+  // one of its products). The welcome page still comes first.
+  if (kioskActive) {
+    const kGroups = hasCats
+      ? [
+          ...catGroups.map(g => ({ key: g.cat.id, name: g.cat.name, items: g.items })),
+          ...(uncategorized.length > 0 ? [{ key: '__other', name: t('store.ourProducts'), items: uncategorized }] : []),
+        ]
+      : [{ key: '__all', name: t('store.ourProducts'), items: visibleProducts }]
+    const kCur = kGroups.find(g => g.key === kioskCatId) ?? kGroups[0]
+    const kImages = kioskCfg?.categoryImages ?? {}
+    // Prices in the store's own price color, or else its main color (not
+    // the app's default purple, which rarely matches a store's look)
+    const kioskStyle = { ...pageStyle, '--sf-kiosk-price': cfg.priceColor || 'var(--sf-accent-color, #7C3AED)' } as React.CSSProperties
+    const tileImg = (g: { key: string; items: Product[] }) =>
+      kImages[g.key] || g.items.map(p => p.image_url).find(u => u && !isVideoUrl(u)) || null
+    return (
+      <>
+      {renderLogoMorphOverlay()}
+      {welcomeOverlay && <div className="sf-welcome-host">{welcomeOverlay}</div>}
+      <div className={`${pageClass} sf-kiosk${pageBgDark ? ' sf-kiosk-dark' : ''}`} style={welcomeOverlay ? { ...kioskStyle, opacity: 0 } : kioskStyle}>
+        {renderCheckoutTransition()}
+        <header className="sf-kiosk-head" style={cfgHeaderBg ? { background: cfgHeaderBg } : undefined}>
+          <div className="sf-kiosk-head-side">
+            {hp.enabled && (
+              <button type="button" className="sf-kiosk-home" onClick={goHome}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="20" height="20" aria-hidden="true">
+                  <path d="M3 11l9-8 9 8M5 9.5V20h5v-6h4v6h5V9.5" />
+                </svg>
+                Inicio
+              </button>
+            )}
+          </div>
+          <div className="sf-kiosk-brand">
+            {store.logo_url
+              ? <img src={resizedImg(store.logo_url, 320)} alt={store.name} className="sf-kiosk-logo" />
+              : <span className="sf-kiosk-name">{store.name}</span>}
+          </div>
+          <div className="sf-kiosk-head-side" />
+        </header>
+
+        <main className="sf-kiosk-main" ref={kioskMainRef}>
+          {kCur ? (
+            <>
+              <h1 className="sf-kiosk-title">{kCur.name}</h1>
+              <div className="sf-kiosk-grid">
+                {kCur.items.map(p => {
+                  const qty = getProdQty(p.id)
+                  const sale = productSale(p)
+                  return (
+                    <button key={p.id} type="button" className="sf-kiosk-card" onClick={() => openProductModal(p)}>
+                      <span className="sf-kiosk-card-img">
+                        {p.image_url
+                          ? isVideoUrl(p.image_url)
+                            ? <video src={p.image_url} muted autoPlay loop playsInline />
+                            : <img src={resizedImg(p.image_url, 600)} srcSet={imgSrcSet(p.image_url, [400, 600, 900])} sizes="(orientation: landscape) 25vw, 33vw" alt="" />
+                          : <span className="sf-kiosk-ph">{p.name.trim().charAt(0).toUpperCase()}</span>}
+                        {qty > 0 && <span className="sf-kiosk-qty">{qty}</span>}
+                      </span>
+                      <span className="sf-kiosk-card-body">
+                        <span className="sf-kiosk-card-name">{p.name}</span>
+                        {p.description && <span className="sf-kiosk-card-desc">{p.description}</span>}
+                        <span className="sf-kiosk-card-price">
+                          {currencySymbol}{Number(p.price).toFixed(2)}
+                          {sale && <span className="sf-price-was">{currencySymbol}{sale.was.toFixed(2)}</span>}
+                        </span>
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </>
+          ) : (
+            <div className="sf-kiosk-empty">Aun no hay productos</div>
+          )}
+        </main>
+
+        {cartCount > 0 && (
+          <button type="button" className="sf-kiosk-cart" onClick={goToCheckout}>
+            <span className="sf-kiosk-cart-count">{cartCount}</span>
+            <span className="sf-kiosk-cart-label">{t('store.viewOrder')}</span>
+            <span>{currencySymbol}{cartTotal.toFixed(2)}</span>
+          </button>
+        )}
+
+        {kGroups.length > 1 && (
+          <nav className="sf-kiosk-cats" aria-label="Categorias">
+            {kGroups.map(g => {
+              const img = tileImg(g)
+              const on = g.key === kCur?.key
+              return (
+                <button
+                  key={g.key} type="button" aria-pressed={on}
+                  className={`sf-kiosk-cat${on ? ' on' : ''}`}
+                  onClick={() => {
+                    setKioskCatId(g.key)
+                    kioskMainRef.current?.scrollTo({ top: 0 })
+                  }}
+                >
+                  <span className="sf-kiosk-cat-img">
+                    {img
+                      ? <img src={resizedImg(img, 320)} alt="" />
+                      : <span className="sf-kiosk-ph">{g.name.trim().charAt(0).toUpperCase()}</span>}
+                  </span>
+                  <span className="sf-kiosk-cat-name">{g.name}</span>
+                </button>
+              )
+            })}
+          </nav>
+        )}
+
+        {renderProductModal()}
+      </div>
+      </>
+    )
+  }
+
   return (
     <>
     {renderLogoMorphOverlay()}
     {installed && <div className="sf-statusbar-strip" />}
     {welcomeOverlay && <div className="sf-welcome-host">{welcomeOverlay}</div>}
-    <div className={`sf-page sf-tpl-${tpl} sf-fsize-${cfgFontSize} sf-align-${cfgTextAlign} sf-pshape-${cfgPhotoShape} sf-prsize-${cfgPriceSize} sf-imgsize-${cfgPhotoSize} sf-vshape-${cfgVariantShape} sf-vsize-${cfgVariantSize} sf-eshape-${cfgExtraShape}${catalogEnter ? ` sf-catalog-enter sf-trans-${store.template_config?.homePage?.transition || 'slide'}` : ''}`} style={welcomeOverlay ? { ...catalogPageStyle, height: '100vh', overflow: 'hidden', opacity: 0 } : catalogPageStyle}>
+    <div className={pageClass} style={welcomeOverlay ? { ...catalogPageStyle, height: '100vh', overflow: 'hidden', opacity: 0 } : catalogPageStyle}>
       {responsiveSizeCSS && <style dangerouslySetInnerHTML={{ __html: responsiveSizeCSS }} />}
       {renderCheckoutTransition()}
       <div className={`sf-topbar${cfgHeaderOverBanner ? ' sf-topbar-glass' : ''}${cfgHeaderSticky && !cfgHeaderOverBanner ? ' sf-topbar-sticky' : ''}${cfgHeaderSticky && cfgHeaderOverBanner ? ' sf-topbar-pinned' : ''}${showHeaderAboveModal ? ' sf-topbar-above-modal' : ''}${!cfgHeaderOverBanner && headerBgDark ? ' sf-topbar-dark' : ''}`}

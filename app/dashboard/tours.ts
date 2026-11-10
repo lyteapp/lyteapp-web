@@ -32,7 +32,7 @@ export const TOURS: Tour[] = [
       { sel: nav('products'), menu: 'open', title: 'Productos', text: 'Crea tus productos con fotos, variables (tallas, colores, tamaños…) y extras, y ordénalos por categorías.' },
       { sel: nav('inventario'), menu: 'open', title: 'Inventario', text: 'Controla almacenes, compras y materiales. Cada venta descuenta sola de tu almacén.' },
       { sel: nav('finanzas'), menu: 'open', title: 'Finanzas', text: 'Tus cuentas, ingresos y gastos en un solo lugar.' },
-      { sel: nav('design'), menu: 'open', title: 'Diseño', text: 'Personaliza cómo se ve tu tienda: vitrina, página de inicio, checkout y rastreo del pedido.' },
+      { sel: nav('design'), menu: 'open', title: 'Diseño', text: 'Personaliza cómo se ve tu tienda: vitrina, página de inicio, checkout, rastreo del pedido y modo kiosko.' },
       { sel: nav('analytics'), menu: 'open', title: 'Analíticas', text: 'Mira cuánto vendes, tus productos estrella y cómo crece tu negocio.' },
       { sel: nav('assistant'), menu: 'closed', title: 'Asistente', text: '¿Tienes dudas? Pregúntale al asistente cómo hacer cualquier cosa en Lyte.', phoneText: '¿Dudas? Toca aquí y pregúntale al asistente cómo hacer cualquier cosa.' },
       { title: 'Todo listo', text: 'Ya conoces lo básico. Cada sección te muestra su propio tutorial la primera vez que la abras.', menu: 'closed' },
@@ -161,6 +161,15 @@ export const TOURS: Tour[] = [
       { sel: '[data-tsec="mode"]', only: 'desktop', title: 'El estilo', text: 'Por estatus, con el mapa en vivo, o la pantalla de turnos.' },
       { sel: '.cn-co-stage', only: 'phone', title: 'La vista previa', text: 'Así lo ve tu cliente. Cambia al momento mientras editas.' },
       { sel: '.cn-co-bar', only: 'phone', title: 'Las secciones', text: 'Estilo, mapa, colores, puntos, letras, textos de cada estatus y más.' },
+    ],
+  },
+  {
+    id: 'kiosko', match: p => p.startsWith('/dashboard/canal/kiosko'),
+    steps: [
+      { title: 'Modo kiosko', text: 'Un diseño de pantalla completa para que tus clientes pidan solos desde una tablet.' },
+      { sel: '[data-tour="kiosk-preview"]', title: 'La vista previa', text: 'Así se ve en la tablet. Cambia entre vertical y horizontal arriba.' },
+      { sel: '[data-tour="kiosk-toggle"]', title: 'Actívalo', text: 'Al encenderlo, las tablets ven este diseño. Teléfonos y computadoras siguen viendo tu tienda normal.' },
+      { sel: '[data-tour="kiosk-cats"]', title: 'Imágenes de las categorías', text: 'Ponle una imagen a cada botón de categoría para que tus clientes encuentren todo de un vistazo.' },
     ],
   },
 ]

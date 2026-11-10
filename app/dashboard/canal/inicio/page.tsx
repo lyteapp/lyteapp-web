@@ -101,6 +101,8 @@ interface HomePageConfig {
   elementSizes: ElementSizes
   images: HomePageImage[]
   showLogo: boolean
+  /** A logo just for the welcome page (null = the store's own logo) */
+  logoUrl: string | null
 }
 
 const DEFAULTS: HomePageConfig = {
@@ -136,6 +138,7 @@ const DEFAULTS: HomePageConfig = {
   elementSizes: { logo: 72, title: 30, subtitle: 15, fields: 14 },
   images: [],
   showLogo: true,
+  logoUrl: null,
 }
 
 function newImage(url: string): HomePageImage {
@@ -471,7 +474,7 @@ function SplashPreview({
             onClick={e => { e.stopPropagation(); onSelect('logo') }}
             style={{ ...selectableStyle('logo'), marginBottom: 22, borderRadius: 14 }}
           >
-            <img src={logoUrl} alt="" style={{ width: sizes.logo * k, height: sizes.logo * k, borderRadius: 14, objectFit: 'cover', display: 'block', boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }} />
+            <img src={logoUrl} alt="" style={{ width: sizes.logo * k, height: sizes.logo * k, objectFit: 'contain', display: 'block', filter: 'drop-shadow(0 4px 14px rgba(0,0,0,0.28))' }} />
             {selected === 'logo' && <ResizeHandle onDrag={startResize('logo')} />}
           </div>
         )}
@@ -695,6 +698,8 @@ export default function InicioPage() {
   const [uploading, setUploading] = useState(false)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  const logoFileRef = useRef<HTMLInputElement>(null)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
   const photoFileRef = useRef<HTMLInputElement>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [selectedEl, setSelectedEl] = useState<SelectableId | null>(null)
@@ -805,6 +810,21 @@ export default function InicioPage() {
     setSelectedImageId(sel => sel === id ? null : sel)
   }
 
+  // The welcome page's own logo. PNG / SVG / WebP / GIF go up as they are,
+  // so a logo keeps its transparent background; only photos get compressed.
+  async function handleLogoUpload(e: { target: { files: FileList | null; value?: string } }) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || !user) return
+    if (!file.type.startsWith('image/')) { setError('El logo tiene que ser una imagen.'); return }
+    setUploadingLogo(true)
+    try {
+      const f = file.type === 'image/jpeg' ? await compressImage(file) : file
+      set('logoUrl', await uploadFile(f, user.id, 'homepage-logo'))
+    } catch { setError('No se pudo subir el logo.') }
+    setUploadingLogo(false)
+  }
+
   async function handleUpload(e: { target: { files: FileList | null } }) {
     const file = e.target.files?.[0]
     if (!file || !user) return
@@ -906,10 +926,10 @@ export default function InicioPage() {
               ? Math.min((vp.w - 32) * (pvDevice === 'mobile' ? 0.72 : 1) / frame.w, (vp.h - 72 - (mSec ? vp.h * 0.42 : 0) - 40 - tabs - 46) / frame.h)
               : pvDevice === 'mobile' ? 1 : Math.min(1, Math.max(120, pvColW - 28) / frame.w, Math.max(240, vp.h - 275 - tabs) / frame.h)
             const preview = previewView === 'reveal' && config.transition === 'reveal' ? (
-              <RevealPreview config={config} storeName={storeName} logoUrl={logoUrl} device={pvDevice} />
+              <RevealPreview config={config} storeName={storeName} logoUrl={config.logoUrl || logoUrl} device={pvDevice} />
             ) : (
               <SplashPreview
-                config={config} storeName={storeName} logoUrl={logoUrl}
+                config={config} storeName={storeName} logoUrl={config.logoUrl || logoUrl}
                 device={pvDevice} fitScale={fit}
                 serviceStep={previewView === 'service' && config.askServiceType}
                 selected={selectedEl} onSelect={setSelectedEl}
@@ -1070,13 +1090,38 @@ export default function InicioPage() {
                 </div>
               </div>
               <div className="cn-section-body">
-                {logoUrl && (
-                  <div className="cn-toggle-row">
-                    <div className="cn-toggle-info">
-                      <div className="cn-toggle-label">Mostrar logotipo</div>
-                      <div className="cn-toggle-hint">Muestra tu logo en la parte superior de la pantalla de inicio</div>
+                <div className="cn-toggle-row">
+                  <div className="cn-toggle-info">
+                    <div className="cn-toggle-label">Mostrar logotipo</div>
+                    <div className="cn-toggle-hint">Muestra un logo en la parte superior de la pantalla de inicio</div>
+                  </div>
+                  <Toggle checked={config.showLogo} onChange={v => set('showLogo', v)} />
+                </div>
+                {config.showLogo && (
+                  <div className="cn-field" data-tour="inicio-logo">
+                    <div className="cn-label">Logo de la pantalla de inicio</div>
+                    <div className="cn-inicio-logo">
+                      <button type="button" className="cn-inicio-logo-thumb" onClick={() => logoFileRef.current?.click()} disabled={uploadingLogo}
+                        aria-label="Cambiar el logo de la pantalla de inicio">
+                        {config.logoUrl || logoUrl
+                          ? <img src={(config.logoUrl || logoUrl)!} alt="" />
+                          : <span>Sin logo</span>}
+                      </button>
+                      <div className="cn-inicio-logo-actions">
+                        <button type="button" className="cn-upload-btn" onClick={() => logoFileRef.current?.click()} disabled={uploadingLogo}>
+                          {uploadingLogo ? 'Subiendo...' : config.logoUrl || logoUrl ? 'Cambiar logo' : 'Subir logo'}
+                        </button>
+                        {config.logoUrl && (
+                          <button type="button" className="cn-inicio-logo-reset" onClick={() => set('logoUrl', null)}>
+                            {logoUrl ? 'Usar el logo de la tienda' : 'Quitar logo'}
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <Toggle checked={config.showLogo} onChange={v => set('showLogo', v)} />
+                    <div className="cn-toggle-hint" style={{ marginTop: 8 }}>
+                      {config.logoUrl ? 'Este logo es solo para la pantalla de inicio. Tu tienda sigue con su logo de siempre.' : 'Por ahora es el logo de tu tienda. Cámbialo si quieres uno distinto solo aquí.'}
+                    </div>
+                    <input ref={logoFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleLogoUpload} />
                   </div>
                 )}
                 <div className="cn-field">

@@ -464,6 +464,8 @@ type TemplateConfig = {
     inputShape?: 'pill' | 'square' | 'outline'
     elementSizes?: { logo?: number; title?: number; subtitle?: number; fields?: number }
     showLogo?: boolean
+    /** A logo just for the welcome page (else the store's) */
+    logoUrl?: string | null
     images?: { id: string; url: string; x: number; y: number; width: number; height: number; flipped?: boolean }[]
     inactivityTimeout?: { enabled?: boolean; minutes?: number }
     orderReturnTimeout?: { enabled?: boolean; seconds?: number }
@@ -3124,6 +3126,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const hp = store.template_config?.homePage ?? {}
   const transitionId = hp.transition || 'slide'
   const collectCustomerData = !!hp.enabled && hp.collectCustomerData !== false
+  // The welcome page can have its own logo (Pagina de inicio)
+  const splashLogo = hp.logoUrl || store.logo_url
   const askServiceType = !!hp.enabled && !!hp.askServiceType
   // With the public queue on, the customer follows the order on its board
   // (a QR on the confirmation) instead of a tracking link of their own.
@@ -3468,11 +3472,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const logoShapeRadius: Record<string, string> = { circle: '50%', rounded: '8px', square: '0px' }
 
   function renderLogoMorphOverlay() {
-    if (!logoMorphStart || !store.logo_url) return null
+    if (!logoMorphStart || !(store.template_config?.homePage?.logoUrl || store.logo_url)) return null
     const rect = logoMorphFlying && logoMorphEnd ? logoMorphEnd : logoMorphStart
     return (
       <img
-        src={store.logo_url}
+        src={store.template_config?.homePage?.logoUrl || store.logo_url!}
         alt=""
         className={`sf-logo-morph${logoMorphFlying ? ' flying' : ''}`}
         style={{
@@ -3531,9 +3535,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
           </div>
         )}
         <div className="sf-splash-content">
-          {store.logo_url && hp.showLogo !== false && (
+          {splashLogo && hp.showLogo !== false && (
             <img
-              ref={splashLogoRef} src={store.logo_url} alt={store.name}
+              ref={splashLogoRef} src={splashLogo} alt={store.name}
               className={`sf-splash-logo${logoMorphStart ? ' sf-splash-logo-hidden' : ''}`}
               style={hp.elementSizes?.logo ? { width: hp.elementSizes.logo * splashScale, height: hp.elementSizes.logo * splashScale } : undefined}
             />
@@ -3783,9 +3787,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
             </div>
           )}
           <div className="sf-reveal-line" style={{ animationDelay: `${revealBaseDelay + 0.15}s` }} />
-          {rv.logoInsteadOfText && store.logo_url ? (
+          {rv.logoInsteadOfText && splashLogo ? (
             <img
-              src={store.logo_url} alt={store.name} className="sf-reveal-logo"
+              src={splashLogo} alt={store.name} className="sf-reveal-logo"
               style={{ animationDelay: `${revealBaseDelay + 0.35}s` }}
             />
           ) : (

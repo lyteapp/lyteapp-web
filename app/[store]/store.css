@@ -2844,3 +2844,50 @@ video.sf-banner-img { object-fit: cover; }
 @media (orientation: landscape) and (min-width: 1300px) {
   .sf-kiosk-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 }
+
+/* ── Kiosk checkout, one step at a time ──────────────────────────────── */
+.sf-co-steps[data-cur="cart"] [data-co-step]:not([data-co-step="cart"]),
+.sf-co-steps[data-cur="service"] [data-co-step]:not([data-co-step="service"]),
+.sf-co-steps[data-cur="delivery"] [data-co-step]:not([data-co-step="delivery"]),
+.sf-co-steps[data-cur="info"] [data-co-step]:not([data-co-step="info"]),
+.sf-co-steps[data-cur="pay"] [data-co-step]:not([data-co-step="pay"]) { display: none !important; }
+.sf-co-steps .sf-co-section { animation: sfCoStepIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes sfCoStepIn { from { opacity: 0; transform: translateX(16px); } }
+.sf-co-stepper { padding: 8px 2px 18px; }
+.sf-co-stepper-count {
+  font-size: 13px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--sf-checkout-accent-color, var(--sf-accent-color, #7C3AED));
+}
+.sf-co-stepper-title {
+  margin: 6px 0 14px; font-size: 32px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.15;
+  color: var(--sf-text-color, #0F172A);
+}
+.sf-co-stepper-bar { display: flex; gap: 6px; }
+.sf-co-stepper-bar span {
+  flex: 1; height: 6px; border-radius: 100px; transition: background 0.3s;
+  background: color-mix(in srgb, var(--sf-checkout-accent-color, var(--sf-accent-color, #7C3AED)) 15%, #E2E8F0);
+}
+.sf-co-stepper-bar span.on { background: var(--sf-checkout-accent-color, var(--sf-accent-color, #7C3AED)); }
+.sf-co-stepnav {
+  position: sticky; bottom: 0; z-index: 5; display: flex; gap: 12px;
+  margin-top: 8px; padding: 18px 0 calc(18px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to bottom, transparent, var(--sf-page-bg, #FAFAF9) 28%);
+}
+.sf-co-step-back, .sf-co-step-next {
+  padding: 18px 24px; border-radius: 16px; font: inherit; font-size: 18px; font-weight: 800; cursor: pointer;
+}
+.sf-co-step-back {
+  flex: 0 0 auto; background: var(--sf-card-bg, #FFFFFF); color: var(--sf-text-color, #0F172A);
+  border: 1.5px solid rgba(15,23,42,0.12);
+}
+.sf-co-step-next {
+  flex: 1; border: none; color: white;
+  background: var(--sf-checkout-accent-color, var(--sf-accent-color, #7C3AED));
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--sf-checkout-accent-color, var(--sf-accent-color, #7C3AED)) 30%, transparent);
+}
+.sf-co-step-next:disabled { opacity: 0.55; cursor: default; }
+.sf-co-step-back:active, .sf-co-step-next:active:not(:disabled) { transform: scale(0.98); }
+/* one-section steps: the step's big title already says it */
+.sf-co-steps[data-cur="service"] .sf-co-section > .sf-co-section-title,
+.sf-co-steps[data-cur="info"] .sf-co-section > .sf-co-section-title,
+.sf-co-steps[data-cur="pay"] .sf-co-section > .sf-co-section-title { display: none; }

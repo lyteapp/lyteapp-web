@@ -349,6 +349,16 @@ type ResponsiveSizeOverrides = {
 // A content block's own sizes for tablet/desktop, when set there in the
 // Vitrina editor — unset keys use the block's (phone) value.
 type BlockSizeOverrides = { fontSize?: number; imageSize?: number; spacing?: number; buttonSize?: number; buttonWidth?: number }
+// Kiosk checkout, one step at a time
+type CoStep = 'cart' | 'service' | 'delivery' | 'info' | 'pay'
+const CO_STEP_TITLES: Record<CoStep, string> = {
+  cart: 'Revisa tu pedido',
+  service: '¿Para comer aquí o para llevar?',
+  delivery: '¿Cómo lo recibes?',
+  info: 'Tus datos',
+  pay: 'Pago',
+}
+
 type KioskConfig = {
   enabled?: boolean
   /** Picture for each category's button (category id -> url) */
@@ -1081,6 +1091,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [tabletScreen, setTabletScreen] = useState(false)
   const [kioskDraft, setKioskDraft] = useState<KioskConfig | null>(null)
   const [kioskCatId, setKioskCatId] = useState<string | null>(null)
+  const [coStep, setCoStep] = useState<CoStep>('cart')
   const kioskMainRef = useRef<HTMLElement>(null)
   useEffect(() => {
     let forced = searchParams.get('kiosko') === '1'
@@ -2893,50 +2904,43 @@ export default function StoreShell({ store, products, categories = [], initialBc
   }
 
   // ── Order submit ──
+  // What's still missing before the order can go out — all of it, or just
+  // one kiosk checkout step's part. Same checks, same order as always.
+  function checkoutProblem(only?: CoStep): string | null {
+    const is = (k: CoStep) => !only || only === k
+    if (only === 'cart' && cartItems.length === 0) return 'Tu pedido esta vacio'
+    if (is('info') && (!customerName.trim() || !customerPhone.trim())) return t('store.error.required')
+    if (is('delivery')) {
+      if (deliveryType === 'delivery' && cs.showLocationBox !== false && !customerLat && !customerAddress.trim())
+        return 'Ingresa tu direccion o comparte tu ubicacion GPS para continuar'
+      if (deliveryType === 'delivery' && deliveryZones.length > 0 && customerLat !== null && matchedZone === null)
+        return 'Ubicacion desconocida, por favor contactenos para coordinar tu entrega'
+      if (deliveryType === 'national' && (!shippingName.trim() || !shippingCedula.trim() || !shippingPhone.trim() || !customerCity.trim() || !customerState.trim()))
+        return 'Completa los datos del envio para continuar'
+      if (deliveryType === 'national' && shippingAgencies.length > 0 && !selectedAgencyId) return 'Selecciona la agencia de envio'
+      if (deliveryType === 'national' && selectedAgencyId && !agencyAddress.trim()) return 'Ingresa la direccion de la agencia'
+    }
+    if (is('service') && askServiceType && !serviceType) {
+      setServiceMissing(true)
+      return 'Elige si tu pedido es para comer aquí o para llevar'
+    }
+    if (is('delivery') && deliveryType === 'pickup' && serviceType !== 'dine_in' && pickupLocations.length > 0 && !selectedPickupLocationId)
+      return 'Selecciona la tienda donde vas a retirar tu pedido'
+    if (is('pay')) {
+      if (requirePaymentMethod && !selectedPayment && !paymentFreeText.trim()) return 'Debes seleccionar un metodo de pago para continuar'
+      if (requirePaymentProof && (selectedPayment || paymentFreeText.trim()) && !paymentProofFile) return 'Debes subir el comprobante de pago para continuar'
+    }
+    return null
+  }
+
   async function handleSubmit() {
     // The dashboard's checkout preview lands here with a pre-filled cart so
     // the owner can see their real checkout rendering — but it must never
     // actually place an order.
     if (isCheckoutPreview) { setError('Esto es una vista previa — los pedidos no se envian aqui.'); return }
     if (isDemo) { setError('Esta es una tienda de ejemplo, el pedido no se envía. Crea la tuya gratis en lyte-app.com'); return }
-    if (!customerName.trim() || !customerPhone.trim()) { setError(t('store.error.required')); return }
-    if (deliveryType === 'delivery' && cs.showLocationBox !== false && !customerLat && !customerAddress.trim()) {
-      setError('Ingresa tu direccion o comparte tu ubicacion GPS para continuar')
-      return
-    }
-    if (deliveryType === 'delivery' && deliveryZones.length > 0 && customerLat !== null && matchedZone === null) {
-      setError('Ubicacion desconocida, por favor contactenos para coordinar tu entrega')
-      return
-    }
-    if (deliveryType === 'national' && (!shippingName.trim() || !shippingCedula.trim() || !shippingPhone.trim() || !customerCity.trim() || !customerState.trim())) {
-      setError('Completa los datos del envio para continuar')
-      return
-    }
-    if (deliveryType === 'national' && shippingAgencies.length > 0 && !selectedAgencyId) {
-      setError('Selecciona la agencia de envio')
-      return
-    }
-    if (deliveryType === 'national' && selectedAgencyId && !agencyAddress.trim()) {
-      setError('Ingresa la direccion de la agencia')
-      return
-    }
-    if (askServiceType && !serviceType) {
-      setServiceMissing(true)
-      setError('Elige si tu pedido es para comer aquí o para llevar')
-      return
-    }
-    if (deliveryType === 'pickup' && serviceType !== 'dine_in' && pickupLocations.length > 0 && !selectedPickupLocationId) {
-      setError('Selecciona la tienda donde vas a retirar tu pedido')
-      return
-    }
-    if (requirePaymentMethod && !selectedPayment && !paymentFreeText.trim()) {
-      setError('Debes seleccionar un metodo de pago para continuar')
-      return
-    }
-    if (requirePaymentProof && (selectedPayment || paymentFreeText.trim()) && !paymentProofFile) {
-      setError('Debes subir el comprobante de pago para continuar')
-      return
-    }
+    const problem = checkoutProblem()
+    if (problem) { setError(problem); return }
     setSubmitting(true); setError('')
     const paymentLabel = selectedPayment
       ? (enabledMethods.find(m => m.type === selectedPayment)?.label ?? selectedPayment)
@@ -3171,7 +3175,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     // The next customer must never see, or repeat, the last one's order
     setLastOrder(null); setShowReorder(false); reorderCheckedRef.current = false
     setShowHeaderReorderHint(false); setHeaderReorderEmpty(false); headerReorderHintShownRef.current = false
-    setKioskCatId(null)
+    setKioskCatId(null); setCoStep('cart')
     // The welcome overlay sits at the top of the document over the store.
     if (hp.enabled) window.scrollTo(0, 0)
     setView(hp.enabled ? 'splash' : 'catalog')
@@ -3878,6 +3882,35 @@ export default function StoreShell({ store, products, categories = [], initialBc
   }
 
   // ── CHECKOUT ──
+  // Kiosk: the checkout goes one step at a time (steps that don't apply,
+  // like delivery for someone eating in, are left out)
+  const needsDeliveryStep = (multiTypes && serviceType !== 'dine_in')
+    || (deliveryType === 'delivery' && cs.showLocationBox !== false)
+    || (deliveryType === 'pickup' && serviceType !== 'dine_in' && pickupLocations.length > 0)
+    || deliveryType === 'national'
+  const coSteps: CoStep[] | null = kioskActive
+    ? ['cart', ...(askServiceType ? ['service' as const] : []), ...(needsDeliveryStep ? ['delivery' as const] : []), 'info', 'pay']
+    : null
+  const coCur: CoStep | null = coSteps ? (coSteps.includes(coStep) ? coStep : coSteps[0]) : null
+  const coIdx = coSteps && coCur ? coSteps.indexOf(coCur) : 0
+  function coGo(step: CoStep) {
+    setError('')
+    setCoStep(step)
+    window.scrollTo(0, 0)
+  }
+  function coNext() {
+    if (!coSteps || !coCur) return
+    const problem = checkoutProblem(coCur)
+    if (problem) { setError(problem); return }
+    coGo(coSteps[Math.min(coIdx + 1, coSteps.length - 1)])
+  }
+  function coBack() {
+    if (!coSteps) return
+    if (coIdx === 0) { setError(''); setView('catalog'); return }
+    coGo(coSteps[coIdx - 1])
+  }
+  const submitDisabled = submitting || cartItems.length === 0 || (deliveryType === 'delivery' && deliveryZones.length > 0 && customerLat !== null && matchedZone === null)
+
   if (view === 'checkout') return (
     <>
     {installed && <div className="sf-statusbar-strip" />}
@@ -3909,8 +3942,17 @@ export default function StoreShell({ store, products, categories = [], initialBc
         </div>
       </nav>
 
-      <div className="sf-checkout-wrap">
-        <div className="sf-co-section">
+      <div className={`sf-checkout-wrap${coSteps ? ' sf-co-steps' : ''}`} data-cur={coCur ?? undefined}>
+        {coSteps && coCur && (
+          <div className="sf-co-stepper">
+            <div className="sf-co-stepper-count">Paso {coIdx + 1} de {coSteps.length}</div>
+            <h2 className="sf-co-stepper-title">{CO_STEP_TITLES[coCur]}</h2>
+            <div className="sf-co-stepper-bar" aria-hidden="true">
+              {coSteps.map((st, i) => <span key={st} className={i <= coIdx ? 'on' : ''} />)}
+            </div>
+          </div>
+        )}
+        <div className="sf-co-section" data-co-step="cart">
           <div className="sf-co-section-head">
             <h3 className="sf-co-section-title">{t('store.summary')}</h3>
             <button className="sf-co-clear-btn" onClick={clearCart}>Vaciar</button>
@@ -3971,7 +4013,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
         {/* Eat in / take away — the store asks for it on its welcome page */}
         {askServiceType && (
-          <div className="sf-co-section">
+          <div className="sf-co-section" data-co-step="service">
             <h3 className="sf-co-section-title">¿Para comer aquí o para llevar? <span style={{ color: '#EF4444' }}>*</span></h3>
             <div style={{ display: 'flex', gap: 10 }}>
               {SERVICE_OPTIONS.map(o => {
@@ -4000,7 +4042,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
         {/* Delivery type selector */}
         {multiTypes && serviceType !== 'dine_in' && (
-          <div className="sf-co-section">
+          <div className="sf-co-section" data-co-step="delivery">
             <h3 className="sf-co-section-title">Tipo de entrega</h3>
             <div style={{ display: 'flex', gap: 10 }}>
               {dtOn && (
@@ -4066,7 +4108,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
         {/* Ubicacion de entrega — solo para domicilio, y solo si la tienda no la desactivo */}
         {deliveryType === 'delivery' && cs.showLocationBox !== false && (
-          <div className="sf-co-section">
+          <div className="sf-co-section" data-co-step="delivery">
             <h3 className="sf-co-section-title">
               Ubicacion de entrega <span style={{ color: '#EF4444' }}>*</span>
             </h3>
@@ -4290,7 +4332,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
         {/* Tienda de retiro — solo para retiro en tienda, cuando la tienda configuro mas de una ubicacion */}
         {deliveryType === 'pickup' && serviceType !== 'dine_in' && pickupLocations.length > 0 && (
-          <div className="sf-co-section">
+          <div className="sf-co-section" data-co-step="delivery">
             <h3 className="sf-co-section-title">
               Tienda de retiro <span style={{ color: '#EF4444' }}>*</span>
             </h3>
@@ -4318,7 +4360,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
         {/* Agencia de envio — solo para envio nacional, cuando la tienda configuro alguna */}
         {deliveryType === 'national' && shippingAgencies.length > 0 && (
-          <div className="sf-co-section">
+          <div className="sf-co-section" data-co-step="delivery">
             <h3 className="sf-co-section-title">
               Agencia de envio <span style={{ color: '#EF4444' }}>*</span>
             </h3>
@@ -4356,7 +4398,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
         {/* Datos del envio — solo para envio nacional */}
         {deliveryType === 'national' && (
-          <div className="sf-co-section">
+          <div className="sf-co-section" data-co-step="delivery">
             <h3 className="sf-co-section-title">
               Datos del envio <span style={{ color: '#EF4444' }}>*</span>
             </h3>
@@ -4383,7 +4425,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           </div>
         )}
 
-        <div className="sf-co-section">
+        <div className="sf-co-section" data-co-step="info">
           <h3 className="sf-co-section-title">{t('store.yourInfo')}</h3>
           <div className="sf-co-field">
             <label>{t('store.fullName')}</label>
@@ -4399,7 +4441,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           </div>
         </div>
 
-        <div className="sf-co-section">
+        <div className="sf-co-section" data-co-step="pay">
           <h3 className="sf-co-section-title">{t('store.paymentMethod')}{requirePaymentMethod && <span className="sf-required"> *</span>}</h3>
           {enabledMethods.length > 0 ? (
             <div className="sf-payment-list">
@@ -4529,9 +4571,24 @@ export default function StoreShell({ store, products, categories = [], initialBc
         </div>
 
         {error && <div className="sf-co-error">{error}</div>}
-        <button className="sf-submit-btn" onClick={handleSubmit} disabled={submitting || cartItems.length === 0 || (deliveryType === 'delivery' && deliveryZones.length > 0 && customerLat !== null && matchedZone === null)}>
-          {submitting ? t('store.sending') : `${t('store.confirmOrder')} · ${currencySymbol}${orderTotal.toFixed(2)}`}
-        </button>
+        {coSteps ? (
+          <div className="sf-co-stepnav">
+            <button type="button" className="sf-co-step-back" onClick={coBack}>
+              {coIdx === 0 ? 'Seguir comprando' : 'Atrás'}
+            </button>
+            {coCur === 'pay' ? (
+              <button type="button" className="sf-co-step-next" onClick={handleSubmit} disabled={submitDisabled}>
+                {submitting ? t('store.sending') : `${t('store.confirmOrder')} · ${currencySymbol}${orderTotal.toFixed(2)}`}
+              </button>
+            ) : (
+              <button type="button" className="sf-co-step-next" onClick={coNext}>Siguiente</button>
+            )}
+          </div>
+        ) : (
+          <button className="sf-submit-btn" onClick={handleSubmit} disabled={submitDisabled}>
+            {submitting ? t('store.sending') : `${t('store.confirmOrder')} · ${currencySymbol}${orderTotal.toFixed(2)}`}
+          </button>
+        )}
       </div>
 
       <footer className={`sf-footer${pageBgDark ? ' sf-footer-dark' : ''}`}>
@@ -4825,6 +4882,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
   function goToCheckout() {
     if (coTransition) return
+    setCoStep('cart')
     setModalProduct(null)
     setMenuOpen(false)
     setCoTransition('in')

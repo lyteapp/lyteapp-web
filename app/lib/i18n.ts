@@ -71,8 +71,9 @@ const en = {
   'store.error.generic': 'Something went wrong. Please try again.',
 
   // ── Store page – confirmed ──────────────────────────────────
-  'store.confirmed.title': 'Order sent!',
-  'store.confirmed.sub': 'Your order #{id} was sent to the store via WhatsApp. Wait for their confirmation.',
+  'store.confirmed.title': 'Order received!',
+  // only shown by stores without WhatsApp (the others confirm on /[store]/pedido)
+  'store.confirmed.sub': 'Your order #{id} was received.',
   'store.confirmed.continue': 'Keep shopping',
   'store.confirmed.link': 'Create your free store on LyteApp →',
 
@@ -447,8 +448,8 @@ const es: Record<Key, string> = {
   'store.error.generic': 'Hubo un error. Intenta de nuevo.',
 
   // ── Store page – confirmed ──────────────────────────────────
-  'store.confirmed.title': '¡Pedido enviado!',
-  'store.confirmed.sub': 'Tu pedido #{id} fue enviado al negocio vía WhatsApp. Espera su confirmación.',
+  'store.confirmed.title': '¡Pedido recibido!',
+  'store.confirmed.sub': 'Tu pedido #{id} fue recibido.',
   'store.confirmed.continue': 'Seguir comprando',
   'store.confirmed.link': 'Crear mi tienda gratis en LyteApp →',
 

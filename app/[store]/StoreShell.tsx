@@ -744,6 +744,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [cedulaStatus, setCedulaStatus] = useState<'idle' | 'checking' | 'found' | 'new'>('idle')
   // "Slide to reveal" bar shown before the cedula keypad, for a bit of interactivity
   const [keypadRevealed, setKeypadRevealed] = useState(false)
+  // Kiosk: a new customer's details, one step at a time (name, phone, address)
+  const [newStepIdx, setNewStepIdx] = useState(0)
   const [cedulaSlideProgress, setCedulaSlideProgress] = useState(0)
   const [cedulaSliding, setCedulaSliding] = useState(false)
   const cedulaSlideBarRef = useRef<HTMLDivElement | null>(null)
@@ -3251,7 +3253,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // enter the cedula) again — not the keypad / question it was left on
   function resetWelcomeSteps() {
     setSplashStep('welcome'); servicePicked.current = false
-    setKeypadRevealed(false); setCedulaSlideProgress(0); setCedulaSliding(false)
+    setKeypadRevealed(false); setCedulaSlideProgress(0); setCedulaSliding(false); setNewStepIdx(0)
     cedulaSlideDraggingRef.current = false
   }
 
@@ -3340,7 +3342,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
         setCedulaStatus('found')
         return { status: 'found', customer: json.customer }
       } else {
-        setCedulaStatus('new')
+        setCedulaStatus('new'); setNewStepIdx(0)
         return { status: 'new' }
       }
     } catch (err) {
@@ -3518,6 +3520,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
     if (cedulaStatus === 'found' || cedulaStatus === 'new') { enterStore(cedulaStatus); return }
     const result = await lookupCedula(cedula)
     if (result.status === 'error') return
+    // Kiosk: a new customer now goes through their details one step at a
+    // time (the steps' last button comes back here) — not straight in
+    if (result.status === 'new' && kioskActive && (customerFields.name || customerFields.phone || askAddressOnSplash)) return
     enterStore(result.status, result.customer)
   }
 
@@ -3552,6 +3557,35 @@ export default function StoreShell({ store, products, categories = [], initialBc
     // The slide-to-enter bar and the Empezar button: under the text, or
     // (Pagina de inicio > posicion del boton) at the bottom of the screen
     const btnBottom = hp.buttonPosition === 'bottom'
+    // Kiosk, new customer: their details one step at a time, like the
+    // kiosk checkout — a big field per step, the phone on the big keypad
+    const newSteps: ('name' | 'phone' | 'address')[] = kioskActive && collectCustomerData && keypadRevealed && cedulaStatus === 'new' && splashStep !== 'service'
+      ? [
+          ...(customerFields.name ? ['name' as const] : []),
+          ...(customerFields.phone ? ['phone' as const] : []),
+          ...(askAddressOnSplash ? ['address' as const] : []),
+        ]
+      : []
+    const kioskNewSteps = newSteps.length > 0
+    const nsIdx = Math.min(newStepIdx, Math.max(0, newSteps.length - 1))
+    const nsCur = newSteps[nsIdx]
+    const nsLast = nsIdx === newSteps.length - 1
+    const nsNext = () => {
+      if (nsCur === 'name' && !customerName.trim()) { setSplashError('Ingresa tu nombre para continuar'); return }
+      if (nsCur === 'phone' && !customerPhone.trim()) { setSplashError('Ingresa tu telefono para continuar'); return }
+      if (nsCur === 'address' && !customerAddress.trim() && customerLat === null) {
+        setSplashError('Comparte tu ubicacion o ingresa tu direccion para continuar'); return
+      }
+      setSplashError('')
+      if (nsLast) handleSplashStart()
+      else setNewStepIdx(nsIdx + 1)
+    }
+    const nsBack = () => {
+      setSplashError('')
+      if (nsIdx === 0) setCedulaStatus('idle') // back to the cedula, to fix it
+      else setNewStepIdx(nsIdx - 1)
+    }
+    const NS_TITLES = { name: '¿Cómo te llamas?', phone: '¿Cuál es tu teléfono?', address: '¿Dónde te lo llevamos?' }
     const slideBarEl = (
       <div
         ref={cedulaSlideBarRef}
@@ -3601,7 +3635,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       <>
       <div
         ref={splashScreenRef}
-        className={`sf-splash-screen sf-trans-${transitionId}${splashLeaving ? ' sf-splash-leaving' : ''}${btnBottom && splashStep !== 'service' ? ' sf-splash-btn-bottom' : ''}${kioskActive ? ' sf-splash-kiosk' : ''}`}
+        className={`sf-splash-screen sf-trans-${transitionId}${splashLeaving ? ' sf-splash-leaving' : ''}${btnBottom && splashStep !== 'service' && !kioskNewSteps ? ' sf-splash-btn-bottom' : ''}${kioskActive ? ' sf-splash-kiosk' : ''}`}
         style={{ ...pageStyle, background: 'transparent', ...(btnBottom ? { '--sf-splash-cta-h': `${68 * splashBtnScale}px` } : {}) } as React.CSSProperties}
       >
         {/* A plain <img> instead of a CSS background, absolutely positioned
@@ -3642,7 +3676,81 @@ export default function StoreShell({ store, products, categories = [], initialBc
               style={hp.elementSizes?.logo ? { width: hp.elementSizes.logo * splashScale, height: hp.elementSizes.logo * splashScale } : undefined}
             />
           )}
-          {splashStep === 'service' ? (
+          {kioskNewSteps && nsCur ? (
+            <div
+              className="sf-splash-newsteps"
+              key={nsCur}
+              style={{
+                '--sf-splash-input-color': hp.inputTextColor || '#FFFFFF',
+                '--sf-splash-input-bg': hp.inputBgColor || '#FFFFFF',
+                '--sf-splash-ns-accent': hp.buttonColor || 'var(--sf-accent-color, #7C3AED)',
+              } as React.CSSProperties}
+            >
+              <div className="sf-splash-ns-count">Eres nuevo por aquí · Paso {nsIdx + 1} de {newSteps.length}</div>
+              <h1 className="sf-splash-ns-title">{NS_TITLES[nsCur]}</h1>
+              <div className="sf-splash-ns-bar" aria-hidden="true">
+                {newSteps.map((st, i) => <span key={st} className={i <= nsIdx ? 'on' : ''} />)}
+              </div>
+              {nsCur === 'name' && (
+                <input
+                  className="sf-splash-cedula sf-splash-ns-input" type="text" autoFocus autoComplete="name"
+                  placeholder="Tu nombre y apellido"
+                  value={customerName} onChange={e => { setSplashError(''); setCustomerName(e.target.value) }}
+                  onKeyDown={e => { if (e.key === 'Enter') nsNext() }}
+                />
+              )}
+              {nsCur === 'phone' && (
+                <>
+                  <div className="sf-splash-cedula sf-splash-ns-input sf-splash-ns-phone" aria-live="polite">
+                    {customerPhone || <span className="sf-splash-ns-ph">Tu teléfono</span>}
+                  </div>
+                  <div className="sf-splash-keypad sf-splash-keypad-in">
+                    {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(d => (
+                      <button key={d} type="button" className="sf-splash-keypad-btn" onClick={() => { setSplashError(''); setCustomerPhone(p => (p + d).slice(0, 15)) }}>{d}</button>
+                    ))}
+                    <div className="sf-splash-keypad-spacer" />
+                    <button type="button" className="sf-splash-keypad-btn" onClick={() => { setSplashError(''); setCustomerPhone(p => (p + '0').slice(0, 15)) }}>0</button>
+                    <button type="button" className="sf-splash-keypad-btn sf-splash-keypad-back" aria-label="Borrar"
+                      disabled={!customerPhone} onClick={() => setCustomerPhone(p => p.slice(0, -1))}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="20" height="20">
+                        <path d="M21 4H8l-7 8 7 8h13a2 2 0 002-2V6a2 2 0 00-2-2z" />
+                        <path d="M15 9l-4 6M11 9l4 6" />
+                      </svg>
+                    </button>
+                  </div>
+                </>
+              )}
+              {nsCur === 'address' && (
+                <>
+                  {locationState !== 'granted' ? (
+                    <button type="button" onClick={requestLocation} className="sf-splash-cedula sf-splash-location-btn">
+                      {locationState === 'requesting' ? 'Obteniendo ubicacion...' : 'Compartir mi ubicacion'}
+                    </button>
+                  ) : (
+                    <div className="sf-splash-cedula-hint found">Ubicacion compartida</div>
+                  )}
+                  <input
+                    className="sf-splash-cedula sf-splash-ns-input" type="text" placeholder="Tu direccion" style={{ marginTop: 12 }}
+                    value={customerAddress} onChange={e => { setSplashError(''); setCustomerAddress(e.target.value) }}
+                    onKeyDown={e => { if (e.key === 'Enter') nsNext() }}
+                  />
+                </>
+              )}
+              {splashError && <div className="sf-splash-cedula-hint error">{splashError}</div>}
+              <div className="sf-splash-ns-nav">
+                <button type="button" className="sf-splash-ns-back" onClick={nsBack} disabled={splashWaiting}>Atrás</button>
+                <button
+                  type="button" className="sf-splash-btn sf-splash-ns-next" onClick={nsNext} disabled={splashWaiting}
+                  style={hp.buttonColor ? { background: hp.buttonColor } : undefined}
+                >
+                  <span>{nsLast ? (hp.buttonLabel || 'Empezar') : 'Siguiente'}</span>
+                  {splashWaiting
+                    ? <span className="sf-splash-btn-spinner" aria-label="Cargando" />
+                    : <svg className="sf-splash-btn-arrow" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18"><path d="M4 10h12M12 5l5 5-5 5" /></svg>}
+                </button>
+              </div>
+            </div>
+          ) : splashStep === 'service' ? (
             <div
               className="sf-splash-service"
               style={{
@@ -3804,7 +3912,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           )}
           </>)}
         </div>
-        {btnBottom && splashStep !== 'service' && (
+        {btnBottom && splashStep !== 'service' && !kioskNewSteps && (
           <div className="sf-splash-bottom">
             {collectCustomerData && !keypadRevealed ? slideBarEl : startBtnEl}
           </div>

@@ -3019,3 +3019,25 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
 }
 .sf-splash-kiosk .sf-splash-cedula-field .sf-splash-cedula::placeholder { font-size: 20px; font-weight: 500; letter-spacing: 0; }
 .sf-splash-kiosk .sf-splash-cedula-edit { width: 44px; height: 44px; right: 10px; }
+
+/* Kiosk: a new customer's details, one step at a time */
+.sf-splash-newsteps { width: 100%; max-width: 460px; margin: 0 auto; text-align: center; animation: sfKeypadRevealIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.sf-splash-ns-count {
+  font-size: 15px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--sf-splash-input-color, white); opacity: 0.75;
+}
+.sf-splash-ns-title { margin: 8px 0 16px; font-size: 36px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; color: white; }
+.sf-splash-ns-bar { display: flex; gap: 6px; margin-bottom: 22px; }
+.sf-splash-ns-bar span { flex: 1; height: 6px; border-radius: 100px; background: rgba(255,255,255,0.2); transition: background 0.3s; }
+.sf-splash-ns-bar span.on { background: var(--sf-splash-ns-accent, #7C3AED); filter: brightness(1.25); }
+.sf-splash-cedula.sf-splash-ns-input { font-size: 26px; font-weight: 600; padding: 18px 24px; }
+.sf-splash-ns-phone { min-height: 72px; display: flex; align-items: center; justify-content: center; letter-spacing: 0.06em; font-weight: 700; font-size: 30px; }
+.sf-splash-ns-ph { font-size: 20px; font-weight: 500; letter-spacing: 0; opacity: 0.55; }
+.sf-splash-ns-nav { display: flex; gap: 12px; margin-top: 24px; }
+.sf-splash-ns-back {
+  flex: 0 0 auto; padding: 16px 28px; border-radius: 100px; cursor: pointer;
+  border: 1.5px solid rgba(255,255,255,0.35); background: transparent; color: white;
+  font-family: var(--font-geist-sans), sans-serif; font-size: 17px; font-weight: 700;
+}
+.sf-splash-ns-back:disabled { opacity: 0.5; }
+.sf-splash-ns-next { flex: 1; font-size: 18px; }

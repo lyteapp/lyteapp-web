@@ -2967,7 +2967,6 @@ div.sf-footer-link:hover { color: inherit; }
 /* the kiosk checkout fills the screen: Atrás / Siguiente and the Lyte mark
    always sit at the bottom, however short the step is */
 .sf-checkout-wrap.sf-co-steps {
-  min-height: calc(100vh - 61px); min-height: calc(100dvh - 61px);
   display: flex; flex-direction: column; padding-bottom: 0;
 }
 .sf-co-steps > .sf-co-stepnav { margin-top: auto; }
@@ -2984,3 +2983,22 @@ div.sf-footer-link:hover { color: inherit; }
   display: flex; justify-content: center; padding: 0 24px;
 }
 .sf-splash-bottom .sf-splash-slide-bar { width: 100%; margin-top: 0; }
+
+/* ── Kiosk: the screen itself never scrolls ─────────────────────────── */
+html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
+@media (pointer: coarse) {
+  html.sf-kiosk-lock, html.sf-kiosk-lock body { overscroll-behavior: none; }
+}
+.sf-kiosk-main, .sf-kiosk-cats { overscroll-behavior: contain; }
+/* the kiosk checkout is one screen: header on top, the step's content
+   scrolling in between (only when it doesn't fit), Atrás / Siguiente below */
+.sf-page:has(> .sf-checkout-wrap.sf-co-steps) {
+  height: 100vh; height: 100dvh; min-height: 0; overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.sf-page:has(> .sf-checkout-wrap.sf-co-steps) > .sf-nav { flex-shrink: 0; position: relative; }
+.sf-checkout-wrap.sf-co-steps {
+  flex: 1; min-height: 0; width: 100%; max-width: none;
+  overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  padding-left: max(24px, calc((100% - 552px) / 2)); padding-right: max(24px, calc((100% - 552px) / 2));
+}

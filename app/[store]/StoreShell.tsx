@@ -1127,6 +1127,33 @@ export default function StoreShell({ store, products, categories = [], initialBc
   }, [isDashboardPreview])
   const kioskCfg = kioskDraft ?? store.template_config?.kiosk
   const kioskActive = !!kioskCfg?.enabled && (kioskForced || (tabletScreen && !isDashboardPreview && !isCheckoutPreview))
+
+  // A kiosk screen never moves as a whole (no scrolling up/down, no
+  // bounce): only the areas made to scroll do — the products, the category
+  // row, a long checkout step, a product's options. A drag anywhere else is
+  // stopped before the browser can move the page.
+  useEffect(() => {
+    if (!kioskActive) return
+    const html = document.documentElement
+    html.classList.add('sf-kiosk-lock')
+    window.scrollTo(0, 0)
+    const onMove = (e: TouchEvent) => {
+      let el = e.target as HTMLElement | null
+      while (el && el !== document.body && el !== html) {
+        if (el.matches('.mapboxgl-map, .sf-splash-slide-bar')) return
+        const cs = getComputedStyle(el)
+        if (/(auto|scroll)/.test(cs.overflowY) && el.scrollHeight > el.clientHeight + 1) return
+        if (/(auto|scroll)/.test(cs.overflowX) && el.scrollWidth > el.clientWidth + 1) return
+        el = el.parentElement
+      }
+      if (e.cancelable) e.preventDefault()
+    }
+    document.addEventListener('touchmove', onMove, { passive: false })
+    return () => {
+      html.classList.remove('sf-kiosk-lock')
+      document.removeEventListener('touchmove', onMove)
+    }
+  }, [kioskActive])
   const [installPrompt, setInstallPrompt] = useState<Event & { prompt(): void } | null>(null)
   const [showIosHint, setShowIosHint] = useState(false)
   const [isIos, setIsIos]   = useState(false)
@@ -3961,7 +3988,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
   function coGo(step: CoStep) {
     setError('')
     setCoStep(step)
-    window.scrollTo(0, 0)
+    // the kiosk checkout scrolls inside its step area, not the page
+    document.querySelector('.sf-co-steps')?.scrollTo(0, 0)
   }
   function coNext() {
     if (!coSteps || !coCur) return

@@ -2811,6 +2811,30 @@ video.sf-banner-img { object-fit: cover; }
 .sf-kiosk-cat.on .sf-kiosk-cat-name { color: var(--sf-accent-color, #7C3AED); }
 .sf-kiosk-cat:active { transform: scale(0.96); }
 
+.sf-kiosk-head-actions { justify-content: flex-end; align-items: center; gap: 12px; }
+.sf-kiosk-icon {
+  position: relative; width: 54px; height: 54px; flex-shrink: 0; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  border: 1.5px solid color-mix(in srgb, currentColor 18%, transparent); background: transparent;
+  color: var(--sf-header-icon-color, inherit); transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.sf-kiosk-icon:active { transform: scale(0.94); }
+/* a last order was found for this customer: the repeat button stands out */
+.sf-kiosk-icon.ready { background: var(--sf-accent-color, #7C3AED); border-color: var(--sf-accent-color, #7C3AED); color: white; }
+.sf-kiosk-icon-badge {
+  position: absolute; top: -5px; right: -5px; min-width: 26px; height: 26px; padding: 0 7px;
+  display: flex; align-items: center; justify-content: center; border-radius: 100px;
+  background: var(--sf-accent-color, #7C3AED); color: white; font-size: 14px; font-weight: 800;
+  border: 2.5px solid var(--sf-card-bg, #FFFFFF);
+  animation: sfKioskBadgePop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes sfKioskBadgePop { from { transform: scale(0.4); } }
+.sf-kiosk-tip {
+  position: absolute; top: calc(100% + 10px); right: 0; z-index: 5; white-space: nowrap; pointer-events: none;
+  padding: 9px 14px; border-radius: 12px; background: #0F172A; color: white; font-size: 15px; font-weight: 600;
+  box-shadow: 0 6px 18px rgba(15,23,42,0.25); animation: sfHeaderReorderTipIn 0.18s ease;
+}
+
 @media (orientation: landscape) {
   .sf-kiosk-main { padding: 22px 28px 28px; }
   .sf-kiosk-title { font-size: 36px; margin-bottom: 18px; }

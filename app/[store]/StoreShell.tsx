@@ -3168,6 +3168,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
     setOrderId(''); setError(''); setSplashError('')
     setSplashLeaving(false); setCatalogEnter(false)
     setServiceType(null); setServiceMissing(false); setSplashStep('welcome')
+    // The next customer must never see, or repeat, the last one's order
+    setLastOrder(null); setShowReorder(false); reorderCheckedRef.current = false
+    setShowHeaderReorderHint(false); setHeaderReorderEmpty(false); headerReorderHintShownRef.current = false
+    setKioskCatId(null)
     // The welcome overlay sits at the top of the document over the store.
     if (hp.enabled) window.scrollTo(0, 0)
     setView(hp.enabled ? 'splash' : 'catalog')
@@ -5298,7 +5302,32 @@ export default function StoreShell({ store, products, categories = [], initialBc
               ? <img src={resizedImg(store.logo_url, 320)} alt={store.name} className="sf-kiosk-logo" />
               : <span className="sf-kiosk-name">{store.name}</span>}
           </div>
-          <div className="sf-kiosk-head-side" />
+          <div className="sf-kiosk-head-side sf-kiosk-head-actions">
+            {cfg.enableReorder && (
+              <button
+                type="button"
+                className={`sf-kiosk-icon${lastOrder ? ' ready' : ''}`}
+                onClick={handleHeaderReorderClick}
+                aria-label="Repetir mi último pedido"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24" aria-hidden="true">
+                  <path d="M3 12a9 9 0 0 1 15.3-6.4L21 8" />
+                  <path d="M21 3v5h-5" />
+                  <path d="M21 12a9 9 0 0 1-15.3 6.4L3 16" />
+                  <path d="M3 21v-5h5" />
+                </svg>
+                {headerReorderEmpty && <span className="sf-kiosk-tip">No hay pedidos recientes</span>}
+              </button>
+            )}
+            <button type="button" className="sf-kiosk-icon" onClick={goToCheckout} aria-label={`Ver mi pedido${cartCount ? `, ${cartCount} productos` : ''}`}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24" aria-hidden="true">
+                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+                <path d="M3 6h18" />
+                <path d="M16 10a4 4 0 01-8 0" />
+              </svg>
+              {cartCount > 0 && <span key={cartCount} className="sf-kiosk-icon-badge">{cartCount}</span>}
+            </button>
+          </div>
         </header>
 
         <main className="sf-kiosk-main" ref={kioskMainRef}>

@@ -69,6 +69,24 @@ function onScreenMediaReady(root: Element, screens: number): boolean {
   }
   return true
 }
+// Keypad keys (cedula, phone) react the instant a finger lands: a click
+// only fires once the finger lifts, and the browser drops it if the finger
+// slid a little on the way — too touchy for a number pad. Enter / Space on
+// a keyboard still work (they arrive as a click with no pointer: detail 0).
+// The key also lights up right away, on any device.
+function keyPress(fn: () => void) {
+  return {
+    onPointerDown: (e: React.PointerEvent<HTMLButtonElement>) => {
+      if (e.button !== 0) return
+      e.preventDefault()
+      const el = e.currentTarget
+      el.classList.add('down')
+      setTimeout(() => el.classList.remove('down'), 140)
+      fn()
+    },
+    onClick: (e: React.MouseEvent<HTMLButtonElement>) => { if (e.detail === 0) fn() },
+  }
+}
 function normSearch(t: string) {
   return t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 }
@@ -3706,12 +3724,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   </div>
                   <div className="sf-splash-keypad sf-splash-keypad-in">
                     {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(d => (
-                      <button key={d} type="button" className="sf-splash-keypad-btn" onClick={() => { setSplashError(''); setCustomerPhone(p => (p + d).slice(0, 15)) }}>{d}</button>
+                      <button key={d} type="button" className="sf-splash-keypad-btn" {...keyPress(() => { setSplashError(''); setCustomerPhone(p => (p + d).slice(0, 15)) })}>{d}</button>
                     ))}
                     <div className="sf-splash-keypad-spacer" />
-                    <button type="button" className="sf-splash-keypad-btn" onClick={() => { setSplashError(''); setCustomerPhone(p => (p + '0').slice(0, 15)) }}>0</button>
+                    <button type="button" className="sf-splash-keypad-btn" {...keyPress(() => { setSplashError(''); setCustomerPhone(p => (p + '0').slice(0, 15)) })}>0</button>
                     <button type="button" className="sf-splash-keypad-btn sf-splash-keypad-back" aria-label="Borrar"
-                      disabled={!customerPhone} onClick={() => setCustomerPhone(p => p.slice(0, -1))}>
+                      disabled={!customerPhone} {...keyPress(() => setCustomerPhone(p => p.slice(0, -1)))}>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="20" height="20">
                         <path d="M21 4H8l-7 8 7 8h13a2 2 0 002-2V6a2 2 0 00-2-2z" />
                         <path d="M15 9l-4 6M11 9l4 6" />
@@ -3821,14 +3839,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
               ) : cedulaStatus !== 'new' && (
                 <div className="sf-splash-keypad sf-splash-keypad-in">
                   {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(d => (
-                    <button key={d} type="button" className="sf-splash-keypad-btn" onClick={() => pressCedulaDigit(d)}>{d}</button>
+                    <button key={d} type="button" className="sf-splash-keypad-btn" {...keyPress(() => pressCedulaDigit(d))}>{d}</button>
                   ))}
                   <div className="sf-splash-keypad-spacer" />
-                  <button type="button" className="sf-splash-keypad-btn" onClick={() => pressCedulaDigit('0')}>0</button>
+                  <button type="button" className="sf-splash-keypad-btn" {...keyPress(() => pressCedulaDigit('0'))}>0</button>
                   <button
                     type="button"
                     className="sf-splash-keypad-btn sf-splash-keypad-back"
-                    onClick={pressCedulaBackspace}
+                    {...keyPress(pressCedulaBackspace)}
                     disabled={!customerCedula}
                     aria-label="Borrar"
                   >

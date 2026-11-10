@@ -3133,3 +3133,29 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
 .sf-splash-newsteps.boxed .sf-splash-ns-bar span { background: color-mix(in srgb, var(--sf-ns-text, white) 22%, transparent); }
 .sf-splash-newsteps.boxed .sf-splash-ns-bar span.on { background: var(--sf-ns-text, white); filter: none; }
 .sf-splash-newsteps.boxed .sf-splash-ns-back { border-color: var(--sf-ns-line); color: var(--sf-ns-text, white); }
+
+/* Kiosk: the open product stops above the category row (still tappable) */
+.sf-kiosk .sf-modal-overlay { bottom: var(--sf-kiosk-bottom, 0px); }
+.sf-kiosk .sf-modal-wrap { height: 100%; }
+.sf-kiosk .sf-modal.sf-modal-fullpage { height: 100%; max-height: 100%; }
+.sf-kiosk .sf-modal-product-head-hero .sf-modal-img-wrap,
+.sf-kiosk .sf-modal-product-head-hero .sf-modal-img { height: 36vh; height: 36dvh; }
+@media (min-width: 1024px) and (orientation: landscape) {
+  .sf-kiosk .sf-modal-fullpage .sf-modal-img-wrap,
+  .sf-kiosk .sf-modal-fullpage .sf-modal-product-head-hero .sf-modal-img { height: 100%; }
+}
+
+/* Full-page product view: the nutrition ring floats ABOVE the sheet, which
+   is off screen when the sheet fills it — it sits on the photo's corner
+   instead (bigger in a kiosk) */
+.sf-modal-wrap-fullpage .sf-modal-nutrition-badge-float {
+  top: 16px; left: 16px; bottom: auto; transform: none; max-width: calc(100% - 100px);
+  animation-name: sfNutritionBadgeInFull;
+}
+@keyframes sfNutritionBadgeInFull { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: none; } }
+.sf-kiosk .sf-modal-wrap-fullpage .sf-modal-nutrition-badge-float { top: 22px; left: 22px; padding: 16px 22px; gap: 20px; border-radius: 24px; }
+.sf-kiosk .sf-modal-nutrition-chart { width: 108px; height: 108px; }
+.sf-kiosk .sf-modal-nutrition-kcal strong { font-size: 24px; }
+.sf-kiosk .sf-modal-nutrition-kcal span { font-size: 12px; }
+.sf-kiosk .sf-modal-nutrition-legend { font-size: 16px; gap: 9px; }
+.sf-kiosk .sf-modal-nutrition-dot { width: 12px; height: 12px; }

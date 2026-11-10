@@ -1221,6 +1221,20 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
   // Product options modal
   const [modalProduct, setModalProduct]       = useState<Product | null>(null)
+  // Kiosk: an open product fills the screen down to the category row, which
+  // stays in view underneath (its height goes to --sf-kiosk-bottom)
+  useEffect(() => {
+    if (!kioskActive || !modalProduct) return
+    const measure = () => {
+      const row = document.querySelector('.sf-kiosk-cats') ?? document.querySelector('.sf-kiosk > .sf-kiosk-powered')
+      const top = row?.getBoundingClientRect().top
+      document.documentElement.style.setProperty('--sf-kiosk-bottom', `${top ? Math.max(0, window.innerHeight - top) : 0}px`)
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [kioskActive, modalProduct])
+
 
   // Swipe from the left screen edge to pull the side menu open (when the
   // store shows the menu button), following the finger like the product
@@ -5736,6 +5750,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   key={g.key} type="button" aria-pressed={on}
                   className={`sf-kiosk-cat${on ? ' on' : ''}`}
                   onClick={() => {
+                    setModalProduct(null) // a product open above closes, the category changes
                     setKioskCatId(g.key)
                     kioskMainRef.current?.scrollTo({ top: 0 })
                   }}

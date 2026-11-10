@@ -2973,8 +2973,10 @@ div.sf-footer-link:hover { color: inherit; }
 .sf-page:has(> .sf-checkout-wrap.sf-co-steps) { padding-bottom: 0; }
 
 /* Welcome page with its button at the bottom of the screen (above the Lyte
-   mark); the content keeps its centre in the space left above it */
+   mark). The same room is kept at the top as at the bottom, so the logo,
+   text, cedula keypad etc. stay in the middle of the screen, clear of it. */
 .sf-splash-screen.sf-splash-btn-bottom {
+  padding-top: calc(var(--sf-safe-top, 0px) + 72px + var(--sf-splash-cta-h, 68px));
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 72px + var(--sf-splash-cta-h, 68px));
 }
 .sf-splash-bottom {

@@ -3582,7 +3582,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       <>
       <div
         ref={splashScreenRef}
-        className={`sf-splash-screen sf-trans-${transitionId}${splashLeaving ? ' sf-splash-leaving' : ''}${btnBottom ? ' sf-splash-btn-bottom' : ''}`}
+        className={`sf-splash-screen sf-trans-${transitionId}${splashLeaving ? ' sf-splash-leaving' : ''}${btnBottom && splashStep !== 'service' ? ' sf-splash-btn-bottom' : ''}`}
         style={{ ...pageStyle, background: 'transparent', ...(btnBottom ? { '--sf-splash-cta-h': `${68 * splashBtnScale}px` } : {}) } as React.CSSProperties}
       >
         {/* A plain <img> instead of a CSS background, absolutely positioned

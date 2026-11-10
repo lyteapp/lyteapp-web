@@ -3159,3 +3159,14 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
 .sf-kiosk .sf-modal-nutrition-kcal span { font-size: 12px; }
 .sf-kiosk .sf-modal-nutrition-legend { font-size: 16px; gap: 9px; }
 .sf-kiosk .sf-modal-nutrition-dot { width: 12px; height: 12px; }
+/* Kiosk: the Lyte mark as small and as low as it can go (1px from the
+   bottom edge, or just above an iPad's home bar) */
+.sf-kiosk-powered { gap: 4px; font-size: 9px; padding-top: 0; padding-bottom: calc(1px + env(safe-area-inset-bottom, 0px)); }
+.sf-co-stepnav .sf-kiosk-powered { padding-top: 4px; }
+.sf-kiosk-powered .sf-powered-by-logo { width: 34px; height: 16px; }
+:is(.sf-splash-kiosk, .sf-co-transition.sf-kiosk-loader) .sf-powered-by { gap: 4px; font-size: 9px; bottom: calc(env(safe-area-inset-bottom, 0px) + 1px); }
+:is(.sf-splash-kiosk, .sf-co-transition.sf-kiosk-loader) .sf-powered-by .sf-powered-by-logo { width: 34px; height: 16px; }
+@media (pointer: coarse) and (min-width: 600px) and (min-height: 600px) {
+  .sf-co-transition.sf-boot-kiosk-able .sf-powered-by { gap: 4px; font-size: 9px; bottom: calc(env(safe-area-inset-bottom, 0px) + 1px); }
+  .sf-co-transition.sf-boot-kiosk-able .sf-powered-by .sf-powered-by-logo { width: 34px; height: 16px; }
+}

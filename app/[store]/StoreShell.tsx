@@ -3717,10 +3717,18 @@ export default function StoreShell({ store, products, categories = [], initialBc
           )}
           </>)}
         </div>
+        {/* in a kiosk the Lyte mark stays, but must not take anyone out of the store */}
+        {kioskActive ? (
+        <div className="sf-powered-by" style={{ color: splashPoweredColors.text }}>
+          <span>Powered by</span>
+          <span className="sf-powered-by-logo" role="img" aria-label="Lyte app" style={{ color: splashPoweredColors.strong }} />
+        </div>
+        ) : (
         <a className="sf-powered-by" href="https://lyte-app.com" target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ color: splashPoweredColors.text }}>
           <span>Powered by</span>
           <span className="sf-powered-by-logo" role="img" aria-label="Lyte app" style={{ color: splashPoweredColors.strong }} />
         </a>
+        )}
       </div>
       </>
     )
@@ -3770,10 +3778,18 @@ export default function StoreShell({ store, products, categories = [], initialBc
         {revealShowSkip && (
           <button className="sf-reveal-skip" onClick={finishReveal}>{rv.skipLabel || 'Saltar →'}</button>
         )}
+        {/* in a kiosk the Lyte mark stays, but must not take anyone out of the store */}
+        {kioskActive ? (
+        <div className="sf-powered-by" style={{ color: revealPoweredColors.text }}>
+          <span>Powered by</span>
+          <span className="sf-powered-by-logo" role="img" aria-label="Lyte app" style={{ color: revealPoweredColors.strong }} />
+        </div>
+        ) : (
         <a className="sf-powered-by" href="https://lyte-app.com" target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ color: revealPoweredColors.text }}>
           <span>Powered by</span>
           <span className="sf-powered-by-logo" role="img" aria-label="Lyte app" style={{ color: revealPoweredColors.strong }} />
         </a>
+        )}
       </div>
     )
   }
@@ -3824,7 +3840,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
         <button className="sf-confirm-btn" onClick={() => { setView('catalog'); setCustomerName(''); setCustomerPhone(''); setCustomerNotes(''); setSelectedPayment(''); setPaymentFreeText(''); setDeliveryTrackId(''); setPickupTrackId(''); setLocationState('idle') }}>
           {t('store.confirmed.continue')}
         </button>
-        <Link href="/" className="sf-confirm-link">{t('store.confirmed.link')}</Link>
+        {!kioskActive && <Link href="/" className="sf-confirm-link">{t('store.confirmed.link')}</Link>}
       </div>
     </div>
     </>
@@ -4592,11 +4608,18 @@ export default function StoreShell({ store, products, categories = [], initialBc
       </div>
 
       <footer className={`sf-footer${pageBgDark ? ' sf-footer-dark' : ''}`}>
+        {kioskActive ? (
+          <div className="sf-footer-link sf-footer-made">
+            <span>{t('store.footerCreatedWith')}</span>
+            <span className="sf-footer-logo" role="img" aria-label="Lyte app" />
+          </div>
+        ) : (
         <Link href="/registro" className="sf-footer-link sf-footer-made">
           <span>{t('store.footerCreatedWith')}</span>
           <span className="sf-footer-logo" role="img" aria-label="Lyte app" />
           <span className="sf-footer-cta">{t('store.footerCreateYours')}</span>
         </Link>
+        )}
       </footer>
 
       {/* Modal inside checkout too */}
@@ -5878,11 +5901,18 @@ export default function StoreShell({ store, products, categories = [], initialBc
             )}
           </div>
         )}
+        {kioskActive ? (
+          <div className="sf-footer-link sf-footer-made">
+            <span>{t('store.footerCreatedWith')}</span>
+            <span className="sf-footer-logo" role="img" aria-label="Lyte app" />
+          </div>
+        ) : (
         <Link href="/registro" className="sf-footer-link sf-footer-made">
           <span>{t('store.footerCreatedWith')}</span>
           <span className="sf-footer-logo" role="img" aria-label="Lyte app" />
           <span className="sf-footer-cta">{t('store.footerCreateYours')}</span>
         </Link>
+        )}
       </footer>
 
       {renderProductModal()}

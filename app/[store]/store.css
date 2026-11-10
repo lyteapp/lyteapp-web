@@ -2891,3 +2891,6 @@ video.sf-banner-img { object-fit: cover; }
 .sf-co-steps[data-cur="service"] .sf-co-section > .sf-co-section-title,
 .sf-co-steps[data-cur="info"] .sf-co-section > .sf-co-section-title,
 .sf-co-steps[data-cur="pay"] .sf-co-section > .sf-co-section-title { display: none; }
+/* kiosk: the Lyte mark without a link */
+div.sf-footer-link { cursor: default; }
+div.sf-footer-link:hover { color: inherit; }

@@ -360,6 +360,10 @@ const CO_STEP_TITLES: Record<CoStep, string> = {
   pay: 'Pago',
 }
 
+// A kiosk's order confirmation goes back to the start by itself after this
+// long when the store hasn't set its own time (Pagina de inicio)
+const KIOSK_RETURN_SECS = 20
+
 type KioskConfig = {
   enabled?: boolean
   /** Picture for each category's button (category id -> url) */
@@ -3226,13 +3230,17 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
   // Reset N seconds after an order is confirmed, so a kiosk hands itself
   // back to the home page instead of sitting on the confirmation screen.
+  // A kiosk has no "Seguir comprando" button, so it always does this: after
+  // the store's own time, or KIOSK_RETURN_SECS when none is set.
+  const orderReturnSecs = hp.orderReturnTimeout?.enabled && hp.orderReturnTimeout.seconds
+    ? hp.orderReturnTimeout.seconds
+    : kioskActive ? KIOSK_RETURN_SECS : 0
   useEffect(() => {
-    const cfg = hp.orderReturnTimeout
-    if (view !== 'confirmed' || !cfg?.enabled || !cfg.seconds) return
-    const t = setTimeout(() => resetToHome(), cfg.seconds * 1000)
+    if (view !== 'confirmed' || !orderReturnSecs) return
+    const t = setTimeout(() => resetToHome(), orderReturnSecs * 1000)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, hp.orderReturnTimeout?.enabled, hp.orderReturnTimeout?.seconds])
+  }, [view, orderReturnSecs])
 
   // Visible countdown for the timer above — purely cosmetic, the actual
   // reset is driven by the setTimeout in the effect above. State updates are
@@ -3240,19 +3248,17 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // effect body, same pattern as the reveal-screen timers.
   const [returnCountdown, setReturnCountdown] = useState<number | null>(null)
   useEffect(() => {
-    const cfg = hp.orderReturnTimeout
-    if (view !== 'confirmed' || !cfg?.enabled || !cfg.seconds) {
+    if (view !== 'confirmed' || !orderReturnSecs) {
       const t = setTimeout(() => setReturnCountdown(null), 0)
       return () => clearTimeout(t)
     }
-    const seconds = cfg.seconds
+    const seconds = orderReturnSecs
     const t0 = setTimeout(() => setReturnCountdown(seconds), 0)
     const interval = setInterval(() => {
       setReturnCountdown(s => (s !== null && s > 0 ? s - 1 : s))
     }, 1000)
     return () => { clearTimeout(t0); clearInterval(interval) }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, hp.orderReturnTimeout?.enabled, hp.orderReturnTimeout?.seconds])
+  }, [view, orderReturnSecs])
 
   type CedulaLookupResult = {
     status: 'found' | 'new' | 'error'
@@ -3849,9 +3855,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
             Rastrear mi pedido
           </a>
         )}
+        {!kioskActive && (
         <button className="sf-confirm-btn" onClick={() => { setView('catalog'); setCustomerName(''); setCustomerPhone(''); setCustomerNotes(''); setSelectedPayment(''); setPaymentFreeText(''); setDeliveryTrackId(''); setPickupTrackId(''); setLocationState('idle') }}>
           {t('store.confirmed.continue')}
         </button>
+        )}
         {!kioskActive && <Link href="/" className="sf-confirm-link">{t('store.confirmed.link')}</Link>}
       </div>
     </div>

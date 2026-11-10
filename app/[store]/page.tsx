@@ -103,12 +103,16 @@ export default async function StorePage({ params, searchParams }: { params: Prom
   // store appears already in place instead of visibly shifting around.
   // Skipped inside the dashboard's live-preview iframes, which reload a lot.
   const showBoot = query.preview !== '1' && query.previewCheckout !== '1'
+  // Kiosk mode: a bigger logo and loading bar. Whether this screen is a
+  // kiosk is only known in the browser, so tablets are matched by CSS
+  // (sf-boot-kiosk-able) and ?kiosko=1 / an earlier ?kiosko=1 by class.
+  const kioskOn = !!(store.template_config as { kiosk?: { enabled?: boolean } } | null)?.kiosk?.enabled
   const pageBg = (store.template_config as { pageBg?: string } | null)?.pageBg
   const bootPowered = poweredByColors(isLightColor(pageBg || '#FAFAF9'))
   return (
     <>
       {showBoot && (
-        <div id="sf-boot" className="sf-co-transition sf-boot" style={{ ...(pageBg ? { background: pageBg } : {}), '--sf-loader-color': storeLoaderColor(store) } as React.CSSProperties} aria-hidden="true">
+        <div id="sf-boot" className={`sf-co-transition sf-boot${kioskOn ? ' sf-boot-kiosk-able' : ''}${kioskOn && query.kiosko === '1' ? ' sf-kiosk-loader' : ''}`} style={{ ...(pageBg ? { background: pageBg } : {}), '--sf-loader-color': storeLoaderColor(store) } as React.CSSProperties} aria-hidden="true">
           {store.logo_url
             ? <img src={resizedImg(store.logo_url, 400)} alt="" className="sf-co-transition-logo" />
             : <div className="sf-co-transition-name">{store.name}</div>}
@@ -118,6 +122,11 @@ export default async function StorePage({ params, searchParams }: { params: Prom
             <span className="sf-powered-by-logo" role="img" aria-label="Lyte app" style={{ color: bootPowered.strong }} />
           </div>
         </div>
+      )}
+      {showBoot && kioskOn && (
+        // a screen put in kiosk mode by ?kiosko=1 earlier in this visit
+        // (StoreShell keeps it in sessionStorage): big loader before first paint
+        <script dangerouslySetInnerHTML={{ __html: "try{if(sessionStorage.getItem('lyte-kiosko')==='1'){var b=document.getElementById('sf-boot');if(b)b.classList.add('sf-kiosk-loader')}}catch(e){}" }} />
       )}
       <StoreShell store={store} products={productsWithCategories} categories={categories ?? []} initialBcvRate={initialBcvRate} initialDeliveryZones={initialDeliveryZones} mapboxToken={mapboxToken} />
     </>

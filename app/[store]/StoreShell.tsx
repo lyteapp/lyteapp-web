@@ -5205,7 +5205,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   function renderCheckoutTransition() {
     if (!coTransition) return null
     return (
-      <div className={`sf-co-transition${coTransition === 'out' ? ' out' : ''}`} aria-hidden="true">
+      <div className={`sf-co-transition${coTransition === 'out' ? ' out' : ''}${kioskActive ? ' sf-kiosk-loader' : ''}`} aria-hidden="true">
         {store.logo_url
           ? <img src={resizedImg(store.logo_url, 400)} alt="" className={`sf-co-transition-logo sf-nav-logo-${cfgLogoShape}`} />
           : <div className="sf-co-transition-name">{store.name}</div>}

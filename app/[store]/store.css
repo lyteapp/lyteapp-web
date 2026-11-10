@@ -3064,3 +3064,19 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
   background: color-mix(in srgb, var(--sf-splash-input-bg, white) 34%, transparent);
   transform: scale(0.92); transition: none;
 }
+
+/* Kiosk: a bigger logo and loading bar on the loading screen (the
+   checkout hand-off and, before the page knows it's a kiosk, any tablet
+   when the store has kiosk mode on) */
+.sf-co-transition.sf-kiosk-loader { gap: 34px; }
+.sf-co-transition.sf-kiosk-loader .sf-co-transition-logo { width: 200px; height: 200px; }
+.sf-co-transition.sf-kiosk-loader .sf-co-transition-name { font-size: 42px; }
+.sf-co-transition.sf-kiosk-loader .sf-co-transition-bar { width: 200px; height: 8px; border-radius: 8px; }
+.sf-co-transition.sf-kiosk-loader .sf-co-transition-bar span { border-radius: 8px; }
+@media (pointer: coarse) and (min-width: 600px) and (min-height: 600px) {
+  .sf-co-transition.sf-boot-kiosk-able { gap: 34px; }
+  .sf-co-transition.sf-boot-kiosk-able .sf-co-transition-logo { width: 200px; height: 200px; }
+  .sf-co-transition.sf-boot-kiosk-able .sf-co-transition-name { font-size: 42px; }
+  .sf-co-transition.sf-boot-kiosk-able .sf-co-transition-bar { width: 200px; height: 8px; border-radius: 8px; }
+  .sf-co-transition.sf-boot-kiosk-able .sf-co-transition-bar span { border-radius: 8px; }
+}

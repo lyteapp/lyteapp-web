@@ -15,6 +15,7 @@ import { CachedVideo } from './videoCache'
 import { storeLoaderColor } from '../lib/storeTheme'
 
 const QueueQr = dynamic(() => import('./QueueQr'), { ssr: false })
+const ProofCamera = dynamic(() => import('./ProofCamera'), { ssr: false })
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -1092,6 +1093,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [kioskDraft, setKioskDraft] = useState<KioskConfig | null>(null)
   const [kioskCatId, setKioskCatId] = useState<string | null>(null)
   const [coStep, setCoStep] = useState<CoStep>('cart')
+  // Kiosk: the payment proof is taken with the tablet's front camera
+  const [proofCamOpen, setProofCamOpen] = useState(false)
   const kioskMainRef = useRef<HTMLElement>(null)
   useEffect(() => {
     let forced = searchParams.get('kiosko') === '1'
@@ -3175,7 +3178,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     // The next customer must never see, or repeat, the last one's order
     setLastOrder(null); setShowReorder(false); reorderCheckedRef.current = false
     setShowHeaderReorderHint(false); setHeaderReorderEmpty(false); headerReorderHintShownRef.current = false
-    setKioskCatId(null); setCoStep('cart')
+    setKioskCatId(null); setCoStep('cart'); setProofCamOpen(false)
     // The welcome overlay sits at the top of the document over the store.
     if (hp.enabled) window.scrollTo(0, 0)
     setView(hp.enabled ? 'splash' : 'catalog')
@@ -4497,7 +4500,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                             </div>
                           )}
                         </div>
-                        <label className="sf-proof-label" htmlFor="sf-proof-input">
+                        <label className="sf-proof-label" htmlFor={kioskActive ? undefined : 'sf-proof-input'}>
                           Comprobante de pago<span className="sf-required"> *</span>
                         </label>
                         <input
@@ -4517,18 +4520,28 @@ export default function StoreShell({ store, products, categories = [], initialBc
                             <button
                               type="button"
                               className="sf-proof-remove"
-                              onClick={() => { setPaymentProofFile(null); setPaymentProofPreview(null) }}
+                              onClick={() => { setPaymentProofFile(null); setPaymentProofPreview(null); if (kioskActive) setProofCamOpen(true) }}
                             >
-                              Quitar foto
+                              {kioskActive ? 'Tomar otra foto' : 'Quitar foto'}
                             </button>
                           </div>
                         ) : (
+                          kioskActive ? (
+                            <button type="button" className="sf-proof-drop sf-proof-cam" onClick={() => setProofCamOpen(true)}>
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="26" height="26" aria-hidden="true">
+                                <path d="M4 8h3l2-3h6l2 3h3a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z" />
+                                <circle cx="12" cy="13.5" r="3.5" />
+                              </svg>
+                              <span>Mostrar el comprobante a la cámara</span>
+                            </button>
+                          ) : (
                           <label htmlFor="sf-proof-input" className="sf-proof-drop">
                             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" width="22" height="22">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v1.25A1.25 1.25 0 004.25 19h11.5A1.25 1.25 0 0017 17.75V16.5M10 3v10m0 0l-3-3m3 3l3-3" />
                             </svg>
                             <span>Subir foto del pago</span>
                           </label>
+                          )
                         )}
                       </div>
                     )}
@@ -4549,7 +4562,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 <span>Total a pagar</span>
                 <div><strong>{currencySymbol}{orderTotal.toFixed(2)}</strong></div>
               </div>
-              <label className="sf-proof-label" htmlFor="sf-proof-input">
+              <label className="sf-proof-label" htmlFor={kioskActive ? undefined : 'sf-proof-input'}>
                 Comprobante de pago<span className="sf-required"> *</span>
               </label>
               <input
@@ -4569,18 +4582,28 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   <button
                     type="button"
                     className="sf-proof-remove"
-                    onClick={() => { setPaymentProofFile(null); setPaymentProofPreview(null) }}
+                    onClick={() => { setPaymentProofFile(null); setPaymentProofPreview(null); if (kioskActive) setProofCamOpen(true) }}
                   >
-                    Quitar foto
+                    {kioskActive ? 'Tomar otra foto' : 'Quitar foto'}
                   </button>
                 </div>
               ) : (
+                kioskActive ? (
+                  <button type="button" className="sf-proof-drop sf-proof-cam" onClick={() => setProofCamOpen(true)}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="26" height="26" aria-hidden="true">
+                      <path d="M4 8h3l2-3h6l2 3h3a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z" />
+                      <circle cx="12" cy="13.5" r="3.5" />
+                    </svg>
+                    <span>Mostrar el comprobante a la cámara</span>
+                  </button>
+                ) : (
                 <label htmlFor="sf-proof-input" className="sf-proof-drop">
                   <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" width="22" height="22">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v1.25A1.25 1.25 0 004.25 19h11.5A1.25 1.25 0 0017 17.75V16.5M10 3v10m0 0l-3-3m3 3l3-3" />
                   </svg>
                   <span>Subir foto del pago</span>
                 </label>
+                )
               )}
             </div>
           )}
@@ -4621,6 +4644,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
         </Link>
         )}
       </footer>
+
+      {proofCamOpen && (
+        <ProofCamera
+          onCapture={f => { handleProofFile(f); setProofCamOpen(false) }}
+          onClose={() => setProofCamOpen(false)}
+          onFallback={() => { setProofCamOpen(false); document.getElementById('sf-proof-input')?.click() }}
+        />
+      )}
 
       {/* Modal inside checkout too */}
       {renderProductModal()}

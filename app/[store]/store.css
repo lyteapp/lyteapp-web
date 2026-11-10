@@ -3041,3 +3041,14 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
 }
 .sf-splash-ns-back:disabled { opacity: 0.5; }
 .sf-splash-ns-next { flex: 1; font-size: 18px; }
+
+/* Kiosk checkout: the step sits in the middle of the space between the
+   header and Atrás / Siguiente (auto margins — a long step that doesn't
+   fit still starts at the top and scrolls) */
+.sf-co-steps > .sf-co-stepper { margin-top: auto; text-align: center; }
+.sf-co-steps .sf-co-stepper-title { margin-left: auto; margin-right: auto; }
+/* Kiosk checkout: each step's content sits in the middle of the screen
+   (the room left over is shared above it and above Atras / Siguiente; a
+   step too long to fit just scrolls), its heading centred */
+.sf-co-steps > .sf-co-stepper { margin-top: auto; text-align: center; }
+.sf-co-steps .sf-co-stepper-bar { max-width: 420px; margin: 0 auto; }

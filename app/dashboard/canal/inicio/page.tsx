@@ -5,7 +5,7 @@ import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../../lib/auth'
 import { useDashboardStore } from '../../../lib/DashboardStoreProvider'
 import { REVEAL_FONTS, revealFontStack, loadRevealFont } from '../../../lib/revealFonts'
-import { isLightColor, poweredByColors } from '../../../lib/colorContrast'
+import { isLightColor, poweredByColors, boxTheme } from '../../../lib/colorContrast'
 import Link from 'next/link'
 import UnsavedNotice, { stableJson } from '../UnsavedNotice'
 import { fastStart } from '../../../lib/faststart'
@@ -108,6 +108,8 @@ interface HomePageConfig {
   logoUrl: string | null
   /** Where the Empezar button sits */
   buttonPosition: 'content' | 'bottom'
+  /** Kiosk: the new customer's steps inside a box of this color ('' = the button's) */
+  newStepsBox: { enabled: boolean; color: string }
 }
 
 const DEFAULTS: HomePageConfig = {
@@ -145,6 +147,7 @@ const DEFAULTS: HomePageConfig = {
   showLogo: true,
   logoUrl: null,
   buttonPosition: 'content',
+  newStepsBox: { enabled: false, color: '' },
 }
 
 function newImage(url: string): HomePageImage {
@@ -398,11 +401,13 @@ function PhotoItem({
 
 function SplashPreview({
   config, storeName, logoUrl, selected, onSelect, onResize,
-  images, selectedImageId, onSelectImage, onUpdateImage, onRemoveImage, device, fitScale, serviceStep,
+  images, selectedImageId, onSelectImage, onUpdateImage, onRemoveImage, device, fitScale, serviceStep, newStepsStep,
 }: {
   config: HomePageConfig; storeName: string; logoUrl: string | null
   /** Show the eat in / take away step instead of the welcome content */
   serviceStep: boolean
+  /** Show the kiosk's new-customer step 1 instead of the welcome content */
+  newStepsStep: boolean
   device: PreviewDevice
   /** how much the whole preview is shrunk to fit */
   fitScale: number
@@ -486,7 +491,35 @@ function SplashPreview({
           </div>
         )}
 
-        {serviceStep ? (
+        {newStepsStep ? (() => {
+          const box = config.newStepsBox.enabled ? (config.newStepsBox.color || config.buttonColor || '#7C3AED') : null
+          const th = box ? boxTheme(box) : null
+          const text = th ? th.text : 'white'
+          const inputC = th ? th.text : (config.inputTextColor || '#FFFFFF')
+          const inputB = th ? th.text : (config.inputBgColor || '#FFFFFF')
+          return (
+            <div style={{
+              width: '100%', boxSizing: 'border-box', textAlign: 'center',
+              ...(box ? { background: box, borderRadius: 24 * k, padding: `${26 * k}px ${22 * k}px ${22 * k}px`, boxShadow: '0 18px 44px rgba(0,0,0,0.28)' } : {}),
+            }}>
+              <div style={{ fontSize: 10 * k, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: text, opacity: 0.75 }}>Eres nuevo por aquí · Paso 1 de 2</div>
+              <div style={{ fontSize: 24 * k, fontWeight: 800, color: text, margin: `${6 * k}px 0 ${12 * k}px`, letterSpacing: '-0.02em' }}>¿Cómo te llamas?</div>
+              <div style={{ display: 'flex', gap: 5 * k, marginBottom: 16 * k }}>
+                {[0, 1].map(i => <div key={i} style={{ flex: 1, height: 5 * k, borderRadius: 100, background: i === 0 ? (th ? th.text : (config.buttonColor || '#7C3AED')) : `color-mix(in srgb, ${text} 22%, transparent)` }} />)}
+              </div>
+              <div style={{
+                padding: `${13 * k}px ${16 * k}px`, borderRadius: 100, fontSize: 17 * k, fontWeight: 600,
+                background: `color-mix(in srgb, ${inputB} 12%, transparent)`, border: `1px solid color-mix(in srgb, ${inputB} 20%, transparent)`,
+                color: `color-mix(in srgb, ${inputC} 55%, transparent)`,
+              }}>Tu nombre y apellido</div>
+              <div style={{ display: 'flex', gap: 8 * k, marginTop: 16 * k }}>
+                <div style={{ padding: `${11 * k}px ${18 * k}px`, borderRadius: 100, border: `1.5px solid ${th ? th.line : 'rgba(255,255,255,0.35)'}`, color: text, fontSize: 13 * k, fontWeight: 700 }}>Atrás</div>
+                <div style={{ flex: 1, padding: `${11 * k}px 0`, borderRadius: 100, fontSize: 14 * k, fontWeight: 700,
+                  background: th ? th.nextBg : (config.buttonColor || '#7C3AED'), color: th ? th.nextText : 'white' }}>Siguiente →</div>
+              </div>
+            </div>
+          )
+        })() : serviceStep ? (
           <div style={{ width: '100%' }}>
             <div style={{ fontSize: 22 * k, fontWeight: 800, color: 'white', letterSpacing: '-0.02em', lineHeight: 1.2, marginBottom: 18 * k }}>
               ¿Para comer aquí o para llevar?
@@ -720,7 +753,7 @@ export default function InicioPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [selectedEl, setSelectedEl] = useState<SelectableId | null>(null)
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
-  const [previewView, setPreviewView] = useState<'splash' | 'service' | 'reveal'>('splash')
+  const [previewView, setPreviewView] = useState<'splash' | 'service' | 'newsteps' | 'reveal'>('splash')
   const [pvDevice, setPvDevice] = useState<PreviewDevice>('mobile')
   // width of the preview column, to fit the iPad / desktop screens in it
   const pvColRef = useRef<HTMLDivElement>(null)
@@ -773,6 +806,7 @@ export default function InicioPage() {
             orderReturnTimeout: { ...DEFAULTS.orderReturnTimeout, ...(hp.orderReturnTimeout ?? {}) },
             elementSizes: { ...DEFAULTS.elementSizes, ...(hp.elementSizes ?? {}) },
             reveal: { ...DEFAULTS.reveal, ...(hp.reveal ?? {}) },
+            newStepsBox: { ...DEFAULTS.newStepsBox, ...(hp.newStepsBox ?? {}) },
           }
         }
         setConfig(loaded)
@@ -899,6 +933,8 @@ export default function InicioPage() {
               ? 'Vista previa de la bienvenida animada'
               : previewView === 'service' && config.askServiceType
                 ? 'Vista previa de la pregunta'
+                : previewView === 'newsteps' && config.collectCustomerData
+                ? 'Vista previa del cliente nuevo en el kiosko (paso 1)'
                 : 'Vista previa · toca un elemento y arrastra su esquina para redimensionar'}
           </div>
 
@@ -916,7 +952,7 @@ export default function InicioPage() {
             ))}
           </div>
 
-          {(config.transition === 'reveal' || config.askServiceType) && (
+          {(config.transition === 'reveal' || config.askServiceType || config.collectCustomerData) && (
             <div className="cn-preview-tabs" onClick={e => e.stopPropagation()}>
               <button type="button" className={`cn-preview-tab${previewView === 'splash' ? ' active' : ''}`} onClick={() => setPreviewView('splash')}>
                 Pantalla de inicio
@@ -924,6 +960,11 @@ export default function InicioPage() {
               {config.askServiceType && (
                 <button type="button" className={`cn-preview-tab${previewView === 'service' ? ' active' : ''}`} onClick={() => setPreviewView('service')}>
                   Pregunta
+                </button>
+              )}
+              {config.collectCustomerData && (
+                <button type="button" className={`cn-preview-tab${previewView === 'newsteps' ? ' active' : ''}`} onClick={() => setPreviewView('newsteps')}>
+                  Cliente nuevo
                 </button>
               )}
               {config.transition === 'reveal' && (
@@ -936,7 +977,7 @@ export default function InicioPage() {
 
           {(() => {
             const frame = PV_DEVICES[pvDevice]
-            const tabs = config.transition === 'reveal' || config.askServiceType ? 44 : 0
+            const tabs = config.transition === 'reveal' || config.askServiceType || config.collectCustomerData ? 44 : 0
             // shrink to fit: above the sheet on a phone; in the column on a
             // computer (the phone preview keeps its real size there)
             const fit = phoneLayout
@@ -949,6 +990,7 @@ export default function InicioPage() {
                 config={config} storeName={storeName} logoUrl={config.logoUrl || logoUrl}
                 device={pvDevice} fitScale={fit}
                 serviceStep={previewView === 'service' && config.askServiceType}
+                newStepsStep={previewView === 'newsteps' && config.collectCustomerData}
                 selected={selectedEl} onSelect={setSelectedEl}
                 onResize={setElementSize}
                 images={config.images} selectedImageId={selectedImageId}
@@ -1091,6 +1133,38 @@ export default function InicioPage() {
                       </div>
                       <Toggle checked={config.customerFields.address} onChange={v => setField('address', v)} />
                     </div>
+
+                    <div className="cn-toggle-row" style={{ marginTop: 8 }}>
+                      <div className="cn-toggle-info">
+                        <div className="cn-toggle-label">Cuadro de color para el cliente nuevo (kiosko)</div>
+                        <div className="cn-toggle-hint">En el modo kiosko, los pasos para registrar a un cliente nuevo salen dentro de un cuadro de este color</div>
+                      </div>
+                      <Toggle checked={config.newStepsBox.enabled} onChange={v => {
+                        set('newStepsBox', { ...config.newStepsBox, enabled: v })
+                        setPreviewView(v ? 'newsteps' : 'splash')
+                      }} />
+                    </div>
+                    {config.newStepsBox.enabled && (
+                      <div className="cn-field" style={{ marginBottom: 0 }}>
+                        <div className="cn-label">Color del cuadro</div>
+                        <div className="cn-colors">
+                          <div className={`cn-color-swatch${!config.newStepsBox.color ? ' selected' : ''}`} title="El color del boton"
+                            style={{ background: config.buttonColor || '#7C3AED', outline: '2px dashed rgba(255,255,255,0.7)', outlineOffset: -6 }}
+                            onClick={() => { set('newStepsBox', { ...config.newStepsBox, color: '' }); setPreviewView('newsteps') }} />
+                          {PILL_COLOR_PRESETS.map(c => (
+                            <div key={c} className={`cn-color-swatch${config.newStepsBox.color === c ? ' selected' : ''}`}
+                              style={{ background: c }} onClick={() => { set('newStepsBox', { ...config.newStepsBox, color: c }); setPreviewView('newsteps') }} />
+                          ))}
+                          <label className="cn-color-custom"
+                            style={{ background: config.newStepsBox.color && !PILL_COLOR_PRESETS.includes(config.newStepsBox.color) ? config.newStepsBox.color : undefined }}>
+                            {config.newStepsBox.color && !PILL_COLOR_PRESETS.includes(config.newStepsBox.color) ? null : '+'}
+                            <input type="color" value={config.newStepsBox.color || config.buttonColor || '#7C3AED'}
+                              onChange={e => { set('newStepsBox', { ...config.newStepsBox, color: e.target.value }); setPreviewView('newsteps') }} />
+                          </label>
+                        </div>
+                        <div className="cn-toggle-hint" style={{ marginTop: 6 }}>El primero usa el color de tu boton. Los textos y botones del cuadro se ajustan solos para que se lean bien.</div>
+                      </div>
+                    )}
                   </>
                 )}
               </div>

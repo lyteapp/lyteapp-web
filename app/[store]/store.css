@@ -3123,3 +3123,13 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
 @media (pointer: coarse) and (min-width: 600px) and (min-height: 600px) {
   .sf-co-transition.sf-boot-kiosk-able .sf-powered-by { bottom: calc(env(safe-area-inset-bottom, 0px) + 4px); }
 }
+
+/* Kiosk new-customer steps inside a box of the store's color (optional) */
+.sf-splash-newsteps.boxed {
+  max-width: 540px; padding: 34px 32px 30px; border-radius: 32px;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.28);
+}
+.sf-splash-newsteps.boxed :is(.sf-splash-ns-title, .sf-splash-ns-count) { color: var(--sf-ns-text, white); }
+.sf-splash-newsteps.boxed .sf-splash-ns-bar span { background: color-mix(in srgb, var(--sf-ns-text, white) 22%, transparent); }
+.sf-splash-newsteps.boxed .sf-splash-ns-bar span.on { background: var(--sf-ns-text, white); filter: none; }
+.sf-splash-newsteps.boxed .sf-splash-ns-back { border-color: var(--sf-ns-line); color: var(--sf-ns-text, white); }

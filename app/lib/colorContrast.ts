@@ -14,3 +14,12 @@ export function poweredByColors(isLight: boolean) {
     ? { text: 'rgba(0,0,0,0.75)', strong: 'rgba(0,0,0,0.95)' }
     : { text: 'rgba(255,255,255,0.85)', strong: 'rgba(255,255,255,1)' }
 }
+
+// Colors for what sits inside a colored box (the kiosk's new-customer
+// steps, Pagina de inicio): dark text and a dark main button on a light
+// box, white text and a white button (in the box's own color) on a dark one.
+export function boxTheme(bg: string) {
+  return isLightColor(bg)
+    ? { text: '#0F172A', nextBg: '#0F172A', nextText: '#FFFFFF', line: 'rgba(15,23,42,0.28)' }
+    : { text: '#FFFFFF', nextBg: '#FFFFFF', nextText: bg, line: 'rgba(255,255,255,0.4)' }
+}

@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useT } from '../lib/LocaleProvider'
 import { revealFontStack, loadRevealFont } from '../lib/revealFonts'
-import { isLightColor, poweredByColors } from '../lib/colorContrast'
+import { isLightColor, poweredByColors, boxTheme } from '../lib/colorContrast'
 import LocationMapPicker from './LocationMapPicker'
 import { isVideoUrl, resizedImg, imgSrcSet } from '../lib/storeImages'
 import BannerCarousel from './BannerCarousel'
@@ -488,6 +488,8 @@ type TemplateConfig = {
     showLogo?: boolean
     /** A logo just for the welcome page (else the store's) */
     logoUrl?: string | null
+    /** Kiosk: the new customer's steps inside a box of this color */
+    newStepsBox?: { enabled?: boolean; color?: string }
     /** Where the Empezar button sits: under the text, or at the bottom of the screen */
     buttonPosition?: 'content' | 'bottom'
     images?: { id: string; url: string; x: number; y: number; width: number; height: number; flipped?: boolean }[]
@@ -3613,6 +3615,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
       else setNewStepIdx(nsIdx - 1)
     }
     const NS_TITLES = { name: '¿Cómo te llamas?', phone: '¿Cuál es tu teléfono?', address: '¿Dónde te lo llevamos?' }
+    // optional colored box around the steps (Pagina de inicio > Datos del cliente)
+    const nsBox = hp.newStepsBox?.enabled ? (hp.newStepsBox.color || hp.buttonColor || cfg.accentColor || '#7C3AED') : null
+    const nsTheme = nsBox ? boxTheme(nsBox) : null
     const slideBarEl = (
       <div
         ref={cedulaSlideBarRef}
@@ -3705,9 +3710,15 @@ export default function StoreShell({ store, products, categories = [], initialBc
           )}
           {kioskNewSteps && nsCur ? (
             <div
-              className="sf-splash-newsteps"
+              className={`sf-splash-newsteps${nsTheme ? ' boxed' : ''}`}
               key={nsCur}
-              style={{
+              style={nsBox && nsTheme ? {
+                background: nsBox,
+                '--sf-splash-input-color': nsTheme.text,
+                '--sf-splash-input-bg': nsTheme.text,
+                '--sf-ns-text': nsTheme.text,
+                '--sf-ns-line': nsTheme.line,
+              } as React.CSSProperties : {
                 '--sf-splash-input-color': hp.inputTextColor || '#FFFFFF',
                 '--sf-splash-input-bg': hp.inputBgColor || '#FFFFFF',
                 '--sf-splash-ns-accent': hp.buttonColor || 'var(--sf-accent-color, #7C3AED)',
@@ -3768,7 +3779,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 <button type="button" className="sf-splash-ns-back" onClick={nsBack} disabled={splashWaiting}>Atrás</button>
                 <button
                   type="button" className="sf-splash-btn sf-splash-ns-next" onClick={nsNext} disabled={splashWaiting}
-                  style={hp.buttonColor ? { background: hp.buttonColor } : undefined}
+                  style={nsTheme ? { background: nsTheme.nextBg, color: nsTheme.nextText } : hp.buttonColor ? { background: hp.buttonColor } : undefined}
                 >
                   <span>{nsLast ? (hp.buttonLabel || 'Empezar') : 'Siguiente'}</span>
                   {splashWaiting

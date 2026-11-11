@@ -37,10 +37,12 @@ function sharpness(src: HTMLCanvasElement): number {
   return n ? sum2 / n - (sum / n) ** 2 : 0
 }
 
-// A phone screen too bright to read: the camera sees a big white area with
-// (almost) no darker strokes in it — the letters got washed out. Looks for
-// the bright area, then for anything clearly darker than its white inside it.
-const WASH_W = 240
+// A phone screen too bright to read: a big white area where the camera
+// sees (almost) no letters. Letters are told apart by their shape — thin
+// strokes darker than the white with white on both sides of them — so a
+// receipt's colored header, logo or icons (which stay visible even when the
+// text washes out) don't count as "there's text".
+const WASH_W = 320
 function screenWashedOut(src: CanvasImageSource, sx: number, sy: number, sw: number, sh: number): boolean {
   const w = WASH_W, h = Math.max(1, Math.round(sh * (w / sw)))
   const c = document.createElement('canvas')
@@ -56,7 +58,7 @@ function screenWashedOut(src: CanvasImageSource, sx: number, sy: number, sw: num
   for (let i = 0; i < w * h; i++) {
     const l = Math.round(d[i * 4] * 0.299 + d[i * 4 + 1] * 0.587 + d[i * 4 + 2] * 0.114)
     lum[i] = l
-    if (l >= 215) {
+    if (l >= 200) {
       const x = i % w, y = (i / w) | 0
       if (x < minx) minx = x; if (x > maxx) maxx = x; if (y < miny) miny = y; if (y > maxy) maxy = y
       hist[l]++; brightN++
@@ -64,15 +66,25 @@ function screenWashedOut(src: CanvasImageSource, sx: number, sy: number, sw: num
   }
   if (maxx < 0) return false
   const bw = maxx - minx + 1, bh = maxy - miny + 1
-  if (bw * bh < 0.25 * w * h || brightN < 0.6 * bw * bh) return false // no big white screen there
+  if (bw * bh < 0.2 * w * h || brightN < 0.45 * bw * bh) return false // no big white screen there
   let acc = 0, white = 255
-  for (let v = 255; v >= 215; v--) { acc += hist[v]; if (acc >= brightN / 2) { white = v; break } }
-  // a 1-2px inset keeps the screen's own edge out of the count
-  let ink = 0, n = 0
-  for (let y = miny + 2; y <= maxy - 2; y++) {
-    for (let x = minx + 2; x <= maxx - 2; x++) { n++; if (lum[y * w + x] < white - 45) ink++ }
+  for (let v = 255; v >= 200; v--) { acc += hist[v]; if (acc >= brightN / 2) { white = v; break } }
+  const ink = white - 30, paper = white - 12
+  let strokes = 0, n = 0
+  for (let y = miny + 6; y <= maxy - 6; y++) {
+    for (let x = minx + 6; x <= maxx - 6; x++) {
+      n++
+      const l = lum[y * w + x]
+      if (l >= ink) continue
+      // thin (a letter's stroke, bold ones included): white on BOTH sides
+      // within a few pixels — the edge of a header bar or logo only has it on one
+      for (let k = 2; k <= 6; k++) {
+        if ((lum[y * w + x - k] >= paper && lum[y * w + x + k] >= paper)
+          || (lum[(y - k) * w + x] >= paper && lum[(y + k) * w + x] >= paper)) { strokes++; break }
+      }
+    }
   }
-  return n > 0 && ink / n < 0.015
+  return n > 0 && strokes / n < 0.008
 }
 
 // Makes a phone screen's text stand out: stretches the contrast (a bright
@@ -95,6 +107,30 @@ function enhance(c: HTMLCanvasElement) {
   for (let i = 0; i < d.length; i += 4) {
     for (let k = 0; k < 3; k++) src[i + k] = scale === 1 ? d[i + k] : (d[i + k] - lo) * scale
     src[i + 3] = 255
+  }
+  // "clarity": each pixel pushed away from its neighbourhood's average
+  // (a wide blur, via an integral image) — faint grey letters on a bright,
+  // washed-out screen come out clearly darker than the white around them
+  {
+    const r = Math.max(6, Math.round(Math.min(w, h) / 40))
+    const L = new Float32Array(w * h)
+    for (let i = 0, p = 0; i < L.length; i++, p += 4) L[i] = src[p] * 0.299 + src[p + 1] * 0.587 + src[p + 2] * 0.114
+    const I = new Float64Array((w + 1) * (h + 1))
+    for (let y = 0; y < h; y++) {
+      let row = 0
+      for (let x = 0; x < w; x++) { row += L[y * w + x]; I[(y + 1) * (w + 1) + x + 1] = I[y * (w + 1) + x + 1] + row }
+    }
+    for (let y = 0; y < h; y++) {
+      const y0 = Math.max(0, y - r), y1 = Math.min(h, y + r + 1)
+      for (let x = 0; x < w; x++) {
+        const x0 = Math.max(0, x - r), x1 = Math.min(w, x + r + 1)
+        const avg = (I[y1 * (w + 1) + x1] - I[y0 * (w + 1) + x1] - I[y1 * (w + 1) + x0] + I[y0 * (w + 1) + x0]) / ((x1 - x0) * (y1 - y0))
+        const i = y * w + x
+        const delta = 1.2 * (L[i] - avg)
+        const p = i * 4
+        src[p] = src[p] + delta; src[p + 1] = src[p + 1] + delta; src[p + 2] = src[p + 2] + delta
+      }
+    }
   }
   // unsharp: pixel + 0.6 × (pixel − its 3×3 average); skipped on huge frames
   if (w * h <= 5_000_000) {
@@ -277,7 +313,7 @@ export default function ProofCamera({ onCapture, onClose, onFallback }: {
       // shake only slows the countdown down instead of restarting it
       // (the detail has to stand out from the room around it — so a busy
       // wall or poster alone doesn't take a photo)
-      const present = (mean - outMean > 6 && sd > 7) || (sd > 22 && sd > outSd * 1.25)
+      const present = (mean - outMean > 6 && sd > 7) || (sd > 16 && sd > outSd * 1.4)
       // still enough: the picture barely changed, or (a hand's shake moving it
       // a few pixels) its overall brightness and detail stayed the same
       const steady = diff < 14 || (dMean < 4 && dSd < 5)

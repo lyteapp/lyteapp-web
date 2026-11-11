@@ -3191,3 +3191,7 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
 .sf-kiosk-ask-actions button { flex: 1; padding: 18px 12px; border-radius: 16px; font: inherit; font-size: 17px; font-weight: 800; cursor: pointer; }
 .sf-kiosk-ask-keep { background: var(--sf-accent-color, #7C3AED); color: white; border: none; }
 .sf-kiosk-ask-reset { background: transparent; color: inherit; border: 1.5px solid rgba(15,23,42,0.18); }
+
+/* "Tu pantalla está muy brillante": the phone's screen washed the letters out */
+.sf-cam-hint.warn { color: #FBBF24; }
+.sf-cam-guide.warn { border-color: #FBBF24; }

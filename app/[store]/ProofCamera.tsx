@@ -37,6 +37,44 @@ function sharpness(src: HTMLCanvasElement): number {
   return n ? sum2 / n - (sum / n) ** 2 : 0
 }
 
+// A phone screen too bright to read: the camera sees a big white area with
+// (almost) no darker strokes in it — the letters got washed out. Looks for
+// the bright area, then for anything clearly darker than its white inside it.
+const WASH_W = 240
+function screenWashedOut(src: CanvasImageSource, sx: number, sy: number, sw: number, sh: number): boolean {
+  const w = WASH_W, h = Math.max(1, Math.round(sh * (w / sw)))
+  const c = document.createElement('canvas')
+  c.width = w; c.height = h
+  const ctx = c.getContext('2d', { willReadFrequently: true })
+  if (!ctx) return false
+  ctx.drawImage(src, sx, sy, sw, sh, 0, 0, w, h)
+  const d = ctx.getImageData(0, 0, w, h).data
+  const lum = new Uint8Array(w * h)
+  let minx = w, miny = h, maxx = -1, maxy = -1
+  const hist = new Uint32Array(256)
+  let brightN = 0
+  for (let i = 0; i < w * h; i++) {
+    const l = Math.round(d[i * 4] * 0.299 + d[i * 4 + 1] * 0.587 + d[i * 4 + 2] * 0.114)
+    lum[i] = l
+    if (l >= 215) {
+      const x = i % w, y = (i / w) | 0
+      if (x < minx) minx = x; if (x > maxx) maxx = x; if (y < miny) miny = y; if (y > maxy) maxy = y
+      hist[l]++; brightN++
+    }
+  }
+  if (maxx < 0) return false
+  const bw = maxx - minx + 1, bh = maxy - miny + 1
+  if (bw * bh < 0.25 * w * h || brightN < 0.6 * bw * bh) return false // no big white screen there
+  let acc = 0, white = 255
+  for (let v = 255; v >= 215; v--) { acc += hist[v]; if (acc >= brightN / 2) { white = v; break } }
+  // a 1-2px inset keeps the screen's own edge out of the count
+  let ink = 0, n = 0
+  for (let y = miny + 2; y <= maxy - 2; y++) {
+    for (let x = minx + 2; x <= maxx - 2; x++) { n++; if (lum[y * w + x] < white - 45) ink++ }
+  }
+  return n > 0 && ink / n < 0.015
+}
+
 // Makes a phone screen's text stand out: stretches the contrast (a bright
 // screen comes out greyish on camera) and sharpens the edges a little.
 function enhance(c: HTMLCanvasElement) {
@@ -86,10 +124,13 @@ export default function ProofCamera({ onCapture, onClose, onFallback }: {
   const stageRef = useRef<HTMLDivElement>(null)
   const guideRef = useRef<HTMLDivElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  // Android: the camera's exposure, lowered step by step while the screen washes out
+  const exposure = useRef<{ track: MediaStreamTrack; value: number; min: number; step: number; last: number } | null>(null)
+  const [shotWashed, setShotWashed] = useState(false)
   // (only ever rendered in the browser — no camera API means no camera)
   const [state, setState] = useState<'starting' | 'live' | 'shot' | 'error'>(
     () => (typeof navigator.mediaDevices?.getUserMedia === 'function' ? 'starting' : 'error'))
-  const [hint, setHint] = useState<'place' | 'hold' | 'shooting'>('place')
+  const [hint, setHint] = useState<'place' | 'hold' | 'shooting' | 'bright'>('place')
   const [progress, setProgress] = useState(0)
   const [shot, setShot] = useState<Shot | null>(null)
 
@@ -112,8 +153,12 @@ export default function ProofCamera({ onCapture, onClose, onFallback }: {
         const caps = (track.getCapabilities?.() ?? {}) as Record<string, unknown>
         const adv: Record<string, unknown>[] = []
         if (Array.isArray(caps.focusMode) && caps.focusMode.includes('continuous')) adv.push({ focusMode: 'continuous' })
-        const ec = caps.exposureCompensation as { min?: number } | undefined
-        if (ec && typeof ec.min === 'number') adv.push({ exposureCompensation: Math.max(ec.min, -1) })
+        const ec = caps.exposureCompensation as { min?: number; step?: number } | undefined
+        if (ec && typeof ec.min === 'number') {
+          const start = Math.max(ec.min, -1)
+          adv.push({ exposureCompensation: start })
+          exposure.current = { track, value: start, min: ec.min, step: ec.step || 0.33, last: 0 }
+        }
         if (adv.length) track.applyConstraints({ advanced: adv as MediaTrackConstraintSet[] }).catch(() => {})
       } catch {}
       const v = videoRef.current
@@ -158,6 +203,7 @@ export default function ProofCamera({ onCapture, onClose, onFallback }: {
   }, [guideInVideo])
 
   const finish = useCallback((canvas: HTMLCanvasElement) => {
+    setShotWashed(screenWashedOut(canvas, 0, 0, canvas.width, canvas.height))
     enhance(canvas)
     canvas.toBlob(blob => {
       if (!blob) return
@@ -187,6 +233,7 @@ export default function ProofCamera({ onCapture, onClose, onFallback }: {
     const ctx = canvas.getContext('2d', { willReadFrequently: true })
     let prev: Float32Array | null = null
     let prevMean = -1, prevSd = -1
+    let washed = 0 // how sure we are the screen is too bright (so the message doesn't flicker)
     let still = 0
     best.current = null
     let seen = 0 // how sure we are a phone is there (so the message doesn't flicker)
@@ -234,7 +281,17 @@ export default function ProofCamera({ onCapture, onClose, onFallback }: {
       // still enough: the picture barely changed, or (a hand's shake moving it
       // a few pixels) its overall brightness and detail stayed the same
       const steady = diff < 14 || (dMean < 4 && dSd < 5)
-      if (present && steady) still += SAMPLE_MS
+      // A screen so bright its letters are washed out: no photo (it couldn't
+      // be read) — ask to dim it, and darken the camera where possible
+      const tooBright = present && screenWashedOut(v, g.x, g.y, g.w, g.h)
+      washed = tooBright ? Math.min(washed + 1, 4) : Math.max(washed - 1, 0)
+      const ex = exposure.current
+      if (washed >= 2 && ex && ex.value > ex.min && Date.now() - ex.last > 800) {
+        ex.value = Math.max(ex.min, ex.value - ex.step * 2); ex.last = Date.now()
+        ex.track.applyConstraints({ advanced: [{ exposureCompensation: ex.value } as MediaTrackConstraintSet] }).catch(() => {})
+      }
+      if (washed >= 2) { still = 0; best.current = null }
+      else if (present && steady) still += SAMPLE_MS
       else if (present) still = Math.max(0, still - SAMPLE_MS * 2)
       else still = Math.max(0, still - SAMPLE_MS * 4)
       const p = Math.min(1, Math.max(0, (still - STEADY_MS) / COUNTDOWN_MS))
@@ -248,7 +305,7 @@ export default function ProofCamera({ onCapture, onClose, onFallback }: {
       }
       setProgress(p)
       seen = present ? Math.min(seen + 1, 4) : Math.max(seen - 1, 0)
-      setHint(p > 0 ? 'shooting' : seen >= 3 ? 'hold' : 'place')
+      setHint(washed >= 2 ? 'bright' : p > 0 ? 'shooting' : seen >= 3 ? 'hold' : 'place')
       if (still >= STEADY_MS + COUNTDOWN_MS) {
         clearInterval(id)
         const c = best.current?.canvas ?? crop()
@@ -260,13 +317,14 @@ export default function ProofCamera({ onCapture, onClose, onFallback }: {
 
   function retake() {
     if (shot) URL.revokeObjectURL(shot.url)
-    setShot(null); setProgress(0); setHint('place'); setState('live')
+    setShot(null); setShotWashed(false); setProgress(0); setHint('place'); setState('live')
   }
 
   const hints = {
     place: 'Coloca tu teléfono dentro del recuadro',
     hold: 'Así, no lo muevas…',
     shooting: 'Tomando la foto…',
+    bright: 'Tu pantalla está muy brillante: baja el brillo del teléfono',
   }
 
   return (
@@ -293,7 +351,7 @@ export default function ProofCamera({ onCapture, onClose, onFallback }: {
               onLoadedData={() => setState(s => (s === 'starting' ? 'live' : s))}
             />
             {state !== 'shot' && (
-              <div ref={guideRef} className={`sf-cam-guide${hint !== 'place' ? ' ok' : ''}`}>
+              <div ref={guideRef} className={`sf-cam-guide${hint === 'bright' ? ' warn' : hint !== 'place' ? ' ok' : ''}`}>
                 <span className="sf-cam-guide-notch" />
                 {progress > 0 && (
                   <span className="sf-cam-guide-bar"><span style={{ transform: `scaleX(${progress})` }} /></span>
@@ -306,7 +364,10 @@ export default function ProofCamera({ onCapture, onClose, onFallback }: {
         )}
       </div>
 
-      {state === 'live' && <div className={`sf-cam-hint${hint !== 'place' ? ' ok' : ''}`} aria-live="polite">{hints[hint]}</div>}
+      {state === 'live' && <div className={`sf-cam-hint${hint === 'bright' ? ' warn' : hint !== 'place' ? ' ok' : ''}`} aria-live="polite">{hints[hint]}</div>}
+      {state === 'shot' && shotWashed && (
+        <div className="sf-cam-hint warn" role="alert">La foto salió muy clara. Baja el brillo de tu teléfono y toma otra.</div>
+      )}
 
       <div className="sf-cam-actions">
         {state === 'shot' && shot ? (

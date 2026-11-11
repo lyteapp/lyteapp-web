@@ -3174,3 +3174,20 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
 /* a smaller guide: the phone is held a little farther away, where a
    tablet's front camera (fixed focus, wide angle) is sharp */
 .sf-cam-guide { height: 62%; }
+
+/* Kiosk: "¿Empezar de nuevo?" before 'Inicio' clears an order in progress */
+.sf-kiosk-ask {
+  position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center; padding: 24px;
+  background: rgba(15,23,42,0.55); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+  animation: sfOverlayIn 0.2s ease;
+}
+.sf-kiosk-ask-card {
+  width: min(480px, 100%); padding: 32px 28px 26px; border-radius: 28px; text-align: center;
+  background: var(--sf-card-bg, #FFFFFF); color: var(--sf-text-color, #0F172A); box-shadow: 0 24px 60px rgba(15,23,42,0.3);
+}
+.sf-kiosk-ask-title { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; }
+.sf-kiosk-ask-text { margin-top: 8px; font-size: 18px; opacity: 0.65; }
+.sf-kiosk-ask-actions { display: flex; gap: 12px; margin-top: 26px; }
+.sf-kiosk-ask-actions button { flex: 1; padding: 18px 12px; border-radius: 16px; font: inherit; font-size: 17px; font-weight: 800; cursor: pointer; }
+.sf-kiosk-ask-keep { background: var(--sf-accent-color, #7C3AED); color: white; border: none; }
+.sf-kiosk-ask-reset { background: transparent; color: inherit; border: 1.5px solid rgba(15,23,42,0.18); }

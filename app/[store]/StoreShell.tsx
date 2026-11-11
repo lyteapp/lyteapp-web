@@ -1141,6 +1141,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [tabletScreen, setTabletScreen] = useState(false)
   const [kioskDraft, setKioskDraft] = useState<KioskConfig | null>(null)
   const [kioskCatId, setKioskCatId] = useState<string | null>(null)
+  // Kiosk "Inicio" with products in the cart: asks before starting over
+  const [kioskHomeAsk, setKioskHomeAsk] = useState(false)
   const [coStep, setCoStep] = useState<CoStep>('cart')
   // Kiosk: the payment proof is taken with the tablet's front camera
   const [proofCamOpen, setProofCamOpen] = useState(false)
@@ -1473,7 +1475,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
     const usesCedula = store.template_config?.homePage?.collectCustomerData !== false
       && store.template_config?.homePage?.enabled
     try {
-      if (!usesCedula) {
+      // A kiosk is one device for many customers: it never brings back the
+      // last one's name/phone (and drops any left from before)
+      const kioskDevice = !!store.template_config?.kiosk?.enabled && (
+        new URLSearchParams(window.location.search).get('kiosko') === '1'
+        || sessionStorage.getItem('lyte-kiosko') === '1'
+        || (window.matchMedia('(pointer: coarse)').matches && Math.min(window.screen.width, window.screen.height) >= 600))
+      if (kioskDevice) localStorage.removeItem('lyte-customer')
+      else if (!usesCedula) {
         const saved = localStorage.getItem('lyte-customer')
         if (saved) {
           const { name, phone } = JSON.parse(saved)
@@ -3096,7 +3105,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       }
       const { order_number: orderNumber } = await orderRes.json().catch(() => ({ order_number: null })) as { order_number: number | null }
 
-      if (!collectCustomerData) {
+      if (!collectCustomerData && !kioskActive) {
         try { localStorage.setItem('lyte-customer', JSON.stringify({ name: customerName.trim(), phone: customerPhone.trim() })) } catch {}
       }
 
@@ -3283,7 +3292,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     // The next customer must never see, or repeat, the last one's order
     setLastOrder(null); setShowReorder(false); reorderCheckedRef.current = false
     setShowHeaderReorderHint(false); setHeaderReorderEmpty(false); headerReorderHintShownRef.current = false
-    setKioskCatId(null); setCoStep('cart'); setProofCamOpen(false)
+    setKioskCatId(null); setCoStep('cart'); setProofCamOpen(false); setKioskHomeAsk(false)
     // The welcome overlay sits at the top of the document over the store.
     if (hp.enabled) window.scrollTo(0, 0)
     setView(hp.enabled ? 'splash' : 'catalog')
@@ -3301,6 +3310,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
   }
 
   function goHome() {
+    // Kiosk: going back to the start is the next customer's turn — nothing
+    // of this one's stays (asks first when there's an order in the cart)
+    if (kioskActive) {
+      if (cartCount > 0) { setKioskHomeAsk(true); return }
+      setModalProduct(null)
+      resetToHome()
+      return
+    }
     if (focusCategory && !hp.enabled) { closeFocusCategory(); return }
     setModalProduct(null)
     setMenuOpen(false)
@@ -5769,6 +5786,19 @@ export default function StoreShell({ store, products, categories = [], initialBc
         )}
 
         <div className="sf-kiosk-powered"><span>Powered by</span><span className="sf-powered-by-logo" role="img" aria-label="Lyte app" /></div>
+
+        {kioskHomeAsk && (
+          <div className="sf-kiosk-ask" role="alertdialog" aria-modal="true" aria-label="Empezar de nuevo" onClick={() => setKioskHomeAsk(false)}>
+            <div className="sf-kiosk-ask-card" onClick={e => e.stopPropagation()}>
+              <div className="sf-kiosk-ask-title">¿Empezar de nuevo?</div>
+              <div className="sf-kiosk-ask-text">Se borrará tu pedido y tus datos.</div>
+              <div className="sf-kiosk-ask-actions">
+                <button type="button" className="sf-kiosk-ask-keep" onClick={() => setKioskHomeAsk(false)}>Seguir con mi pedido</button>
+                <button type="button" className="sf-kiosk-ask-reset" onClick={() => { setKioskHomeAsk(false); setModalProduct(null); resetToHome() }}>Empezar de nuevo</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {renderProductModal()}
       </div>

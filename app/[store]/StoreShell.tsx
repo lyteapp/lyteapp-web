@@ -4901,7 +4901,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
       {proofCamOpen && (
         <ProofCamera
-          onCapture={f => { handleProofFile(f); setProofCamOpen(false) }}
+          // already sized and sharpened for reading: not recompressed (that blurred the text)
+          onCapture={f => { setPaymentProofPreview(URL.createObjectURL(f)); setPaymentProofFile(f); setProofCamOpen(false) }}
           onClose={() => setProofCamOpen(false)}
           onFallback={() => { setProofCamOpen(false); document.getElementById('sf-proof-input')?.click() }}
         />

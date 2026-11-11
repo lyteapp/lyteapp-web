@@ -9,9 +9,70 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 // receipt the brightness check can't see). Only the guide area is kept.
 
 const SAMPLE_MS = 120
-const STEADY_MS = 700      // held still this long → the countdown starts
-const COUNTDOWN_MS = 2000  // and still through it → the photo is taken
+const STEADY_MS = 400      // held (about) still this long → the countdown starts
+const COUNTDOWN_MS = 1500  // and through it → the photo is taken
 const SAMPLE_W = 96        // width of the tiny frame copy used for detection
+const SHARP_W = 360        // width of the copy used to judge how sharp a frame is
+
+// How sharp a picture is: the variance of its edges (Laplacian) on a small
+// grey copy — a shaky, out-of-focus frame scores low.
+function sharpness(src: HTMLCanvasElement): number {
+  const w = Math.min(SHARP_W, src.width), h = Math.max(1, Math.round(src.height * (w / src.width)))
+  const c = document.createElement('canvas')
+  c.width = w; c.height = h
+  const ctx = c.getContext('2d', { willReadFrequently: true })
+  if (!ctx) return 0
+  ctx.drawImage(src, 0, 0, w, h)
+  const d = ctx.getImageData(0, 0, w, h).data
+  const g = new Float32Array(w * h)
+  for (let i = 0; i < w * h; i++) g[i] = d[i * 4] * 0.299 + d[i * 4 + 1] * 0.587 + d[i * 4 + 2] * 0.114
+  let sum = 0, sum2 = 0, n = 0
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const i = y * w + x
+      const l = 4 * g[i] - g[i - 1] - g[i + 1] - g[i - w] - g[i + w]
+      sum += l; sum2 += l * l; n++
+    }
+  }
+  return n ? sum2 / n - (sum / n) ** 2 : 0
+}
+
+// Makes a phone screen's text stand out: stretches the contrast (a bright
+// screen comes out greyish on camera) and sharpens the edges a little.
+function enhance(c: HTMLCanvasElement) {
+  const ctx = c.getContext('2d', { willReadFrequently: true })
+  if (!ctx) return
+  const { width: w, height: h } = c
+  const img = ctx.getImageData(0, 0, w, h)
+  const d = img.data
+  const hist = new Uint32Array(256)
+  for (let i = 0; i < d.length; i += 4) hist[Math.round(d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114)]++
+  const total = w * h
+  let lo = 0, hi = 255, acc = 0
+  for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc > total * 0.01) { lo = v; break } }
+  acc = 0
+  for (let v = 255; v >= 0; v--) { acc += hist[v]; if (acc > total * 0.01) { hi = v; break } }
+  const scale = hi - lo > 40 ? 255 / (hi - lo) : 1
+  const src = new Uint8ClampedArray(d.length)
+  for (let i = 0; i < d.length; i += 4) {
+    for (let k = 0; k < 3; k++) src[i + k] = scale === 1 ? d[i + k] : (d[i + k] - lo) * scale
+    src[i + 3] = 255
+  }
+  // unsharp: pixel + 0.6 × (pixel − its 3×3 average); skipped on huge frames
+  if (w * h <= 5_000_000) {
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        const i = (y * w + x) * 4
+        for (let k = 0; k < 3; k++) {
+          let s = 0
+          for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) s += src[i + (dy * w + dx) * 4 + k]
+          d[i + k] = src[i + k] + 0.6 * (src[i + k] - s / 9)
+        }
+      }
+    }
+  } else d.set(src)
+  ctx.putImageData(img, 0, 0)
+}
 
 type Shot = { url: string; file: File }
 
@@ -37,11 +98,24 @@ export default function ProofCamera({ onCapture, onClose, onFallback }: {
     if (typeof navigator.mediaDevices?.getUserMedia !== 'function') return
     let cancelled = false
     navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', width: { ideal: 1920 }, height: { ideal: 1080 } },
+      // as many pixels as the camera gives (up to 4K): the receipt's text is
+      // only a part of the frame
+      video: { facingMode: 'user', width: { ideal: 3840 }, height: { ideal: 2160 } },
       audio: false,
     }).then(stream => {
       if (cancelled) { stream.getTracks().forEach(t => t.stop()); return }
       streamRef.current = stream
+      // Where the device allows it (Android): keep focusing, and expose a bit
+      // darker so the phone's bright screen isn't washed out. iPads ignore it.
+      try {
+        const track = stream.getVideoTracks()[0]
+        const caps = (track.getCapabilities?.() ?? {}) as Record<string, unknown>
+        const adv: Record<string, unknown>[] = []
+        if (Array.isArray(caps.focusMode) && caps.focusMode.includes('continuous')) adv.push({ focusMode: 'continuous' })
+        const ec = caps.exposureCompensation as { min?: number } | undefined
+        if (ec && typeof ec.min === 'number') adv.push({ exposureCompensation: Math.max(ec.min, -1) })
+        if (adv.length) track.applyConstraints({ advanced: adv as MediaTrackConstraintSet[] }).catch(() => {})
+      } catch {}
       const v = videoRef.current
       if (v) { v.srcObject = stream; v.play().catch(() => {}) }
     }).catch(() => { if (!cancelled) setState('error') })
@@ -68,10 +142,11 @@ export default function ProofCamera({ onCapture, onClose, onFallback }: {
     }
   }, [])
 
-  const capture = useCallback(() => {
+  // The guide's area of the current frame, at the camera's full resolution
+  const crop = useCallback((): HTMLCanvasElement | null => {
     const v = videoRef.current
     const g = guideInVideo()
-    if (!v || !g) return
+    if (!v || !g) return null
     // a little room around the guide, so the receipt's edges aren't lost
     const mx = g.w * 0.12, my = g.h * 0.06
     const x = Math.max(0, g.x - mx), y = Math.max(0, g.y - my)
@@ -79,13 +154,30 @@ export default function ProofCamera({ onCapture, onClose, onFallback }: {
     const canvas = document.createElement('canvas')
     canvas.width = Math.round(w); canvas.height = Math.round(h)
     canvas.getContext('2d')?.drawImage(v, x, y, w, h, 0, 0, canvas.width, canvas.height)
+    return canvas
+  }, [guideInVideo])
+
+  const finish = useCallback((canvas: HTMLCanvasElement) => {
+    enhance(canvas)
     canvas.toBlob(blob => {
       if (!blob) return
       const file = new File([blob], 'comprobante.jpg', { type: 'image/jpeg' })
       setShot({ url: URL.createObjectURL(blob), file })
       setState('shot')
-    }, 'image/jpeg', 0.92)
-  }, [guideInVideo])
+    }, 'image/jpeg', 0.95)
+  }, [])
+
+  // "Tomar foto ahora": a short burst, keeping the sharpest frame
+  const best = useRef<{ canvas: HTMLCanvasElement; score: number } | null>(null)
+  const burst = useCallback(async () => {
+    let top: { canvas: HTMLCanvasElement; score: number } | null = null
+    for (let n = 0; n < 5; n++) {
+      const c = crop()
+      if (c) { const sc = sharpness(c); if (!top || sc > top.score) top = { canvas: c, score: sc } }
+      await new Promise(r => setTimeout(r, 80))
+    }
+    if (top) finish(top.canvas)
+  }, [crop, finish])
 
   // Watches the guide: a phone screen there is brighter than what's around
   // it and has detail (text) on it; held still, it gets its photo taken.
@@ -94,7 +186,9 @@ export default function ProofCamera({ onCapture, onClose, onFallback }: {
     const canvas = document.createElement('canvas')
     const ctx = canvas.getContext('2d', { willReadFrequently: true })
     let prev: Float32Array | null = null
+    let prevMean = -1, prevSd = -1
     let still = 0
+    best.current = null
     let seen = 0 // how sure we are a phone is there (so the message doesn't flicker)
     const id = setInterval(() => {
       const v = videoRef.current
@@ -107,13 +201,13 @@ export default function ProofCamera({ onCapture, onClose, onFallback }: {
       const x0 = Math.max(0, Math.floor(g.x * k)), x1 = Math.min(canvas.width, Math.ceil((g.x + g.w) * k))
       const y0 = Math.max(0, Math.floor(g.y * k)), y1 = Math.min(canvas.height, Math.ceil((g.y + g.h) * k))
       const inside: number[] = []
-      let outSum = 0, outN = 0
+      let outSum = 0, outSum2 = 0, outN = 0
       for (let y = 0; y < canvas.height; y++) {
         for (let x = 0; x < canvas.width; x++) {
           const i = (y * canvas.width + x) * 4
           const lum = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114
           if (x >= x0 && x < x1 && y >= y0 && y < y1) inside.push(lum)
-          else { outSum += lum; outN++ }
+          else { outSum += lum; outSum2 += lum * lum; outN++ }
         }
       }
       if (!inside.length) return
@@ -121,6 +215,7 @@ export default function ProofCamera({ onCapture, onClose, onFallback }: {
       const mean = inside.reduce((a, b) => a + b, 0) / inside.length
       const sd = Math.sqrt(inside.reduce((a, b) => a + (b - mean) ** 2, 0) / inside.length)
       const outMean = outN ? outSum / outN : 0
+      const outSd = outN ? Math.sqrt(Math.max(0, outSum2 / outN - outMean * outMean)) : 0
       let diff = 255
       if (prev && prev.length === cur.length) {
         let d = 0
@@ -128,18 +223,40 @@ export default function ProofCamera({ onCapture, onClose, onFallback }: {
         diff = d / cur.length
       }
       prev = cur
-      const present = mean - outMean > 12 && sd > 10
-      const steady = diff < 6
+      const dMean = prevMean < 0 ? 255 : Math.abs(mean - prevMean), dSd = prevSd < 0 ? 255 : Math.abs(sd - prevSd)
+      prevMean = mean; prevSd = sd
+      // Forgiving on purpose: a lit screen a bit brighter than the room, or
+      // more detail (text) than around it even on a dark-mode receipt; a hand's normal
+      // shake only slows the countdown down instead of restarting it
+      // (the detail has to stand out from the room around it — so a busy
+      // wall or poster alone doesn't take a photo)
+      const present = (mean - outMean > 6 && sd > 7) || (sd > 22 && sd > outSd * 1.25)
+      // still enough: the picture barely changed, or (a hand's shake moving it
+      // a few pixels) its overall brightness and detail stayed the same
+      const steady = diff < 14 || (dMean < 4 && dSd < 5)
       if (present && steady) still += SAMPLE_MS
-      else still = 0
+      else if (present) still = Math.max(0, still - SAMPLE_MS * 2)
+      else still = Math.max(0, still - SAMPLE_MS * 4)
       const p = Math.min(1, Math.max(0, (still - STEADY_MS) / COUNTDOWN_MS))
+      // during the countdown, keep the sharpest frame seen (least shaky)
+      if (p > 0) {
+        const c = crop()
+        if (c) {
+          const sc = sharpness(c)
+          if (!best.current || sc > best.current.score) best.current = { canvas: c, score: sc }
+        }
+      }
       setProgress(p)
       seen = present ? Math.min(seen + 1, 4) : Math.max(seen - 1, 0)
       setHint(p > 0 ? 'shooting' : seen >= 3 ? 'hold' : 'place')
-      if (still >= STEADY_MS + COUNTDOWN_MS) { clearInterval(id); capture() }
+      if (still >= STEADY_MS + COUNTDOWN_MS) {
+        clearInterval(id)
+        const c = best.current?.canvas ?? crop()
+        if (c) finish(c)
+      }
     }, SAMPLE_MS)
     return () => clearInterval(id)
-  }, [state, guideInVideo, capture])
+  }, [state, guideInVideo, crop, finish])
 
   function retake() {
     if (shot) URL.revokeObjectURL(shot.url)
@@ -159,7 +276,7 @@ export default function ProofCamera({ onCapture, onClose, onFallback }: {
         <div className="sf-cam-sub">
           {state === 'shot'
             ? 'Revisa que se vean el monto y la referencia del pago.'
-            : 'Abre la confirmación del pago móvil en tu teléfono y ponlo frente a la cámara de la tablet.'}
+            : 'Abre la confirmación del pago móvil en tu teléfono y ponlo frente a la cámara de la tablet, a unos 25 cm.'}
         </div>
       </div>
 
@@ -205,7 +322,7 @@ export default function ProofCamera({ onCapture, onClose, onFallback }: {
         ) : (
           <>
             <button type="button" className="sf-cam-btn" onClick={onClose}>Cancelar</button>
-            <button type="button" className="sf-cam-btn light" disabled={state !== 'live'} onClick={capture}>Tomar foto ahora</button>
+            <button type="button" className="sf-cam-btn light" disabled={state !== 'live'} onClick={burst}>Tomar foto ahora</button>
           </>
         )}
       </div>

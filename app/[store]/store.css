@@ -3170,3 +3170,7 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
   .sf-co-transition.sf-boot-kiosk-able .sf-powered-by { gap: 4px; font-size: 9px; bottom: calc(env(safe-area-inset-bottom, 0px) + 1px); }
   .sf-co-transition.sf-boot-kiosk-able .sf-powered-by .sf-powered-by-logo { width: 34px; height: 16px; }
 }
+
+/* a smaller guide: the phone is held a little farther away, where a
+   tablet's front camera (fixed focus, wide angle) is sharp */
+.sf-cam-guide { height: 62%; }

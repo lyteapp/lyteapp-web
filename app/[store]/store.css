@@ -3143,6 +3143,9 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
 @media (min-width: 1024px) and (orientation: landscape) {
   .sf-kiosk .sf-modal-fullpage .sf-modal-img-wrap,
   .sf-kiosk .sf-modal-fullpage .sf-modal-product-head-hero .sf-modal-img { height: 100%; }
+  /* the product name starts below iPadOS Safari's blurred top bar, which
+     floats over the page (and isn't counted in the safe area) */
+  .sf-kiosk .sf-modal-fullpage .sf-modal-product-info { padding-top: calc(84px + env(safe-area-inset-top, 0px)); }
 }
 
 /* Full-page product view: the nutrition ring floats ABOVE the sheet, which

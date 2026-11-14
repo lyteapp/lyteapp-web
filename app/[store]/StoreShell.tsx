@@ -133,6 +133,143 @@ const CARD_IMG_WIDTH = 750
 // Shows the card-sized image (already cached → instant) right away, then
 // fades in the sharper large version over it once that finishes loading,
 // instead of leaving the modal blank while a fresh large image downloads.
+/** Kiosk: the open product's photo zooms INSIDE its own box — pinch with
+ *  two fingers, drag it around once zoomed, double-tap to zoom in / back out.
+ *  It never spills over the box (the box clips it) and can't be dragged past
+ *  its edges. While it's zoomed (or being pinched) it keeps the gesture, so
+ *  the photo strip doesn't swipe; `busyRef` tells the strip so. */
+function KioskZoom({ children, active, busyRef }: {
+  children: React.ReactNode
+  active: boolean
+  busyRef: React.MutableRefObject<boolean>
+}) {
+  const boxRef = useRef<HTMLDivElement | null>(null)
+  const layerRef = useRef<HTMLDivElement | null>(null)
+  const z = useRef({ s: 1, x: 0, y: 0 })
+  const lastTouch = useRef(0)
+
+  const apply = (s: number, x: number, y: number, animate = false) => {
+    const box = boxRef.current, layer = layerRef.current
+    if (!box || !layer) return
+    const W = box.clientWidth, H = box.clientHeight
+    s = Math.min(4, Math.max(1, s))
+    // keep the photo covering the whole box: no empty edge can be dragged in
+    x = Math.min(0, Math.max(W - W * s, x))
+    y = Math.min(0, Math.max(H - H * s, y))
+    z.current = { s, x, y }
+    layer.style.transition = animate ? 'transform 0.25s ease' : 'none'
+    layer.style.transform = s === 1 ? '' : `translate(${x}px, ${y}px) scale(${s})`
+    box.classList.toggle('zoomed', s > 1)
+  }
+
+  // swiped to another photo / photo changed: this one goes back to normal
+  useEffect(() => { if (!active) apply(1, 0, 0) }, [active])
+
+  useEffect(() => {
+    const box = boxRef.current
+    if (!box) return
+    type G = { kind: 'pinch'; d0: number; s0: number; x0: number; y0: number; mx: number; my: number }
+      | { kind: 'pan'; px: number; py: number; x0: number; y0: number }
+    let g: G | null = null
+    let tap: { t: number; x: number; y: number } | null = null
+    let down: { t: number; x: number; y: number; moved: boolean } | null = null
+    const rel = (t: Touch) => { const r = box.getBoundingClientRect(); return { x: t.clientX - r.left, y: t.clientY - r.top } }
+    const pinchStart = (e: TouchEvent) => {
+      const a = rel(e.touches[0]), b = rel(e.touches[1])
+      g = { kind: 'pinch', d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, s0: z.current.s, x0: z.current.x, y0: z.current.y, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }
+    }
+    const onStart = (e: TouchEvent) => {
+      lastTouch.current = performance.now()
+      if (e.touches.length >= 2) {
+        busyRef.current = true
+        down = null
+        pinchStart(e)
+        e.stopPropagation()
+      } else {
+        const p = rel(e.touches[0])
+        down = { t: e.timeStamp, x: p.x, y: p.y, moved: false }
+        if (z.current.s > 1) {
+          busyRef.current = true
+          g = { kind: 'pan', px: p.x, py: p.y, x0: z.current.x, y0: z.current.y }
+          e.stopPropagation()
+        }
+      }
+    }
+    const onMove = (e: TouchEvent) => {
+      if (down && e.touches.length === 1) {
+        const p = rel(e.touches[0])
+        if (Math.hypot(p.x - down.x, p.y - down.y) > 10) down.moved = true
+      }
+      if (!g) return
+      if (e.cancelable) e.preventDefault()
+      e.stopPropagation()
+      if (g.kind === 'pinch' && e.touches.length >= 2) {
+        const a = rel(e.touches[0]), b = rel(e.touches[1])
+        const s = Math.min(4, Math.max(1, g.s0 * Math.hypot(a.x - b.x, a.y - b.y) / g.d0))
+        const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2
+        // the point of the photo that was under the fingers stays under them
+        const cx = (g.mx - g.x0) / g.s0, cy = (g.my - g.y0) / g.s0
+        apply(s, mx - cx * s, my - cy * s)
+      } else if (g.kind === 'pan' && e.touches.length === 1) {
+        const p = rel(e.touches[0])
+        apply(z.current.s, g.x0 + p.x - g.px, g.y0 + p.y - g.py)
+      }
+    }
+    const onEnd = (e: TouchEvent) => {
+      lastTouch.current = performance.now()
+      if (e.touches.length === 1 && z.current.s > 1) {
+        // one finger lifted off a pinch: keep dragging with the other
+        const p = rel(e.touches[0])
+        g = { kind: 'pan', px: p.x, py: p.y, x0: z.current.x, y0: z.current.y }
+        return
+      }
+      if (e.touches.length >= 2) { pinchStart(e); return }
+      g = null
+      if (z.current.s < 1.05) apply(1, 0, 0, true)
+      // double-tap: zoom in where tapped, or back out
+      const t = e.changedTouches[0]
+      if (down && !down.moved && t && e.timeStamp - down.t < 300) {
+        const p = rel(t)
+        if (tap && e.timeStamp - tap.t < 350 && Math.hypot(p.x - tap.x, p.y - tap.y) < 40) {
+          tap = null
+          busyRef.current = true
+          if (z.current.s > 1) apply(1, 0, 0, true)
+          else apply(2.5, p.x - p.x * 2.5, p.y - p.y * 2.5, true)
+        } else tap = { t: e.timeStamp, x: p.x, y: p.y }
+      } else tap = null
+      down = null
+    }
+    box.addEventListener('touchstart', onStart, { passive: true })
+    box.addEventListener('touchmove', onMove, { passive: false })
+    box.addEventListener('touchend', onEnd)
+    box.addEventListener('touchcancel', onEnd)
+    // iOS Safari's own page pinch
+    const noGesture = (e: Event) => e.preventDefault()
+    box.addEventListener('gesturestart', noGesture)
+    return () => {
+      box.removeEventListener('touchstart', onStart)
+      box.removeEventListener('touchmove', onMove)
+      box.removeEventListener('touchend', onEnd)
+      box.removeEventListener('touchcancel', onEnd)
+      box.removeEventListener('gesturestart', noGesture)
+    }
+  }, [busyRef])
+
+  return (
+    <div ref={boxRef} className="sf-kzoom"
+      // mouse (testing on a computer): double-click zooms in / out too
+      onDoubleClick={e => {
+        if (performance.now() - lastTouch.current < 1000) return // a finger's double-tap, already handled
+        const r = e.currentTarget.getBoundingClientRect()
+        const x = e.clientX - r.left, y = e.clientY - r.top
+        if (z.current.s > 1) apply(1, 0, 0, true)
+        else apply(2.5, x - x * 2.5, y - y * 2.5, true)
+      }}>
+      <div ref={layerRef} className="sf-kzoom-layer">{children}</div>
+    </div>
+  )
+}
+
 function ProgressiveImg({ src, alt, className, original, onWait }: {
   src: string; alt: string; className: string
   /** Kiosk (full screen on a tablet): the sharp version is the photo exactly
@@ -1450,6 +1587,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [lightbox, setLightbox] = useState<{ images: string[]; idx: number } | null>(null)
   const touchStartX             = useRef<number>(0)
   const swipedRef               = useRef<boolean>(false)
+  // Kiosk: the product photo is zoomed / being pinched — the strip doesn't swipe
+  const kioskZoomBusyRef        = useRef<boolean>(false)
   const dragStartIdxRef         = useRef<number>(0)
   const stripRefs               = useRef<Map<string, HTMLDivElement>>(new Map())
   const lightboxStripRef        = useRef<HTMLDivElement | null>(null)
@@ -2648,6 +2787,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
               const swipeable = imgs.length > 1
               const curIdx = Math.min(modalImgIdx, imgs.length - 1)
               const openLightbox = () => setLightbox({ images: imgs.length > 0 ? imgs : [modalDisplayImage!], idx: curIdx })
+              // kiosk: each photo zooms inside its own box
+              const inZoom = (node: React.ReactNode, active: boolean, key?: string | null) => kioskActive
+                ? <KioskZoom key={key ?? undefined} active={active} busyRef={kioskZoomBusyRef}>{node}</KioskZoom>
+                : node
               return (
                 <div
                   className="sf-modal-img-wrap"
@@ -2659,6 +2802,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                     if (modalImgStripRef.current) modalImgStripRef.current.classList.add('dragging')
                   } : undefined}
                   onTouchMove={swipeable ? e => {
+                    if (kioskZoomBusyRef.current) return
                     const dx = e.touches[0].clientX - touchStartX.current
                     if (Math.abs(dx) > 5) {
                       e.stopPropagation()
@@ -2675,6 +2819,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
                     const dx = (e.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current
                     const strip = modalImgStripRef.current
                     if (strip) strip.classList.remove('dragging')
+                    if (kioskZoomBusyRef.current) {
+                      // the gesture was a zoom, not a swipe: stay on this photo
+                      if (e.touches.length === 0) kioskZoomBusyRef.current = false
+                      swipedRef.current = true
+                      if (strip) strip.style.transform = `translateX(-${dragStartIdxRef.current * (100 / imgs.length)}%)`
+                      setModalImgIdx(dragStartIdxRef.current)
+                      return
+                    }
                     if (Math.abs(dx) > 40) {
                       swipedRef.current = true
                       const next = dx < 0 ? Math.min(imgs.length - 1, dragStartIdxRef.current + 1) : Math.max(0, dragStartIdxRef.current - 1)
@@ -2683,7 +2835,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
                       setModalImgIdx(dragStartIdxRef.current)
                     }
                   } : undefined}
-                  onClick={() => { if (swipedRef.current) { swipedRef.current = false } else { openLightbox() } }}
+                  // kiosk: the photo zooms right where it is instead of opening over everything
+                  onClick={() => { if (swipedRef.current) { swipedRef.current = false } else if (!kioskActive) { openLightbox() } }}
                 >
                   {swipeable ? (
                     <div
@@ -2693,17 +2846,17 @@ export default function StoreShell({ store, products, categories = [], initialBc
                     >
                       {imgs.map((img, i) => (
                         <div key={i} className="sf-modal-img-frame" style={{ width: `${100 / imgs.length}%` }}>
-                          {isVideoUrl(img)
+                          {inZoom(isVideoUrl(img)
                             ? <video src={img} autoPlay muted loop playsInline className="sf-modal-img sf-modal-img-zoom" />
                             : <ProgressiveImg key={img} src={img} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" original={kioskActive}
-                                onWait={kioskActive && i === curIdx ? setKioskPhotoWait : undefined} />}
+                                onWait={kioskActive && i === curIdx ? setKioskPhotoWait : undefined} />, i === curIdx)}
                         </div>
                       ))}
                     </div>
                   ) : (
-                    isVideoUrl(modalDisplayImage)
+                    inZoom(isVideoUrl(modalDisplayImage)
                       ? <video src={modalDisplayImage} autoPlay muted loop playsInline className="sf-modal-img sf-modal-img-zoom" />
-                      : <ProgressiveImg key={modalDisplayImage ?? ''} src={modalDisplayImage ?? ''} alt={modalProduct.name} original={kioskActive} onWait={kioskActive ? setKioskPhotoWait : undefined} className="sf-modal-img sf-modal-img-zoom" />
+                      : <ProgressiveImg key={modalDisplayImage ?? ''} src={modalDisplayImage ?? ''} alt={modalProduct.name} original={kioskActive} onWait={kioskActive ? setKioskPhotoWait : undefined} className="sf-modal-img sf-modal-img-zoom" />, true, modalDisplayImage)
                   )}
                   {imgs.length > 1 && (
                     <div className="sf-slide-dots sf-modal-img-dots">

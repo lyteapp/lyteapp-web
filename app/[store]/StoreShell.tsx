@@ -133,29 +133,53 @@ const CARD_IMG_WIDTH = 750
 // Shows the card-sized image (already cached → instant) right away, then
 // fades in the sharper large version over it once that finishes loading,
 // instead of leaving the modal blank while a fresh large image downloads.
-function ProgressiveImg({ src, alt, className, original }: {
+function ProgressiveImg({ src, alt, className, original, onWait }: {
   src: string; alt: string; className: string
   /** Kiosk (full screen on a tablet): the sharp version is the photo exactly
-   *  as uploaded — full size, not recompressed — the best there is */
+   *  as uploaded — full size, not recompressed — the best there is, and no
+   *  blurry preview: the loading screen covers it until it's in */
   original?: boolean
+  /** Told true while the sharp photo loads, false once it's in (or after
+   *  6s / on an error, so nothing ever waits on it for good) */
+  onWait?: (waiting: boolean) => void
 }) {
   const [hiLoaded, setHiLoaded] = useState(false)
+  const [gaveUp, setGaveUp] = useState(false)
   const lo = resizedImg(src, CARD_IMG_WIDTH)
   const hi = original ? src : resizedImg(src, 1200)
+  useEffect(() => {
+    if (!original) return
+    const t = setTimeout(() => setGaveUp(true), 6000)
+    return () => clearTimeout(t)
+  }, [original])
+  const waiting = !!original && !hiLoaded && !gaveUp
+  // Whichever photo is the one on screen reports; when it stops being it
+  // (swiped away, closed) it takes its "still loading" back with it.
+  const waitRef = useRef(onWait)
+  useEffect(() => { waitRef.current = onWait })
+  const reporting = !!onWait
+  useEffect(() => {
+    const tell = waitRef.current
+    if (!reporting || !tell) return
+    tell(waiting)
+    return () => { if (waiting) tell(false) }
+  }, [reporting, waiting])
+  const ready = () => setHiLoaded(true)
   return (
     <>
       {/* sync decode: it's already cached, so paint it in the same frame the
           modal opens instead of one blank frame later. */}
-      <img src={lo} alt={alt} className={className} decoding="sync" />
-      {hi !== lo && (
+      {!original && <img src={lo} alt={alt} className={className} decoding="sync" />}
+      {(hi !== lo || original) && (
         <img
           src={hi}
-          alt=""
-          aria-hidden="true"
+          alt={original ? alt : ''}
+          aria-hidden={original ? undefined : true}
           className={`${className} sf-img-hi${hiLoaded ? ' loaded' : ''}`}
           // onLoad fires once downloaded, not decoded — revealing it then
           // flashes its empty box for a frame over the image underneath.
-          onLoad={e => { e.currentTarget.decode().catch(() => {}).finally(() => setHiLoaded(true)) }}
+          onLoad={e => { e.currentTarget.decode().catch(() => {}).finally(ready) }}
+          onError={ready}
         />
       )}
     </>
@@ -1148,6 +1172,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [kioskCatId, setKioskCatId] = useState<string | null>(null)
   // Kiosk "Inicio" with products in the cart: asks before starting over
   const [kioskHomeAsk, setKioskHomeAsk] = useState(false)
+  // Kiosk: the product's full-resolution photo is still loading (the loading screen shows)
+  const [kioskPhotoWait, setKioskPhotoWait] = useState(false)
   const [coStep, setCoStep] = useState<CoStep>('cart')
   // Kiosk: the payment proof is taken with the tablet's front camera
   const [proofCamOpen, setProofCamOpen] = useState(false)
@@ -2452,6 +2478,17 @@ export default function StoreShell({ store, products, categories = [], initialBc
     const modalFull = cfgModalFull || kioskActive
     return (
       <div className="sf-modal-overlay" style={showHeaderAboveModal ? { top: modalTop } : undefined} onClick={() => setModalProduct(null)}>
+        {kioskActive && (
+          // Kiosk: the logo loading screen over the product until its photo
+          // is in at full resolution (no blurry stand-in)
+          <div className={`sf-co-transition sf-kiosk-loader sf-photo-loader${kioskPhotoWait ? '' : ' done'}`}
+            aria-hidden="true" onClick={e => e.stopPropagation()}>
+            {store.logo_url
+              ? <img src={resizedImg(store.logo_url, 400)} alt="" className={`sf-co-transition-logo sf-nav-logo-${cfgLogoShape}`} />
+              : <div className="sf-co-transition-name">{store.name}</div>}
+            <div className="sf-co-transition-bar"><span /></div>
+          </div>
+        )}
         {maxHit && (
           <div key={maxHit.n} className="sf-max-toast" role="alert" onClick={e => { e.stopPropagation(); setMaxHit(null) }}>
             <span className="sf-max-toast-icon">!</span>
@@ -2658,14 +2695,15 @@ export default function StoreShell({ store, products, categories = [], initialBc
                         <div key={i} className="sf-modal-img-frame" style={{ width: `${100 / imgs.length}%` }}>
                           {isVideoUrl(img)
                             ? <video src={img} autoPlay muted loop playsInline className="sf-modal-img sf-modal-img-zoom" />
-                            : <ProgressiveImg key={img} src={img} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" original={kioskActive} />}
+                            : <ProgressiveImg key={img} src={img} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" original={kioskActive}
+                                onWait={kioskActive && i === curIdx ? setKioskPhotoWait : undefined} />}
                         </div>
                       ))}
                     </div>
                   ) : (
                     isVideoUrl(modalDisplayImage)
                       ? <video src={modalDisplayImage} autoPlay muted loop playsInline className="sf-modal-img sf-modal-img-zoom" />
-                      : <ProgressiveImg key={modalDisplayImage ?? ''} src={modalDisplayImage ?? ''} alt={modalProduct.name} original={kioskActive} className="sf-modal-img sf-modal-img-zoom" />
+                      : <ProgressiveImg key={modalDisplayImage ?? ''} src={modalDisplayImage ?? ''} alt={modalProduct.name} original={kioskActive} onWait={kioskActive ? setKioskPhotoWait : undefined} className="sf-modal-img sf-modal-img-zoom" />
                   )}
                   {imgs.length > 1 && (
                     <div className="sf-slide-dots sf-modal-img-dots">

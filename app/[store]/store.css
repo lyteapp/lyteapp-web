@@ -3336,3 +3336,16 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
 .sf-modal-dark .sf-knut-track { stroke: rgba(255,255,255,0.12); }
 .sf-modal-dark .sf-knut-bar { background: rgba(255,255,255,0.1); box-shadow: inset 0 1px 2px rgba(0,0,0,0.3); }
 .sf-modal-dark .sf-knut-diets { border-top-color: rgba(255,255,255,0.12); }
+
+/* Kiosk touch: no wait for a possible double-tap zoom on anything, no grey
+   tap flash, no text getting selected or the iOS callout popping up under a
+   finger held a little long. :where() keeps it weaker than any part's own
+   touch rules (the photo zoom, the photo strip, slide-to-start). */
+:where(html.sf-kiosk-lock, html.sf-kiosk-lock *) {
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
+:where(html.sf-kiosk-lock) :where(input, textarea, [contenteditable="true"]) { -webkit-user-select: text; user-select: text; }
+/* pressed feedback right away on the rest of the tappable things */
+.sf-kiosk-lock :is(.sf-modal-extra, .sf-modal-chip, .sf-payment-opt, .sf-modal-qty button, .sf-modal-close):active { transform: scale(0.97); }
+.sf-kiosk-lock :is(.sf-modal-extra, .sf-modal-chip, .sf-payment-opt, .sf-modal-qty button, .sf-modal-close) { transition: transform 0.12s ease, background 0.15s, border-color 0.15s, color 0.15s; }

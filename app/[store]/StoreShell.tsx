@@ -1409,6 +1409,67 @@ export default function StoreShell({ store, products, categories = [], initialBc
       document.removeEventListener('touchmove', onMove)
     }
   }, [kioskActive])
+  // Kiosk touch: a tap counts even when the finger slides a little. Safari
+  // takes a few pixels of movement inside a scrolling area (the products,
+  // a product's options, a checkout step) as the start of a scroll and drops
+  // the tap — on a kiosk that reads as "it didn't take my touch". When a
+  // short touch that barely moved ends on something tappable and the
+  // browser didn't click it, it gets clicked. Not when the touch was
+  // stopping a scroll still gliding, and not for what handles touch on its
+  // own (number pad, slide-to-start, the photo zoom).
+  useEffect(() => {
+    if (!kioskActive) return
+    const TAPPABLE = 'button, a[href], label, summary, [role="button"], input[type="checkbox"], input[type="radio"], .sf-modal-extra, .sf-payment-opt'
+    const OWN = '.sf-splash-keypad-btn, [class*="slide-bar"], .sf-kzoom, input, textarea, select'
+    let start: { x: number; y: number; t: number; el: HTMLElement; far: boolean } | null = null
+    let lastScroll = 0
+    let lastClick = 0
+    const onScroll = () => { lastScroll = performance.now() }
+    const onClick = () => { lastClick = performance.now() }
+    const onStart = (e: TouchEvent) => {
+      start = null
+      if (e.touches.length !== 1) return
+      const target = e.target as HTMLElement | null
+      if (!target?.closest || target.closest(OWN)) return
+      const el = target.closest(TAPPABLE) as HTMLElement | null
+      if (!el || (el as HTMLButtonElement).disabled) return
+      // a touch that stops a scroll still gliding is just that, not a tap
+      if (performance.now() - lastScroll < 120) return
+      const t = e.touches[0]
+      start = { x: t.clientX, y: t.clientY, t: performance.now(), el, far: false }
+    }
+    const onMove = (e: TouchEvent) => {
+      if (!start) return
+      if (e.touches.length !== 1) { start = null; return }
+      const t = e.touches[0]
+      if (Math.hypot(t.clientX - start.x, t.clientY - start.y) > 22) start.far = true
+    }
+    const onEnd = (e: TouchEvent) => {
+      const s = start
+      start = null
+      if (!s || s.far || performance.now() - s.t > 420) return // a hold is not a tap (an option's hold shows its nutrition)
+      const t = e.changedTouches[0]
+      if (t && Math.hypot(t.clientX - s.x, t.clientY - s.y) > 22) return
+      const endedAt = performance.now()
+      // give the browser's own click its moment first
+      setTimeout(() => {
+        if (lastClick >= endedAt - 5 || !s.el.isConnected || (s.el as HTMLButtonElement).disabled) return
+        s.el.click()
+      }, 90)
+    }
+    document.addEventListener('scroll', onScroll, { capture: true, passive: true })
+    document.addEventListener('click', onClick, true)
+    document.addEventListener('touchstart', onStart, { capture: true, passive: true })
+    document.addEventListener('touchmove', onMove, { capture: true, passive: true })
+    document.addEventListener('touchend', onEnd, { capture: true, passive: true })
+    return () => {
+      document.removeEventListener('scroll', onScroll, { capture: true })
+      document.removeEventListener('click', onClick, true)
+      document.removeEventListener('touchstart', onStart, { capture: true })
+      document.removeEventListener('touchmove', onMove, { capture: true })
+      document.removeEventListener('touchend', onEnd, { capture: true })
+    }
+  }, [kioskActive])
   const [installPrompt, setInstallPrompt] = useState<Event & { prompt(): void } | null>(null)
   const [showIosHint, setShowIosHint] = useState(false)
   const [isIos, setIsIos]   = useState(false)

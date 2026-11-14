@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef } from 'react'
+import { syncVideo } from './videoSync'
 
 // Keeps storefront videos (welcome background, banner, content blocks) in
 // memory once they've been seen, so coming back to the welcome page or to a
@@ -59,8 +60,11 @@ export function warmVideo(src?: string | null) {
 
 /** A <video> that plays from the in-memory copy when there is one. Only a
  *  video that actually played gets kept (not a tap-to-play one left alone). */
-export function CachedVideo({ src, onPlaying, ref, alwaysPlay, ...props }: React.VideoHTMLAttributes<HTMLVideoElement> & {
+export function CachedVideo({ src, onPlaying, ref, alwaysPlay, sync, ...props }: React.VideoHTMLAttributes<HTMLVideoElement> & {
   src: string; ref?: React.Ref<HTMLVideoElement>
+  /** Kept on the same moment as every other screen playing it (kiosks side
+   *  by side) — see videoSync */
+  sync?: boolean
   /** Never left stopped: nudged, retried and started by the first touch
    *  (the welcome page's background). Not for videos paused on purpose. */
   alwaysPlay?: boolean
@@ -118,6 +122,12 @@ export function CachedVideo({ src, onPlaying, ref, alwaysPlay, ...props }: React
       window.removeEventListener('touchstart', onTouch)
     }
   }, [src, autoPlay, muted, alwaysPlay])
+
+  useEffect(() => {
+    const v = el.current
+    if (!v || !sync) return
+    return syncVideo(v)
+  }, [src, sync])
 
   return (
     <video

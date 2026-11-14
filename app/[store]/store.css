@@ -3344,3 +3344,18 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
 /* pressed feedback right away on the rest of the tappable things */
 .sf-kiosk-lock :is(.sf-modal-extra, .sf-modal-chip, .sf-payment-opt, .sf-modal-qty button, .sf-modal-close):active { transform: scale(0.97); }
 .sf-kiosk-lock :is(.sf-modal-extra, .sf-modal-chip, .sf-payment-opt, .sf-modal-qty button, .sf-modal-close) { transition: transform 0.12s ease, background 0.15s, border-color 0.15s, color 0.15s; }
+
+/* Kiosk welcome: invisible corner spot that re-syncs the video with the
+   other kiosks; it only shows a short notice once done */
+.sf-splash-sync {
+  position: absolute; top: 0; left: 0; z-index: 30; width: 64px; height: 64px;
+  padding: 0; border: none; background: transparent; cursor: default;
+  -webkit-tap-highlight-color: transparent;
+}
+.sf-splash-sync span {
+  position: absolute; top: calc(14px + env(safe-area-inset-top, 0px)); left: 14px; white-space: nowrap;
+  padding: 8px 14px; border-radius: 99px; font-size: 14px; font-weight: 600; color: #fff;
+  background: rgba(15,23,42,0.55); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  opacity: 0; transform: translateY(-6px); transition: opacity 0.2s, transform 0.2s; pointer-events: none;
+}
+.sf-splash-sync.done span { opacity: 1; transform: none; }

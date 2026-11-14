@@ -12,6 +12,7 @@ import LocationMapPicker from './LocationMapPicker'
 import { isVideoUrl, resizedImg, imgSrcSet } from '../lib/storeImages'
 import BannerCarousel from './BannerCarousel'
 import { CachedVideo } from './videoCache'
+import { resyncVideos } from './videoSync'
 import { storeLoaderColor } from '../lib/storeTheme'
 
 const QueueQr = dynamic(() => import('./QueueQr'), { ssr: false })
@@ -1355,6 +1356,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [kioskHomeAsk, setKioskHomeAsk] = useState(false)
   // Kiosk: the product's full-resolution photo is still loading (the loading screen shows)
   const [kioskPhotoWait, setKioskPhotoWait] = useState(false)
+  // Kiosk: the welcome video was just put back in step with the other kiosks (a short notice)
+  const [videoSynced, setVideoSynced] = useState(false)
   const [coStep, setCoStep] = useState<CoStep>('cart')
   // Kiosk: the payment proof is taken with the tablet's front camera
   const [proofCamOpen, setProofCamOpen] = useState(false)
@@ -4082,13 +4085,28 @@ export default function StoreShell({ store, products, categories = [], initialBc
             same way normal flow does — that mismatch, not a height or
             overscroll issue, was the actual cause of the blank strip). */}
         {hp.imageUrl && isVideoUrl(hp.imageUrl) ? (
-          <CachedVideo src={hp.imageUrl} autoPlay muted loop playsInline preload="auto" alwaysPlay className="sf-splash-bg-img" />
+          <CachedVideo src={hp.imageUrl} autoPlay muted loop playsInline preload="auto" alwaysPlay sync={kioskActive} className="sf-splash-bg-img" />
         ) : hp.imageUrl ? (
           <img src={resizedImg(hp.imageUrl, 1400)} srcSet={imgSrcSet(hp.imageUrl, [800, 1400, 2000, 2400])} sizes="100vw" alt="" className="sf-splash-bg-img" />
         ) : (
           <div className="sf-splash-bg-img" style={{ background: hp.bgColor || '#0F172A' }} />
         )}
         {hp.imageUrl && <div className="sf-splash-bg-tint" />}
+        {kioskActive && hp.imageUrl && isVideoUrl(hp.imageUrl) && (
+          // Kiosk: an invisible spot in the top-left corner — a tap puts this
+          // screen's video right in step with the other kiosks again (it
+          // keeps itself in step anyway; this is for the staff, on the spot)
+          <button type="button" className={`sf-splash-sync${videoSynced ? ' done' : ''}`} aria-label="Sincronizar video"
+            onClick={e => {
+              e.stopPropagation()
+              resyncVideos().then(() => {
+                setVideoSynced(true)
+                setTimeout(() => setVideoSynced(false), 1600)
+              })
+            }}>
+            <span>Video sincronizado</span>
+          </button>
+        )}
         {hp.images && hp.images.length > 0 && (
           <div className="sf-splash-images-layer">
             {hp.images.map(img => (

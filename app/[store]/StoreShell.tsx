@@ -146,23 +146,61 @@ function KioskZoom({ children, active, busyRef }: {
   const boxRef = useRef<HTMLDivElement | null>(null)
   const layerRef = useRef<HTMLDivElement | null>(null)
   const z = useRef({ s: 1, x: 0, y: 0 })
+  // what the layer is actually laid out at (real size, so the photo is drawn
+  // at full resolution); a gesture in progress is a quick transform on top
+  const laid = useRef({ s: 1, x: 0, y: 0 })
+  const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastTouch = useRef(0)
 
-  const apply = (s: number, x: number, y: number, animate = false) => {
+  // Lays the photo out at its zoomed size for real — the browser redraws it
+  // from the full-resolution file, instead of stretching the small picture it
+  // drew at normal size (that's what a CSS scale does, and why it looks soft)
+  const settle = () => {
+    const layer = layerRef.current
+    if (!layer) return
+    const { s, x, y } = z.current
+    laid.current = { s, x, y }
+    layer.style.transition = 'none'
+    layer.style.transform = ''
+    if (s === 1) {
+      layer.style.left = layer.style.top = layer.style.width = layer.style.height = ''
+    } else {
+      layer.style.left = `${x}px`; layer.style.top = `${y}px`
+      layer.style.width = `${s * 100}%`; layer.style.height = `${s * 100}%`
+    }
+  }
+
+  // How far it can go without losing quality: up to the point where each
+  // pixel of the photo fills one pixel of the screen (4x at most, and at
+  // least 2x so a small photo still zooms some)
+  const maxZoom = () => {
+    const box = boxRef.current
+    const img = layerRef.current?.querySelector('img.sf-img-hi, img') as HTMLImageElement | null
+    if (!box || !img?.naturalWidth) return 4
+    const shown = Math.min(box.clientWidth / img.naturalWidth, box.clientHeight / img.naturalHeight) * img.naturalWidth
+    return Math.min(4, Math.max(2, img.naturalWidth / (shown * (window.devicePixelRatio || 1))))
+  }
+
+  const apply = (s: number, x: number, y: number, animate = false, live = false) => {
     const box = boxRef.current, layer = layerRef.current
     if (!box || !layer) return
     const W = box.clientWidth, H = box.clientHeight
-    s = Math.min(4, Math.max(1, s))
+    s = Math.min(maxZoom(), Math.max(1, s))
     // keep the photo covering the whole box: no empty edge can be dragged in
     x = Math.min(0, Math.max(W - W * s, x))
     y = Math.min(0, Math.max(H - H * s, y))
     z.current = { s, x, y }
-    layer.style.transition = animate ? 'transform 0.25s ease' : 'none'
-    layer.style.transform = s === 1 ? '' : `translate(${x}px, ${y}px) scale(${s})`
     box.classList.toggle('zoomed', s > 1)
+    if (settleTimer.current) { clearTimeout(settleTimer.current); settleTimer.current = null }
+    if (!live && !animate) { settle(); return }
+    const L = laid.current
+    layer.style.transition = animate ? 'transform 0.25s ease' : 'none'
+    layer.style.transform = `translate(${x - L.x}px, ${y - L.y}px) scale(${s / L.s})`
+    if (animate) settleTimer.current = setTimeout(settle, 260)
   }
 
   // swiped to another photo / photo changed: this one goes back to normal
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- apply only touches refs
   useEffect(() => { if (!active) apply(1, 0, 0) }, [active])
 
   useEffect(() => {
@@ -205,14 +243,14 @@ function KioskZoom({ children, active, busyRef }: {
       e.stopPropagation()
       if (g.kind === 'pinch' && e.touches.length >= 2) {
         const a = rel(e.touches[0]), b = rel(e.touches[1])
-        const s = Math.min(4, Math.max(1, g.s0 * Math.hypot(a.x - b.x, a.y - b.y) / g.d0))
+        const s = Math.min(maxZoom(), Math.max(1, g.s0 * Math.hypot(a.x - b.x, a.y - b.y) / g.d0))
         const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2
         // the point of the photo that was under the fingers stays under them
         const cx = (g.mx - g.x0) / g.s0, cy = (g.my - g.y0) / g.s0
-        apply(s, mx - cx * s, my - cy * s)
+        apply(s, mx - cx * s, my - cy * s, false, true)
       } else if (g.kind === 'pan' && e.touches.length === 1) {
         const p = rel(e.touches[0])
-        apply(z.current.s, g.x0 + p.x - g.px, g.y0 + p.y - g.py)
+        apply(z.current.s, g.x0 + p.x - g.px, g.y0 + p.y - g.py, false, true)
       }
     }
     const onEnd = (e: TouchEvent) => {
@@ -224,8 +262,10 @@ function KioskZoom({ children, active, busyRef }: {
         return
       }
       if (e.touches.length >= 2) { pinchStart(e); return }
+      const wasGesture = !!g
       g = null
       if (z.current.s < 1.05) apply(1, 0, 0, true)
+      else if (wasGesture) apply(z.current.s, z.current.x, z.current.y) // fingers off: redraw it sharp
       // double-tap: zoom in where tapped, or back out
       const t = e.changedTouches[0]
       if (down && !down.moved && t && e.timeStamp - down.t < 300) {
@@ -234,7 +274,7 @@ function KioskZoom({ children, active, busyRef }: {
           tap = null
           busyRef.current = true
           if (z.current.s > 1) apply(1, 0, 0, true)
-          else apply(2.5, p.x - p.x * 2.5, p.y - p.y * 2.5, true)
+          else { const t = Math.min(2.5, maxZoom()); apply(t, p.x - p.x * t, p.y - p.y * t, true) }
         } else tap = { t: e.timeStamp, x: p.x, y: p.y }
       } else tap = null
       down = null
@@ -253,6 +293,7 @@ function KioskZoom({ children, active, busyRef }: {
       box.removeEventListener('touchcancel', onEnd)
       box.removeEventListener('gesturestart', noGesture)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- apply only touches refs
   }, [busyRef])
 
   return (
@@ -263,7 +304,7 @@ function KioskZoom({ children, active, busyRef }: {
         const r = e.currentTarget.getBoundingClientRect()
         const x = e.clientX - r.left, y = e.clientY - r.top
         if (z.current.s > 1) apply(1, 0, 0, true)
-        else apply(2.5, x - x * 2.5, y - y * 2.5, true)
+        else { const t = Math.min(2.5, maxZoom()); apply(t, x - x * t, y - y * t, true) }
       }}>
       <div ref={layerRef} className="sf-kzoom-layer">{children}</div>
     </div>

@@ -3216,37 +3216,91 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
 .sf-kiosk .sf-modal-img-strip, .sf-kiosk .sf-modal-img-frame { height: 100%; }
 .sf-kiosk .sf-modal-img-wrap { cursor: default; }
 
-/* Kiosk: nutrition facts as a card under the price, instead of a badge
-   floating over the photo */
+/* Kiosk: nutrition facts as a card at the top of the product's options,
+   in "liquid glass": frosted translucent glass with bright edges, the macro
+   colors glowing softly through it, a glossy ring around a glass disc */
 .sf-knut {
-  margin: 4px 0 22px; padding: 18px 22px 20px; border-radius: 22px;
-  background: color-mix(in srgb, var(--sf-accent-color, #7C3AED) 6%, #fff);
-  border: 1px solid color-mix(in srgb, var(--sf-accent-color, #7C3AED) 14%, transparent);
+  --kn-a: var(--sf-accent-color, #7C3AED);
+  position: relative; isolation: isolate; overflow: hidden; flex-shrink: 0;
+  margin: 4px 0 22px; padding: 18px 22px 20px; border-radius: 28px;
+  background: linear-gradient(150deg, rgba(255,255,255,0.72) 0%, rgba(255,255,255,0.38) 55%, rgba(255,255,255,0.55) 100%);
+  -webkit-backdrop-filter: blur(28px) saturate(185%); backdrop-filter: blur(28px) saturate(185%);
+  border: 1px solid rgba(255,255,255,0.75);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255,255,255,0.95),
+    inset 0 -1px 0 rgba(255,255,255,0.45),
+    inset 0 0 0 1px rgba(255,255,255,0.25),
+    inset 0 -18px 30px -24px rgba(15,23,42,0.18),
+    0 18px 40px -18px rgba(15,23,42,0.22),
+    0 2px 8px rgba(15,23,42,0.06);
   animation: sfKnutIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-@keyframes sfKnutIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-.sf-knut-title { font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #64748B; margin-bottom: 14px; }
+/* the specular sheen across the top of the glass */
+.sf-knut::after {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; border-radius: inherit;
+  background:
+    linear-gradient(170deg, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0.12) 28%, rgba(255,255,255,0) 45%),
+    radial-gradient(120% 60% at 0% 0%, rgba(255,255,255,0.5), transparent 60%);
+}
+@keyframes sfKnutIn { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: none; } }
+.sf-knut-glow { position: absolute; inset: -30px; z-index: -2; pointer-events: none; filter: blur(34px); opacity: 0.5; }
+.sf-knut-glow i { position: absolute; border-radius: 50%; }
+.sf-knut-glow i:nth-child(1) { width: 190px; height: 190px; left: 0; top: 10px; background: var(--kn-a); opacity: 0.55; }
+.sf-knut-glow i:nth-child(2) { width: 220px; height: 160px; right: 10%; top: 0; background: #10B981; opacity: 0.4; }
+.sf-knut-glow i:nth-child(3) { width: 200px; height: 150px; right: 0; bottom: 0; background: #F59E0B; opacity: 0.4; }
+.sf-knut-title { font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(15,23,42,0.55); margin-bottom: 14px; }
 .sf-knut-main { display: flex; align-items: center; gap: 24px; }
-.sf-knut-ring { position: relative; width: 116px; height: 116px; flex-shrink: 0; }
-.sf-knut-ring svg { width: 100%; height: 100%; display: block; }
-.sf-knut-track { stroke: rgba(15, 23, 42, 0.08); }
-.sf-knut-kcal { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05; }
-.sf-knut-kcal strong { font-size: 30px; font-weight: 800; color: #0F172A; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-.sf-knut-kcal span { font-size: 12px; font-weight: 600; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.06em; }
+.sf-knut-ring { position: relative; width: 124px; height: 124px; flex-shrink: 0; }
+.sf-knut-ring svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.sf-knut-track { stroke: rgba(255,255,255,0.55); }
+.sf-knut-segs { filter: drop-shadow(0 3px 5px rgba(15,23,42,0.18)); }
+/* the glass disc in the middle */
+.sf-knut-kcal {
+  position: absolute; inset: 21px; border-radius: 50%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05;
+  background: linear-gradient(160deg, rgba(255,255,255,0.85), rgba(255,255,255,0.45));
+  -webkit-backdrop-filter: blur(12px) saturate(170%); backdrop-filter: blur(12px) saturate(170%);
+  box-shadow: inset 0 1.5px 0 rgba(255,255,255,1), inset 0 -2px 6px rgba(15,23,42,0.08), 0 4px 12px rgba(15,23,42,0.12);
+}
+.sf-knut-kcal strong { font-size: 28px; font-weight: 800; color: #0F172A; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.sf-knut-kcal span { font-size: 11px; font-weight: 700; color: rgba(15,23,42,0.45); text-transform: uppercase; letter-spacing: 0.08em; }
 .sf-knut-macros { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
-.sf-knut-macro-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 16px; color: #475569; margin-bottom: 6px; }
+.sf-knut-macro-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 16px; color: rgba(15,23,42,0.7); margin-bottom: 7px; }
 .sf-knut-macro-top span { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
-.sf-knut-macro-top i { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.sf-knut-macro-top i { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 1px 3px rgba(15,23,42,0.2); }
 .sf-knut-macro-top strong { font-size: 17px; font-weight: 800; color: #0F172A; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.sf-knut-bar { height: 8px; border-radius: 99px; background: rgba(15, 23, 42, 0.08); overflow: hidden; }
-.sf-knut-bar span { display: block; height: 100%; border-radius: 99px; }
-.sf-knut-diets { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(15, 23, 42, 0.07); }
-.sf-knut-diet { padding: 7px 14px; border-radius: 99px; color: #fff; font-size: 14px; font-weight: 700; }
-/* dark product sheet */
-.sf-modal-dark .sf-knut { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.1); }
-.sf-modal-dark .sf-knut-title, .sf-modal-dark .sf-knut-kcal span { color: rgba(241, 245, 249, 0.6); }
+/* glass tubes */
+.sf-knut-bar {
+  height: 10px; border-radius: 99px; overflow: hidden;
+  background: rgba(255,255,255,0.5);
+  box-shadow: inset 0 1px 2px rgba(15,23,42,0.12), 0 1px 0 rgba(255,255,255,0.8);
+}
+.sf-knut-bar span { position: relative; display: block; height: 100%; border-radius: 99px; box-shadow: 0 0 10px -2px currentColor; }
+.sf-knut-bar span::after {
+  content: ''; position: absolute; inset: 1px 3px auto; height: 45%; border-radius: 99px;
+  background: linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0));
+}
+.sf-knut-diets { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.7); }
+.sf-knut-diet {
+  position: relative; overflow: hidden; padding: 7px 15px; border-radius: 99px; color: #fff; font-size: 14px; font-weight: 700;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.15);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -1px 2px rgba(0,0,0,0.12), 0 4px 10px -4px rgba(15,23,42,0.35);
+}
+.sf-knut-diet::after {
+  content: ''; position: absolute; inset: 0 0 50%; pointer-events: none;
+  background: linear-gradient(rgba(255,255,255,0.38), rgba(255,255,255,0.05));
+}
+/* dark product sheet: smoked glass */
+.sf-modal-dark .sf-knut {
+  background: linear-gradient(150deg, rgba(255,255,255,0.14), rgba(255,255,255,0.05));
+  border-color: rgba(255,255,255,0.18);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), inset 0 0 0 1px rgba(255,255,255,0.05), 0 18px 40px -18px rgba(0,0,0,0.6);
+}
+.sf-modal-dark .sf-knut::after { background: linear-gradient(170deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 40%); }
+.sf-modal-dark .sf-knut-kcal { background: linear-gradient(160deg, rgba(255,255,255,0.2), rgba(255,255,255,0.06)); box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 4px 12px rgba(0,0,0,0.35); }
+.sf-modal-dark .sf-knut-title, .sf-modal-dark .sf-knut-kcal span { color: rgba(241,245,249,0.6); }
 .sf-modal-dark :is(.sf-knut-kcal strong, .sf-knut-macro-top strong) { color: #F8FAFC; }
-.sf-modal-dark .sf-knut-macro-top { color: rgba(241, 245, 249, 0.75); }
-.sf-modal-dark :is(.sf-knut-track) { stroke: rgba(255, 255, 255, 0.1); }
-.sf-modal-dark :is(.sf-knut-bar, .sf-knut-diets) { background-color: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.1); }
-.sf-modal-dark .sf-knut-diets { background-color: transparent; }
+.sf-modal-dark .sf-knut-macro-top { color: rgba(241,245,249,0.75); }
+.sf-modal-dark .sf-knut-track { stroke: rgba(255,255,255,0.12); }
+.sf-modal-dark .sf-knut-bar { background: rgba(255,255,255,0.1); box-shadow: inset 0 1px 2px rgba(0,0,0,0.3); }
+.sf-modal-dark .sf-knut-diets { border-top-color: rgba(255,255,255,0.12); }

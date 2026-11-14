@@ -1611,17 +1611,33 @@ export default function StoreShell({ store, products, categories = [], initialBc
     const diets = (modalProduct.options?.nutrition?.diets ?? []).filter(k => DIET_LABELS[k])
     return (
       <div className="sf-knut">
+        {/* the colors glowing through the glass */}
+        <div className="sf-knut-glow" aria-hidden="true"><i /><i /><i /></div>
         <div className="sf-knut-title">Valor nutricional</div>
         <div className="sf-knut-main">
           <div className="sf-knut-ring">
             <svg viewBox="0 0 80 80" aria-hidden="true">
-              <circle cx="40" cy="40" r={modalNutritionRadius} fill="none" className="sf-knut-track" strokeWidth="8" />
-              {modalNutritionSegments.map(sg => (
-                <circle key={sg.key} cx="40" cy="40" r={modalNutritionRadius} fill="none"
-                  stroke={sg.color} strokeWidth="8"
-                  strokeDasharray={`${sg.len} ${modalNutritionCircumference - sg.len}`}
-                  strokeDashoffset={sg.dashOffset} transform="rotate(-90 40 40)" />
-              ))}
+              <defs>
+                {/* light falling on a glass tube: bright on top, a faint edge below */}
+                <linearGradient id="sfKnutGloss" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stopColor="#fff" stopOpacity="0.55" />
+                  <stop offset="0.45" stopColor="#fff" stopOpacity="0.08" />
+                  <stop offset="0.8" stopColor="#fff" stopOpacity="0" />
+                  <stop offset="1" stopColor="#fff" stopOpacity="0.35" />
+                </linearGradient>
+              </defs>
+              <circle cx="40" cy="40" r={modalNutritionRadius} fill="none" className="sf-knut-track" strokeWidth="9" />
+              <g className="sf-knut-segs">
+                {modalNutritionSegments.map(sg => (
+                  <circle key={sg.key} cx="40" cy="40" r={modalNutritionRadius} fill="none"
+                    stroke={sg.color} strokeWidth="9"
+                    strokeDasharray={`${sg.len} ${modalNutritionCircumference - sg.len}`}
+                    strokeDashoffset={sg.dashOffset} transform="rotate(-90 40 40)" />
+                ))}
+              </g>
+              <circle cx="40" cy="40" r={modalNutritionRadius} fill="none" stroke="url(#sfKnutGloss)" strokeWidth="9" />
+              <circle cx="40" cy="40" r={modalNutritionRadius - 4} fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="0.6" />
+              <circle cx="40" cy="40" r={modalNutritionRadius + 4} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.6" />
             </svg>
             <div className="sf-knut-kcal"><strong>{Math.round(d.calories)}</strong><span>kcal</span></div>
           </div>
@@ -1632,7 +1648,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   <span><i style={{ background: m.color }} />{m.label}</span>
                   <strong>{Math.round(m.g)} g</strong>
                 </div>
-                <div className="sf-knut-bar"><span style={{ width: `${total > 0 ? (m.g / total) * 100 : 0}%`, background: m.color }} /></div>
+                <div className="sf-knut-bar"><span style={{ width: `${total > 0 ? (m.g / total) * 100 : 0}%`, background: m.color, color: m.color }} /></div>
               </div>
             ))}
           </div>

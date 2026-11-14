@@ -6138,7 +6138,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
         {kGroups.length > 1 && (
           <nav className="sf-kiosk-cats" aria-label="Categorias">
-            {kGroups.map((g, gi) => {
+            {kGroups.map(g => {
               const img = tileImg(g)
               const floats = !!img && tileFloats(g)
               const on = g.key === kCur?.key
@@ -6152,8 +6152,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                     kioskMainRef.current?.scrollTo({ top: 0 })
                   }}
                 >
-                  <span className={`sf-kiosk-cat-img${floats ? ' float' : ''}`}
-                    style={floats ? { '--sf-float-delay': `${-gi * 0.7}s` } as React.CSSProperties : undefined}>
+                  <span className={`sf-kiosk-cat-img${floats ? ' float' : ''}`}>
                     {img
                       ? <img src={resizedImg(img, 320)} alt="" />
                       : <span className="sf-kiosk-ph">{g.name.trim().charAt(0).toUpperCase()}</span>}

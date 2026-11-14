@@ -1602,18 +1602,21 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // (scrolls with them, so the options always have room) — not over the photo.
   // The ring with the calories, a bar per macro, the diets spelled out; it
   // follows the picked options live.
-  const renderKioskNutrition = () => {
+  // still: shown again on a later step of the step-by-step (no entrance animation)
+  const renderKioskNutrition = (still = false) => {
     if (!kioskActive || !modalProduct || !modalNutritionEnabled || !modalNutritionDisplay) return null
     const d = modalNutritionDisplay
     const total = d.protein + d.carbs + d.fat
+    // three tones of the store's own color (set on .sf-knut)
+    const tone: Record<string, string> = { protein: 'var(--kn-1)', carbs: 'var(--kn-2)', fat: 'var(--kn-3)' }
     const macros = [
-      { key: 'protein', label: 'Proteínas', g: d.protein, color: 'var(--sf-accent-color, #7C3AED)' },
-      { key: 'carbs', label: 'Carbohidratos', g: d.carbs, color: '#10B981' },
-      { key: 'fat', label: 'Grasas', g: d.fat, color: '#F59E0B' },
+      { key: 'protein', label: 'Proteínas', g: d.protein, color: tone.protein },
+      { key: 'carbs', label: 'Carbohidratos', g: d.carbs, color: tone.carbs },
+      { key: 'fat', label: 'Grasas', g: d.fat, color: tone.fat },
     ]
     const diets = (modalProduct.options?.nutrition?.diets ?? []).filter(k => DIET_LABELS[k])
     return (
-      <div className="sf-knut">
+      <div className={`sf-knut${still ? ' still' : ''}`}>
         {/* the colors glowing through the glass */}
         <div className="sf-knut-glow" aria-hidden="true"><i /><i /><i /></div>
         <div className="sf-knut-title">Valor nutricional</div>
@@ -1633,7 +1636,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
               <g className="sf-knut-segs">
                 {modalNutritionSegments.map(sg => (
                   <circle key={sg.key} cx="40" cy="40" r={modalNutritionRadius} fill="none"
-                    stroke={sg.color} strokeWidth="9"
+                    style={{ stroke: tone[sg.key] ?? sg.color }} strokeWidth="9"
                     strokeDasharray={`${sg.len} ${modalNutritionCircumference - sg.len}`}
                     strokeDashoffset={sg.dashOffset} transform="rotate(-90 40 40)" />
                 ))}
@@ -2994,7 +2997,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
           {modalWizardActive && modalWizardStep ? (
             <div key={modalStep} className="sf-modal-body sf-modal-wizard">
-              {modalStep === 0 && renderKioskNutrition()}
+              {renderKioskNutrition(modalStep > 0)}
               <div className="sf-modal-wizard-progress">
                 {modalWizardSteps.map((_, i) => (
                   <div key={i} className={`sf-modal-wizard-dot${i === modalStep ? ' active' : ''}${i < modalStep ? ' done' : ''}`} />

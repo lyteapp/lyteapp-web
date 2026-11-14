@@ -3241,7 +3241,7 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
   --kn-2: color-mix(in oklab, var(--kn-1) 55%, #fff);
   --kn-3: color-mix(in oklab, var(--kn-1) 62%, #0B1220);
   position: relative; isolation: isolate; overflow: hidden; flex-shrink: 0;
-  margin: 4px 0 22px; padding: 18px 22px 20px; border-radius: 28px;
+  margin: 0 0 16px; padding: 14px 20px 16px; border-radius: 26px;
   background: linear-gradient(150deg, rgba(255,255,255,0.72) 0%, rgba(255,255,255,0.38) 55%, rgba(255,255,255,0.55) 100%);
   -webkit-backdrop-filter: blur(28px) saturate(185%); backdrop-filter: blur(28px) saturate(185%);
   /* a fine edge all the way round (white on white would leave the corners
@@ -3257,7 +3257,7 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
 }
 /* the specular sheen across the top of the glass */
 .sf-knut::after {
-  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; border-radius: inherit; clip-path: inset(0 round 28px);
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; border-radius: inherit; clip-path: inset(0 round 26px);
   background:
     linear-gradient(170deg, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0.12) 28%, rgba(255,255,255,0) 45%),
     radial-gradient(120% 60% at 0% 0%, rgba(255,255,255,0.5), transparent 60%);
@@ -3269,36 +3269,37 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
    left little square corners sticking out */
 .sf-knut-glow {
   position: absolute; inset: 0; z-index: -2; pointer-events: none; opacity: 0.5;
-  border-radius: inherit; overflow: hidden; clip-path: inset(0 round 28px);
+  border-radius: inherit; overflow: hidden; clip-path: inset(0 round 26px);
 }
 .sf-knut-glow i { position: absolute; border-radius: 50%; filter: blur(34px); }
 .sf-knut-glow i:nth-child(1) { width: 190px; height: 190px; left: -30px; top: -20px; background: var(--kn-1); opacity: 0.5; }
 .sf-knut-glow i:nth-child(2) { width: 220px; height: 160px; right: 10%; top: -30px; background: var(--kn-2); opacity: 0.55; }
 .sf-knut-glow i:nth-child(3) { width: 200px; height: 150px; right: -30px; bottom: -30px; background: var(--kn-2); opacity: 0.4; }
-.sf-knut-title { font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(15,23,42,0.55); margin-bottom: 14px; }
-.sf-knut-main { display: flex; align-items: center; gap: 24px; }
-.sf-knut-ring { position: relative; width: 124px; height: 124px; flex-shrink: 0; }
+.sf-knut-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 28px; margin-bottom: 10px; }
+.sf-knut-title { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(15,23,42,0.55); white-space: nowrap; }
+.sf-knut-main { display: flex; align-items: center; gap: 22px; }
+.sf-knut-ring { position: relative; width: 96px; height: 96px; flex-shrink: 0; }
 .sf-knut-ring svg { width: 100%; height: 100%; display: block; overflow: visible; }
 .sf-knut-track { stroke: rgba(255,255,255,0.55); }
 .sf-knut-segs { filter: drop-shadow(0 3px 5px rgba(15,23,42,0.18)); }
 /* the glass disc in the middle */
 .sf-knut-kcal {
-  position: absolute; inset: 21px; border-radius: 50%;
+  position: absolute; inset: 16px; border-radius: 50%;
   display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05;
   background: linear-gradient(160deg, rgba(255,255,255,0.85), rgba(255,255,255,0.45));
   -webkit-backdrop-filter: blur(12px) saturate(170%); backdrop-filter: blur(12px) saturate(170%);
   box-shadow: inset 0 1.5px 0 rgba(255,255,255,1), inset 0 -2px 6px rgba(15,23,42,0.08), 0 4px 12px rgba(15,23,42,0.12);
 }
-.sf-knut-kcal strong { font-size: 28px; font-weight: 800; color: #0F172A; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-.sf-knut-kcal span { font-size: 11px; font-weight: 700; color: rgba(15,23,42,0.45); text-transform: uppercase; letter-spacing: 0.08em; }
-.sf-knut-macros { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
-.sf-knut-macro-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 16px; color: rgba(15,23,42,0.7); margin-bottom: 7px; }
-.sf-knut-macro-top span { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
-.sf-knut-macro-top i { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 1px 3px rgba(15,23,42,0.2); }
-.sf-knut-macro-top strong { font-size: 17px; font-weight: 800; color: #0F172A; font-variant-numeric: tabular-nums; white-space: nowrap; }
-/* glass tubes */
+.sf-knut-kcal strong { font-size: 22px; font-weight: 800; color: #0F172A; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.sf-knut-kcal span { font-size: 10px; font-weight: 700; color: rgba(15,23,42,0.45); text-transform: uppercase; letter-spacing: 0.08em; }
+/* a column per macro: grams, name, a glass tube */
+.sf-knut-macros { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.sf-knut-macro { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.sf-knut-macro > strong { font-size: 21px; font-weight: 800; color: #0F172A; font-variant-numeric: tabular-nums; white-space: nowrap; letter-spacing: -0.01em; }
+.sf-knut-macro > span { display: flex; align-items: center; gap: 6px; font-size: 13.5px; color: rgba(15,23,42,0.65); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sf-knut-macro > span i { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 1px 3px rgba(15,23,42,0.2); }
 .sf-knut-bar {
-  height: 10px; border-radius: 99px; overflow: hidden;
+  margin-top: 4px; height: 8px; border-radius: 99px; overflow: hidden;
   background: rgba(255,255,255,0.5);
   box-shadow: inset 0 1px 2px rgba(15,23,42,0.12), 0 1px 0 rgba(255,255,255,0.8);
 }
@@ -3307,15 +3308,31 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
   content: ''; position: absolute; inset: 1px 3px auto; height: 45%; border-radius: 99px;
   background: linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0));
 }
-.sf-knut-diets { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.7); }
+.sf-knut-diets { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; min-width: 0; }
 .sf-knut-diet {
-  position: relative; overflow: hidden; padding: 7px 15px; border-radius: 99px; color: #fff; font-size: 14px; font-weight: 700;
+  position: relative; overflow: hidden; padding: 4px 11px; border-radius: 99px; color: #fff; font-size: 12.5px; font-weight: 700; white-space: nowrap;
   text-shadow: 0 1px 1px rgba(0,0,0,0.15);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -1px 2px rgba(0,0,0,0.12), 0 4px 10px -4px rgba(15,23,42,0.35);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -1px 2px rgba(0,0,0,0.12), 0 3px 8px -3px rgba(15,23,42,0.35);
 }
 .sf-knut-diet::after {
   content: ''; position: absolute; inset: 0 0 50%; pointer-events: none;
   background: linear-gradient(rgba(255,255,255,0.38), rgba(255,255,255,0.05));
+}
+/* where it goes: above the options (portrait), under the photo (landscape) */
+.sf-knut-side { display: none; }
+.sf-kiosk .sf-modal.sf-has-knut { --knut-h: 170px; }
+@media (orientation: portrait) {
+  /* a bit less photo, so the step's options fit under the card */
+  .sf-kiosk .sf-modal.sf-has-knut .sf-modal-product-head-hero .sf-modal-img-wrap,
+  .sf-kiosk .sf-modal.sf-has-knut .sf-modal-product-head-hero .sf-modal-img { height: 25vh; height: 25dvh; }
+}
+@media (min-width: 1024px) and (orientation: landscape) {
+  .sf-kiosk .sf-knut-flow { display: none; }
+  .sf-kiosk .sf-modal-fullpage.sf-has-knut .sf-modal-img-wrap { height: calc(100% - var(--knut-h) - 36px); align-self: start; }
+  .sf-kiosk .sf-knut-side {
+    display: block; position: absolute; z-index: 2; margin: 0;
+    left: 20px; bottom: 20px; width: calc(100% * 1.15 / 2.15 - 40px); height: var(--knut-h); box-sizing: border-box;
+  }
 }
 /* dark product sheet: smoked glass */
 .sf-modal-dark .sf-knut {
@@ -3326,11 +3343,10 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
 .sf-modal-dark .sf-knut::after { background: linear-gradient(170deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 40%); }
 .sf-modal-dark .sf-knut-kcal { background: linear-gradient(160deg, rgba(255,255,255,0.2), rgba(255,255,255,0.06)); box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 4px 12px rgba(0,0,0,0.35); }
 .sf-modal-dark .sf-knut-title, .sf-modal-dark .sf-knut-kcal span { color: rgba(241,245,249,0.6); }
-.sf-modal-dark :is(.sf-knut-kcal strong, .sf-knut-macro-top strong) { color: #F8FAFC; }
-.sf-modal-dark .sf-knut-macro-top { color: rgba(241,245,249,0.75); }
+.sf-modal-dark :is(.sf-knut-kcal strong, .sf-knut-macro > strong) { color: #F8FAFC; }
+.sf-modal-dark .sf-knut-macro > span { color: rgba(241,245,249,0.75); }
 .sf-modal-dark .sf-knut-track { stroke: rgba(255,255,255,0.12); }
 .sf-modal-dark .sf-knut-bar { background: rgba(255,255,255,0.1); box-shadow: inset 0 1px 2px rgba(0,0,0,0.3); }
-.sf-modal-dark .sf-knut-diets { border-top-color: rgba(255,255,255,0.12); }
 
 /* Kiosk touch: no wait for a possible double-tap zoom on anything, no grey
    tap flash, no text getting selected or the iOS callout popping up under a
@@ -3359,3 +3375,37 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
   opacity: 0; transform: translateY(-6px); transition: opacity 0.2s, transform 0.2s; pointer-events: none;
 }
 .sf-splash-sync.done span { opacity: 1; transform: none; }
+
+/* Kiosk step-by-step: the step sits right under the product (no forced
+   height to center it in), the options a little tighter, and "Atrás" /
+   "Siguiente" are real buttons a finger hits easily, not small links */
+.sf-modal-kiosk .sf-modal-body.sf-modal-wizard { min-height: 0; justify-content: flex-start; padding-top: 12px; }
+.sf-modal-kiosk .sf-modal-wizard-progress { margin-bottom: 8px; }
+.sf-modal-kiosk .sf-modal-wizard-question { font-size: 21px; margin-bottom: 12px; }
+.sf-modal-kiosk .sf-modal-wizard-hint { font-size: 13px; }
+.sf-modal-kiosk .sf-modal-wizard-chips { gap: 10px; }
+.sf-modal-kiosk .sf-modal-wizard-chips .sf-modal-chip { font-size: 17px; padding: 12px 20px; }
+.sf-modal-kiosk .sf-modal-wizard-actions { margin-top: 16px; gap: 12px; }
+.sf-modal-kiosk :is(.sf-modal-wizard-back, .sf-modal-wizard-skip) {
+  min-height: 48px; padding: 0 24px; border-radius: 99px; font-size: 16px; text-decoration: none;
+  border: 1.5px solid rgba(15,23,42,0.12); color: #475569; background: transparent;
+}
+.sf-modal-kiosk .sf-modal-wizard-skip:disabled { opacity: 0.35; }
+.sf-modal-dark.sf-modal-kiosk :is(.sf-modal-wizard-back, .sf-modal-wizard-skip) { border-color: rgba(255,255,255,0.22); color: rgba(241,245,249,0.85); }
+/* …a level tighter each time the step doesn't fit (data-fit, see StoreShell) */
+.sf-modal-kiosk .sf-modal-wizard[data-fit="1"] .sf-modal-wizard-chips { gap: 8px; }
+.sf-modal-kiosk .sf-modal-wizard[data-fit="1"] .sf-modal-wizard-chips .sf-modal-chip { font-size: 16px; padding: 10px 17px; }
+.sf-modal-kiosk .sf-modal-wizard[data-fit="1"] .sf-modal-wizard-question { margin-bottom: 8px; }
+.sf-modal-kiosk .sf-modal-wizard[data-fit="1"] .sf-modal-wizard-actions { margin-top: 12px; }
+.sf-modal-kiosk .sf-modal-wizard[data-fit="2"] .sf-modal-wizard-chips { gap: 7px; }
+.sf-modal-kiosk .sf-modal-wizard[data-fit="2"] .sf-modal-wizard-chips .sf-modal-chip { font-size: 15px; padding: 8px 14px; }
+.sf-modal-kiosk .sf-modal-wizard[data-fit="2"] .sf-modal-wizard-question { font-size: 19px; margin-bottom: 6px; }
+.sf-modal-kiosk .sf-modal-wizard[data-fit="2"] .sf-modal-wizard-progress { margin-bottom: 4px; }
+.sf-modal-kiosk .sf-modal-wizard[data-fit="2"] .sf-modal-wizard-actions { margin-top: 10px; }
+.sf-modal-kiosk .sf-modal-wizard[data-fit="2"] :is(.sf-modal-wizard-back, .sf-modal-wizard-skip) { min-height: 44px; }
+.sf-modal-kiosk .sf-modal-wizard[data-fit="3"] .sf-modal-wizard-chips { gap: 6px; }
+.sf-modal-kiosk .sf-modal-wizard[data-fit="3"] .sf-modal-wizard-chips .sf-modal-chip { font-size: 14px; padding: 7px 12px; }
+.sf-modal-kiosk .sf-modal-wizard[data-fit="3"] .sf-modal-wizard-question { font-size: 18px; margin-bottom: 4px; }
+.sf-modal-kiosk .sf-modal-wizard[data-fit="3"] .sf-modal-wizard-progress { margin-bottom: 2px; }
+.sf-modal-kiosk .sf-modal-wizard[data-fit="3"] .sf-modal-wizard-actions { margin-top: 8px; }
+.sf-modal-kiosk .sf-modal-wizard[data-fit="3"] :is(.sf-modal-wizard-back, .sf-modal-wizard-skip) { min-height: 42px; }

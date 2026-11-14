@@ -1666,8 +1666,13 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // (scrolls with them, so the options always have room) — not over the photo.
   // The ring with the calories, a bar per macro, the diets spelled out; it
   // follows the picked options live.
-  // still: shown again on a later step of the step-by-step (no entrance animation)
-  const renderKioskNutrition = (still = false) => {
+  // Kiosk: the nutrition facts as a compact card (ring with the calories,
+  // a column per macro, the diets up top), in the store's colors. It goes
+  // where it leaves the options their room: on a landscape tablet under the
+  // photo ('side'), on a portrait one above the options ('flow') — both are
+  // rendered and the orientation shows one. still: shown again on a later
+  // step of the step-by-step (no entrance animation).
+  const renderKioskNutrition = (still = false, where: 'side' | 'flow' = 'flow') => {
     if (!kioskActive || !modalProduct || !modalNutritionEnabled || !modalNutritionDisplay) return null
     const d = modalNutritionDisplay
     const total = d.protein + d.carbs + d.fat
@@ -1679,17 +1684,25 @@ export default function StoreShell({ store, products, categories = [], initialBc
       { key: 'fat', label: 'Grasas', g: d.fat, color: tone.fat },
     ]
     const diets = (modalProduct.options?.nutrition?.diets ?? []).filter(k => DIET_LABELS[k])
+    const gloss = `sfKnutGloss-${where}`
     return (
-      <div className={`sf-knut${still ? ' still' : ''}`}>
+      <div className={`sf-knut sf-knut-${where}${still ? ' still' : ''}`}>
         {/* the colors glowing through the glass */}
         <div className="sf-knut-glow" aria-hidden="true"><i /><i /><i /></div>
-        <div className="sf-knut-title">Valor nutricional</div>
+        <div className="sf-knut-head">
+          <div className="sf-knut-title">Valor nutricional</div>
+          {diets.length > 0 && (
+            <div className="sf-knut-diets">
+              {diets.map(k => <span key={k} className={`sf-knut-diet sf-diet-${k}`}>{DIET_LABELS[k]}</span>)}
+            </div>
+          )}
+        </div>
         <div className="sf-knut-main">
           <div className="sf-knut-ring">
             <svg viewBox="0 0 80 80" aria-hidden="true">
               <defs>
                 {/* light falling on a glass tube: bright on top, a faint edge below */}
-                <linearGradient id="sfKnutGloss" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={gloss} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0" stopColor="#fff" stopOpacity="0.55" />
                   <stop offset="0.45" stopColor="#fff" stopOpacity="0.08" />
                   <stop offset="0.8" stopColor="#fff" stopOpacity="0" />
@@ -1705,7 +1718,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                     strokeDashoffset={sg.dashOffset} transform="rotate(-90 40 40)" />
                 ))}
               </g>
-              <circle cx="40" cy="40" r={modalNutritionRadius} fill="none" stroke="url(#sfKnutGloss)" strokeWidth="9" />
+              <circle cx="40" cy="40" r={modalNutritionRadius} fill="none" stroke={`url(#${gloss})`} strokeWidth="9" />
               <circle cx="40" cy="40" r={modalNutritionRadius - 4} fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="0.6" />
               <circle cx="40" cy="40" r={modalNutritionRadius + 4} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.6" />
             </svg>
@@ -1714,20 +1727,13 @@ export default function StoreShell({ store, products, categories = [], initialBc
           <div className="sf-knut-macros">
             {macros.map(m => (
               <div key={m.key} className="sf-knut-macro">
-                <div className="sf-knut-macro-top">
-                  <span><i style={{ background: m.color }} />{m.label}</span>
-                  <strong>{Math.round(m.g)} g</strong>
-                </div>
+                <strong>{Math.round(m.g)} g</strong>
+                <span><i style={{ background: m.color }} />{m.label}</span>
                 <div className="sf-knut-bar"><span style={{ width: `${total > 0 ? (m.g / total) * 100 : 0}%`, background: m.color, color: m.color }} /></div>
               </div>
             ))}
           </div>
         </div>
-        {diets.length > 0 && (
-          <div className="sf-knut-diets">
-            {diets.map(k => <span key={k} className={`sf-knut-diet sf-diet-${k}`}>{DIET_LABELS[k]}</span>)}
-          </div>
-        )}
       </div>
     )
   }
@@ -2869,7 +2875,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
             </div>
           )}
         <div
-          className={`sf-modal${cfgModalHalf ? ' sf-modal-half' : ''}${modalFull ? ' sf-modal-fullpage' : ''}${kioskActive ? ' sf-modal-kiosk' : ''}${cfgModalDark ? ' sf-modal-dark' : ''}`}
+          className={`sf-modal${cfgModalHalf ? ' sf-modal-half' : ''}${modalFull ? ' sf-modal-fullpage' : ''}${kioskActive ? ' sf-modal-kiosk' : ''}${kioskActive && modalNutritionEnabled ? ' sf-has-knut' : ''}${cfgModalDark ? ' sf-modal-dark' : ''}`}
           style={{
             ...(showHeaderAboveModal ? { height: `calc(100dvh - ${modalTop}px)`, maxHeight: `calc(100dvh - ${modalTop}px)` } : {}),
             ...(cfgModalBg ? { background: cfgModalBg } : {}),
@@ -3044,6 +3050,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 </div>
               )
             })()}
+            {renderKioskNutrition(false, 'side')}
             <div className="sf-modal-product-info">
               <div className="sf-modal-name">{modalProduct.name}</div>
               {modalProduct.description && <div className="sf-modal-desc">{modalProduct.description}</div>}
@@ -3060,7 +3067,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           </div>
 
           {modalWizardActive && modalWizardStep ? (
-            <div key={modalStep} className="sf-modal-body sf-modal-wizard">
+            <div key={modalStep} ref={wizardBodyRef} className="sf-modal-body sf-modal-wizard">
               {renderKioskNutrition(modalStep > 0)}
               <div className="sf-modal-wizard-progress">
                 {modalWizardSteps.map((_, i) => (
@@ -3988,6 +3995,27 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // underneath mounts right away, so its images, videos and measured
   // positions are all loaded and settled by the time the overlay leaves.
   let welcomeOverlay: React.ReactNode = null
+  // Kiosk step-by-step: a step with many options is fitted into the space
+  // there is — its buttons get a level tighter (up to 3) until the whole
+  // step, "Siguiente" included, shows without scrolling. A step with few
+  // keeps the big ones. Set on the element itself (data-fit), measured
+  // before it's painted.
+  const wizardBodyRef = useRef<HTMLDivElement | null>(null)
+  useLayoutEffect(() => {
+    const el = wizardBodyRef.current
+    if (!kioskActive || !el) return
+    const fit = () => {
+      el.dataset.fit = '0'
+      for (let lvl = 1; lvl <= 3 && el.scrollHeight > el.clientHeight + 1; lvl++) el.dataset.fit = String(lvl)
+    }
+    fit()
+    // the space settles a moment later (the category row below is measured
+    // after), and changes when the screen turns: fitted again each time
+    const ro = new ResizeObserver(fit)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [kioskActive, modalStep, modalProduct, modalColor, cfgModalWizard])
+
   if (view === 'splash') {
     const splashPoweredColors = poweredByColors(!hp.imageUrl && isLightColor(hp.bgColor || '#0F172A'))
     // The slide-to-enter bar and the Empezar button: under the text, or
@@ -4555,6 +4583,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const wizardVarMinMax = modalWizardStep?.kind === 'variable' ? groupMinMax(modalWizardStep.group) : { min: 0, max: 1 }
   const wizardVarCount = modalWizardStep?.kind === 'variable' ? (modalVars[modalWizardStep.group.label] ?? []).length : 0
   const wizardVarSatisfied = wizardVarCount >= wizardVarMinMax.min
+
 
   function advanceModalWizard() {
     setTimeout(() => setModalStep(s => s + 1), 220)

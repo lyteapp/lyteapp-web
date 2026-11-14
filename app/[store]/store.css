@@ -3215,3 +3215,38 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
 .sf-kzoom-layer .sf-modal-img { position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; }
 .sf-kiosk .sf-modal-img-strip, .sf-kiosk .sf-modal-img-frame { height: 100%; }
 .sf-kiosk .sf-modal-img-wrap { cursor: default; }
+
+/* Kiosk: nutrition facts as a card under the price, instead of a badge
+   floating over the photo */
+.sf-knut {
+  margin: 4px 0 22px; padding: 18px 22px 20px; border-radius: 22px;
+  background: color-mix(in srgb, var(--sf-accent-color, #7C3AED) 6%, #fff);
+  border: 1px solid color-mix(in srgb, var(--sf-accent-color, #7C3AED) 14%, transparent);
+  animation: sfKnutIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes sfKnutIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.sf-knut-title { font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #64748B; margin-bottom: 14px; }
+.sf-knut-main { display: flex; align-items: center; gap: 24px; }
+.sf-knut-ring { position: relative; width: 116px; height: 116px; flex-shrink: 0; }
+.sf-knut-ring svg { width: 100%; height: 100%; display: block; }
+.sf-knut-track { stroke: rgba(15, 23, 42, 0.08); }
+.sf-knut-kcal { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05; }
+.sf-knut-kcal strong { font-size: 30px; font-weight: 800; color: #0F172A; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.sf-knut-kcal span { font-size: 12px; font-weight: 600; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.06em; }
+.sf-knut-macros { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.sf-knut-macro-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 16px; color: #475569; margin-bottom: 6px; }
+.sf-knut-macro-top span { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.sf-knut-macro-top i { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.sf-knut-macro-top strong { font-size: 17px; font-weight: 800; color: #0F172A; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sf-knut-bar { height: 8px; border-radius: 99px; background: rgba(15, 23, 42, 0.08); overflow: hidden; }
+.sf-knut-bar span { display: block; height: 100%; border-radius: 99px; }
+.sf-knut-diets { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(15, 23, 42, 0.07); }
+.sf-knut-diet { padding: 7px 14px; border-radius: 99px; color: #fff; font-size: 14px; font-weight: 700; }
+/* dark product sheet */
+.sf-modal-dark .sf-knut { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.1); }
+.sf-modal-dark .sf-knut-title, .sf-modal-dark .sf-knut-kcal span { color: rgba(241, 245, 249, 0.6); }
+.sf-modal-dark :is(.sf-knut-kcal strong, .sf-knut-macro-top strong) { color: #F8FAFC; }
+.sf-modal-dark .sf-knut-macro-top { color: rgba(241, 245, 249, 0.75); }
+.sf-modal-dark :is(.sf-knut-track) { stroke: rgba(255, 255, 255, 0.1); }
+.sf-modal-dark :is(.sf-knut-bar, .sf-knut-diets) { background-color: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.1); }
+.sf-modal-dark .sf-knut-diets { background-color: transparent; }

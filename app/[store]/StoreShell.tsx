@@ -1595,6 +1595,57 @@ export default function StoreShell({ store, products, categories = [], initialBc
     }
   }
 
+  // Kiosk: the nutrition facts as a card at the top of the product's options
+  // (scrolls with them, so the options always have room) — not over the photo.
+  // The ring with the calories, a bar per macro, the diets spelled out; it
+  // follows the picked options live.
+  const renderKioskNutrition = () => {
+    if (!kioskActive || !modalProduct || !modalNutritionEnabled || !modalNutritionDisplay) return null
+    const d = modalNutritionDisplay
+    const total = d.protein + d.carbs + d.fat
+    const macros = [
+      { key: 'protein', label: 'Proteínas', g: d.protein, color: 'var(--sf-accent-color, #7C3AED)' },
+      { key: 'carbs', label: 'Carbohidratos', g: d.carbs, color: '#10B981' },
+      { key: 'fat', label: 'Grasas', g: d.fat, color: '#F59E0B' },
+    ]
+    const diets = (modalProduct.options?.nutrition?.diets ?? []).filter(k => DIET_LABELS[k])
+    return (
+      <div className="sf-knut">
+        <div className="sf-knut-title">Valor nutricional</div>
+        <div className="sf-knut-main">
+          <div className="sf-knut-ring">
+            <svg viewBox="0 0 80 80" aria-hidden="true">
+              <circle cx="40" cy="40" r={modalNutritionRadius} fill="none" className="sf-knut-track" strokeWidth="8" />
+              {modalNutritionSegments.map(sg => (
+                <circle key={sg.key} cx="40" cy="40" r={modalNutritionRadius} fill="none"
+                  stroke={sg.color} strokeWidth="8"
+                  strokeDasharray={`${sg.len} ${modalNutritionCircumference - sg.len}`}
+                  strokeDashoffset={sg.dashOffset} transform="rotate(-90 40 40)" />
+              ))}
+            </svg>
+            <div className="sf-knut-kcal"><strong>{Math.round(d.calories)}</strong><span>kcal</span></div>
+          </div>
+          <div className="sf-knut-macros">
+            {macros.map(m => (
+              <div key={m.key} className="sf-knut-macro">
+                <div className="sf-knut-macro-top">
+                  <span><i style={{ background: m.color }} />{m.label}</span>
+                  <strong>{Math.round(m.g)} g</strong>
+                </div>
+                <div className="sf-knut-bar"><span style={{ width: `${total > 0 ? (m.g / total) * 100 : 0}%`, background: m.color }} /></div>
+              </div>
+            ))}
+          </div>
+        </div>
+        {diets.length > 0 && (
+          <div className="sf-knut-diets">
+            {diets.map(k => <span key={k} className={`sf-knut-diet sf-diet-${k}`}>{DIET_LABELS[k]}</span>)}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   // Press-and-hold a variable chip to preview that specific choice's own
   // nutrition deltas before picking it — touch-only (mouse users just
   // click), so a customer on their phone can compare options by calories
@@ -2687,7 +2738,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           </div>
         )}
         <div className={`sf-modal-wrap${modalFull ? ' sf-modal-wrap-fullpage' : ''}`}>
-          {modalNutritionEnabled && modalNutritionDisplay && (
+          {modalNutritionEnabled && modalNutritionDisplay && !kioskActive && (
             <div className="sf-modal-nutrition-badge sf-modal-nutrition-badge-float">
               <div className="sf-modal-nutrition-chart">
                 <svg viewBox="0 0 80 80">
@@ -2924,6 +2975,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
           {modalWizardActive && modalWizardStep ? (
             <div key={modalStep} className="sf-modal-body sf-modal-wizard">
+              {modalStep === 0 && renderKioskNutrition()}
               <div className="sf-modal-wizard-progress">
                 {modalWizardSteps.map((_, i) => (
                   <div key={i} className={`sf-modal-wizard-dot${i === modalStep ? ' active' : ''}${i < modalStep ? ' done' : ''}`} />
@@ -3016,6 +3068,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
             </div>
           ) : (
             <div className="sf-modal-body">
+              {renderKioskNutrition()}
               {!cfgModalWizard && modalProduct.options?.variables?.filter(g => g.choices.length > 0).map((g, gi) => {
                 const { min, max } = groupMinMax(g)
                 const count = (modalVars[g.label] ?? []).length

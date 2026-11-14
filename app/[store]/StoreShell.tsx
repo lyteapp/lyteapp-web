@@ -597,6 +597,9 @@ type KioskConfig = {
   enabled?: boolean
   /** Picture for each category's button (category id -> url) */
   categoryImages?: Record<string, string>
+  /** Category ids whose own picture has a see-through background (a PNG
+   *  cut-out): it floats over the bar, with no box behind it */
+  floatingImages?: Record<string, boolean>
 }
 
 type TemplateConfig = {
@@ -5970,6 +5973,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
     const kioskStyle = { ...pageStyle, '--sf-kiosk-price': cfg.priceColor || 'var(--sf-accent-color, #7C3AED)' } as React.CSSProperties
     const tileImg = (g: { key: string; items: Product[] }) =>
       kImages[g.key] || g.items.map(p => p.image_url).find(u => u && !isVideoUrl(u)) || null
+    // its own picture is a cut-out (told at upload; a .png from before that counts too)
+    const tileFloats = (g: { key: string }) => {
+      const own = kImages[g.key]
+      return !!own && (kioskCfg?.floatingImages?.[g.key] ?? /\.png(\?|#|$)/i.test(own))
+    }
     return (
       <>
       {renderLogoMorphOverlay()}
@@ -6066,8 +6074,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
         {kGroups.length > 1 && (
           <nav className="sf-kiosk-cats" aria-label="Categorias">
-            {kGroups.map(g => {
+            {kGroups.map((g, gi) => {
               const img = tileImg(g)
+              const floats = !!img && tileFloats(g)
               const on = g.key === kCur?.key
               return (
                 <button
@@ -6079,7 +6088,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
                     kioskMainRef.current?.scrollTo({ top: 0 })
                   }}
                 >
-                  <span className="sf-kiosk-cat-img">
+                  <span className={`sf-kiosk-cat-img${floats ? ' float' : ''}`}
+                    style={floats ? { '--sf-float-delay': `${-gi * 0.7}s` } as React.CSSProperties : undefined}>
                     {img
                       ? <img src={resizedImg(img, 320)} alt="" />
                       : <span className="sf-kiosk-ph">{g.name.trim().charAt(0).toUpperCase()}</span>}

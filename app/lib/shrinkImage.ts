@@ -16,3 +16,22 @@ export async function shrinkImage(file: File, max = 900): Promise<File> {
   if (!blob || blob.size >= file.size) return file
   return new File([blob], `img.${type === 'image/jpeg' ? 'jpg' : 'png'}`, { type })
 }
+
+/** True when the picture has a see-through background (a PNG/WebP cut-out):
+ *  more than 1% of it is transparent. JPEGs never are. */
+export async function hasTransparency(file: Blob): Promise<boolean> {
+  if (!/^image\/(png|webp|gif)$/.test(file.type)) return false
+  const bmp = await createImageBitmap(file).catch(() => null)
+  if (!bmp) return false
+  const scale = Math.min(1, 128 / Math.max(bmp.width, bmp.height))
+  const w = Math.max(1, Math.round(bmp.width * scale)), h = Math.max(1, Math.round(bmp.height * scale))
+  const canvas = document.createElement('canvas')
+  canvas.width = w; canvas.height = h
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return false
+  ctx.drawImage(bmp, 0, 0, w, h)
+  const px = ctx.getImageData(0, 0, w, h).data
+  let clear = 0
+  for (let i = 3; i < px.length; i += 4) if (px[i] < 240) clear++
+  return clear > (w * h) / 100
+}

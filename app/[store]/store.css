@@ -2800,6 +2800,27 @@ video.sf-banner-img { object-fit: cover; }
   background: color-mix(in srgb, var(--sf-accent-color, #7C3AED) 8%, #F1F5F9);
 }
 .sf-kiosk-cat-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* a cut-out (PNG without background): no box, it floats over the bar —
+   bobbing gently, its own shape casting the shadow, a soft spot of shadow
+   below it that shrinks as it rises */
+.sf-kiosk-cat-img.float { background: none; overflow: visible; border-radius: 0; }
+.sf-kiosk-cat-img.float img {
+  position: relative; z-index: 1; object-fit: contain;
+  filter: drop-shadow(0 10px 9px rgba(15,23,42,0.22)) drop-shadow(0 2px 3px rgba(15,23,42,0.12));
+  animation: sfKioskFloat 4.2s ease-in-out var(--sf-float-delay, 0s) infinite;
+  transition: scale 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.sf-kiosk-cat-img.float::after {
+  content: ''; position: absolute; left: 20%; right: 20%; bottom: -4px; height: 12px; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(15,23,42,0.28), rgba(15,23,42,0));
+  animation: sfKioskFloatShadow 4.2s ease-in-out var(--sf-float-delay, 0s) infinite;
+}
+.sf-kiosk-cat.on .sf-kiosk-cat-img.float img { scale: 1.08; }
+@keyframes sfKioskFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+@keyframes sfKioskFloatShadow { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.8); opacity: 0.55; } }
+@media (prefers-reduced-motion: reduce) {
+  .sf-kiosk-cat-img.float img, .sf-kiosk-cat-img.float::after { animation: none; }
+}
 .sf-kiosk-cat-name {
   max-width: 100%; font-size: 15px; font-weight: 700; text-align: center; line-height: 1.2; overflow-wrap: break-word;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;

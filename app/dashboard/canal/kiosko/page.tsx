@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useDashboardStore } from '../../../lib/DashboardStoreProvider'
 import UnsavedNotice, { stableJson } from '../UnsavedNotice'
-import { shrinkImage } from '../../../lib/shrinkImage'
+import { shrinkImage, hasTransparency } from '../../../lib/shrinkImage'
 import '../canal.css'
 
 // Kiosk mode: tablets see the store as a full-screen ordering layout (big
@@ -12,10 +12,12 @@ import '../canal.css'
 // after the welcome page. Saved in template_config.kiosk; the preview is the
 // real store (?kiosko=1), fed the unsaved settings by postMessage.
 
-type KioskConfig = { enabled: boolean; categoryImages: Record<string, string> }
+// floatingImages: category ids whose own picture has a see-through background
+// (a PNG cut-out) — shown floating, with no box behind it
+type KioskConfig = { enabled: boolean; categoryImages: Record<string, string>; floatingImages: Record<string, boolean> }
 type Category = { id: string; name: string }
 
-const DEFAULTS: KioskConfig = { enabled: false, categoryImages: {} }
+const DEFAULTS: KioskConfig = { enabled: false, categoryImages: {}, floatingImages: {} }
 
 // iPad Air, the most common kiosk tablet
 const DEVICES = {
@@ -80,7 +82,7 @@ export default function KioskPage() {
         const cfg = (data.template_config ?? {}) as Record<string, unknown>
         setBaseConfig(cfg)
         const k = (cfg.kiosk ?? {}) as Partial<KioskConfig>
-        const loaded = { enabled: !!k.enabled, categoryImages: { ...(k.categoryImages ?? {}) } }
+        const loaded = { enabled: !!k.enabled, categoryImages: { ...(k.categoryImages ?? {}) }, floatingImages: { ...(k.floatingImages ?? {}) } }
         setConfig(loaded)
         setSavedConfig(loaded)
         const hidden = new Set((cfg.hiddenCategoryIds as string[] | undefined) ?? [])
@@ -138,6 +140,7 @@ export default function KioskPage() {
     if (!file || !catId || !storeId) return
     setError(''); setUploadingId(catId)
     try {
+      const floating = await hasTransparency(file)
       const small = await shrinkImage(file)
       const ext = (small.name.split('.').pop() || 'jpg').toLowerCase()
       const path = `kiosk/${storeId}-${catId.slice(0, 8)}-${Date.now()}.${ext}`
@@ -145,7 +148,7 @@ export default function KioskPage() {
         .upload(path, small, { upsert: true, contentType: small.type || 'image/jpeg', cacheControl: '31536000' })
       if (upErr) throw upErr
       const url = supabase.storage.from('store-assets').getPublicUrl(path).data.publicUrl
-      setConfig(c => ({ ...c, categoryImages: { ...c.categoryImages, [catId]: url } }))
+      setConfig(c => ({ ...c, categoryImages: { ...c.categoryImages, [catId]: url }, floatingImages: { ...c.floatingImages, [catId]: floating } }))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo subir la imagen')
     }
@@ -155,7 +158,9 @@ export default function KioskPage() {
     setConfig(c => {
       const next = { ...c.categoryImages }
       delete next[catId]
-      return { ...c, categoryImages: next }
+      const float = { ...c.floatingImages }
+      delete float[catId]
+      return { ...c, categoryImages: next, floatingImages: float }
     })
   }
 
@@ -227,7 +232,7 @@ export default function KioskPage() {
             <div className="cn-section-head">
               <div>
                 <div className="cn-section-title">Imágenes de las categorías</div>
-                <div className="cn-section-sub">Salen en los botones grandes de abajo. Si no subes una, usamos la foto de un producto de esa categoría.</div>
+                <div className="cn-section-sub">Salen en los botones grandes de abajo. Si subes un PNG sin fondo, sale flotando, sin el cuadro detrás. Si no subes una, usamos la foto de un producto de esa categoría.</div>
               </div>
             </div>
             <div className="cn-section-body">
@@ -238,16 +243,17 @@ export default function KioskPage() {
                   {categories.map(cat => {
                     const own = config.categoryImages[cat.id]
                     const shown = own || productPhoto[cat.id]
+                    const floating = !!own && (config.floatingImages[cat.id] ?? /\.png(\?|#|$)/i.test(own))
                     return (
                       <div key={cat.id} className="cn-kiosk-cat">
-                        <div className="cn-kiosk-cat-thumb">
+                        <div className={`cn-kiosk-cat-thumb${floating ? ' float' : ''}`}>
                           {shown
                             ? <img src={shown} alt="" style={own ? undefined : { opacity: 0.55 }} />
                             : <span>{cat.name.trim().charAt(0).toUpperCase()}</span>}
                         </div>
                         <div className="cn-kiosk-cat-info">
                           <div className="cn-kiosk-cat-name">{cat.name}</div>
-                          <div className="cn-toggle-hint">{own ? 'Imagen propia' : shown ? 'Foto de un producto' : 'Sin imagen'}</div>
+                          <div className="cn-toggle-hint">{own ? (floating ? 'Imagen sin fondo · flotando' : 'Imagen propia') : shown ? 'Foto de un producto' : 'Sin imagen'}</div>
                         </div>
                         <button type="button" className="cn-pill-btn" disabled={uploadingId === cat.id} onClick={() => pickImage(cat.id)}>
                           {uploadingId === cat.id ? 'Subiendo…' : own ? 'Cambiar' : 'Subir'}

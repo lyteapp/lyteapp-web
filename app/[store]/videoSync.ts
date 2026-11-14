@@ -42,17 +42,30 @@ export async function resyncVideos() {
   window.dispatchEvent(new Event(RESYNC))
 }
 
-/** Holds `v` on the shared timeline. Small differences are made up by
- *  playing a touch faster or slower (no visible jump); big ones by jumping,
- *  aimed ahead by however long a jump takes on this device (learned from the
- *  quick ones; a first jump that has to wait for the video to load says
- *  nothing about that). How far off it is shows in the element's
- *  data-sync-drift (seconds), for checking on the spot. */
+/** Holds `v` on the shared timeline.
+ *
+ *  Small differences (under a second) are made up by playing a touch faster
+ *  or slower — no visible jump. A big one is fixed with a jump, done so it
+ *  can't miss: it aims a little AHEAD of where the others will be (by how
+ *  long a jump takes on this device, learned from every jump, slow ones
+ *  included — on a tablet that has to fetch and decode that part of the
+ *  video that can be seconds), freezes on that frame, and starts playing
+ *  the instant the others reach it. Never jumps while the video is still
+ *  loading, and after a few jumps in a row it lets the speed do the work
+ *  for a while instead of jumping over and over.
+ *
+ *  How far off it is shows in the element's data-sync-drift (seconds), and
+ *  data-sync-hold is set while it's frozen on purpose (the always-play
+ *  nudges in CachedVideo leave it alone then). */
 export function syncVideo(v: HTMLVideoElement): () => void {
   let stopped = false
-  let lastSeek = 0
-  let seekLead = 0.15   // how far ahead to aim a jump, learned
-  let seeking = false
+  let state: 'run' | 'seek' | 'hold' = 'run'
+  let seekStart = 0
+  let seekTime = 0.4          // how long a jump takes here, learned
+  let burst = 0               // jumps in a row that landed late
+  let jumps: number[] = []    // when the recent jumps were
+  let lastJumpEnd = 0
+  let holdTimer: ReturnType<typeof setTimeout> | undefined
 
   const drift = () => {
     // The loop length every screen counts with: rounded, because browsers
@@ -68,55 +81,95 @@ export function syncVideo(v: HTMLVideoElement): () => void {
     if (x < -d / 2) x += d
     return { d, target, x }
   }
+  const release = () => {
+    clearTimeout(holdTimer)
+    delete v.dataset.syncHold
+    state = 'run'
+    lastJumpEnd = performance.now()
+    v.playbackRate = 1
+    v.play().catch(() => {})
+  }
   const jump = () => {
     const w = drift()
     if (!w) return
-    seeking = true
-    lastSeek = performance.now()
+    clearTimeout(holdTimer)
+    state = 'seek'
+    seekStart = performance.now()
+    jumps = [...jumps.filter(t => seekStart - t < 60000), seekStart]
+    v.dataset.syncHold = '1'
+    v.pause()
     v.playbackRate = 1
-    v.currentTime = (w.target + seekLead) % w.d
+    // aim ahead by how long a jump takes, plus a margin to wait out
+    v.currentTime = (w.target + seekTime + 0.3) % w.d
+  }
+  // landed: wait until it can really play, then line up
+  const landed = () => {
+    if (state !== 'seek' || stopped) return
+    if (v.readyState < 3) return // 'canplay' brings it back here
+    const took = (performance.now() - seekStart) / 1000
+    seekTime = Math.min(6, Math.max(0.05, took > seekTime ? took : seekTime * 0.7 + took * 0.3))
+    const w = drift()
+    if (!w) { release(); return }
+    v.dataset.syncDrift = w.x.toFixed(3)
+    if (w.x >= 0 && w.x < 8) {
+      // ahead (as aimed): hold this frame until the others get here
+      burst = 0
+      state = 'hold'
+      holdTimer = setTimeout(release, Math.max(0, w.x * 1000 - 40))
+    } else if (burst < 2) {
+      // it took even longer than learned: aim again, further ahead
+      burst++
+      jump()
+    } else {
+      burst = 0
+      release() // the speed makes up the rest
+    }
   }
   const check = (hard = false) => {
-    if (stopped || seeking) return
+    if (stopped) return
+    if (state === 'seek') {
+      // a jump that can't load that part (slow connection) doesn't hang
+      // it: it plays on, loading as it goes, and the speed catches up
+      if (performance.now() - seekStart > 4000) { burst = 0; release() }
+      return
+    }
+    if (state === 'hold') return
     const w = drift()
-    if (!w || v.readyState < 2) return
+    if (!w) return
+    if (hard) { burst = 0; jump(); return }
+    if (v.readyState < 3 || v.paused) return // still loading / stopped: nothing to judge
     v.dataset.syncDrift = w.x.toFixed(3)
-    if (hard || (Math.abs(w.x) > 0.5 && performance.now() - lastSeek > 1000)) { jump(); return }
-    if (v.paused) return
+    const now = performance.now()
+    // after several jumps in the last minute, wait longer before another
+    const coolDown = jumps.filter(t => now - t < 60000).length >= 3 ? 20000 : 1500
+    if (Math.abs(w.x) > 1 && now - lastJumpEnd > coolDown) { jump(); return }
     // ahead → slow down a little, behind → speed up a little (a background
     // video a few % faster or slower for a moment isn't noticeable)
-    v.playbackRate = Math.abs(w.x) < 0.02 ? 1 : Math.min(1.12, Math.max(0.88, 1 - w.x))
-  }
-  const onSeeked = () => {
-    if (!seeking) return
-    seeking = false
-    const took = (performance.now() - lastSeek) / 1000
-    if (took < 1) seekLead = Math.min(0.6, Math.max(0.03, seekLead * 0.6 + took * 0.4))
+    v.playbackRate = Math.abs(w.x) < 0.02 ? 1 : Math.min(1.12, Math.max(0.88, 1 - w.x * 0.6))
   }
 
   const onMeta = () => check(true)
-  const onPlaying = () => check()
-  const onResync = () => { seeking = false; check(true) }
+  const onResync = () => { if (state === 'hold') release(); state = 'run'; check(true) }
   v.addEventListener('loadedmetadata', onMeta)
-  v.addEventListener('playing', onPlaying)
-  v.addEventListener('seeked', onSeeked)
+  v.addEventListener('seeked', landed)
+  v.addEventListener('canplay', landed)
+  v.addEventListener('canplaythrough', landed)
   window.addEventListener(RESYNC, onResync)
   measureClock().then(() => check(true))
   // a tablet left on for days gets its own clock adjusted now and then: the
   // difference is measured again every 10 minutes
   const remeasure = setInterval(() => { measureClock(true) }, 10 * 60 * 1000)
-  const timer = setInterval(() => {
-    // a jump that never reported back doesn't block the checks for good
-    if (seeking && performance.now() - lastSeek > 3000) seeking = false
-    check()
-  }, 500)
+  const timer = setInterval(() => { if (state === 'seek') landed(); check() }, 500)
   return () => {
     stopped = true
+    clearTimeout(holdTimer)
     clearInterval(timer)
     clearInterval(remeasure)
+    delete v.dataset.syncHold
     v.removeEventListener('loadedmetadata', onMeta)
-    v.removeEventListener('playing', onPlaying)
-    v.removeEventListener('seeked', onSeeked)
+    v.removeEventListener('seeked', landed)
+    v.removeEventListener('canplay', landed)
+    v.removeEventListener('canplaythrough', landed)
     window.removeEventListener(RESYNC, onResync)
   }
 }

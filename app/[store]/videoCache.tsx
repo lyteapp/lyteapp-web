@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { syncVideo } from './videoSync'
 
 // Keeps storefront videos (welcome background, banner, content blocks) in
@@ -16,6 +16,9 @@ import { syncVideo } from './videoSync'
 
 const MAX_FILE = 40 * 1024 * 1024
 const MAX_TOTAL = 160 * 1024 * 1024
+// a synced kiosk video (see CachedVideo's sync) may be far bigger — a
+// welcome video straight off a phone — and has to be in memory whole
+const MAX_SYNC_FILE = 250 * 1024 * 1024
 
 type Entry = { url: string; size: number; users: number }
 const cache = new Map<string, Entry>()
@@ -38,24 +41,31 @@ function use(src: string, d: number) {
   if (e) e.users += d
 }
 
-export function warmVideo(src?: string | null) {
-  if (!src || src.startsWith('blob:') || src.startsWith('data:') || cache.has(src) || pending.has(src)) return
+const pendingDone = new Map<string, Promise<void>>()
+
+export function warmVideo(src?: string | null, big = false): Promise<void> {
+  if (!src || src.startsWith('blob:') || src.startsWith('data:') || cache.has(src)) return Promise.resolve()
+  const already = pendingDone.get(src)
+  if (already) return already
   pending.add(src)
-  fetch(src)
+  const done = fetch(src)
     .then(r => {
       const len = Number(r.headers.get('content-length') || 0)
-      if (!r.ok || len > MAX_FILE) { r.body?.cancel(); throw new Error('skip') }
+      const max = big ? MAX_SYNC_FILE : MAX_FILE
+      if (!r.ok || len > max) { r.body?.cancel(); throw new Error('skip') }
       return r.blob()
     })
     .then(b => {
-      if (b.size > MAX_FILE) return
+      if (b.size > (big ? MAX_SYNC_FILE : MAX_FILE)) return
       evict(b.size)
-      if (total + b.size > MAX_TOTAL) return
+      if (total + b.size > Math.max(MAX_TOTAL, big ? b.size : 0)) return
       cache.set(src, { url: URL.createObjectURL(b), size: b.size, users: 0 })
       total += b.size
     })
     .catch(() => {})
-    .finally(() => pending.delete(src))
+    .finally(() => { pending.delete(src); pendingDone.delete(src) })
+  pendingDone.set(src, done)
+  return done
 }
 
 /** A <video> that plays from the in-memory copy when there is one. Only a
@@ -70,7 +80,10 @@ export function CachedVideo({ src, onPlaying, ref, alwaysPlay, sync, ...props }:
   alwaysPlay?: boolean
 }) {
   // picked once per src, so a copy arriving mid-playback doesn't restart it
-  const entry = useMemo(() => cache.get(src), [src])
+  // (except for a synced video, see below)
+  const memo = useMemo(() => cache.get(src), [src])
+  const [late, setLate] = useState<{ src: string; entry: Entry } | null>(null)
+  const entry = memo ?? (late?.src === src ? late.entry : undefined)
   const played = useRef(false)
   const el = useRef<HTMLVideoElement | null>(null)
   useEffect(() => {
@@ -80,6 +93,25 @@ export function CachedVideo({ src, onPlaying, ref, alwaysPlay, sync, ...props }:
       else if (played.current) warmVideo(src)
     }
   }, [src, entry])
+  // A synced video (kiosks side by side) gets the whole file into memory
+  // right away and switches to it once it's there: keeping in step means
+  // jumping to any second of it, which from memory is instant, while from
+  // the network each jump waits for that part to download.
+  useEffect(() => {
+    if (!sync || memo) return
+    let gone = false
+    let tries = 0
+    let retry: ReturnType<typeof setTimeout> | undefined
+    const get = () => warmVideo(src, true).then(() => {
+      if (gone) return
+      const e = cache.get(src)
+      if (e) setLate({ src, entry: e })
+      // didn't make it (network hiccup): again in a while
+      else if (++tries < 6) retry = setTimeout(get, 20000)
+    })
+    get()
+    return () => { gone = true; clearTimeout(retry) }
+  }, [src, sync, memo])
 
   // An autoplaying video must start. The page arrives from the server
   // without the `muted` attribute (React only sets it as a property, after
@@ -99,7 +131,8 @@ export function CachedVideo({ src, onPlaying, ref, alwaysPlay, sync, ...props }:
     if (!alwaysPlay) return
     let retries = 0
     let retryTimer: ReturnType<typeof setTimeout> | undefined
-    const kick = () => { if (v.paused && !v.ended && v.readyState >= 2) v.play().catch(() => {}) }
+    // (not while the sync is holding it still on purpose)
+    const kick = () => { if (v.paused && !v.ended && v.readyState >= 2 && !v.dataset.syncHold) v.play().catch(() => {}) }
     const onError = () => {
       if (retries >= 3) return
       retries++

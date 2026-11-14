@@ -133,10 +133,15 @@ const CARD_IMG_WIDTH = 750
 // Shows the card-sized image (already cached → instant) right away, then
 // fades in the sharper large version over it once that finishes loading,
 // instead of leaving the modal blank while a fresh large image downloads.
-function ProgressiveImg({ src, alt, className }: { src: string; alt: string; className: string }) {
+function ProgressiveImg({ src, alt, className, original }: {
+  src: string; alt: string; className: string
+  /** Kiosk (full screen on a tablet): the sharp version is the photo exactly
+   *  as uploaded — full size, not recompressed — the best there is */
+  original?: boolean
+}) {
   const [hiLoaded, setHiLoaded] = useState(false)
   const lo = resizedImg(src, CARD_IMG_WIDTH)
-  const hi = resizedImg(src, 1200)
+  const hi = original ? src : resizedImg(src, 1200)
   return (
     <>
       {/* sync decode: it's already cached, so paint it in the same frame the
@@ -2653,14 +2658,14 @@ export default function StoreShell({ store, products, categories = [], initialBc
                         <div key={i} className="sf-modal-img-frame" style={{ width: `${100 / imgs.length}%` }}>
                           {isVideoUrl(img)
                             ? <video src={img} autoPlay muted loop playsInline className="sf-modal-img sf-modal-img-zoom" />
-                            : <ProgressiveImg key={img} src={img} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" />}
+                            : <ProgressiveImg key={img} src={img} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" original={kioskActive} />}
                         </div>
                       ))}
                     </div>
                   ) : (
                     isVideoUrl(modalDisplayImage)
                       ? <video src={modalDisplayImage} autoPlay muted loop playsInline className="sf-modal-img sf-modal-img-zoom" />
-                      : <ProgressiveImg key={modalDisplayImage ?? ''} src={modalDisplayImage ?? ''} alt={modalProduct.name} className="sf-modal-img sf-modal-img-zoom" />
+                      : <ProgressiveImg key={modalDisplayImage ?? ''} src={modalDisplayImage ?? ''} alt={modalProduct.name} original={kioskActive} className="sf-modal-img sf-modal-img-zoom" />
                   )}
                   {imgs.length > 1 && (
                     <div className="sf-slide-dots sf-modal-img-dots">

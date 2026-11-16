@@ -1506,13 +1506,17 @@ export default function StoreShell({ store, products, categories = [], initialBc
   useEffect(() => {
     if (!kioskActive || !modalProduct) return
     const measure = () => {
-      const row = document.querySelector('.sf-kiosk-cats')
+      const row = document.querySelector('.sf-kiosk-dock')
       const top = row?.getBoundingClientRect().top
       document.documentElement.style.setProperty('--sf-kiosk-bottom', `${top ? Math.max(0, window.innerHeight - top) : 0}px`)
     }
     measure()
     window.addEventListener('resize', measure)
-    return () => window.removeEventListener('resize', measure)
+    // the dock grows or shrinks when the nutrition card takes the bar's place
+    const dock = document.querySelector('.sf-kiosk-dock')
+    const ro = dock ? new ResizeObserver(measure) : null
+    if (dock) ro!.observe(dock)
+    return () => { window.removeEventListener('resize', measure); ro?.disconnect() }
   }, [kioskActive, modalProduct, kioskCfg?.catSize])
 
 
@@ -1664,17 +1668,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
     }
   }
 
-  // Kiosk: the nutrition facts as a card at the top of the product's options
-  // (scrolls with them, so the options always have room) — not over the photo.
-  // The ring with the calories, a bar per macro, the diets spelled out; it
-  // follows the picked options live.
-  // Kiosk: the nutrition facts as a compact card (ring with the calories,
-  // a column per macro, the diets up top), in the store's colors. It goes
-  // where it leaves the options their room: on a landscape tablet under the
-  // photo ('side'), on a portrait one above the options ('flow') — both are
-  // rendered and the orientation shows one. still: shown again on a later
-  // step of the step-by-step (no entrance animation).
-  const renderKioskNutrition = (still = false, where: 'side' | 'flow' = 'flow') => {
+  // Kiosk: the open product's nutrition facts as a card (ring with the
+  // calories, a column per macro, the diets up top) in the store's colors,
+  // following the picked options live. It takes the category bar's place at
+  // the bottom of the screen while the product is open (see the kiosk dock).
+  const renderKioskNutrition = (still = false, where = 'dock') => {
     if (!kioskActive || !modalProduct || !modalNutritionEnabled || !modalNutritionDisplay) return null
     const d = modalNutritionDisplay
     const total = d.protein + d.carbs + d.fat
@@ -2886,7 +2884,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
             </div>
           )}
         <div
-          className={`sf-modal${cfgModalHalf ? ' sf-modal-half' : ''}${modalFull ? ' sf-modal-fullpage' : ''}${kioskActive ? ' sf-modal-kiosk' : ''}${kioskActive && modalNutritionEnabled ? ' sf-has-knut' : ''}${cfgModalDark ? ' sf-modal-dark' : ''}`}
+          className={`sf-modal${cfgModalHalf ? ' sf-modal-half' : ''}${modalFull ? ' sf-modal-fullpage' : ''}${kioskActive ? ' sf-modal-kiosk' : ''}${cfgModalDark ? ' sf-modal-dark' : ''}`}
           style={{
             ...(showHeaderAboveModal ? { height: `calc(100dvh - ${modalTop}px)`, maxHeight: `calc(100dvh - ${modalTop}px)` } : {}),
             ...(cfgModalBg ? { background: cfgModalBg } : {}),
@@ -3062,7 +3060,6 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 </div>
               )
             })()}
-            {renderKioskNutrition(false, 'side')}
             <div className="sf-modal-product-info">
               <div className="sf-modal-name">{modalProduct.name}</div>
               {modalProduct.description && <div className="sf-modal-desc">{modalProduct.description}</div>}
@@ -3080,7 +3077,6 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
           {modalWizardActive && modalWizardStep ? (
             <div key={modalStep} ref={wizardBodyRef} className="sf-modal-body sf-modal-wizard">
-              {renderKioskNutrition(modalStep > 0)}
               <div className="sf-modal-wizard-progress">
                 {modalWizardSteps.map((_, i) => (
                   <div key={i} className={`sf-modal-wizard-dot${i === modalStep ? ' active' : ''}${i < modalStep ? ' done' : ''}`} />
@@ -3173,7 +3169,6 @@ export default function StoreShell({ store, products, categories = [], initialBc
             </div>
           ) : (
             <div className="sf-modal-body">
-              {renderKioskNutrition()}
               {!cfgModalWizard && modalProduct.options?.variables?.filter(g => g.choices.length > 0).map((g, gi) => {
                 const { min, max } = groupMinMax(g)
                 const count = (modalVars[g.label] ?? []).length
@@ -6094,6 +6089,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     // Prices in the store's own price color, or else its main color (not
     // the app's default purple, which rarely matches a store's look)
     const kioskStyle = { ...pageStyle, '--sf-kiosk-price': cfg.priceColor || 'var(--sf-accent-color, #7C3AED)' } as React.CSSProperties
+    const kioskDockNut = !!modalProduct && modalNutritionEnabled && !!modalNutritionDisplay
     const tileImg = (g: { key: string; items: Product[] }) =>
       kImages[g.key] || g.items.map(p => p.image_url).find(u => u && !isVideoUrl(u)) || null
     // its own picture is a cut-out (told at upload; a .png from before that counts too)
@@ -6195,35 +6191,42 @@ export default function StoreShell({ store, products, categories = [], initialBc
           </button>
         )}
 
-        {kGroups.length > 1 && (
-          <nav className="sf-kiosk-cats" aria-label="Categorias"
-            style={{ '--sf-kiosk-cat-scale': Math.min(1.7, Math.max(0.6, (kioskCfg?.catSize ?? 100) / 100)) } as React.CSSProperties}>
-            {kGroups.map(g => {
-              const img = tileImg(g)
-              const floats = !!img && tileFloats(g)
-              const on = g.key === kCur?.key
-              return (
-                <button
-                  key={g.key} type="button" aria-pressed={on}
-                  className={`sf-kiosk-cat${on ? ' on' : ''}`}
-                  onClick={() => {
-                    setModalProduct(null) // a product open above closes, the category changes
-                    setKioskCatId(g.key)
-                    kioskMainRef.current?.scrollTo({ top: 0 })
-                  }}
-                >
-                  <span className={`sf-kiosk-cat-img${floats ? ' float' : ''}`}>
-                    {img
-                      // bigger symbols (Modo kiosko → size) get a sharper copy
-                      ? <img src={resizedImg(img, (kioskCfg?.catSize ?? 100) > 110 ? 480 : 320)} alt="" />
-                      : <span className="sf-kiosk-ph">{g.name.trim().charAt(0).toUpperCase()}</span>}
-                  </span>
-                  <span className="sf-kiosk-cat-name">{g.name}</span>
-                </button>
-              )
-            })}
-          </nav>
-        )}
+        {/* The bottom of the kiosk: the category bar — while a product with
+            nutrition facts is open, the bar slides away and that product's
+            nutrition card rises in its place (both share the spot, so its
+            height doesn't jump); closing the product brings the bar back */}
+        <div className={`sf-kiosk-dock${kioskDockNut ? ' nut-on' : ''}`}>
+          {kGroups.length > 1 && (
+            <nav className="sf-kiosk-cats" aria-label="Categorias"
+              style={{ '--sf-kiosk-cat-scale': Math.min(1.7, Math.max(0.6, (kioskCfg?.catSize ?? 100) / 100)) } as React.CSSProperties}>
+              {kGroups.map(g => {
+                const img = tileImg(g)
+                const floats = !!img && tileFloats(g)
+                const on = g.key === kCur?.key
+                return (
+                  <button
+                    key={g.key} type="button" aria-pressed={on}
+                    className={`sf-kiosk-cat${on ? ' on' : ''}`}
+                    onClick={() => {
+                      setModalProduct(null) // a product open above closes, the category changes
+                      setKioskCatId(g.key)
+                      kioskMainRef.current?.scrollTo({ top: 0 })
+                    }}
+                  >
+                    <span className={`sf-kiosk-cat-img${floats ? ' float' : ''}`}>
+                      {img
+                        // bigger symbols (Modo kiosko → size) get a sharper copy
+                        ? <img src={resizedImg(img, (kioskCfg?.catSize ?? 100) > 110 ? 480 : 320)} alt="" />
+                        : <span className="sf-kiosk-ph">{g.name.trim().charAt(0).toUpperCase()}</span>}
+                    </span>
+                    <span className="sf-kiosk-cat-name">{g.name}</span>
+                  </button>
+                )
+              })}
+            </nav>
+          )}
+          {kioskDockNut && <div className="sf-kiosk-dock-nut">{renderKioskNutrition(false, 'dock')}</div>}
+        </div>
 
         {kioskHomeAsk && (
           <div className="sf-kiosk-ask" role="alertdialog" aria-modal="true" aria-label="Empezar de nuevo" onClick={() => setKioskHomeAsk(false)}>

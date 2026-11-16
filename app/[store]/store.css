@@ -3317,35 +3317,41 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
   content: ''; position: absolute; inset: 0 0 50%; pointer-events: none;
   background: linear-gradient(rgba(255,255,255,0.38), rgba(255,255,255,0.05));
 }
-/* where it goes: above the options (portrait), under the photo (landscape) */
-.sf-knut-side { display: none; }
-.sf-kiosk .sf-modal.sf-has-knut { --knut-h: 170px; }
-@media (orientation: portrait) {
-  /* a bit less photo, so the step's options fit under the card */
-  .sf-kiosk .sf-modal.sf-has-knut .sf-modal-product-head-hero .sf-modal-img-wrap,
-  .sf-kiosk .sf-modal.sf-has-knut .sf-modal-product-head-hero .sf-modal-img { height: 25vh; height: 25dvh; }
+/* The kiosk dock: the bottom of the screen, shared by the category bar and
+   (while a product with nutrition facts is open) that product's nutrition
+   card — stacked in one grid cell so its height doesn't jump; the bar
+   slides down out of sight, the card rises in */
+.sf-kiosk-dock {
+  flex-shrink: 0; display: grid; position: relative; overflow: hidden;
+  background: var(--sf-card-bg, #FFFFFF); box-shadow: 0 -6px 24px rgba(15,23,42,0.06);
 }
-@media (min-width: 1024px) and (orientation: landscape) {
-  .sf-kiosk .sf-knut-flow { display: none; }
-  .sf-kiosk .sf-modal-fullpage.sf-has-knut .sf-modal-img-wrap { height: calc(100% - var(--knut-h) - 36px); align-self: start; }
-  .sf-kiosk .sf-knut-side {
-    display: block; position: absolute; z-index: 2; margin: 0;
-    left: 20px; bottom: 20px; width: calc(100% * 1.15 / 2.15 - 40px); height: var(--knut-h); box-sizing: border-box;
-  }
+.sf-kiosk-dock > * { grid-area: 1 / 1; min-width: 0; }
+.sf-kiosk-dock:empty { display: none; }
+.sf-kiosk-dock > .sf-kiosk-cats {
+  box-shadow: none;
+  transition: transform 0.38s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.25s ease;
 }
+.sf-kiosk-dock.nut-on > .sf-kiosk-cats { transform: translateY(60%); opacity: 0; pointer-events: none; }
+.sf-kiosk-dock-nut {
+  display: flex; align-items: center; justify-content: center;
+  padding: 10px 28px max(10px, env(safe-area-inset-bottom, 0px));
+  animation: sfDockNutIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+}
+@keyframes sfDockNutIn { from { opacity: 0; transform: translateY(45%); } to { opacity: 1; transform: none; } }
+.sf-kiosk-dock-nut .sf-knut { width: 100%; max-width: 920px; margin: 0; animation: none; }
 /* dark product sheet: smoked glass */
-.sf-modal-dark .sf-knut {
+:is(.sf-modal-dark, .sf-kiosk-dark) .sf-knut {
   background: linear-gradient(150deg, rgba(255,255,255,0.14), rgba(255,255,255,0.05));
   border-color: rgba(255,255,255,0.18);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), inset 0 0 0 1px rgba(255,255,255,0.05), 0 18px 40px -18px rgba(0,0,0,0.6);
 }
-.sf-modal-dark .sf-knut::after { background: linear-gradient(170deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 40%); }
-.sf-modal-dark .sf-knut-kcal { background: linear-gradient(160deg, rgba(255,255,255,0.2), rgba(255,255,255,0.06)); box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 4px 12px rgba(0,0,0,0.35); }
-.sf-modal-dark .sf-knut-title, .sf-modal-dark .sf-knut-kcal span { color: rgba(241,245,249,0.6); }
-.sf-modal-dark :is(.sf-knut-kcal strong, .sf-knut-macro > strong) { color: #F8FAFC; }
-.sf-modal-dark .sf-knut-macro > span { color: rgba(241,245,249,0.75); }
-.sf-modal-dark .sf-knut-track { stroke: rgba(255,255,255,0.12); }
-.sf-modal-dark .sf-knut-bar { background: rgba(255,255,255,0.1); box-shadow: inset 0 1px 2px rgba(0,0,0,0.3); }
+:is(.sf-modal-dark, .sf-kiosk-dark) .sf-knut::after { background: linear-gradient(170deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 40%); }
+:is(.sf-modal-dark, .sf-kiosk-dark) .sf-knut-kcal { background: linear-gradient(160deg, rgba(255,255,255,0.2), rgba(255,255,255,0.06)); box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 4px 12px rgba(0,0,0,0.35); }
+:is(.sf-modal-dark, .sf-kiosk-dark) :is(.sf-knut-title, .sf-knut-kcal span) { color: rgba(241,245,249,0.6); }
+:is(.sf-modal-dark, .sf-kiosk-dark) :is(.sf-knut-kcal strong, .sf-knut-macro > strong) { color: #F8FAFC; }
+:is(.sf-modal-dark, .sf-kiosk-dark) .sf-knut-macro > span { color: rgba(241,245,249,0.75); }
+:is(.sf-modal-dark, .sf-kiosk-dark) .sf-knut-track { stroke: rgba(255,255,255,0.12); }
+:is(.sf-modal-dark, .sf-kiosk-dark) .sf-knut-bar { background: rgba(255,255,255,0.1); box-shadow: inset 0 1px 2px rgba(0,0,0,0.3); }
 
 /* Kiosk touch: no wait for a possible double-tap zoom on anything, no grey
    tap flash, no text getting selected or the iOS callout popping up under a

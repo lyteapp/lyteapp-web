@@ -3409,3 +3409,10 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
 .sf-modal-kiosk .sf-modal-wizard[data-fit="3"] .sf-modal-wizard-progress { margin-bottom: 2px; }
 .sf-modal-kiosk .sf-modal-wizard[data-fit="3"] .sf-modal-wizard-actions { margin-top: 8px; }
 .sf-modal-kiosk .sf-modal-wizard[data-fit="3"] :is(.sf-modal-wizard-back, .sf-modal-wizard-skip) { min-height: 42px; }
+
+/* Kiosk: the open product's name, description and quantity in the kiosk's
+   own text color (set only when it reads on the sheet, see StoreShell);
+   the description a softer shade of it, like on the kiosk's product cards */
+.sf-modal-kiosk[style*="--sf-kmodal-text"] :is(.sf-modal-name, .sf-modal-qty span, .sf-modal-qty button) { color: var(--sf-kmodal-text); }
+.sf-modal-kiosk[style*="--sf-kmodal-text"] .sf-modal-desc { color: color-mix(in srgb, var(--sf-kmodal-text) 62%, transparent); }
+.sf-modal-kiosk[style*="--sf-kmodal-text"] .sf-modal-qty { border-color: color-mix(in srgb, var(--sf-kmodal-text) 18%, transparent); }

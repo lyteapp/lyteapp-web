@@ -2181,6 +2181,15 @@ export default function StoreShell({ store, products, categories = [], initialBc
     const n = parseInt(m[1], 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
     return (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.55
   })()
+  // Kiosk: the open product's name, description and quantity in the store's
+  // own text color, like every other letter of the kiosk — as long as it
+  // reads on the product sheet (dark letters on a light sheet or light on a
+  // dark one); otherwise they keep the sheet's own colors
+  const kioskModalText = (() => {
+    const t = cfg.textColor
+    if (!t || !/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.test(t)) return ''
+    return isLightColor(t) === cfgModalDark ? t : ''
+  })()
   // A full-page product modal is otherwise a fixed inset:0 overlay, which
   // hides the store's own header behind it — pin the header above the
   // overlay and start the overlay right below it instead, so it stays
@@ -2879,6 +2888,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           style={{
             ...(showHeaderAboveModal ? { height: `calc(100dvh - ${modalTop}px)`, maxHeight: `calc(100dvh - ${modalTop}px)` } : {}),
             ...(cfgModalBg ? { background: cfgModalBg } : {}),
+            ...(kioskActive && kioskModalText ? { '--sf-kmodal-text': kioskModalText } : {}),
             ...chipVars,
           } as React.CSSProperties}
           onClick={e => e.stopPropagation()}

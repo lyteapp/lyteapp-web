@@ -2782,8 +2782,9 @@ video.sf-banner-img { object-fit: cover; }
 
 .sf-kiosk-cats {
   flex-shrink: 0; display: flex; gap: 18px; overflow-x: auto; scrollbar-width: none;
-  /* kept low, so the products above get the height */
-  padding: 8px 28px 0;
+  /* kept low, so the products above get the height; it's the last thing
+     on the screen, so it keeps clear of an iPad's home bar */
+  padding: 8px 28px max(8px, env(safe-area-inset-bottom, 0px));
   background: var(--sf-card-bg, #FFFFFF); color: var(--sf-text-color, #0F172A);
   box-shadow: 0 -6px 24px rgba(15,23,42,0.06);
 }

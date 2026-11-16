@@ -1506,7 +1506,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   useEffect(() => {
     if (!kioskActive || !modalProduct) return
     const measure = () => {
-      const row = document.querySelector('.sf-kiosk-cats') ?? document.querySelector('.sf-kiosk > .sf-kiosk-powered')
+      const row = document.querySelector('.sf-kiosk-cats')
       const top = row?.getBoundingClientRect().top
       document.documentElement.style.setProperty('--sf-kiosk-bottom', `${top ? Math.max(0, window.innerHeight - top) : 0}px`)
     }
@@ -6224,8 +6224,6 @@ export default function StoreShell({ store, products, categories = [], initialBc
             })}
           </nav>
         )}
-
-        <div className="sf-kiosk-powered"><span>Powered by</span><span className="sf-powered-by-logo" role="img" aria-label="Lyte app" /></div>
 
         {kioskHomeAsk && (
           <div className="sf-kiosk-ask" role="alertdialog" aria-modal="true" aria-label="Empezar de nuevo" onClick={() => setKioskHomeAsk(false)}>

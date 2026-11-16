@@ -14,10 +14,12 @@ import '../canal.css'
 
 // floatingImages: category ids whose own picture has a see-through background
 // (a PNG cut-out) — shown floating, with no box behind it
-type KioskConfig = { enabled: boolean; categoryImages: Record<string, string>; floatingImages: Record<string, boolean> }
+// catSize: size of the category buttons' pictures, in % of the normal size
+type KioskConfig = { enabled: boolean; categoryImages: Record<string, string>; floatingImages: Record<string, boolean>; catSize: number }
+const CAT_SIZE: [number, number] = [60, 170]
 type Category = { id: string; name: string }
 
-const DEFAULTS: KioskConfig = { enabled: false, categoryImages: {}, floatingImages: {} }
+const DEFAULTS: KioskConfig = { enabled: false, categoryImages: {}, floatingImages: {}, catSize: 100 }
 
 // iPad Air, the most common kiosk tablet
 const DEVICES = {
@@ -82,7 +84,10 @@ export default function KioskPage() {
         const cfg = (data.template_config ?? {}) as Record<string, unknown>
         setBaseConfig(cfg)
         const k = (cfg.kiosk ?? {}) as Partial<KioskConfig>
-        const loaded = { enabled: !!k.enabled, categoryImages: { ...(k.categoryImages ?? {}) }, floatingImages: { ...(k.floatingImages ?? {}) } }
+        const loaded = {
+          enabled: !!k.enabled, categoryImages: { ...(k.categoryImages ?? {}) }, floatingImages: { ...(k.floatingImages ?? {}) },
+          catSize: typeof k.catSize === 'number' ? Math.min(CAT_SIZE[1], Math.max(CAT_SIZE[0], k.catSize)) : 100,
+        }
         setConfig(loaded)
         setSavedConfig(loaded)
         const hidden = new Set((cfg.hiddenCategoryIds as string[] | undefined) ?? [])
@@ -236,6 +241,18 @@ export default function KioskPage() {
               </div>
             </div>
             <div className="cn-section-body">
+              <div className="cn-label">Tamaño de los símbolos</div>
+              <div className="cn-size-row" style={{ marginBottom: 18 }}>
+                <span>A</span>
+                <input type="range" min={CAT_SIZE[0]} max={CAT_SIZE[1]} step={5}
+                  value={config.catSize} onChange={e => setConfig(c => ({ ...c, catSize: Number(e.target.value) }))}
+                  aria-label="Tamaño de los símbolos de las categorías" />
+                <span style={{ fontSize: 18 }}>A</span>
+                <button type="button" className="cn-pill-btn" disabled={config.catSize === 100}
+                  onClick={() => setConfig(c => ({ ...c, catSize: 100 }))} style={{ marginLeft: 6, minWidth: 64 }}>
+                  {config.catSize === 100 ? 'Normal' : `${config.catSize}%`}
+                </button>
+              </div>
               {categories.length === 0 ? (
                 <div className="cn-toggle-hint">Aún no tienes categorías. Créalas en Productos → Categorías.</div>
               ) : (

@@ -601,6 +601,8 @@ type KioskConfig = {
   /** Category ids whose own picture has a see-through background (a PNG
    *  cut-out): it floats over the bar, with no box behind it */
   floatingImages?: Record<string, boolean>
+  /** Size of the category buttons' pictures, in % of the normal size */
+  catSize?: number
 }
 
 type TemplateConfig = {
@@ -1511,7 +1513,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     measure()
     window.addEventListener('resize', measure)
     return () => window.removeEventListener('resize', measure)
-  }, [kioskActive, modalProduct])
+  }, [kioskActive, modalProduct, kioskCfg?.catSize])
 
 
   // Swipe from the left screen edge to pull the side menu open (when the
@@ -6194,7 +6196,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
         )}
 
         {kGroups.length > 1 && (
-          <nav className="sf-kiosk-cats" aria-label="Categorias">
+          <nav className="sf-kiosk-cats" aria-label="Categorias"
+            style={{ '--sf-kiosk-cat-scale': Math.min(1.7, Math.max(0.6, (kioskCfg?.catSize ?? 100) / 100)) } as React.CSSProperties}>
             {kGroups.map(g => {
               const img = tileImg(g)
               const floats = !!img && tileFloats(g)
@@ -6211,7 +6214,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 >
                   <span className={`sf-kiosk-cat-img${floats ? ' float' : ''}`}>
                     {img
-                      ? <img src={resizedImg(img, 320)} alt="" />
+                      // bigger symbols (Modo kiosko → size) get a sharper copy
+                      ? <img src={resizedImg(img, (kioskCfg?.catSize ?? 100) > 110 ? 480 : 320)} alt="" />
                       : <span className="sf-kiosk-ph">{g.name.trim().charAt(0).toUpperCase()}</span>}
                   </span>
                   <span className="sf-kiosk-cat-name">{g.name}</span>

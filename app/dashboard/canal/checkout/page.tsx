@@ -5,6 +5,7 @@ import { supabase } from '../../../lib/supabase'
 import { useDashboardStore } from '../../../lib/DashboardStoreProvider'
 import Link from 'next/link'
 import UnsavedNotice, { stableJson } from '../UnsavedNotice'
+import BankCredentials from './BankCredentials'
 import '../canal.css'
 
 // The checkout's sections, in page order (their data-sec index), for the
@@ -384,6 +385,7 @@ export default function CheckoutPage() {
                   {savingPagos ? 'Guardando...' : 'Guardar metodos de pago'}
                 </button>
               </div>
+              <BankCredentials storeId={storeId} />
             </div>
           </div>
 

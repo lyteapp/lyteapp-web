@@ -776,3 +776,21 @@
 /* Pagina de inicio: logo / button size sliders */
 .cn-size-row { display: flex; align-items: center; gap: 10px; color: #94A3B8; font-weight: 700; font-size: 12px; }
 .cn-size-row input[type="range"] { flex: 1; accent-color: var(--lyte-navy, #1C1B3A); }
+
+/* Checkout → Métodos de pago: a bank's API credentials (BankCredentials) */
+.cn-bank { margin-top: 18px; padding: 16px; border: 1px solid rgba(15,23,42,0.08); border-radius: 14px; background: #F8FAFC; }
+.cn-bank-head { display: flex; align-items: center; gap: 12px; }
+.cn-bank-logo {
+  width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  background: #0F172A; color: white; font-size: 11px; font-weight: 800; letter-spacing: 0.02em;
+}
+.cn-bank-title { font-size: 14px; font-weight: 700; color: #0F172A; }
+.cn-bank-sub { font-size: 12px; color: #94A3B8; margin-top: 2px; }
+.cn-bank-ok { color: #047857; font-weight: 600; }
+.cn-bank-summary { margin-top: 14px; display: grid; gap: 8px; font-size: 13px; }
+.cn-bank-summary > div:not(.cn-bank-actions) { display: flex; justify-content: space-between; gap: 12px; padding: 8px 12px; background: white; border-radius: 10px; border: 1px solid rgba(15,23,42,0.06); }
+.cn-bank-summary span { color: #64748B; }
+.cn-bank-summary strong { color: #0F172A; font-weight: 600; font-variant-numeric: tabular-nums; }
+.cn-bank-form { margin-top: 14px; }
+.cn-bank-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+.cn-bank-remove { color: #DC2626; }

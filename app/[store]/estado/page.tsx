@@ -6,9 +6,13 @@ import { createClient } from '@supabase/supabase-js'
 import { queueStep, queueBackground } from '../../lib/queueSteps'
 import './estado.css'
 
+// This screen stays open for hours on a TV/PC. The live connection's
+// keep-alive runs in a Web Worker: a hidden or screen-off tab gets its timers
+// slowed down to once a minute, which would let the connection drop.
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+  { realtime: { worker: true } }
 )
 
 type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'ready' | 'delivered' | 'completed' | 'cancelled'
@@ -149,15 +153,28 @@ export default function EstadoPage() {
     return () => clearTimeout(t)
   }, [current, dismiss])
 
+  // A failed request (no internet yet right after the PC wakes up, a
+  // hiccup) is not "store not found": it keeps trying, saying it's
+  // connecting. "Not found" is only an answer that has no store in it.
+  const [connecting, setConnecting] = useState(false)
   useEffect(() => {
     let cancelled = false
-    supabase
+    let retry: ReturnType<typeof setTimeout> | undefined
+    let tries = 0
+    const load = () => supabase
       .from('stores')
       .select('id, name, logo_url, template_config')
       .eq('slug', storeSlug)
       .maybeSingle()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
         if (cancelled) return
+        if (error) {
+          tries++
+          setConnecting(true)
+          retry = setTimeout(load, Math.min(15000, 1500 * tries))
+          return
+        }
+        setConnecting(false)
         if (!data) { setNotFound(true); setLoading(false); return }
         const tc = (data.template_config as Record<string, unknown>) ?? {}
         const tracking = (tc.trackingConfig as Record<string, unknown>) ?? {}
@@ -182,9 +199,33 @@ export default function EstadoPage() {
           },
         })
         setLoading(false)
+      }, () => {
+        if (cancelled) return
+        tries++
+        setConnecting(true)
+        retry = setTimeout(load, Math.min(15000, 1500 * tries))
       })
-    return () => { cancelled = true }
+    load()
+    return () => { cancelled = true; clearTimeout(retry) }
   }, [storeSlug])
+
+  // Keep the screen on while the board is showing (Windows turning the
+  // display off is what lets the browser put the page to sleep); asked again
+  // whenever the page comes back into view
+  useEffect(() => {
+    type WakeLock = { release: () => Promise<void> }
+    const nav = navigator as Navigator & { wakeLock?: { request: (t: 'screen') => Promise<WakeLock> } }
+    if (!nav.wakeLock) return
+    let lock: WakeLock | null = null
+    let gone = false
+    const ask = () => {
+      if (document.visibilityState !== 'visible') return
+      nav.wakeLock!.request('screen').then(l => { if (gone) l.release().catch(() => {}); else lock = l }).catch(() => {})
+    }
+    ask()
+    document.addEventListener('visibilitychange', ask)
+    return () => { gone = true; document.removeEventListener('visibilitychange', ask); lock?.release().catch(() => {}) }
+  }, [])
 
   const storeId = store?.id
   const enabled = store?.queueBoard.enabled ?? false
@@ -214,55 +255,110 @@ export default function EstadoPage() {
     })
   }, [])
 
+  // An order on the board that just got its locker (not one that already
+  // had it when the screen loaded), or whose locker the locker screen asked
+  // to announce again ("Volver a anunciar") — whether the change came live
+  // or from a catch-up fetch
+  const noteForAnnouncement = useCallback((row: QueueOrder) => {
+    const before = ordersRef.current.find(o => o.id === row.id)
+    const inLocker = row.locker_number != null && row.status === 'ready' && !!before
+    const justPut = inLocker && before!.locker_number == null
+    const again = inLocker && !!row.locker_notified_at && row.locker_notified_at !== before!.locker_notified_at
+    const key = `${row.id}:${again ? row.locker_notified_at : 'locker'}`
+    if ((justPut || again) && !announced.current.has(key)) {
+      announced.current.add(key)
+      // (if it's already up or waiting, it goes up again from the start)
+      setAnnouncements(q => [...q.filter(o => o.id !== row.id), row])
+    }
+  }, [])
+
   useEffect(() => {
     if (!storeId || !enabled) return
     let cancelled = false
+    let first = true
 
-    const cutoff = new Date(Date.now() - QUEUE_WINDOW_MS).toISOString()
-    supabase
-      .from('orders')
-      .select('id, status, customer_name, created_at, locker_number, locker_notified_at')
-      .eq('store_id', storeId)
-      .not('status', 'in', '(delivered,cancelled,completed)')
-      .gte('created_at', cutoff)
-      .order('created_at', { ascending: true })
-      .then(({ data }) => { if (!cancelled && data) setOrders(data as QueueOrder[]) })
+    // The whole current list. Run at the start, and again to catch up on
+    // anything the live connection missed: when it reconnects, when the
+    // screen comes back on / the PC wakes, when the internet returns, and
+    // every 30 seconds just in case.
+    const refresh = () => {
+      const cutoff = new Date(Date.now() - QUEUE_WINDOW_MS).toISOString()
+      supabase
+        .from('orders')
+        .select('id, status, customer_name, created_at, locker_number, locker_notified_at')
+        .eq('store_id', storeId)
+        .not('status', 'in', '(delivered,cancelled,completed)')
+        .gte('created_at', cutoff)
+        .order('created_at', { ascending: true })
+        .then(({ data, error }) => {
+          if (cancelled || error || !data) return
+          const rows = data as QueueOrder[]
+          if (!first) rows.forEach(noteForAnnouncement)
+          first = false
+          const next = rows.filter(r => ACTIVE_STATUSES.includes(r.status) && isWithinWindow(r.created_at))
+          ordersRef.current = next
+          setOrders(next)
+        }, () => { /* offline: the next try catches up */ })
+    }
 
-    const channel = supabase
-      .channel(`queue-${storeId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders', filter: `store_id=eq.${storeId}` },
-        payload => {
-          if (payload.eventType === 'DELETE') {
-            const old = payload.old as { id: string }
-            setOrders(prev => prev.filter(o => o.id !== old.id))
-            return
+    // The live connection, rebuilt whenever it breaks
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    let rejoin: ReturnType<typeof setTimeout> | undefined
+    const connect = () => {
+      if (cancelled) return
+      if (channel) supabase.removeChannel(channel)
+      channel = supabase
+        .channel(`queue-${storeId}-${Date.now()}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'orders', filter: `store_id=eq.${storeId}` },
+          payload => {
+            if (payload.eventType === 'DELETE') {
+              const old = payload.old as { id: string }
+              setOrders(prev => prev.filter(o => o.id !== old.id))
+              return
+            }
+            const row = payload.new as QueueOrder
+            noteForAnnouncement(row)
+            applyRow(row)
           }
-          const row = payload.new as QueueOrder
-          // An order on the board that just got its locker (not one that
-          // already had it when the screen loaded), or whose locker the
-          // locker screen asked to announce again ("Volver a anunciar")
-          const before = ordersRef.current.find(o => o.id === row.id)
-          const inLocker = row.locker_number != null && row.status === 'ready' && !!before
-          const justPut = inLocker && before!.locker_number == null
-          const again = inLocker && !!row.locker_notified_at && row.locker_notified_at !== before!.locker_notified_at
-          const key = `${row.id}:${again ? row.locker_notified_at : 'locker'}`
-          if ((justPut || again) && !announced.current.has(key)) {
-            announced.current.add(key)
-            // (if it's already up or waiting, it goes up again from the start)
-            setAnnouncements(q => [...q.filter(o => o.id !== row.id), row])
+        )
+        .subscribe(status => {
+          if (cancelled) return
+          if (status === 'SUBSCRIBED') { refresh(); return }
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            clearTimeout(rejoin)
+            rejoin = setTimeout(connect, 3000)
           }
-          applyRow(row)
-        }
-      )
-      .subscribe()
+        })
+    }
 
-    return () => { cancelled = true; supabase.removeChannel(channel) }
-  }, [storeId, enabled, applyRow])
+    refresh()
+    connect()
+    const wake = () => { if (document.visibilityState === 'visible') refresh() }
+    document.addEventListener('visibilitychange', wake)
+    window.addEventListener('online', refresh)
+    window.addEventListener('focus', refresh)
+    const poll = setInterval(refresh, 30000)
+
+    return () => {
+      cancelled = true
+      clearTimeout(rejoin)
+      clearInterval(poll)
+      document.removeEventListener('visibilitychange', wake)
+      window.removeEventListener('online', refresh)
+      window.removeEventListener('focus', refresh)
+      if (channel) supabase.removeChannel(channel)
+    }
+  }, [storeId, enabled, applyRow, noteForAnnouncement])
 
   if (loading) {
-    return <div className="oq-state"><div className="oq-spinner" /></div>
+    return (
+      <div className="oq-state">
+        <div className="oq-spinner" />
+        {connecting && <div className="oq-subtitle" style={{ marginTop: 16 }}>Conectando…</div>}
+      </div>
+    )
   }
 
   if (notFound || !store) {

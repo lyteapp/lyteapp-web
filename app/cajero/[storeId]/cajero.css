@@ -380,3 +380,25 @@
 }
 .cj-pin-btn:hover:not(:disabled) { background: #6D28D9; }
 .cj-pin-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Kiosk customers waiting to pay cash: loud, at the top, until "Cobrado" */
+.cj-cash-calls { position: sticky; top: 0; z-index: 30; display: flex; flex-direction: column; gap: 10px; padding: 12px 16px; background: #FFFBEB; border-bottom: 2px solid #F59E0B; }
+.cj-cash-call {
+  display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 16px;
+  background: #FEF3C7; border: 2px solid #F59E0B; animation: cjCashPulse 1.6s ease-in-out infinite;
+}
+@keyframes cjCashPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.45); } 50% { box-shadow: 0 0 0 8px rgba(245,158,11,0); } }
+.cj-cash-call-icon { width: 52px; height: 52px; border-radius: 14px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #F59E0B; color: white; }
+.cj-cash-call-text { flex: 1; min-width: 0; }
+.cj-cash-call-kicker { font-size: 12px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #B45309; }
+.cj-cash-call-name { font-size: 20px; font-weight: 800; color: #0F172A; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cj-cash-call-name span { color: #92400E; }
+.cj-cash-call-sub { font-size: 14px; color: #78350F; margin-top: 2px; }
+.cj-cash-call-sub strong { font-size: 16px; }
+.cj-cash-call-btn {
+  flex-shrink: 0; min-height: 52px; padding: 0 22px; border-radius: 14px; border: none; cursor: pointer;
+  background: #047857; color: white; font: inherit; font-size: 17px; font-weight: 800;
+}
+.cj-cash-call-btn:disabled { opacity: 0.6; cursor: default; }
+.cj-cash-sound { font-size: 12px; font-weight: 600; color: #92400E; text-align: center; }
+@media (prefers-reduced-motion: reduce) { .cj-cash-call { animation: none; } }

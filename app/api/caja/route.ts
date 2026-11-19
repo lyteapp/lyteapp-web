@@ -53,7 +53,7 @@ export async function GET(req: Request) {
 
   const { data: orders } = await supa
     .from('orders')
-    .select('id,customer_name,customer_phone,payment_method,payment_proof_url,payment_status,payment_verified_by,total,status,created_at,delivery_type')
+    .select('id,customer_name,customer_phone,payment_method,payment_proof_url,payment_status,payment_verified_by,total,status,created_at,delivery_type,order_number,cash_call_at')
     .eq('store_id', storeId)
     .order('created_at', { ascending: false })
     .limit(500)

@@ -3431,3 +3431,18 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
   transition: transform 0.12s ease, filter 0.15s;
 }
 .sf-confirm-btn.sf-confirm-next:active { transform: scale(0.97); }
+
+/* Kiosk, paying cash: the total big, and a "waiting for the staff" line */
+.sf-cash-icon { background: #FEF3C7 !important; color: #B45309 !important; border-color: #FDE68A !important; }
+.sf-cash-total {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  margin: 4px 0 18px; padding: 16px; border-radius: 18px; background: #F8FAFC; border: 1px solid rgba(15,23,42,0.06);
+}
+.sf-cash-total span { font-size: 13px; font-weight: 600; color: #64748B; text-transform: uppercase; letter-spacing: 0.05em; }
+.sf-cash-total strong { font-size: 44px; font-weight: 800; color: #0F172A; letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.sf-cash-total em { font-style: normal; font-size: 14px; font-weight: 700; color: #94A3B8; }
+.sf-cash-waiting { display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 14px; font-weight: 600; color: #B45309; margin-bottom: 14px; }
+.sf-cash-waiting i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: sfCashDot 1.2s ease-in-out infinite; }
+.sf-cash-waiting i:nth-child(2) { animation-delay: 0.2s; }
+.sf-cash-waiting i:nth-child(3) { animation-delay: 0.4s; margin-right: 6px; }
+@keyframes sfCashDot { 0%, 80%, 100% { opacity: 0.25; transform: scale(0.8); } 40% { opacity: 1; transform: none; } }

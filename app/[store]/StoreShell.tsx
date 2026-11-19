@@ -1309,6 +1309,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [submitting, setSubmitting] = useState(false)
   const [error, setError]           = useState('')
   const [orderId, setOrderId]       = useState('')
+  // Kiosk: this order is being paid cash at the kiosk — the customer waits
+  // there until the staff (alerted on the Caja screen) collects it
+  const [kioskCash, setKioskCash] = useState<{ id: string; total: number; number: number | null; paid: boolean } | null>(null)
   const [deliveryTrackId, setDeliveryTrackId] = useState('')
   const [pickupTrackId, setPickupTrackId]     = useState('')
   const [locationState, setLocationState] = useState<'idle' | 'requesting' | 'granted' | 'denied'>('idle')
@@ -3448,6 +3451,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
       : paymentFreeText
     const isPickup = deliveryType === 'pickup'
     const isNational = deliveryType === 'national'
+    // Kiosk + cash: the customer waits at the kiosk to pay, the Caja screen
+    // alerts the staff to come collect it and bring change
+    const kioskCashPay = kioskActive && /efectivo|cash/i.test(`${selectedPayment} ${paymentLabel}`)
 
     try {
       const newOrderId = crypto.randomUUID()
@@ -3480,6 +3486,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           delivery_type: isPickup ? 'pickup' : isNational ? 'national' : 'delivery',
           service_type: askServiceType ? serviceType : null,
           payment_proof_url: proofUrl,
+          kiosk_cash: kioskCashPay,
           items: cartItems.map(i => ({
             product_id: i.productId ?? i.id,
             product_name: i.name, product_price: i.price,
@@ -3580,11 +3587,13 @@ export default function StoreShell({ store, products, categories = [], initialBc
       }
 
       const shortId = newOrderId.slice(0, 8).toUpperCase()
+      setKioskCash(kioskCashPay ? { id: newOrderId, total: orderTotal, number: orderNumber ?? null, paid: false } : null)
       setOrderId(shortId); setCart({}); clearSavedCart()
       if (isPickup) setPickupTrackId(newOrderId)
       else setPickupTrackId('')
 
-      if (store.whatsapp) {
+      // (a kiosk always confirms on its own screen: never off to WhatsApp)
+      if (store.whatsapp && !kioskActive) {
         const num = store.whatsapp.replace(/\D/g, '')
         // National shipments have no live tracking (no local courier, and the
         // pickup status page doesn't apply) — leave both params out so the
@@ -3682,7 +3691,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     // The next customer must never see, or repeat, the last one's order
     setLastOrder(null); setShowReorder(false); reorderCheckedRef.current = false
     setShowHeaderReorderHint(false); setHeaderReorderEmpty(false); headerReorderHintShownRef.current = false
-    setKioskCatId(null); setCoStep('cart'); setProofCamOpen(false); setKioskHomeAsk(false)
+    setKioskCatId(null); setCoStep('cart'); setProofCamOpen(false); setKioskHomeAsk(false); setKioskCash(null)
     // The welcome overlay sits at the top of the document over the store.
     if (hp.enabled) window.scrollTo(0, 0)
     setView(hp.enabled ? 'splash' : 'catalog')
@@ -3740,9 +3749,27 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // back to the home page instead of sitting on the confirmation screen.
   // A kiosk has no "Seguir comprando" button, so it always does this: after
   // the store's own time, or KIOSK_RETURN_SECS when none is set.
-  const orderReturnSecs = hp.orderReturnTimeout?.enabled && hp.orderReturnTimeout.seconds
+  // (a kiosk customer waiting to pay cash isn't sent away: only after 5
+  // minutes, in case they left — the countdown starts once it's collected)
+  const waitingCash = kioskActive && !!kioskCash && !kioskCash.paid
+  const orderReturnSecs = waitingCash ? 300
+    : hp.orderReturnTimeout?.enabled && hp.orderReturnTimeout.seconds
     ? hp.orderReturnTimeout.seconds
     : kioskActive ? KIOSK_RETURN_SECS : 0
+
+  // Kiosk + cash: checks every few seconds whether the staff marked it
+  // collected (Caja), to tell the customer and hand the screen on
+  const cashOrderId = waitingCash && view === 'confirmed' ? kioskCash!.id : null
+  useEffect(() => {
+    if (!cashOrderId) return
+    let gone = false
+    const check = () => fetch(`/api/orders/payment?id=${cashOrderId}`, { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(j => { if (!gone && j?.paid) setKioskCash(k => (k && k.id === cashOrderId ? { ...k, paid: true } : k)) })
+      .catch(() => {})
+    const t = setInterval(check, 3000)
+    return () => { gone = true; clearInterval(t) }
+  }, [cashOrderId])
   useEffect(() => {
     if (view !== 'confirmed' || !orderReturnSecs) return
     const t = setTimeout(() => resetToHome(), orderReturnSecs * 1000)
@@ -4496,10 +4523,40 @@ export default function StoreShell({ store, products, categories = [], initialBc
     <div className="sf-confirm-screen">
       {kioskActive && <div className="sf-kiosk-powered sf-kiosk-powered-fixed"><span>Powered by</span><span className="sf-powered-by-logo" role="img" aria-label="Lyte app" /></div>}
       <div className="sf-confirm-card">
-        <div className="sf-confirm-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 32, height: 32 }}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg></div>
-        <h1 className="sf-confirm-title">{t('store.confirmed.title')}</h1>
-        <p className="sf-confirm-sub">{t('store.confirmed.sub', { id: orderId })}</p>
-        {returnCountdown !== null && (
+        {kioskActive && kioskCash ? (
+          // Kiosk, paying cash: the customer waits here for the staff (alerted
+          // on the Caja screen) — then "¡Pago recibido!"
+          !kioskCash.paid ? (
+            <>
+              <div className="sf-confirm-check sf-cash-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: 34, height: 34 }}>
+                  <rect x="2.5" y="6" width="19" height="12" rx="2" /><circle cx="12" cy="12" r="2.6" /><path d="M6 9.5v5M18 9.5v5" />
+                </svg>
+              </div>
+              <h1 className="sf-confirm-title">Paga en efectivo aquí</h1>
+              <p className="sf-confirm-sub">Ya avisamos al personal: alguien viene a cobrarte y darte el cambio. Espera aquí, por favor.</p>
+              <div className="sf-cash-total">
+                <span>Total a pagar</span>
+                <strong>{currencySymbol}{kioskCash.total.toFixed(2)}</strong>
+                <em>Pedido {kioskCash.number != null ? `#${kioskCash.number}` : orderId}</em>
+              </div>
+              <div className="sf-cash-waiting"><i /><i /><i /> Esperando al personal</div>
+            </>
+          ) : (
+            <>
+              <div className="sf-confirm-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 32, height: 32 }}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg></div>
+              <h1 className="sf-confirm-title">¡Pago recibido!</h1>
+              <p className="sf-confirm-sub">Gracias. Tu pedido {kioskCash.number != null ? `#${kioskCash.number}` : orderId} ya está en preparación.</p>
+            </>
+          )
+        ) : (
+          <>
+            <div className="sf-confirm-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 32, height: 32 }}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg></div>
+            <h1 className="sf-confirm-title">{t('store.confirmed.title')}</h1>
+            <p className="sf-confirm-sub">{t('store.confirmed.sub', { id: orderId })}</p>
+          </>
+        )}
+        {returnCountdown !== null && !waitingCash && (
           <div className="sf-confirm-countdown">Volviendo al inicio en {returnCountdown}s</div>
         )}
         {queueBoardEnabled && <QueueQr url={`${window.location.origin}/${store.slug}/estado`} />}

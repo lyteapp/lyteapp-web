@@ -16,6 +16,23 @@ type Order = {
   status: string
   created_at: string
   delivery_type: string | null
+  order_number?: number | null
+  /** a kiosk customer chose cash and is waiting at the kiosk to pay */
+  cash_call_at?: string | null
+}
+
+// A short two-note chime, made on the spot (no sound file)
+function chime(ctx: AudioContext) {
+  const now = ctx.currentTime
+  ;[[880, 0], [660, 0.22], [880, 0.6], [660, 0.82]].forEach(([f, at]) => {
+    const o = ctx.createOscillator(), g = ctx.createGain()
+    o.type = 'sine'; o.frequency.value = f
+    g.gain.setValueAtTime(0.0001, now + at)
+    g.gain.exponentialRampToValueAtTime(0.35, now + at + 0.02)
+    g.gain.exponentialRampToValueAtTime(0.0001, now + at + 0.2)
+    o.connect(g).connect(ctx.destination)
+    o.start(now + at); o.stop(now + at + 0.22)
+  })
 }
 
 const METHOD_CURRENCY: Record<string, { label: string; currency: string; symbol: string }> = {
@@ -73,6 +90,9 @@ export default function CajeroPage() {
   const [lightbox, setLightbox]     = useState<string | null>(null)
   const [verifying, setVerifying]   = useState<Set<string>>(new Set())
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  // the alert's sound: browsers only allow it after a touch on the page
+  const audioRef = useRef<AudioContext | null>(null)
+  const [soundOn, setSoundOn] = useState(false)
 
   const doFetch = useCallback(async (pin: string): Promise<{ ok: boolean; requiresPin?: boolean; notFound?: boolean; error?: boolean }> => {
     try {
@@ -201,6 +221,50 @@ export default function CajeroPage() {
     }
   }
 
+  // ── Kiosk customers waiting to pay cash ──
+  // Each one shows as a loud alert at the top (with a chime every few
+  // seconds) until "Cobrado" marks its payment collected — which also tells
+  // the kiosk, so it frees itself for the next customer
+  const cashCalls = orders.filter(o =>
+    o.cash_call_at && o.payment_status !== 'approved' && o.status !== 'cancelled' && isToday(o.cash_call_at))
+  const calling = cashCalls.length > 0
+  useEffect(() => {
+    const unlock = () => {
+      const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+      if (!AC) return
+      if (!audioRef.current) audioRef.current = new AC()
+      audioRef.current.resume().then(() => setSoundOn(audioRef.current?.state === 'running')).catch(() => {})
+    }
+    window.addEventListener('pointerdown', unlock)
+    return () => window.removeEventListener('pointerdown', unlock)
+  }, [])
+  useEffect(() => {
+    if (!calling) return
+    const ring = () => { const ctx = audioRef.current; if (ctx && ctx.state === 'running') chime(ctx) }
+    ring()
+    const t = setInterval(ring, 7000)
+    return () => clearInterval(t)
+  }, [calling, soundOn])
+
+  async function collectCash(orderId: string) {
+    const pin = sessionStorage.getItem(SESSION_KEY(storeId)) ?? ''
+    setVerifying(prev => new Set(prev).add(orderId))
+    try {
+      const res = await fetch('/api/caja', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-cajero-pin': pin },
+        body: JSON.stringify({ orderId, storeId, status: 'approved', verifiedBy: cajeraName }),
+      })
+      if (res.ok) {
+        setOrders(prev => prev.map(o =>
+          o.id === orderId ? { ...o, payment_status: 'approved', payment_verified_by: cajeraName } : o
+        ))
+      }
+    } finally {
+      setVerifying(prev => { const s = new Set(prev); s.delete(orderId); return s })
+    }
+  }
+
   function logout() {
     sessionStorage.removeItem(SESSION_KEY(storeId))
     sessionStorage.removeItem(SESSION_CAJERA(storeId))
@@ -310,6 +374,32 @@ export default function CajeroPage() {
           </div>
         </div>
       </header>
+
+      {/* KIOSK CASH CALLS */}
+      {calling && (
+        <div className="cj-cash-calls" role="alert">
+          {cashCalls.map(o => (
+            <div key={o.id} className="cj-cash-call">
+              <div className="cj-cash-call-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="30" height="30">
+                  <rect x="2.5" y="6" width="19" height="12" rx="2" /><circle cx="12" cy="12" r="2.6" /><path d="M6 9.5v5M18 9.5v5" />
+                </svg>
+              </div>
+              <div className="cj-cash-call-text">
+                <div className="cj-cash-call-kicker">Cobro en efectivo en el kiosko</div>
+                <div className="cj-cash-call-name">
+                  {o.customer_name}{o.order_number != null ? <span> · #{o.order_number}</span> : null}
+                </div>
+                <div className="cj-cash-call-sub">Ve al kiosko a cobrar <strong>${Number(o.total).toFixed(2)}</strong> y lleva el cambio</div>
+              </div>
+              <button className="cj-cash-call-btn" disabled={verifying.has(o.id)} onClick={() => collectCash(o.id)}>
+                {verifying.has(o.id) ? '...' : 'Cobrado'}
+              </button>
+            </div>
+          ))}
+          {!soundOn && <div className="cj-cash-sound">Toca la pantalla una vez para activar el sonido de estas alertas</div>}
+        </div>
+      )}
 
       {/* ORDER LIST */}
       <div className="cj-view">

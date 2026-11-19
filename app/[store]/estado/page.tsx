@@ -80,6 +80,34 @@ function shortCode(id: string): string {
   return `#${id.slice(-4).toUpperCase()}`
 }
 
+// ── Data, through lyte-app.com ─────────────────────────────────
+// The board reads its store and orders from /api/queue (our own server)
+// rather than straight from the database, so a PC whose own connection to
+// the database has gone bad (after sleeping, a flaky network) still gets
+// them as long as the site opens. The live connection below only makes
+// changes arrive instantly when it works.
+
+type QueueFetch =
+  | { kind: 'ok'; store: { id: string; name: string; logo_url: string | null; accentColor: string | null; trackingConfig: Record<string, unknown> }; orders: QueueOrder[] }
+  | { kind: 'notFound' }
+  | { kind: 'error' }
+
+async function fetchQueue(slug: string): Promise<QueueFetch> {
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), 12000)
+  try {
+    const r = await fetch(`/api/queue?slug=${encodeURIComponent(slug)}`, { cache: 'no-store', signal: ctrl.signal })
+    if (r.status === 404) return { kind: 'notFound' }
+    if (!r.ok) return { kind: 'error' }
+    const j = await r.json()
+    return { kind: 'ok', store: j.store, orders: (j.orders ?? []) as QueueOrder[] }
+  } catch {
+    return { kind: 'error' }
+  } finally {
+    clearTimeout(t)
+  }
+}
+
 // ── Voice for the locker announcements ─────────────────────────
 // The browser's own speech (no service, no cost), in the best Spanish voice
 // the screen has. Browsers only let a page speak once someone has touched
@@ -161,50 +189,42 @@ export default function EstadoPage() {
     let cancelled = false
     let retry: ReturnType<typeof setTimeout> | undefined
     let tries = 0
-    const load = () => supabase
-      .from('stores')
-      .select('id, name, logo_url, template_config')
-      .eq('slug', storeSlug)
-      .maybeSingle()
-      .then(({ data, error }) => {
-        if (cancelled) return
-        if (error) {
-          tries++
-          setConnecting(true)
-          retry = setTimeout(load, Math.min(15000, 1500 * tries))
-          return
-        }
-        setConnecting(false)
-        if (!data) { setNotFound(true); setLoading(false); return }
-        const tc = (data.template_config as Record<string, unknown>) ?? {}
-        const tracking = (tc.trackingConfig as Record<string, unknown>) ?? {}
-        const qb = (tracking.queueBoard as Partial<QueueBoardConfig> | undefined) ?? {}
-        setStore({
-          id: data.id,
-          name: data.name,
-          logo_url: data.logo_url,
-          accentColor: (tracking.accentColor as string) || (tc.accentColor as string) || '#7C3AED',
-          fontFamily: (tracking.fontFamily as string) || 'system',
-          queueBoard: {
-            enabled: qb.enabled === true,
-            title: qb.title || 'Estado de pedidos',
-            subtitle: qb.subtitle || 'Actualizado en tiempo real',
-            preparingLabel: qb.preparingLabel || 'En preparación',
-            readyLabel: qb.readyLabel || 'Listo',
-            customerDisplay: qb.customerDisplay ?? 'firstName',
-            showLogo: qb.showLogo !== false,
-            voice: qb.voice !== false,
-            bgColor: qb.bgColor,
-            bgImage: qb.bgImage ?? null,
-          },
-        })
-        setLoading(false)
-      }, () => {
-        if (cancelled) return
+    const load = () => fetchQueue(storeSlug).then(res => {
+      if (cancelled) return
+      if (res.kind === 'error') {
         tries++
         setConnecting(true)
         retry = setTimeout(load, Math.min(15000, 1500 * tries))
+        return
+      }
+      setConnecting(false)
+      if (res.kind === 'notFound') { setNotFound(true); setLoading(false); return }
+      const tracking = res.store.trackingConfig ?? {}
+      const qb = (tracking.queueBoard as Partial<QueueBoardConfig> | undefined) ?? {}
+      setStore({
+        id: res.store.id,
+        name: res.store.name,
+        logo_url: res.store.logo_url,
+        accentColor: (tracking.accentColor as string) || res.store.accentColor || '#7C3AED',
+        fontFamily: (tracking.fontFamily as string) || 'system',
+        queueBoard: {
+          enabled: qb.enabled === true,
+          title: qb.title || 'Estado de pedidos',
+          subtitle: qb.subtitle || 'Actualizado en tiempo real',
+          preparingLabel: qb.preparingLabel || 'En preparación',
+          readyLabel: qb.readyLabel || 'Listo',
+          customerDisplay: qb.customerDisplay ?? 'firstName',
+          showLogo: qb.showLogo !== false,
+          voice: qb.voice !== false,
+          bgColor: qb.bgColor,
+          bgImage: qb.bgImage ?? null,
+        },
       })
+      const first = res.orders.filter(r => ACTIVE_STATUSES.includes(r.status) && isWithinWindow(r.created_at))
+      ordersRef.current = first
+      setOrders(first)
+      setLoading(false)
+    })
     load()
     return () => { cancelled = true; clearTimeout(retry) }
   }, [storeSlug])
@@ -275,30 +295,25 @@ export default function EstadoPage() {
   useEffect(() => {
     if (!storeId || !enabled) return
     let cancelled = false
-    let first = true
+    // the live connection is up (changes arrive instantly) — while it isn't,
+    // the list is re-read through the server every few seconds instead
+    let live = false
 
-    // The whole current list. Run at the start, and again to catch up on
-    // anything the live connection missed: when it reconnects, when the
-    // screen comes back on / the PC wakes, when the internet returns, and
-    // every 30 seconds just in case.
-    const refresh = () => {
-      const cutoff = new Date(Date.now() - QUEUE_WINDOW_MS).toISOString()
-      supabase
-        .from('orders')
-        .select('id, status, customer_name, created_at, locker_number, locker_notified_at')
-        .eq('store_id', storeId)
-        .not('status', 'in', '(delivered,cancelled,completed)')
-        .gte('created_at', cutoff)
-        .order('created_at', { ascending: true })
-        .then(({ data, error }) => {
-          if (cancelled || error || !data) return
-          const rows = data as QueueOrder[]
-          if (!first) rows.forEach(noteForAnnouncement)
-          first = false
-          const next = rows.filter(r => ACTIVE_STATUSES.includes(r.status) && isWithinWindow(r.created_at))
-          ordersRef.current = next
-          setOrders(next)
-        }, () => { /* offline: the next try catches up */ })
+    // The whole current list, through the server: to catch up on whatever
+    // the live connection missed (when it reconnects, when the screen/tab
+    // comes back, when the internet returns), and on a timer — every 30s
+    // while the live connection works, every 4s while it doesn't
+    const refresh = () => fetchQueue(storeSlug).then(res => {
+      if (cancelled || res.kind !== 'ok') return
+      res.orders.forEach(noteForAnnouncement)
+      const next = res.orders.filter(r => ACTIVE_STATUSES.includes(r.status) && isWithinWindow(r.created_at))
+      ordersRef.current = next
+      setOrders(next)
+    })
+    let poll: ReturnType<typeof setTimeout> | undefined
+    const schedule = () => {
+      clearTimeout(poll)
+      poll = setTimeout(() => { refresh().finally(() => { if (!cancelled) schedule() }) }, live ? 30000 : 4000)
     }
 
     // The live connection, rebuilt whenever it breaks
@@ -325,32 +340,33 @@ export default function EstadoPage() {
         )
         .subscribe(status => {
           if (cancelled) return
-          if (status === 'SUBSCRIBED') { refresh(); return }
+          if (status === 'SUBSCRIBED') { live = true; refresh(); schedule(); return }
           if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            live = false
+            schedule()
             clearTimeout(rejoin)
-            rejoin = setTimeout(connect, 3000)
+            rejoin = setTimeout(connect, 5000)
           }
         })
     }
 
-    refresh()
     connect()
+    schedule()
     const wake = () => { if (document.visibilityState === 'visible') refresh() }
     document.addEventListener('visibilitychange', wake)
     window.addEventListener('online', refresh)
     window.addEventListener('focus', refresh)
-    const poll = setInterval(refresh, 30000)
 
     return () => {
       cancelled = true
       clearTimeout(rejoin)
-      clearInterval(poll)
+      clearTimeout(poll)
       document.removeEventListener('visibilitychange', wake)
       window.removeEventListener('online', refresh)
       window.removeEventListener('focus', refresh)
       if (channel) supabase.removeChannel(channel)
     }
-  }, [storeId, enabled, applyRow, noteForAnnouncement])
+  }, [storeId, storeSlug, enabled, applyRow, noteForAnnouncement])
 
   if (loading) {
     return (

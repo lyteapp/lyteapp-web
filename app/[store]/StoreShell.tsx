@@ -1367,6 +1367,23 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // Kiosk: the diet filter in the header (GF / VG / V / P picked) and its panel
   const [dietFilter, setDietFilter] = useState<string[]>([])
   const [dietPanel, setDietPanel] = useState(false)
+  // What the diet filter goes by. A product can fit as a whole (its own
+  // diets, in its nutrition facts) or be built to fit: a "build your own"
+  // with no diets of its own but diets on each option fits when every
+  // required step has enough options that do — and then the options that
+  // don't are blocked in it. A product with no diet information at all
+  // never fits (nobody can say it's safe).
+  const productLevelDiets = (p: Product) => (p.options?.nutrition?.enabled ? p.options.nutrition.diets ?? [] : [])
+  const choiceFits = (c: VariableChoice) => dietFilter.every(d => (c.diets ?? []).includes(d))
+  const choicesHaveDiets = (p: Product) => (p.options?.variables ?? []).some(g => g.choices.some(ch => typeof ch !== 'string' && (ch.diets?.length ?? 0) > 0))
+  const productFitsWhole = (p: Product) => dietFilter.every(d => productLevelDiets(p).includes(d))
+  const productFitsDiet = (p: Product) => !dietFilter.length || productFitsWhole(p) || (choicesHaveDiets(p) && (p.options?.variables ?? []).every(g => {
+    const { min } = groupMinMax(g)
+    return min === 0 || g.choices.map(normalizeChoice).filter(choiceFits).length >= min
+  }))
+  // in the open product, an option that doesn't fit the filter can't be picked
+  const dietBlocked = (c: VariableChoice) => kioskActive && dietFilter.length > 0 && !!modalProduct && !productFitsWhole(modalProduct) && !choiceFits(c)
+  const dietBlockedNote = () => `No es ${dietFilter.map(d => DIET_LABELS[d]?.toLowerCase()).join(' ni ')}`
   // Kiosk: the product's full-resolution photo is still loading (the loading screen shows)
   const [kioskPhotoWait, setKioskPhotoWait] = useState(false)
   // Kiosk: the welcome video was just put back in step with the other kiosks (a short notice)
@@ -3062,9 +3079,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   {modalWizardStep.group.choices.map(normalizeChoice).map(c => (
                     <button
                       key={maxHit?.key === `${modalWizardStep.group.label}::${c.value}` ? `${c.value}-${maxHit.n}` : c.value}
-                      className={`sf-modal-chip${c.imageUrl ? ' sf-chip-photo' : ''}${(modalVars[modalWizardStep.group.label] ?? []).includes(c.value) ? ' selected' : ''}${maxHit?.key === `${modalWizardStep.group.label}::${c.value}` ? ' sf-chip-shake' : ''}`}
+                      className={`sf-modal-chip${c.imageUrl ? ' sf-chip-photo' : ''}${(modalVars[modalWizardStep.group.label] ?? []).includes(c.value) ? ' selected' : ''}${maxHit?.key === `${modalWizardStep.group.label}::${c.value}` ? ' sf-chip-shake' : ''}${dietBlocked(c) ? ' sf-chip-blocked' : ''}`}
                       style={c.imageUrl ? { backgroundImage: `linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0.05) 75%), url(${resizedImg(c.imageUrl, 400)})` } : undefined}
-                      onClick={() => chipClick(() => {
+                      disabled={dietBlocked(c)} title={dietBlocked(c) ? dietBlockedNote() : undefined}
+                      onClick={() => !dietBlocked(c) && chipClick(() => {
                         toggleModalVar(modalWizardStep.group, c.value)
                         if (wizardVarMinMax.max <= 1) advanceModalWizard()
                       })}
@@ -3082,6 +3100,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                         </span>
                       )}
                       {c.price > 0 && <span className="sf-modal-chip-price">+{currencySymbol}{c.price.toFixed(2)}</span>}
+                      {dietBlocked(c) && <span className="sf-chip-blocked-note">{dietBlockedNote()}</span>}
                     </button>
                   ))}
                 </div>
@@ -3155,9 +3174,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
                       {g.choices.map(normalizeChoice).map(c => (
                         <button
                           key={maxHit?.key === `${g.label}::${c.value}` ? `${c.value}-${maxHit.n}` : c.value}
-                          className={`sf-modal-chip${c.imageUrl ? ' sf-chip-photo' : ''}${(modalVars[g.label] ?? []).includes(c.value) ? ' selected' : ''}${maxHit?.key === `${g.label}::${c.value}` ? ' sf-chip-shake' : ''}`}
+                          className={`sf-modal-chip${c.imageUrl ? ' sf-chip-photo' : ''}${(modalVars[g.label] ?? []).includes(c.value) ? ' selected' : ''}${maxHit?.key === `${g.label}::${c.value}` ? ' sf-chip-shake' : ''}${dietBlocked(c) ? ' sf-chip-blocked' : ''}`}
                           style={c.imageUrl ? { backgroundImage: `linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0.05) 75%), url(${resizedImg(c.imageUrl, 400)})` } : undefined}
-                          onClick={() => chipClick(() => toggleModalVar(g, c.value))}
+                          disabled={dietBlocked(c)} title={dietBlocked(c) ? dietBlockedNote() : undefined}
+                          onClick={() => !dietBlocked(c) && chipClick(() => toggleModalVar(g, c.value))}
                           onPointerDown={e => chipPressStart(e, c)}
                           onPointerUp={chipPressEnd}
                           onPointerLeave={chipPressEnd}
@@ -3172,6 +3192,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                         </span>
                       )}
                           {c.price > 0 && <span className="sf-modal-chip-price">+{currencySymbol}{c.price.toFixed(2)}</span>}
+                          {dietBlocked(c) && <span className="sf-chip-blocked-note">{dietBlockedNote()}</span>}
                         </button>
                       ))}
                     </div>
@@ -6248,9 +6269,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
     // when some are picked, only products that are all of them (a product
     // without nutrition facts set up doesn't count as any)
     const DIET_ORDER = ['GF', 'VG', 'V', 'P']
-    const productDiets = (p: Product) => (p.options?.nutrition?.enabled ? p.options.nutrition.diets ?? [] : [])
-    const storeDiets = DIET_ORDER.filter(d => visibleProducts.some(p => productDiets(p).includes(d)))
-    const dietOk = (p: Product) => dietFilter.every(d => productDiets(p).includes(d))
+    const optionDiets = (p: Product) => (p.options?.variables ?? []).flatMap(g => g.choices.flatMap(ch => (typeof ch === 'string' ? [] : ch.diets ?? [])))
+    const storeDiets = DIET_ORDER.filter(d => visibleProducts.some(p => productLevelDiets(p).includes(d) || optionDiets(p).includes(d)))
+    const dietOk = productFitsDiet
     const kGroups = kGroupsAll.map(g => ({ ...g, items: g.items.filter(dietOk) }))
     const dietMatches = visibleProducts.filter(dietOk).length
     const dietNames = dietFilter.map(d => DIET_LABELS[d]).join(' · ')

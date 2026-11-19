@@ -1728,6 +1728,15 @@ video.sf-banner-img { object-fit: cover; }
 }
 .sf-modal-diets:has(.sf-diet-item:only-child) { grid-template-columns: auto; }
 .sf-diet-item { display: contents; }
+/* A picked option that isn't this diet: the circle greys out with a slash and
+   the spelled-out name is struck through, until that option is unpicked. */
+.sf-diet { position: relative; transition: background-color .25s; }
+.sf-diet-item.lost .sf-diet { background: #E2E8F0; color: #64748B; }
+.sf-diet-item.lost .sf-diet::after {
+  content: ''; position: absolute; left: -2px; right: -2px; top: 50%; height: 2px;
+  background: #DC2626; border-radius: 2px; transform: rotate(-35deg);
+}
+.sf-diet-item.lost .sf-diet-name { text-decoration: line-through; opacity: .45; }
 .sf-diet {
   width: 28px; height: 28px; border-radius: 50%;
   display: inline-flex; align-items: center; justify-content: center;

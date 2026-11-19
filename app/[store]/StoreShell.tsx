@@ -1686,6 +1686,16 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const renderNutritionBadge = (extraClass: string) => {
     if (!modalProduct || !modalNutritionEnabled || !modalNutritionDisplay) return null
     const d = modalNutritionDisplay
+    // A picked option takes a diet away when it doesn't carry it. Only groups
+    // whose choices have diets marked count, so a "Tamaño" group with no diet
+    // info (or a store that only marks the product) never strips anything.
+    const pickedTracked = Object.entries(modalVars).flatMap(([label, values]) => {
+      const group = modalProduct.options?.variables?.find(g => g.label === label)
+      const choices = (group?.choices ?? []).map(normalizeChoice)
+      if (!choices.some(c => (c.diets?.length ?? 0) > 0)) return []
+      return values.map(v => choices.find(c => c.value === v)).filter((c): c is VariableChoice => !!c)
+    })
+    const lostDiet = (code: string) => pickedTracked.some(c => !(c.diets ?? []).includes(code))
     return (
     <div className={`sf-modal-nutrition-badge ${extraClass}`}>
       <div className="sf-modal-nutrition-chart">
@@ -1725,8 +1735,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
         <div className="sf-modal-diets">
           {modalProduct!.options!.nutrition!.diets!.filter(d => DIET_LABELS[d]).map(d => (
             // (a kiosk spells each one out next to its circle)
-            <span key={d} className="sf-diet-item">
-              <span className={`sf-diet sf-diet-${d}`} title={DIET_LABELS[d]} aria-label={DIET_LABELS[d]}>{d}</span>
+            <span key={d} className={`sf-diet-item${lostDiet(d) ? ' lost' : ''}`}>
+              <span className={`sf-diet sf-diet-${d}`} title={lostDiet(d) ? `Ya no es ${DIET_LABELS[d].toLowerCase()} con lo que elegiste` : DIET_LABELS[d]} aria-label={lostDiet(d) ? `No ${DIET_LABELS[d].toLowerCase()}` : DIET_LABELS[d]}>{d}</span>
               {kioskActive && <span className="sf-diet-name">{DIET_LABELS[d]}</span>}
             </span>
           ))}

@@ -39,6 +39,9 @@ interface Order {
   created_at: string
   delivery_type?: string | null
   service_type?: string | null
+  payment_status?: string | null
+  /** paid in person (cash / point of sale), see waitingPayment */
+  cash_call_at?: string | null
   items?: OrderItem[]
   delivery_info?: { zone_name: string | null; zone_color: string | null; driver_name: string | null } | null
 }
@@ -51,6 +54,8 @@ interface DisplayOrder {
   ready_at?: string | null
   delivery_type?: string | null
   service_type?: string | null
+  payment_status?: string | null
+  cash_call_at?: string | null
   customer_name: string
   customer_phone: string
   customer_notes: string | null
@@ -90,6 +95,13 @@ const FILTER_KEYS: { key: 'all' | OrderStatus; tKey: TranslationKey }[] = [
   { key: 'delivered', tKey: 'orders.filter.delivered' },
   { key: 'cancelled', tKey: 'orders.filter.cancelled' },
 ]
+
+// An order to be paid at the counter / kiosk (cash, point of sale — not
+// delivery) can't be marked received until Caja collects the payment; Caja
+// confirms it then
+function waitingPayment(o: { status: string; payment_status?: string | null; cash_call_at?: string | null; delivery_type?: string | null }) {
+  return o.status === 'pending' && !!o.cash_call_at && o.payment_status !== 'approved' && o.delivery_type !== 'delivery'
+}
 
 const NEXT_STATUS: Partial<Record<OrderStatus, { status: OrderStatus; tKey?: TranslationKey; label?: string; cls: string }>> = {
   pending:    { status: 'confirmed',  label: 'Recibido',   cls: 'confirm' },
@@ -252,13 +264,13 @@ export default function PedidosPage() {
         (payload) => {
           const updated = payload.new as Order
           setOrders(prev =>
-            prev.map(o => o.id === updated.id ? { ...o, status: updated.status, locker_number: updated.locker_number } : o)
+            prev.map(o => o.id === updated.id ? { ...o, status: updated.status, locker_number: updated.locker_number, payment_status: updated.payment_status } : o)
           )
           if (['delivered', 'cancelled', 'completed'].includes(updated.status)) {
             setDisplayOrders(prev => prev.filter(o => o.id !== updated.id))
           } else {
             setDisplayOrders(prev =>
-              prev.map(o => o.id === updated.id ? { ...o, status: updated.status, locker_number: updated.locker_number } : o)
+              prev.map(o => o.id === updated.id ? { ...o, status: updated.status, locker_number: updated.locker_number, payment_status: updated.payment_status } : o)
             )
           }
         }
@@ -409,7 +421,7 @@ export default function PedidosPage() {
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
     const { data } = await supabase
       .from('orders')
-      .select('id, order_number, locker_number, created_at, ready_at, delivery_type, service_type, customer_name, customer_phone, customer_notes, payment_method, total, status, order_items(product_name, quantity, subtotal, selected_options)')
+      .select('id, order_number, locker_number, created_at, ready_at, delivery_type, service_type, payment_status, cash_call_at, customer_name, customer_phone, customer_notes, payment_method, total, status, order_items(product_name, quantity, subtotal, selected_options)')
       .eq('store_id', storeId)
       .not('status', 'in', '(delivered,cancelled,completed)')
       .gte('created_at', todayStart.toISOString())
@@ -708,7 +720,10 @@ export default function PedidosPage() {
                     <div className="pd-comanda-notes">{order.customer_notes}</div>
                   )}
                   <div className="pd-comanda-actions">
-                    {order.status === 'pending' && (
+                    {waitingPayment(order) && (
+                      <div className="pd-wait-pay">Esperando pago en caja · se confirma al cobrar</div>
+                    )}
+                    {order.status === 'pending' && !waitingPayment(order) && (
                       <button className="pd-comanda-btn confirm" disabled={displayUpdating === order.id} onClick={() => updateDisplayStatus(order.id, 'confirmed')}>
                         {displayUpdating === order.id ? '...' : (<>Marcar recibido <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd"/></svg></>)}
                       </button>
@@ -801,7 +816,7 @@ export default function PedidosPage() {
         <div className="pd-list">
           {filtered.map(order => {
             const isExpanded = expanded === order.id
-            const advance = NEXT_STATUS[order.status]
+            const advance = waitingPayment(order) ? undefined : NEXT_STATUS[order.status]
             const isBusy = updating === order.id
 
             return (
@@ -821,7 +836,7 @@ export default function PedidosPage() {
                   </div>
                   <div className="pd-total">{fmt(order.total)}</div>
                   <div className={`pd-status ${order.status}`}>
-                    {t(STATUS_KEYS[order.status])}{order.locker_number != null ? ` · Casillero ${order.locker_number}` : ''}
+                    {waitingPayment(order) ? 'Esperando pago en caja' : t(STATUS_KEYS[order.status])}{order.locker_number != null ? ` · Casillero ${order.locker_number}` : ''}
                   </div>
                   <svg className={`pd-chevron${isExpanded ? ' open' : ''}`} viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />

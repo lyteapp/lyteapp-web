@@ -78,11 +78,16 @@ export async function POST(req: Request) {
   if (result.denied) return Response.json({ error: 'PIN incorrecto' }, { status: 401 })
   if (!result.store) return Response.json({ error: 'Tienda no encontrada' }, { status: 404 })
 
-  const { data: order } = await supa.from('orders').select('store_id').eq('id', orderId).maybeSingle()
+  const { data: order } = await supa.from('orders').select('store_id, status, cash_call_at, delivery_type').eq('id', orderId).maybeSingle()
   if (!order || order.store_id !== storeId) return Response.json({ error: 'Not found' }, { status: 404 })
 
   const update: Record<string, unknown> = { payment_status: status }
   if (verifiedBy && status === 'approved') update.payment_verified_by = verifiedBy
+  // An order waiting to be paid at the counter / kiosk (cash, point of sale,
+  // not delivery) is confirmed the moment its payment is collected
+  if (status === 'approved' && order.cash_call_at && order.delivery_type !== 'delivery' && order.status === 'pending') {
+    update.status = 'confirmed'
+  }
 
   await supa.from('orders').update(update).eq('id', orderId)
   return Response.json({ ok: true })

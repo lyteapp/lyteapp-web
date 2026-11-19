@@ -434,7 +434,7 @@ export default function CajeroPage() {
                     ? `Bs ${(Number(o.total) * bcvRate).toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                     : `$${Number(o.total).toFixed(2)}`}</strong>{bcvRate > 0 ? ` ($${Number(o.total).toFixed(2)})` : ''}
                   {' · '}
-                  {o.delivery_type === 'delivery' ? 'Delivery: que el repartidor lleve el punto de venta' : 'Cóbrale con el punto cuando venga a retirar'}
+                  {o.delivery_type === 'delivery' ? 'Delivery: que el repartidor lleve el punto de venta' : 'Viene a la caja a pagar · se confirma al cobrar'}
                 </div>
               </div>
               <button className="cj-pos-todo-btn" disabled={verifying.has(o.id)} onClick={() => collectCash(o.id)}>

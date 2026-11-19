@@ -3601,13 +3601,17 @@ export default function StoreShell({ store, products, categories = [], initialBc
       }
 
       const shortId = newOrderId.slice(0, 8).toUpperCase()
-      setKioskCash(staffPay && kioskActive ? { id: newOrderId, total: orderTotal, ves: vesAmount, number: orderNumber ?? null, paid: false, kind: staffPay } : null)
+      // waits for the payment: a kiosk customer (cash / terminal), or an online
+      // customer who pays by terminal at the counter (not delivery: that one
+      // is charged at the door) — the order is confirmed once Caja collects
+      const waitPay = !!staffPay && (kioskActive || deliveryType !== 'delivery')
+      setKioskCash(waitPay ? { id: newOrderId, total: orderTotal, ves: vesAmount, number: orderNumber ?? null, paid: false, kind: staffPay } : null)
       setOrderId(shortId); setCart({}); clearSavedCart()
       if (isPickup) setPickupTrackId(newOrderId)
       else setPickupTrackId('')
 
       // (a kiosk always confirms on its own screen: never off to WhatsApp)
-      if (store.whatsapp && !kioskActive) {
+      if (store.whatsapp && !kioskActive && !(staffPay && deliveryType !== 'delivery')) {
         const num = store.whatsapp.replace(/\D/g, '')
         // National shipments have no live tracking (no local courier, and the
         // pickup status page doesn't apply) — leave both params out so the
@@ -3765,15 +3769,17 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // the store's own time, or KIOSK_RETURN_SECS when none is set.
   // (a kiosk customer waiting to pay cash isn't sent away: only after 5
   // minutes, in case they left — the countdown starts once it's collected)
-  const waitingCash = kioskActive && !!kioskCash && !kioskCash.paid
+  const waitingPay = !!kioskCash && !kioskCash.paid
+  const waitingCash = kioskActive && waitingPay
   const orderReturnSecs = waitingCash ? 300
+    : waitingPay ? 0 // (online, waiting to pay at the counter: stays put)
     : hp.orderReturnTimeout?.enabled && hp.orderReturnTimeout.seconds
     ? hp.orderReturnTimeout.seconds
     : kioskActive ? KIOSK_RETURN_SECS : 0
 
   // Kiosk + cash: checks every few seconds whether the staff marked it
   // collected (Caja), to tell the customer and hand the screen on
-  const cashOrderId = waitingCash && view === 'confirmed' ? kioskCash!.id : null
+  const cashOrderId = waitingPay && view === 'confirmed' ? kioskCash!.id : null
   useEffect(() => {
     if (!cashOrderId) return
     let gone = false
@@ -4537,7 +4543,35 @@ export default function StoreShell({ store, products, categories = [], initialBc
     <div className="sf-confirm-screen">
       {kioskActive && <div className="sf-kiosk-powered sf-kiosk-powered-fixed"><span>Powered by</span><span className="sf-powered-by-logo" role="img" aria-label="Lyte app" /></div>}
       <div className="sf-confirm-card">
-        {kioskActive && kioskCash ? (
+        {kioskCash && !kioskActive ? (
+          // Online, paying by terminal at the counter: the order isn't
+          // confirmed until Caja collects it — then "¡Pago recibido!"
+          !kioskCash.paid ? (
+            <>
+              <div className="sf-confirm-check sf-cash-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: 34, height: 34 }}>
+                  <rect x="5" y="2.5" width="14" height="19" rx="2.5" /><rect x="8" y="5.5" width="8" height="5" rx="1" /><path d="M8.5 14h1M11.5 14h1M14.5 14h1M8.5 17h1M11.5 17h1M14.5 17h1" />
+                </svg>
+              </div>
+              <h1 className="sf-confirm-title">Acércate a la caja a pagar</h1>
+              <p className="sf-confirm-sub">Paga con tarjeta en el punto de venta. Tu pedido se confirma en cuanto la caja registre el pago.</p>
+              <div className="sf-cash-total">
+                <span>Total a pagar</span>
+                {kioskCash.ves
+                  ? <><strong>Bs {kioskCash.ves.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong><b>{currencySymbol}{kioskCash.total.toFixed(2)}</b></>
+                  : <strong>{currencySymbol}{kioskCash.total.toFixed(2)}</strong>}
+                <em>Pedido {kioskCash.number != null ? `#${kioskCash.number}` : orderId}</em>
+              </div>
+              <div className="sf-cash-waiting"><i /><i /><i /> Esperando el pago</div>
+            </>
+          ) : (
+            <>
+              <div className="sf-confirm-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 32, height: 32 }}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg></div>
+              <h1 className="sf-confirm-title">¡Pago recibido!</h1>
+              <p className="sf-confirm-sub">Tu pedido {kioskCash.number != null ? `#${kioskCash.number}` : orderId} está confirmado.</p>
+            </>
+          )
+        ) : kioskActive && kioskCash ? (
           // Kiosk, paying cash: the customer waits here for the staff (alerted
           // on the Caja screen) — then "¡Pago recibido!"
           !kioskCash.paid ? (
@@ -4578,7 +4612,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
             <p className="sf-confirm-sub">{t('store.confirmed.sub', { id: orderId })}</p>
           </>
         )}
-        {returnCountdown !== null && !waitingCash && (
+        {returnCountdown !== null && !waitingPay && (
           <div className="sf-confirm-countdown">Volviendo al inicio en {returnCountdown}s</div>
         )}
         {queueBoardEnabled && <QueueQr url={`${window.location.origin}/${store.slug}/estado`} />}

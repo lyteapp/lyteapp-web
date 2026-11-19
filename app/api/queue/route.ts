@@ -45,7 +45,7 @@ export async function GET(req: Request) {
   if (qb.enabled === true) {
     const { data: orders, error: oErr } = await supa
       .from('orders')
-      .select('id, status, customer_name, created_at, locker_number, locker_notified_at')
+      .select('id, status, customer_name, created_at, locker_number, locker_notified_at, payment_status, cash_call_at, delivery_type')
       .eq('store_id', store.id)
       .not('status', 'in', '(delivered,cancelled,completed)')
       .gte('created_at', new Date(Date.now() - QUEUE_WINDOW_MS).toISOString())

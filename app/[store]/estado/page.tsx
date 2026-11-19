@@ -25,6 +25,15 @@ type QueueOrder = {
   locker_number: number | null
   /** last "Volver a anunciar" from the locker screen */
   locker_notified_at?: string | null
+  payment_status?: string | null
+  cash_call_at?: string | null
+  delivery_type?: string | null
+}
+
+// Not on the board until it's paid: an order to be paid at the counter or
+// kiosk (cash, point of sale) isn't confirmed before Caja collects it
+function awaitingCounterPayment(o: QueueOrder) {
+  return o.status === 'pending' && !!o.cash_call_at && o.payment_status !== 'approved' && o.delivery_type !== 'delivery'
 }
 
 type CustomerDisplay = 'firstName' | 'fullName' | 'code'
@@ -223,7 +232,7 @@ export default function EstadoPage() {
           bgImage: qb.bgImage ?? null,
         },
       })
-      const first = res.orders.filter(r => ACTIVE_STATUSES.includes(r.status) && isWithinWindow(r.created_at))
+      const first = res.orders.filter(r => ACTIVE_STATUSES.includes(r.status) && isWithinWindow(r.created_at) && !awaitingCounterPayment(r))
       ordersRef.current = first
       setOrders(first)
       setLoading(false)
@@ -270,7 +279,7 @@ export default function EstadoPage() {
 
   const applyRow = useCallback((row: QueueOrder) => {
     setOrders(prev => {
-      const isActive = ACTIVE_STATUSES.includes(row.status) && isWithinWindow(row.created_at)
+      const isActive = ACTIVE_STATUSES.includes(row.status) && isWithinWindow(row.created_at) && !awaitingCounterPayment(row)
       if (!isActive) return prev.filter(o => o.id !== row.id)
       const exists = prev.some(o => o.id === row.id)
       const next = exists ? prev.map(o => (o.id === row.id ? row : o)) : [...prev, row]
@@ -309,7 +318,7 @@ export default function EstadoPage() {
     const refresh = () => fetchQueue(storeSlug).then(res => {
       if (cancelled || res.kind !== 'ok') return
       res.orders.forEach(noteForAnnouncement)
-      const next = res.orders.filter(r => ACTIVE_STATUSES.includes(r.status) && isWithinWindow(r.created_at))
+      const next = res.orders.filter(r => ACTIVE_STATUSES.includes(r.status) && isWithinWindow(r.created_at) && !awaitingCounterPayment(r))
       ordersRef.current = next
       setOrders(next)
     })

@@ -685,3 +685,9 @@
   margin-left: 2px;
 }
 .pd-bulk-clear:hover { color: white; }
+
+/* an order to be paid at the counter: not confirmable until Caja collects */
+.pd-wait-pay {
+  margin: 0 16px 10px; padding: 10px 12px; border-radius: 10px; text-align: center;
+  background: #FFFBEB; border: 1px solid #FDE68A; color: #92400E; font-size: 13px; font-weight: 700;
+}

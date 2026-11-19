@@ -11,7 +11,7 @@ body { background: #F1F5F9; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 2em 1em calc(0.6em + env(safe-area-inset-bottom, 0px));
+  padding: 0.9em 1em calc(0.6em + env(safe-area-inset-bottom, 0px));
   position: relative;
 }
 
@@ -40,8 +40,8 @@ body { background: #F1F5F9; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5em;
-  margin-bottom: 1.75em;
+  gap: 0.15em;
+  margin-bottom: 0.9em;
   text-align: center;
 }
 
@@ -65,13 +65,13 @@ body { background: #F1F5F9; }
   max-width: 60em;
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1.5em;
+  gap: 1.2em;
 }
 @media (min-width: 640px) {
   .oq-board { grid-template-columns: 1fr 1fr; }
 }
 
-.oq-column { display: flex; flex-direction: column; gap: 0.65em; }
+.oq-column { display: flex; flex-direction: column; gap: 0.45em; }
 
 .oq-column-head { display: flex; align-items: center; gap: 0.5em; margin-bottom: 0.15em; }
 .oq-column-dot { width: 0.6em; height: 0.6em; border-radius: 50%; flex-shrink: 0; }
@@ -83,8 +83,8 @@ body { background: #F1F5F9; }
 
 .oq-card {
   background: white;
-  border-radius: 1em;
-  padding: 0.9em 1em;
+  border-radius: 0.85em;
+  padding: 0.55em 0.9em 0.6em;
   box-shadow: 0 2px 12px rgba(15,23,42,0.06);
   animation: oq-card-in 0.3s ease both;
 }
@@ -97,8 +97,9 @@ body { background: #F1F5F9; }
 
 /* Progress bar: fills in the store's color as the order moves along
    (lib/queueSteps), with moving stripes while it is still being made */
+.oq-progress-row { display: flex; align-items: center; gap: 0.7em; margin-top: 0.45em; }
 .oq-progress {
-  margin-top: 0.75em; height: 0.5em; border-radius: 100px; overflow: hidden;
+  flex: 1; min-width: 0; height: 0.5em; border-radius: 100px; overflow: hidden;
   background: color-mix(in srgb, var(--oq-accent, #7C3AED) 14%, #F1F5F9);
 }
 .oq-progress-fill {
@@ -118,7 +119,7 @@ body { background: #F1F5F9; }
 @keyframes oq-progress-grow { from { width: 0; } }
 @keyframes oq-progress-stripes { to { background-position: 16px 0; } }
 .oq-progress-label {
-  margin-top: 0.4em; font-size: 0.8em; font-weight: 700;
+  flex-shrink: 0; min-width: 7.2em; text-align: right; font-size: 0.8em; font-weight: 700; white-space: nowrap;
   color: var(--oq-accent, #7C3AED);
 }
 @media (prefers-reduced-motion: reduce) {

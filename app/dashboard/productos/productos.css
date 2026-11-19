@@ -798,6 +798,7 @@
 .pr-diet.on .pr-diet-VG, .pr-diet-dot.pr-diet-VG.on { background: #15803D; color: white; }
 .pr-diet.on .pr-diet-V,  .pr-diet-dot.pr-diet-V.on  { background: #65A30D; color: white; }
 .pr-diet.on .pr-diet-P,  .pr-diet-dot.pr-diet-P.on  { background: #0284C7; color: white; }
+.pr-diet.on .pr-diet-SA, .pr-diet-dot.pr-diet-SA.on { background: #DB2777; color: white; }
 /* per-choice diet toggles under each variable choice's nutrition inputs */
 .pr-opt-choice-diets { grid-column: 1 / -1; display: flex; gap: 5px; margin-top: 2px; }
 .pr-opt-choice-diets .pr-diet-dot { width: 24px; height: 24px; border: none; cursor: pointer; font-family: inherit; font-size: 9.5px; }

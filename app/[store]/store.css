@@ -1738,6 +1738,7 @@ video.sf-banner-img { object-fit: cover; }
 .sf-diet-VG { background: #15803D; }
 .sf-diet-V  { background: #65A30D; }
 .sf-diet-P  { background: #0284C7; }
+.sf-diet-SA { background: #DB2777; }
 /* the same circles, small, inside a variable choice's chip */
 .sf-chip-diets { display: inline-flex; gap: 3px; margin-left: 6px; vertical-align: middle; }
 .sf-chip-diets .sf-diet { width: 18px; height: 18px; font-size: 7.5px; }

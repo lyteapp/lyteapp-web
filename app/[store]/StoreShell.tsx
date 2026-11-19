@@ -399,7 +399,7 @@ type Additional     = { name: string; price: number; calories?: number; fat?: nu
 type ColorVariant   = { label: string; color: string; imageUrl: string; imageUrls?: string[] }
 type NutritionInfo  = { enabled?: boolean; calories?: number; fat?: number; protein?: number; carbs?: number; diets?: string[] }
 // Dietary badges set on the product (with its nutrition info)
-const DIET_LABELS: Record<string, string> = { GF: 'Sin gluten', VG: 'Vegano', V: 'Vegetariano', P: 'Pescetariano' }
+const DIET_LABELS: Record<string, string> = { GF: 'Sin gluten', VG: 'Vegano', V: 'Vegetariano', P: 'Pescetariano', SA: 'Sin azúcar' }
 type ProductOptions = {
   variables?:     VariableGroup[]
   colors?:        string[]
@@ -6268,7 +6268,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     // The diet filter (header): only the diets some product here has, and,
     // when some are picked, only products that are all of them (a product
     // without nutrition facts set up doesn't count as any)
-    const DIET_ORDER = ['GF', 'VG', 'V', 'P']
+    const DIET_ORDER = ['GF', 'VG', 'V', 'P', 'SA']
     const optionDiets = (p: Product) => (p.options?.variables ?? []).flatMap(g => g.choices.flatMap(ch => (typeof ch === 'string' ? [] : ch.diets ?? [])))
     const storeDiets = DIET_ORDER.filter(d => visibleProducts.some(p => productLevelDiets(p).includes(d) || optionDiets(p).includes(d)))
     const dietOk = productFitsDiet

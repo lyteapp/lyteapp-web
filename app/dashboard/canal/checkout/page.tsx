@@ -18,6 +18,7 @@ const CO_SECTIONS: { label: string; icon: React.ReactNode }[] = [
   { label: 'Numeracion de pedidos', icon: <path d="M9 3L7 21M17 3l-2 18M4 8h17M3 16h17" /> },
   { label: 'Color de acentos', icon: <><path d="M12 3a9 9 0 100 18c1.1 0 1.6-.8 1.6-1.6 0-1.2-1-1.6-1-2.6 0-1 .8-1.8 1.8-1.8H17a4 4 0 004-4C21 6.5 17 3 12 3z" /><circle cx="7.5" cy="11" r="1" /><circle cx="10" cy="7" r="1" /><circle cx="15" cy="7.5" r="1" /></> },
   { label: 'Boton de WhatsApp', icon: <path d="M4 20l1.3-3.9A8 8 0 1112 20a8 8 0 01-3.9-1z" /> },
+  { label: 'Sugerencias', icon: <><path d="M9 18h6M10 21h4" /><path d="M12 3a6 6 0 00-3.6 10.8c.4.3.6.8.6 1.3V16h6v-.9c0-.5.2-1 .6-1.3A6 6 0 0012 3z" /></> },
 ]
 
 const ACCENT_PRESETS = ['#7C3AED', '#2563EB', '#DC2626', '#D97706', '#059669', '#DB2777', '#0F172A', '#64748B']
@@ -81,6 +82,9 @@ interface CheckoutSettings {
   orderTitle: string
   // Empty = matches the store's general accent color automatically.
   accentColor: string
+  // "¿Te provoca algo más?": products of these categories offered under the
+  // cart in the checkout (drinks, desserts…)
+  suggestions: { enabled: boolean; title: string; categoryIds: string[] }
 }
 
 const DEFAULTS: CheckoutSettings = {
@@ -95,6 +99,7 @@ const DEFAULTS: CheckoutSettings = {
   showBcvInSummary: true,
   showLocationLink: false,
   orderTitle: 'Comanda',
+  suggestions: { enabled: false, title: '', categoryIds: [] },
 }
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
@@ -242,6 +247,7 @@ export default function CheckoutPage() {
         if (!store) return
         setStoreWhatsapp((store as Record<string, unknown>).whatsapp as string | null ?? null)
         const loadedSettings: CheckoutSettings = store.checkout_settings ? { ...DEFAULTS, ...store.checkout_settings } : DEFAULTS
+        loadedSettings.suggestions = { ...DEFAULTS.suggestions, ...(loadedSettings.suggestions ?? {}) }
         setSettings(loadedSettings)
         const nextNum = (store as Record<string, unknown>).order_number_next
         const loadedNum = typeof nextNum === 'number' ? String(nextNum) : '1'
@@ -256,6 +262,16 @@ export default function CheckoutPage() {
       } catch { /* silently handle */ }
     }
     load()
+  }, [storeId])
+
+  // the store's categories, for the suggestions picker
+  const [suggestCats, setSuggestCats] = useState<{ id: string; name: string }[]>([])
+  useEffect(() => {
+    if (!storeId) return
+    let alive = true
+    supabase.from('categories').select('id, name').eq('store_id', storeId).order('position', { ascending: true })
+      .then(({ data }) => { if (alive) setSuggestCats((data ?? []) as { id: string; name: string }[]) })
+    return () => { alive = false }
   }, [storeId])
 
   function setSetting<K extends keyof CheckoutSettings>(key: K, value: CheckoutSettings[K]) {
@@ -784,6 +800,61 @@ export default function CheckoutPage() {
                   <div style={{ marginTop: 12, padding: '10px 14px', background: '#F0FDF4', border: '1px solid #86EFAC', borderRadius: 10, fontSize: 13, color: '#166534' }}>
                     El boton enlazara a: wa.me/{storeWhatsapp.replace(/\D/g, '')}
                   </div>
+                )}
+              </div>
+            </div>
+
+            <div className="cn-section" data-sec="7">
+              <div className="cn-section-head">
+                <div className="cn-section-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 18h6M10 21h4" /><path d="M12 3a6 6 0 00-3.6 10.8c.4.3.6.8.6 1.3V16h6v-.9c0-.5.2-1 .6-1.3A6 6 0 0012 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="cn-section-title">Sugerencias</div>
+                  <div className="cn-section-sub">Ofrece algo más al pagar, por ejemplo bebidas o postres</div>
+                </div>
+              </div>
+              <div className="cn-section-body">
+                <div className="cn-toggle-row">
+                  <div className="cn-toggle-info">
+                    <div className="cn-toggle-label">Mostrar sugerencias en el checkout</div>
+                    <div className="cn-toggle-hint">Debajo del pedido salen productos de las categorías que elijas, con un botón para agregarlos. En la tienda, el kiosko y la vista previa.</div>
+                  </div>
+                  <Toggle checked={settings.suggestions.enabled} onChange={v => setSetting('suggestions', { ...settings.suggestions, enabled: v })} />
+                </div>
+                {settings.suggestions.enabled && (
+                  <>
+                    <div className="cn-field" style={{ marginTop: 14 }}>
+                      <div className="cn-label">Título</div>
+                      <input className="cn-input" value={settings.suggestions.title} maxLength={40}
+                        onChange={e => setSetting('suggestions', { ...settings.suggestions, title: e.target.value })}
+                        placeholder="¿Te provoca algo más?" />
+                    </div>
+                    <div className="cn-label">Categorías que se sugieren</div>
+                    {suggestCats.length === 0 ? (
+                      <div className="cn-toggle-hint">Aún no tienes categorías. Créalas en Productos → Categorías.</div>
+                    ) : (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                        {suggestCats.map(c => {
+                          const on = settings.suggestions.categoryIds.includes(c.id)
+                          return (
+                            <button key={c.id} type="button" className={`cn-pill-btn${on ? ' selected' : ''}`}
+                              onClick={() => setSetting('suggestions', {
+                                ...settings.suggestions,
+                                categoryIds: on ? settings.suggestions.categoryIds.filter(x => x !== c.id) : [...settings.suggestions.categoryIds, c.id],
+                              })}>
+                              {c.name}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                    {settings.suggestions.categoryIds.length === 0 && suggestCats.length > 0 && (
+                      <div className="cn-toggle-hint" style={{ marginTop: 8, color: '#B45309' }}>Elige al menos una categoría para que salgan sugerencias.</div>
+                    )}
+                  </>
                 )}
               </div>
             </div>

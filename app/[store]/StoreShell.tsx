@@ -749,6 +749,9 @@ type Store = {
     // Falls back to the store's general accent (cfg.accentColor) via CSS
     // when unset — see --sf-checkout-accent-color in pageStyle.
     accentColor?: string
+    // "¿Te provoca algo más?" in the checkout: products from these
+    // categories offered under the cart (Checkout → Sugerencias)
+    suggestions?: { enabled?: boolean; title?: string; categoryIds?: string[] }
   } | null
 }
 
@@ -3335,6 +3338,32 @@ export default function StoreShell({ store, products, categories = [], initialBc
 
   function clearCart() { setCart({}); clearSavedCart() }
 
+  // Checkout suggestions (Checkout → Sugerencias): products of the chosen
+  // categories (drinks, say), offered under the cart. One with nothing to
+  // choose goes straight in; one with choices (sizes, flavors…) opens so
+  // they can be picked.
+  function suggestionNeedsChoice(p: Product) {
+    const o = p.options
+    return !!(o?.colorVariants?.length || o?.colors?.length || (o?.variables ?? []).some(g => g.choices.length > 0 && groupMinMax(g).min > 0))
+  }
+  function addSuggestion(p: Product) {
+    if (suggestionNeedsChoice(p)) {
+      // back to the store with the product open; the cart stays as it is
+      setView('catalog')
+      openProductModal(p)
+      return
+    }
+    const key = buildCartKey(p.id)
+    setCart(prev => ({
+      ...prev,
+      [key]: {
+        id: key, productId: p.id, name: p.name, price: p.price, extraPrice: 0,
+        image_url: p.image_url, quantity: (prev[key]?.quantity ?? 0) + 1,
+        options: p.options ?? undefined, selectedOptions: {},
+      },
+    }))
+  }
+
   function updateQty(id: string, delta: number) {
     setCart(prev => {
       const next = (prev[id]?.quantity ?? 0) + delta
@@ -4803,6 +4832,45 @@ export default function StoreShell({ store, products, categories = [], initialBc
             </div>
           )}
         </div>
+
+        {/* Suggestions: "¿Te provoca algo más?" (Checkout → Sugerencias) */}
+        {(() => {
+          const sg = cs.suggestions
+          const catIds = new Set(sg?.enabled ? sg.categoryIds ?? [] : [])
+          if (!catIds.size || isCheckoutPreview && !cartItems.length) return null
+          const hidden = new Set(cfg.hiddenCategoryIds ?? [])
+          const list = products.filter(p => {
+            const ids = p.category_ids ?? (p.category_id ? [p.category_id] : [])
+            return ids.some(id => catIds.has(id) && !hidden.has(id))
+          }).slice(0, 12)
+          if (!list.length) return null
+          return (
+            <div className="sf-co-section sf-co-suggest" data-co-step="cart">
+              <h3 className="sf-co-section-title">{sg?.title?.trim() || '¿Te provoca algo más?'}</h3>
+              <div className="sf-co-suggest-row">
+                {list.map(p => {
+                  const inCart = getProdQty(p.id)
+                  return (
+                    <div key={p.id} className="sf-co-suggest-card">
+                      <div className="sf-co-suggest-img">
+                        {p.image_url && !isVideoUrl(p.image_url)
+                          ? <img src={resizedImg(p.image_url, 240)} alt="" />
+                          : <span>{p.name.trim().charAt(0).toUpperCase()}</span>}
+                        {inCart > 0 && <em>{inCart}</em>}
+                      </div>
+                      <div className="sf-co-suggest-name">{p.name}</div>
+                      <div className="sf-co-suggest-price">{currencySymbol}{Number(p.price).toFixed(2)}</div>
+                      <button type="button" className="sf-co-suggest-add" onClick={() => addSuggestion(p)}
+                        style={{ background: coAccent }}>
+                        {suggestionNeedsChoice(p) ? 'Elegir' : inCart > 0 ? '+ Otro' : '+ Agregar'}
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Eat in / take away — the store asks for it on its welcome page */}
         {askServiceType && (

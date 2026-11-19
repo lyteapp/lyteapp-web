@@ -560,8 +560,9 @@ function QueueColumn({
         <div key={o.id} className="oq-locker">
           <span className="oq-locker-label">Casillero</span>
           <span className="oq-locker-num">{o.locker_number}</span>
+          {/* the customer's full name (or the code, when the board shows codes) */}
           <span className="oq-locker-name">
-            {customerDisplay === 'code' ? shortCode(o.id) : displayName(o.customer_name, customerDisplay)}
+            {customerDisplay === 'code' ? shortCode(o.id) : o.customer_name.trim()}
           </span>
         </div>
       )) : shown.map(o => {

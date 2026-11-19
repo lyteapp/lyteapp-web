@@ -24,7 +24,7 @@ export async function GET(req: Request) {
 
   const { data: store, error } = await supa
     .from('stores')
-    .select('id, name, logo_url, template_config')
+    .select('id, name, logo_url, template_config, checkout_settings')
     .eq('slug', slug)
     .maybeSingle()
   if (error) return Response.json({ error: error.message }, { status: 502, headers: NO_STORE })
@@ -33,8 +33,13 @@ export async function GET(req: Request) {
   const tc = (store.template_config as Record<string, unknown> | null) ?? {}
   const trackingConfig = (tc.trackingConfig as Record<string, unknown> | undefined) ?? {}
   const qb = (trackingConfig.queueBoard as { enabled?: boolean } | undefined) ?? {}
+  const cs = (store.checkout_settings as { lockerMode?: { enabled?: boolean; count?: number } } | null) ?? {}
   const out = {
-    store: { id: store.id, name: store.name, logo_url: store.logo_url, accentColor: tc.accentColor ?? null, trackingConfig },
+    store: {
+      id: store.id, name: store.name, logo_url: store.logo_url, accentColor: tc.accentColor ?? null, trackingConfig,
+      // the store hands orders out through lockers (Pedidos → Modo casillero)
+      lockers: cs.lockerMode?.enabled === true && (cs.lockerMode.count ?? 0) > 0,
+    },
     orders: [] as unknown[],
   }
   if (qb.enabled === true) {

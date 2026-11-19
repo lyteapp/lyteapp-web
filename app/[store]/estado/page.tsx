@@ -49,6 +49,8 @@ type StoreInfo = {
   accentColor: string
   fontFamily: string
   queueBoard: QueueBoardConfig
+  /** the store hands orders out through lockers */
+  lockers: boolean
 }
 
 const FONT_STACKS: Record<string, string> = {
@@ -88,7 +90,7 @@ function shortCode(id: string): string {
 // changes arrive instantly when it works.
 
 type QueueFetch =
-  | { kind: 'ok'; store: { id: string; name: string; logo_url: string | null; accentColor: string | null; trackingConfig: Record<string, unknown> }; orders: QueueOrder[] }
+  | { kind: 'ok'; store: { id: string; name: string; logo_url: string | null; accentColor: string | null; trackingConfig: Record<string, unknown>; lockers?: boolean }; orders: QueueOrder[] }
   | { kind: 'notFound' }
   | { kind: 'error' }
 
@@ -207,6 +209,7 @@ export default function EstadoPage() {
         logo_url: res.store.logo_url,
         accentColor: (tracking.accentColor as string) || res.store.accentColor || '#7C3AED',
         fontFamily: (tracking.fontFamily as string) || 'system',
+        lockers: res.store.lockers === true,
         queueBoard: {
           enabled: qb.enabled === true,
           title: qb.title || 'Estado de pedidos',
@@ -395,8 +398,14 @@ export default function EstadoPage() {
     )
   }
 
-  const preparing = orders.filter(o => o.status !== 'ready')
-  const ready = orders.filter(o => o.status === 'ready')
+  // A store with lockers: "Listo" holds only what's already in a locker
+  // (by locker number); an order that's done but not in one yet stays in
+  // preparation, as "Casi listo"
+  const inLocker = (o: QueueOrder) => o.status === 'ready' && o.locker_number != null
+  const preparing = store.lockers ? orders.filter(o => !inLocker(o)) : orders.filter(o => o.status !== 'ready')
+  const ready = store.lockers
+    ? orders.filter(inLocker).sort((a, b) => (a.locker_number ?? 0) - (b.locker_number ?? 0))
+    : orders.filter(o => o.status === 'ready')
   const font = FONT_STACKS[store.fontFamily] ?? FONT_STACKS.system
   const bg = queueBackground(store.queueBoard)
 
@@ -425,6 +434,7 @@ export default function EstadoPage() {
           customerDisplay={store.queueBoard.customerDisplay}
           accentColor={store.accentColor}
           showTime
+          lockerMode={store.lockers}
         />
         <QueueColumn
           label={store.queueBoard.readyLabel}
@@ -432,6 +442,7 @@ export default function EstadoPage() {
           orders={ready}
           customerDisplay={store.queueBoard.customerDisplay}
           accentColor={store.accentColor}
+          asLockers={store.lockers}
         />
       </div>
 
@@ -479,7 +490,7 @@ const PAGE_MS = 8000
  *  themselves, like an airport's departures board (the dots show which page
  *  is up). How many fit is measured from the column's own height and a card's. */
 function QueueColumn({
-  label, dotColor, orders, customerDisplay, accentColor, showTime,
+  label, dotColor, orders, customerDisplay, accentColor, showTime, lockerMode, asLockers,
 }: {
   label: string
   dotColor: string
@@ -487,6 +498,10 @@ function QueueColumn({
   customerDisplay: CustomerDisplay
   accentColor: string
   showTime?: boolean
+  /** the store uses lockers: a done order not in one yet reads "Casi listo" */
+  lockerMode?: boolean
+  /** show the orders as locker boxes (big number + name) in a grid */
+  asLockers?: boolean
 }) {
   const listRef = useRef<HTMLDivElement | null>(null)
   const [perPage, setPerPage] = useState(0)
@@ -497,17 +512,22 @@ function QueueColumn({
     const list = listRef.current
     if (!list) return
     const measure = () => {
-      const card = list.querySelector('.oq-card') as HTMLElement | null
-      if (!card) return
-      const gap = parseFloat(getComputedStyle(list.firstElementChild as Element ?? list).rowGap) || 0
-      const fit = Math.max(1, Math.floor((list.clientHeight + gap) / (card.offsetHeight + gap)))
+      const card = list.querySelector('.oq-card, .oq-locker') as HTMLElement | null
+      const grid = list.firstElementChild as HTMLElement | null
+      if (!card || !grid) return
+      const cs = getComputedStyle(grid)
+      const gap = parseFloat(cs.rowGap) || 0
+      const rows = Math.max(1, Math.floor((list.clientHeight + gap) / (card.offsetHeight + gap)))
+      // the locker boxes sit several to a row
+      const cols = asLockers ? Math.max(1, cs.gridTemplateColumns.split(' ').filter(Boolean).length) : 1
+      const fit = rows * cols
       setPerPage(p => (p === fit ? p : fit))
     }
     const ro = new ResizeObserver(measure)
     ro.observe(list)
     measure()
     return () => ro.disconnect()
-  }, [orders.length])
+  }, [orders.length, asLockers])
 
   const size = perPage || orders.length || 1
   const pages = Math.max(1, Math.ceil(orders.length / size))
@@ -534,9 +554,19 @@ function QueueColumn({
         <span className="oq-column-count">{orders.length}</span>
       </div>
       <div className="oq-column-list" ref={listRef}>
-        <div key={pages > 1 ? page : 'all'} className={`oq-page${pages > 1 ? ' turning' : ''}`}>
-      {shown.map(o => {
-        const step = queueStep(o.status)
+        <div key={pages > 1 ? page : 'all'} className={`oq-page${asLockers ? ' oq-locker-grid' : ''}${pages > 1 ? ' turning' : ''}`}>
+      {asLockers ? shown.map(o => (
+        // a locker: "Casillero", its number big, and whose it is
+        <div key={o.id} className="oq-locker">
+          <span className="oq-locker-label">Casillero</span>
+          <span className="oq-locker-num">{o.locker_number}</span>
+          <span className="oq-locker-name">
+            {customerDisplay === 'code' ? shortCode(o.id) : displayName(o.customer_name, customerDisplay)}
+          </span>
+        </div>
+      )) : shown.map(o => {
+        const waitingLocker = lockerMode && o.status === 'ready' && o.locker_number == null
+        const step = waitingLocker ? { pct: 92, label: 'Casi listo' } : queueStep(o.status)
         return (
         <div key={o.id} className="oq-card">
           <div className="oq-card-row">
@@ -558,7 +588,7 @@ function QueueColumn({
           {/* the bar and its step on one line (a shorter card: more fit) */}
           <div className="oq-progress-row">
             <div
-              className={`oq-progress${o.status === 'ready' ? ' done' : ''}`}
+              className={`oq-progress${o.status === 'ready' && !waitingLocker ? ' done' : ''}`}
               role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={step.pct} aria-label={step.label}
             >
               <div className="oq-progress-fill" style={{ width: `${step.pct}%` }} />

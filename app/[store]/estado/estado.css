@@ -241,3 +241,21 @@ html:has(.oq-wrap)::-webkit-scrollbar, body:has(.oq-wrap)::-webkit-scrollbar { d
   animation: oqVoicePulse 2.4s ease-in-out infinite;
 }
 @keyframes oqVoicePulse { 0%, 100% { box-shadow: 0 8px 24px rgba(15,23,42,0.25), 0 0 0 0 rgba(255,255,255,0.35); } 50% { box-shadow: 0 8px 24px rgba(15,23,42,0.25), 0 0 0 8px rgba(255,255,255,0); } }
+
+/* "Listo" in a store with lockers: each order as a box in the store's
+   color — "Casillero", the number big, the name — several to a row */
+.oq-page.oq-locker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.6em, 1fr)); gap: 0.6em; }
+.oq-locker {
+  min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 0.55em 0.6em 0.7em; border-radius: 1em; text-align: center;
+  background: var(--oq-accent, #7C3AED); color: #FFFFFF;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--oq-accent, #7C3AED) 35%, transparent);
+  animation: oq-card-in 0.3s ease both;
+}
+.oq-page.turning > .oq-locker { animation: none; }
+.oq-locker-label { font-size: 0.72em; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; }
+.oq-locker-num { font-size: 3.1em; font-weight: 800; line-height: 1; letter-spacing: -0.03em; margin: 0.05em 0 0.08em; font-variant-numeric: tabular-nums; }
+.oq-locker-name {
+  max-width: 100%; font-size: 1.15em; font-weight: 700; line-height: 1.2;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}

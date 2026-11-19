@@ -167,5 +167,11 @@ body { background: #F1F5F9; }
 }
 .lk-renotify:active:not(:disabled) { transform: scale(0.98); }
 .lk-renotify:disabled { cursor: default; }
+.lk-renotify { position: relative; overflow: hidden; }
+/* while it's announcing: can't be pressed, with the time left draining */
 .lk-renotify.done { color: #047857; background: #ECFDF5; border-color: #A7F3D0; }
+.lk-renotify.done::after {
+  content: ''; position: absolute; left: 0; bottom: 0; height: 3px; width: var(--lk-left, 0%);
+  background: #10B981; transition: width 0.5s linear;
+}
 .lk-modal-ask { font-size: 14px; font-weight: 600; color: #475569; text-align: center; margin-bottom: 10px; }

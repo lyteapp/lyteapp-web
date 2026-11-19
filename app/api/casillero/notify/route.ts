@@ -9,9 +9,9 @@ const supabase = createClient(
 // "Volver a anunciar" on the locker screen: stamps locker_notified_at on an
 // order that's sitting in a locker for this store, which puts its big
 // announcement (and voice) up again on the public queue board and a
-// reminder on the customer's tracking page. Not more than once every few
-// seconds per order, so a double tap doesn't announce it twice.
-const MIN_GAP_MS = 8000
+// reminder on the customer's tracking page. Not again while the last one is
+// still going on the board (its 9s announcement, plus a beat).
+const MIN_GAP_MS = 10000
 
 export async function POST(req: NextRequest) {
   const { orderId, storeId } = await req.json().catch(() => ({}))

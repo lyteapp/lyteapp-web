@@ -18,7 +18,13 @@ type LockerOrder = {
   customer_name: string
   locker_number: number | null
   status: OrderStatus
+  /** when its locker was last announced again (from this screen or another) */
+  locker_notified_at?: string | null
 }
+
+// How long an announcement takes on the queue board (its 9s, plus a beat):
+// "Volver a anunciar" waits that long before it can be pressed again
+const ANNOUNCE_WINDOW_MS = 10000
 
 type StoreInfo = {
   id: string
@@ -40,8 +46,11 @@ export default function CasilleroPage() {
   const [confirming, setConfirming] = useState<LockerOrder | null>(null)
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState('')
-  // "Volver a anunciar" just went out for the locker open in the dialog
-  const [renotified, setRenotified] = useState(false)
+  // "Volver a anunciar" went out at this moment, per order (on top of what
+  // the order itself says, which also covers another locker screen)
+  const [sentAt, setSentAt] = useState<Record<string, number>>({})
+  // ticks once a second while an announcement is going, for its countdown
+  const [now, setNow] = useState(() => Date.now())
 
   useEffect(() => {
     let cancelled = false
@@ -84,7 +93,7 @@ export default function CasilleroPage() {
 
     supabase
       .from('orders')
-      .select('id, order_number, customer_name, locker_number, status')
+      .select('id, order_number, customer_name, locker_number, status, locker_notified_at')
       .eq('store_id', storeId)
       .eq('status', 'ready')
       .then(({ data }) => { if (!cancelled && data) setOrders(data as LockerOrder[]) })
@@ -141,8 +150,9 @@ export default function CasilleroPage() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) { setActionError(data.error ?? 'No se pudo volver a anunciar'); return }
-      setRenotified(true)
-      setTimeout(() => setRenotified(false), 2500)
+      const at = Date.now()
+      setSentAt(m => ({ ...m, [confirming.id]: at }))
+      setNow(at)
     } catch {
       setActionError('No se pudo conectar con el servidor')
     } finally {
@@ -169,6 +179,20 @@ export default function CasilleroPage() {
       setBusy(false)
     }
   }
+
+  // The order in the dialog is announcing until its window is over: no
+  // second "Volver a anunciar" until the first one has finished
+  const openOrder = confirming ? (orders.find(o => o.id === confirming.id) ?? confirming) : null
+  const announcedAt = openOrder
+    ? Math.max(sentAt[openOrder.id] ?? 0, openOrder.locker_notified_at ? new Date(openOrder.locker_notified_at).getTime() : 0)
+    : 0
+  const announcingLeft = Math.max(0, announcedAt + ANNOUNCE_WINDOW_MS - now)
+  const announcing = announcingLeft > 0
+  useEffect(() => {
+    if (!announcing) return
+    const t = setInterval(() => setNow(Date.now()), 500)
+    return () => clearInterval(t)
+  }, [announcing])
 
   if (loading) {
     return <div className="lk-state"><div className="lk-spinner" /></div>
@@ -235,7 +259,7 @@ export default function CasilleroPage() {
               key={n}
               className={`lk-locker${order ? ' lk-locker-occupied' : ''}${assignable ? ' lk-locker-assignable' : ''}`}
               onClick={() => {
-                if (order) { setConfirming(order); setActionError(''); setRenotified(false) }
+                if (order) { setConfirming(order); setActionError(''); setNow(Date.now()) }
                 else if (assignable) assignLocker(n)
               }}
             >
@@ -261,13 +285,12 @@ export default function CasilleroPage() {
               {confirming.order_number != null ? ` #${confirming.order_number}` : ''}
             </div>
             {actionError && <div className="lk-modal-error">{actionError}</div>}
-            <button className={`lk-renotify${renotified ? ' done' : ''}`} disabled={busy || renotified} onClick={renotify}>
+            <button className={`lk-renotify${announcing ? ' done' : ''}`} disabled={busy || announcing} onClick={renotify}
+              style={announcing ? { ['--lk-left' as string]: `${(announcingLeft / ANNOUNCE_WINDOW_MS) * 100}%` } : undefined}>
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                {renotified
-                  ? <path d="M5 12.5l4.5 4.5L19 7.5" />
-                  : <><path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M15.5 8.5a5 5 0 010 7M19 5a10 10 0 010 14" /></>}
+                <path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M15.5 8.5a5 5 0 010 7M19 5a10 10 0 010 14" />
               </svg>
-              {renotified ? 'Anunciado otra vez' : 'Volver a anunciar'}
+              {announcing ? `Anunciando… ${Math.ceil(announcingLeft / 1000)} s` : 'Volver a anunciar'}
             </button>
             <div className="lk-modal-ask">¿Ya retiró su pedido?</div>
             <div className="lk-modal-actions">

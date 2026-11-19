@@ -3110,16 +3110,20 @@ export default function StoreShell({ store, products, categories = [], initialBc
               <div className="sf-modal-wizard-actions">
                 {modalStep > 0 && (
                   <button className="sf-modal-wizard-back" onClick={() => setModalStep(s => Math.max(0, s - 1))}>
-                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><path d="M12 15l-5-5 5-5" /></svg>
-                    Atras
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width="1.1em" height="1.1em"><path d="M12 15l-5-5 5-5" /></svg>
+                    Atrás
                   </button>
                 )}
+                {/* "Siguiente" is the main action (filled); "Omitir" stays outlined */}
                 <button
-                  className="sf-modal-wizard-skip"
+                  className={`sf-modal-wizard-skip${wizardVarMinMax.min > 0 || wizardVarCount > 0 ? ' next' : ''}`}
                   disabled={!wizardVarSatisfied}
                   onClick={() => setModalStep(s => s + 1)}
                 >
                   {wizardVarMinMax.min > 0 || wizardVarCount > 0 ? 'Siguiente' : 'Omitir'}
+                  {(wizardVarMinMax.min > 0 || wizardVarCount > 0) && (
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width="1.1em" height="1.1em"><path d="M8 5l5 5-5 5" /></svg>
+                  )}
                 </button>
               </div>
             </div>

@@ -1965,24 +1965,26 @@ video.sf-banner-img { object-fit: cover; }
 .sf-modal-wizard-chips .sf-modal-chip { padding: 12px 22px; font-size: 15px; }
 .sf-modal-wizard-swatches { justify-content: center; }
 .sf-modal-wizard-actions {
-  display: flex; align-items: center; justify-content: center; gap: 16px;
-  margin-top: 12px;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  margin-top: 14px;
 }
-.sf-modal-wizard-back {
-  display: flex; align-items: center; gap: 4px;
-  background: none; border: none; cursor: pointer;
-  font-size: 13px; font-weight: 600; color: #94A3B8;
-  padding: 6px 4px; font-family: inherit;
+/* Step-by-step: "Atrás" / "Omitir" outlined, "Siguiente" filled in the
+   store's color — real buttons a thumb hits easily */
+.sf-modal-wizard-back, .sf-modal-wizard-skip {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 46px; min-width: 7.5em; padding: 0 20px; border-radius: 99px; cursor: pointer;
+  font-family: inherit; font-size: 15px; font-weight: 700; color: #475569;
+  background: transparent; border: 1.5px solid rgba(15,23,42,0.14);
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s, transform 0.12s;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
 }
-.sf-modal-wizard-back:hover { color: #64748B; }
-.sf-modal-wizard-skip {
-  background: none; border: none; cursor: pointer;
-  font-size: 13px; font-weight: 600; color: #94A3B8;
-  text-decoration: underline; text-underline-offset: 2px;
-  padding: 6px 4px; font-family: inherit;
+.sf-modal-wizard-back:hover, .sf-modal-wizard-skip:hover:not(:disabled) { border-color: rgba(15,23,42,0.28); }
+.sf-modal-wizard-skip.next {
+  color: #FFFFFF; background: var(--sf-accent-color, #7C3AED); border-color: var(--sf-accent-color, #7C3AED);
 }
-.sf-modal-wizard-skip:hover:not(:disabled) { color: #64748B; }
-.sf-modal-wizard-skip:disabled { opacity: 0.4; cursor: default; text-decoration: none; }
+.sf-modal-wizard-skip.next:hover:not(:disabled) { filter: brightness(0.92); border-color: var(--sf-accent-color, #7C3AED); }
+:is(.sf-modal-wizard-back, .sf-modal-wizard-skip):active:not(:disabled) { transform: scale(0.97); }
+.sf-modal-wizard-skip:disabled { opacity: 0.4; cursor: default; }
 
 /* Additionals */
 .sf-modal-extra {
@@ -2073,7 +2075,7 @@ video.sf-banner-img { object-fit: cover; }
    (chips, extras and inputs keep their light cards with dark text). */
 .sf-modal-dark { color: #F1F5F9; }
 .sf-modal-dark :is(.sf-modal-name, .sf-modal-wizard-question, .sf-modal-qty span, .sf-modal-qty button) { color: #F8FAFC; }
-.sf-modal-dark :is(.sf-modal-desc, .sf-modal-wizard-hint, .sf-modal-wizard-back, .sf-modal-wizard-skip) { color: rgba(241,245,249,0.72); }
+.sf-modal-dark :is(.sf-modal-desc, .sf-modal-wizard-hint) { color: rgba(241,245,249,0.72); }
 .sf-modal-dark .sf-modal-section-title { color: rgba(241,245,249,0.6); }
 .sf-modal-dark .sf-modal-qty { border-color: rgba(255,255,255,0.22); }
 .sf-modal-dark .sf-modal-qty button:hover { background: rgba(255,255,255,0.08); }
@@ -3292,13 +3294,12 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
 .sf-modal-kiosk .sf-modal-wizard-hint { font-size: 13px; }
 .sf-modal-kiosk .sf-modal-wizard-chips { gap: 10px; }
 .sf-modal-kiosk .sf-modal-wizard-chips .sf-modal-chip { font-size: 17px; padding: 12px 20px; }
-.sf-modal-kiosk .sf-modal-wizard-actions { margin-top: 16px; gap: 12px; }
+.sf-modal-kiosk .sf-modal-wizard-actions { margin-top: 18px; gap: 14px; }
 .sf-modal-kiosk :is(.sf-modal-wizard-back, .sf-modal-wizard-skip) {
-  min-height: 48px; padding: 0 24px; border-radius: 99px; font-size: 16px; text-decoration: none;
-  border: 1.5px solid rgba(15,23,42,0.12); color: #475569; background: transparent;
+  min-height: 62px; min-width: 9em; padding: 0 32px; font-size: 20px; border-width: 2px;
 }
 .sf-modal-kiosk .sf-modal-wizard-skip:disabled { opacity: 0.35; }
-.sf-modal-dark.sf-modal-kiosk :is(.sf-modal-wizard-back, .sf-modal-wizard-skip) { border-color: rgba(255,255,255,0.22); color: rgba(241,245,249,0.85); }
+.sf-modal-dark :is(.sf-modal-wizard-back, .sf-modal-wizard-skip):not(.next) { border-color: rgba(255,255,255,0.22); color: rgba(241,245,249,0.85); }
 /* …a level tighter each time the step doesn't fit (data-fit, see StoreShell) */
 .sf-modal-kiosk .sf-modal-wizard[data-fit="1"] .sf-modal-wizard-chips { gap: 8px; }
 .sf-modal-kiosk .sf-modal-wizard[data-fit="1"] .sf-modal-wizard-chips .sf-modal-chip { font-size: 16px; padding: 10px 17px; }
@@ -3309,13 +3310,13 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
 .sf-modal-kiosk .sf-modal-wizard[data-fit="2"] .sf-modal-wizard-question { font-size: 19px; margin-bottom: 6px; }
 .sf-modal-kiosk .sf-modal-wizard[data-fit="2"] .sf-modal-wizard-progress { margin-bottom: 4px; }
 .sf-modal-kiosk .sf-modal-wizard[data-fit="2"] .sf-modal-wizard-actions { margin-top: 10px; }
-.sf-modal-kiosk .sf-modal-wizard[data-fit="2"] :is(.sf-modal-wizard-back, .sf-modal-wizard-skip) { min-height: 44px; }
+.sf-modal-kiosk .sf-modal-wizard[data-fit="2"] :is(.sf-modal-wizard-back, .sf-modal-wizard-skip) { min-height: 56px; font-size: 19px; }
 .sf-modal-kiosk .sf-modal-wizard[data-fit="3"] .sf-modal-wizard-chips { gap: 6px; }
 .sf-modal-kiosk .sf-modal-wizard[data-fit="3"] .sf-modal-wizard-chips .sf-modal-chip { font-size: 14px; padding: 7px 12px; }
 .sf-modal-kiosk .sf-modal-wizard[data-fit="3"] .sf-modal-wizard-question { font-size: 18px; margin-bottom: 4px; }
 .sf-modal-kiosk .sf-modal-wizard[data-fit="3"] .sf-modal-wizard-progress { margin-bottom: 2px; }
 .sf-modal-kiosk .sf-modal-wizard[data-fit="3"] .sf-modal-wizard-actions { margin-top: 8px; }
-.sf-modal-kiosk .sf-modal-wizard[data-fit="3"] :is(.sf-modal-wizard-back, .sf-modal-wizard-skip) { min-height: 42px; }
+.sf-modal-kiosk .sf-modal-wizard[data-fit="3"] :is(.sf-modal-wizard-back, .sf-modal-wizard-skip) { min-height: 52px; font-size: 18px; }
 
 /* Kiosk: the open product's name, description and quantity in the kiosk's
    own text color (set only when it reads on the sheet, see StoreShell);

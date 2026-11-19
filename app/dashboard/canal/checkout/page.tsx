@@ -62,6 +62,9 @@ const METHODS: Omit<PaymentMethod, 'enabled' | 'values'>[] = [
   { id: 'punto_venta', name: 'Punto de venta', icon: 'PV', fields: [
     { key: 'instrucciones', label: 'Instrucciones', placeholder: 'Ej: Disponible en local' },
   ]},
+  // charged through the store's own BNC account (credentials below): the
+  // customer gets a code from their bank and the order is paid on the spot
+  { id: 'debito_inmediato', name: 'Débito inmediato (BNC)', icon: 'DI', fields: [] },
 ]
 
 interface CheckoutSettings {
@@ -376,7 +379,12 @@ export default function CheckoutPage() {
                     </div>
                     {openMethod === m.id && (
                       <div style={{ padding: '0 16px 16px', borderTop: '1px solid rgba(15,23,42,0.06)' }}>
-                        <div style={{ paddingTop: 14, display: 'grid', gridTemplateColumns: m.fields.length > 2 ? '1fr 1fr' : '1fr', gap: 12 }}>
+                        {m.id === 'debito_inmediato' && (
+                          <div className="cn-toggle-hint" style={{ paddingTop: 14 }}>
+                            El cliente elige su banco, pone su cédula y teléfono, le llega un código por SMS y paga ahí mismo, sin comprobante. Se cobra con las credenciales de BNC de abajo (&quot;Débito inmediato · BNC&quot;).
+                          </div>
+                        )}
+                        <div style={{ paddingTop: m.fields.length ? 14 : 0, display: 'grid', gridTemplateColumns: m.fields.length > 2 ? '1fr 1fr' : '1fr', gap: 12 }}>
                           {m.fields.map(f => (
                             <div key={f.key} className="cn-field" style={{ marginBottom: 0 }}>
                               <div className="cn-label">{f.label}</div>

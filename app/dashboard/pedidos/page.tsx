@@ -99,9 +99,16 @@ const FILTER_KEYS: { key: 'all' | OrderStatus; tKey: TranslationKey }[] = [
 // An order to be paid at the counter / kiosk (cash, point of sale — not
 // delivery) can't be marked received until Caja collects the payment; Caja
 // confirms it then
-function waitingPayment(o: { status: string; payment_status?: string | null; cash_call_at?: string | null; delivery_type?: string | null }) {
-  return o.status === 'pending' && !!o.cash_call_at && o.payment_status !== 'approved' && o.delivery_type !== 'delivery'
+type PayWaitable = { status: string; payment_status?: string | null; cash_call_at?: string | null; delivery_type?: string | null; payment_method?: string | null }
+// A Débito inmediato order the bank hasn't approved yet (the customer is
+// still entering the code, or gave up)
+function waitingDebit(o: PayWaitable) {
+  return o.status === 'pending' && o.payment_method === 'Débito inmediato' && o.payment_status !== 'approved'
 }
+function waitingPayment(o: PayWaitable) {
+  return waitingDebit(o) || (o.status === 'pending' && !!o.cash_call_at && o.payment_status !== 'approved' && o.delivery_type !== 'delivery')
+}
+const waitingLabel = (o: PayWaitable) => (waitingDebit(o) ? 'Esperando Débito inmediato' : 'Esperando pago en caja')
 
 const NEXT_STATUS: Partial<Record<OrderStatus, { status: OrderStatus; tKey?: TranslationKey; label?: string; cls: string }>> = {
   pending:    { status: 'confirmed',  label: 'Recibido',   cls: 'confirm' },
@@ -721,7 +728,7 @@ export default function PedidosPage() {
                   )}
                   <div className="pd-comanda-actions">
                     {waitingPayment(order) && (
-                      <div className="pd-wait-pay">Esperando pago en caja · se confirma al cobrar</div>
+                      <div className="pd-wait-pay">{waitingDebit(order) ? 'Esperando Débito inmediato · se confirma cuando el banco apruebe' : 'Esperando pago en caja · se confirma al cobrar'}</div>
                     )}
                     {order.status === 'pending' && !waitingPayment(order) && (
                       <button className="pd-comanda-btn confirm" disabled={displayUpdating === order.id} onClick={() => updateDisplayStatus(order.id, 'confirmed')}>
@@ -836,7 +843,7 @@ export default function PedidosPage() {
                   </div>
                   <div className="pd-total">{fmt(order.total)}</div>
                   <div className={`pd-status ${order.status}`}>
-                    {waitingPayment(order) ? 'Esperando pago en caja' : t(STATUS_KEYS[order.status])}{order.locker_number != null ? ` · Casillero ${order.locker_number}` : ''}
+                    {waitingPayment(order) ? waitingLabel(order) : t(STATUS_KEYS[order.status])}{order.locker_number != null ? ` · Casillero ${order.locker_number}` : ''}
                   </div>
                   <svg className={`pd-chevron${isExpanded ? ' open' : ''}`} viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />

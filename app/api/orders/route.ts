@@ -29,6 +29,11 @@ export async function POST(req: NextRequest) {
     // failing the order if the RPC has any trouble.
     const { data: orderNumber } = await supabase.rpc('get_next_order_number', { p_store_id: store_id })
 
+    // Débito inmediato: the customer pays right after this (/api/pay/debito),
+    // so the order waits unpaid until the bank approves — and the store hears
+    // about it then, not now.
+    const bankDebit = payment_method === 'Débito inmediato'
+
     const { error: orderError } = await supabase.from('orders').insert({
       id, store_id,
       customer_name, customer_phone,
@@ -44,7 +49,7 @@ export async function POST(req: NextRequest) {
       // collected — loudly when the customer is waiting at a kiosk
       cash_call_at: kiosk_cash === true ? new Date().toISOString() : null,
       from_kiosk: from_kiosk === true,
-      payment_status: payment_proof_url || kiosk_cash === true ? 'pending' : null,
+      payment_status: payment_proof_url || kiosk_cash === true || bankDebit ? 'pending' : null,
     })
 
     if (orderError) {
@@ -71,7 +76,7 @@ export async function POST(req: NextRequest) {
     // before it ever reached web-push. after() keeps the invocation alive
     // until this finishes, without making the customer wait on it.
     const origin = req.nextUrl.origin
-    after(async () => {
+    if (!bankDebit) after(async () => {
       try {
         await fetch(new URL('/api/push-owner', origin), {
           method: 'POST',

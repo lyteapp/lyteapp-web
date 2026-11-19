@@ -14,6 +14,7 @@ import BannerCarousel from './BannerCarousel'
 import { CachedVideo } from './videoCache'
 import { resyncVideos } from './videoSync'
 import { storeLoaderColor } from '../lib/storeTheme'
+import BankDebit, { type BankDebitResult } from './BankDebit'
 
 const QueueQr = dynamic(() => import('./QueueQr'), { ssr: false })
 const ProofCamera = dynamic(() => import('./ProofCamera'), { ssr: false })
@@ -464,6 +465,7 @@ const PM_LABELS: Record<string, string> = {
   pago_movil: 'Pago Móvil', zelle: 'Zelle', paypal: 'PayPal', efectivo_usd: 'Efectivo USD',
   efectivo_bs: 'Efectivo Bs', usdt: 'USDT / Cripto', binance: 'Binance Pay',
   transferencia: 'Transferencia Bs', punto_venta: 'Punto de venta', efectivo: 'Efectivo',
+  debito_inmediato: 'Débito inmediato',
 }
 
 function parsePaymentMethods(raw: unknown): PaymentMethod[] {
@@ -1311,6 +1313,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [paymentProofPreview, setPaymentProofPreview] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError]           = useState('')
+  // Débito inmediato: the order exists, the customer pays it in this sheet;
+  // handleSubmit waits on it (the resolver below) before finishing up
+  const [bankDebit, setBankDebit]   = useState<{ orderId: string; phone: string } | null>(null)
+  const bankDebitDone = useRef<((r: BankDebitResult) => void) | null>(null)
   const [orderId, setOrderId]       = useState('')
   // Kiosk: this order is being paid cash at the kiosk — the customer waits
   // there until the staff (alerted on the Caja screen) collects it
@@ -2053,7 +2059,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const selectedStaffPay = staffPayKind(selectedPayment, (enabledMethods.find(m => m.type === selectedPayment)?.label ?? '') || paymentFreeText)
   const showInstallBtn = !installed && (isIos || !!installPrompt)
 
-  const VES_METHODS = new Set(['pago_movil', 'efectivo_bs', 'transferencia', 'punto_venta'])
+  const VES_METHODS = new Set(['pago_movil', 'efectivo_bs', 'transferencia', 'punto_venta', 'debito_inmediato'])
   const selectedMethodIsVES = VES_METHODS.has(selectedPayment)
   const vesAmount = selectedMethodIsVES && bcvRate && cs.showBcvInSummary !== false ? orderTotal * bcvRate : null
 
@@ -3435,7 +3441,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       return 'Selecciona la tienda donde vas a retirar tu pedido'
     if (is('pay')) {
       if (requirePaymentMethod && !selectedPayment && !paymentFreeText.trim()) return 'Debes seleccionar un metodo de pago para continuar'
-      if (requirePaymentProof && !selectedStaffPay && (selectedPayment || paymentFreeText.trim()) && !paymentProofFile) return 'Debes subir el comprobante de pago para continuar'
+      if (requirePaymentProof && !selectedStaffPay && selectedPayment !== 'debito_inmediato' && (selectedPayment || paymentFreeText.trim()) && !paymentProofFile) return 'Debes subir el comprobante de pago para continuar'
     }
     return null
   }
@@ -3506,6 +3512,24 @@ export default function StoreShell({ store, products, categories = [], initialBc
       }
       const { order_number: orderNumber } = await orderRes.json().catch(() => ({ order_number: null })) as { order_number: number | null }
 
+      // Débito inmediato: pay it now, before the order goes anywhere. Giving
+      // up cancels the order (the sheet does that) and leaves the cart as is.
+      let debitNote = ''
+      if (selectedPayment === 'debito_inmediato') {
+        const r = await new Promise<BankDebitResult>(resolve => {
+          bankDebitDone.current = resolve
+          setBankDebit({ orderId: newOrderId, phone: customerPhone.trim() })
+        })
+        bankDebitDone.current = null
+        setBankDebit(null)
+        if (r.outcome === 'cancelled') {
+          setSubmitting(false)
+          setError('El pago no se completó y el pedido no se envió. Puedes intentarlo de nuevo o elegir otro método de pago.')
+          return
+        }
+        debitNote = r.outcome === 'paid' ? ` (PAGADO${r.reference ? ` · Ref ${r.reference}` : ''})` : ' (pago en verificación)'
+      }
+
       if (!collectCustomerData && !kioskActive) {
         try { localStorage.setItem('lyte-customer', JSON.stringify({ name: customerName.trim(), phone: customerPhone.trim() })) } catch {}
       }
@@ -3547,7 +3571,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
         ...(isNational && customerState.trim() ? [`*Estado:* ${customerState.trim()}`] : []),
         ...(isNational && selectedAgencyId ? [`*Agencia:* ${shippingAgencies.find(a => a.id === selectedAgencyId)?.name ?? ''}`] : []),
         ...(isNational && agencyAddress.trim() ? [`*Direccion de la agencia:* ${agencyAddress.trim()}`] : []),
-        ...(paymentLabel ? [`*Pago:* ${paymentLabel}`] : []),
+        ...(paymentLabel ? [`*Pago:* ${paymentLabel}${debitNote}`] : []),
         '', '*Productos:*',
         ...cartItems.flatMap(i => {
           const unitTotal = (i.price + i.extraPrice) * i.quantity
@@ -5330,7 +5354,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
                     {/* (kiosk: the store's instructions for paying cash / by terminal
                         are written for online orders — "send us a photo of the
                         bills" — so they're left out where the staff collects) */}
-                    {isSelected && !staffPayKind(m.type, m.label) && Object.keys(m.details ?? {}).length > 0 && (
+                    {isSelected && m.type === 'debito_inmediato' && (
+                      <div className="sf-staff-pay-note">
+                        Al confirmar, eliges tu banco, pones tu cédula y te llega un código por SMS para pagar aquí mismo. Sin comprobante.
+                      </div>
+                    )}
+                    {isSelected && !staffPayKind(m.type, m.label) && m.type !== 'debito_inmediato' && Object.keys(m.details ?? {}).length > 0 && (
                       <div className="sf-payment-info">
                         {Object.entries(m.details).map(([k, v]) => (
                           <div key={k} className="sf-payment-detail-row"><span>{k}</span><strong>{v as string}</strong></div>
@@ -5349,7 +5378,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                               : 'Pagas con tarjeta en el punto de venta cuando retires tu pedido.'}
                       </div>
                     )}
-                    {isSelected && requirePaymentProof && !staffPayKind(m.type, m.label) && (
+                    {isSelected && requirePaymentProof && !staffPayKind(m.type, m.label) && m.type !== 'debito_inmediato' && (
                       <div className="sf-proof-upload" onClick={e => e.stopPropagation()}>
                         <div className="sf-proof-total">
                           <span>Total a pagar</span>
@@ -5514,6 +5543,13 @@ export default function StoreShell({ store, products, categories = [], initialBc
         </Link>
         )}
       </footer>
+
+      {bankDebit && (
+        <BankDebit
+          orderId={bankDebit.orderId} phone={bankDebit.phone} kiosk={kioskActive}
+          onDone={r => bankDebitDone.current?.(r)}
+        />
+      )}
 
       {proofCamOpen && (
         <ProofCamera

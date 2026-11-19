@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { sealSecret } from '../../lib/bankSecrets'
+import { BncError, bncLogon, loadBncCreds } from '../../lib/bnc'
 
 // A store's bank API credentials (BNC's Débito inmediato for now), from the
 // dashboard: Checkout → Métodos de pago. Only the store's owner can see or
@@ -37,7 +38,7 @@ export async function GET(req: Request) {
   const who = await owner(req, storeId)
   if (!who) return Response.json({ error: 'No autorizado' }, { status: 403, headers: NO_STORE })
   const { data, error } = await who.supa.from('store_bank_credentials')
-    .select('environment, client_id, terminal, api_key_last4, updated_at')
+    .select('environment, client_id, child_client_id, branch_id, api_key_last4, updated_at')
     .eq('store_id', storeId!).eq('provider', provider).maybeSingle()
   if (error) return Response.json({ error: error.message }, { status: 500, headers: NO_STORE })
   if (!data) return Response.json({ connected: false }, { headers: NO_STORE })
@@ -45,7 +46,8 @@ export async function GET(req: Request) {
     connected: true,
     environment: data.environment,
     clientId: mask(data.client_id),
-    terminal: data.terminal,
+    childClientId: data.child_client_id,
+    branchId: data.branch_id,
     keyEnding: data.api_key_last4,
     updatedAt: data.updated_at,
   }, { headers: NO_STORE })
@@ -60,29 +62,53 @@ export async function PUT(req: Request) {
   if (!who) return Response.json({ error: 'No autorizado' }, { status: 403, headers: NO_STORE })
 
   const environment = body.environment === 'production' ? 'production' : 'sandbox'
-  const apiKey = clean(body.apiKey, 4096)
-  const clientId = clean(body.clientId)
-  const terminal = clean(body.terminal, 64)
+  const apiKey = clean(body.apiKey, 4096)     // BNC: MasterKey
+  const clientId = clean(body.clientId)       // BNC: ClientGUID
+  const childClientId = clean(body.childClientId, 16).toUpperCase().replace(/[^A-Z0-9]/g, '')
+  const branchId = clean(body.branchId, 32)
 
   const { data: existing } = await who.supa.from('store_bank_credentials')
-    .select('store_id').eq('store_id', storeId).eq('provider', provider).maybeSingle()
-  // the key is needed the first time; later it can be left blank to keep it
-  if (!apiKey && !existing) return Response.json({ error: 'Falta la clave (API key) que te dio el banco' }, { status: 400, headers: NO_STORE })
+    .select('store_id, environment').eq('store_id', storeId).eq('provider', provider).maybeSingle()
+  // both are needed the first time; later either can be left blank to keep it
+  if (!apiKey && !existing) return Response.json({ error: 'Falta la MasterKey que te dio el banco' }, { status: 400, headers: NO_STORE })
+  if (!clientId && !existing) return Response.json({ error: 'Falta el ClientGUID que te dio el banco' }, { status: 400, headers: NO_STORE })
 
   const row: Record<string, unknown> = {
     store_id: storeId, provider, environment,
-    client_id: clientId || null, terminal: terminal || null,
+    child_client_id: childClientId || null, branch_id: branchId || null,
     updated_at: new Date().toISOString(), updated_by: who.userId,
   }
+  if (clientId) row.client_id = clientId
   if (apiKey) {
     try { row.api_key_enc = sealSecret(apiKey) } catch { return Response.json({ error: 'No se pudo guardar de forma segura' }, { status: 500, headers: NO_STORE }) }
     row.api_key_last4 = apiKey.slice(-4)
   }
+  // new keys or another server: the day's WorkingKey no longer applies
+  if (apiKey || clientId || existing?.environment !== environment) { row.working_key_enc = null; row.working_key_day = null }
   const { error } = existing
     ? await who.supa.from('store_bank_credentials').update(row).eq('store_id', storeId).eq('provider', provider)
     : await who.supa.from('store_bank_credentials').insert(row)
   if (error) return Response.json({ error: error.message }, { status: 500, headers: NO_STORE })
   return Response.json({ ok: true }, { headers: NO_STORE })
+}
+
+// "Probar conexión": a Logon with the saved credentials — charges nothing
+export async function POST(req: Request) {
+  const body = await req.json().catch(() => ({})) as Record<string, unknown>
+  const storeId = clean(body.storeId, 64)
+  if (body.action !== 'test') return Response.json({ error: 'Acción desconocida' }, { status: 400, headers: NO_STORE })
+  const who = await owner(req, storeId)
+  if (!who) return Response.json({ error: 'No autorizado' }, { status: 403, headers: NO_STORE })
+  let creds
+  try { creds = await loadBncCreds(who.supa, storeId) } catch { creds = null }
+  if (!creds) return Response.json({ error: 'Primero guarda el ClientGUID y la MasterKey' }, { status: 400, headers: NO_STORE })
+  try {
+    await bncLogon(who.supa, creds)
+    return Response.json({ ok: true }, { headers: NO_STORE })
+  } catch (e) {
+    const msg = e instanceof BncError ? e.message : 'No se pudo conectar con el banco'
+    return Response.json({ error: `BNC respondió: ${msg}` }, { status: 502, headers: NO_STORE })
+  }
 }
 
 export async function DELETE(req: Request) {

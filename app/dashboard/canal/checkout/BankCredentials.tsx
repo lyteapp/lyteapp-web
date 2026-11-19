@@ -6,14 +6,15 @@ import { supabase } from '../../../lib/supabase'
 // Checkout → Métodos de pago: where a store keeps the credentials its own
 // bank gives it for charging by API (BNC's Débito inmediato first). The
 // secret goes straight to the server (/api/bank-credentials) and never comes
-// back: once saved, this only shows "connected, ends in 1234". It doesn't
-// turn anything on in the checkout yet — that comes with the bank's docs.
+// back: once saved, this only shows "connected, ends in 1234". The checkout
+// charges with them when the "Débito inmediato (BNC)" method is on.
 
 type Status = {
   connected: boolean
   environment?: 'sandbox' | 'production'
   clientId?: string | null
-  terminal?: string | null
+  childClientId?: string | null
+  branchId?: string | null
   keyEnding?: string | null
   updatedAt?: string
 }
@@ -37,8 +38,11 @@ export default function BankCredentials({ storeId }: { storeId: string | null })
   const [environment, setEnvironment] = useState<'sandbox' | 'production'>('sandbox')
   const [clientId, setClientId] = useState('')
   const [apiKey, setApiKey] = useState('')
-  const [terminal, setTerminal] = useState('')
+  const [childClientId, setChildClientId] = useState('')
+  const [branchId, setBranchId] = useState('')
   const [busy, setBusy] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [testOk, setTestOk] = useState(false)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
 
@@ -50,7 +54,8 @@ export default function BankCredentials({ storeId }: { storeId: string | null })
     }
     setStatus(s)
     setEnvironment(s.environment ?? 'sandbox')
-    setTerminal(s.terminal ?? '')
+    setChildClientId(s.childClientId ?? '')
+    setBranchId(s.branchId ?? '')
   }, [])
   const fetchStatus = useCallback((): Promise<Status | Error> => (storeId
     ? call('GET', `/api/bank-credentials?storeId=${storeId}&provider=bnc`).then(s => s as Status, e => e as Error)
@@ -66,7 +71,7 @@ export default function BankCredentials({ storeId }: { storeId: string | null })
     if (!storeId) return
     setBusy(true); setError(''); setSaved(false)
     try {
-      await call('PUT', '/api/bank-credentials', { storeId, provider: 'bnc', environment, clientId, apiKey, terminal })
+      await call('PUT', '/api/bank-credentials', { storeId, provider: 'bnc', environment, clientId, apiKey, childClientId, branchId })
       setApiKey(''); setClientId(''); setEditing(false); setSaved(true)
       setTimeout(() => setSaved(false), 2500)
       await load()
@@ -78,10 +83,18 @@ export default function BankCredentials({ storeId }: { storeId: string | null })
     setBusy(true); setError('')
     try {
       await call('DELETE', `/api/bank-credentials?storeId=${storeId}&provider=bnc`)
-      setEditing(false); setApiKey(''); setClientId(''); setTerminal('')
+      setEditing(false); setApiKey(''); setClientId(''); setChildClientId(''); setBranchId('')
       await load()
     } catch (e) { setError((e as Error).message) }
     setBusy(false)
+  }
+
+  async function test() {
+    if (!storeId) return
+    setTesting(true); setError(''); setTestOk(false)
+    try { await call('POST', '/api/bank-credentials', { storeId, action: 'test' }); setTestOk(true) }
+    catch (e) { setError((e as Error).message) }
+    setTesting(false)
   }
 
   const connected = !!status?.connected
@@ -103,17 +116,19 @@ export default function BankCredentials({ storeId }: { storeId: string | null })
       </div>
 
       <div className="cn-toggle-hint" style={{ marginTop: 10 }}>
-        Guarda aquí las credenciales que te dio el banco para cobrar por Débito inmediato. Quedan guardadas cifradas en el servidor: nunca se muestran ni se envían al navegador. El cobro en el checkout se activa cuando terminemos la conexión con el banco.
+        Guarda aquí las credenciales que te dio BNC para cobrar por Débito inmediato. Quedan guardadas cifradas en el servidor: nunca se muestran ni se envían al navegador. Para cobrar, activa también el método &quot;Débito inmediato (BNC)&quot; arriba.
       </div>
 
       {connected && !editing && (
         <div className="cn-bank-summary">
-          <div><span>Clave</span><strong>•••• {status?.keyEnding}</strong></div>
-          {status?.clientId && <div><span>Identificador</span><strong>{status.clientId}</strong></div>}
-          {status?.terminal && <div><span>Terminal</span><strong>{status.terminal}</strong></div>}
+          {status?.clientId && <div><span>ClientGUID</span><strong>{status.clientId}</strong></div>}
+          <div><span>MasterKey</span><strong>•••• {status?.keyEnding}</strong></div>
+          {status?.childClientId && <div><span>ChildClientID</span><strong>{status.childClientId}</strong></div>}
+          {status?.branchId && <div><span>BranchID</span><strong>{status.branchId}</strong></div>}
           {when && <div><span>Guardado</span><strong>{when}</strong></div>}
           <div className="cn-bank-actions">
-            <button type="button" className="cn-pill-btn" onClick={() => { setEditing(true); setSaved(false) }}>Cambiar</button>
+            <button type="button" className="cn-pill-btn" disabled={testing} onClick={test}>{testing ? 'Probando…' : 'Probar conexión'}</button>
+            <button type="button" className="cn-pill-btn" onClick={() => { setEditing(true); setSaved(false); setTestOk(false) }}>Cambiar</button>
             <button type="button" className="cn-pill-btn cn-bank-remove" disabled={busy} onClick={remove}>Quitar</button>
           </div>
         </div>
@@ -127,21 +142,25 @@ export default function BankCredentials({ storeId }: { storeId: string | null })
             <button type="button" className={`cn-pill-btn${environment === 'production' ? ' selected' : ''}`} onClick={() => setEnvironment('production')}>Cobros reales</button>
           </div>
           <div className="cn-field">
-            <div className="cn-label">Clave / API key</div>
-            <input className="cn-input" type="password" autoComplete="off" spellCheck={false} value={apiKey} onChange={e => setApiKey(e.target.value)}
-              placeholder={connected ? 'Déjala vacía para mantener la actual' : 'La clave que te dio el banco'} />
-          </div>
-          <div className="cn-field">
-            <div className="cn-label">Identificador de cliente <span style={{ fontWeight: 400, color: '#94A3B8' }}>(si el banco te dio uno)</span></div>
+            <div className="cn-label">ClientGUID</div>
             <input className="cn-input" autoComplete="off" spellCheck={false} value={clientId} onChange={e => setClientId(e.target.value)}
-              placeholder={connected && status?.clientId ? 'Déjalo vacío para quitarlo, o escríbelo de nuevo' : 'Ej: Client ID / ClientGUID'} />
+              placeholder={connected ? 'Déjalo vacío para mantener el actual' : 'Ej: 4A074C46-DD4E-4E54-8010-B80A6A8758F4'} />
           </div>
           <div className="cn-field">
-            <div className="cn-label">Terminal o afiliación <span style={{ fontWeight: 400, color: '#94A3B8' }}>(opcional)</span></div>
-            <input className="cn-input" autoComplete="off" spellCheck={false} value={terminal} onChange={e => setTerminal(e.target.value)} placeholder="Si el banco te dio uno" />
+            <div className="cn-label">MasterKey</div>
+            <input className="cn-input" type="password" autoComplete="off" spellCheck={false} value={apiKey} onChange={e => setApiKey(e.target.value)}
+              placeholder={connected ? 'Déjala vacía para mantener la actual' : 'La llave maestra que te dio el banco'} />
+          </div>
+          <div className="cn-field">
+            <div className="cn-label">ChildClientID <span style={{ fontWeight: 400, color: '#94A3B8' }}>(solo si BNC te lo indicó)</span></div>
+            <input className="cn-input" autoComplete="off" spellCheck={false} value={childClientId} onChange={e => setChildClientId(e.target.value)} placeholder="RIF del asociado, ej: J000000000" />
+          </div>
+          <div className="cn-field">
+            <div className="cn-label">BranchID <span style={{ fontWeight: 400, color: '#94A3B8' }}>(solo si BNC te lo indicó)</span></div>
+            <input className="cn-input" autoComplete="off" spellCheck={false} value={branchId} onChange={e => setBranchId(e.target.value)} placeholder="Código de sucursal, ej: CCS001" />
           </div>
           <div className="cn-bank-actions">
-            <button type="button" className="cn-save-btn" disabled={busy || (!connected && !apiKey.trim())} onClick={save}>
+            <button type="button" className="cn-save-btn" disabled={busy || (!connected && (!apiKey.trim() || !clientId.trim()))} onClick={save}>
               {busy ? 'Guardando…' : 'Guardar credenciales'}
             </button>
             {connected && <button type="button" className="cn-pill-btn" onClick={() => { setEditing(false); setApiKey(''); setClientId(''); setError('') }}>Cancelar</button>}
@@ -150,7 +169,8 @@ export default function BankCredentials({ storeId }: { storeId: string | null })
       )}
 
       {error && <div className="cn-error" style={{ marginTop: 12 }}>{error}</div>}
-      {saved && <div className="cn-success" style={{ marginTop: 12 }}>Credenciales guardadas.</div>}
+      {saved && <div className="cn-success" style={{ marginTop: 12 }}>Credenciales guardadas. Usa &quot;Probar conexión&quot; para verificarlas.</div>}
+      {testOk && <div className="cn-success" style={{ marginTop: 12 }}>BNC aceptó las credenciales. La conexión funciona.</div>}
     </div>
   )
 }

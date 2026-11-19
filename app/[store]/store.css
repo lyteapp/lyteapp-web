@@ -3460,3 +3460,85 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
 .sf-co-steps .sf-co-suggest-name { font-size: 17px; }
 .sf-co-steps .sf-co-suggest-price { font-size: 16px; }
 .sf-co-steps .sf-co-suggest-add { min-height: 50px; font-size: 17px; border-radius: 14px; }
+
+/* ── Débito inmediato (BankDebit.tsx): pay the order with a code from the bank ── */
+.sf-debit-overlay {
+  position: fixed; inset: 0; z-index: 2000;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex; align-items: flex-end; justify-content: center;
+  animation: sf-debit-fade .2s ease;
+}
+@keyframes sf-debit-fade { from { opacity: 0 } to { opacity: 1 } }
+.sf-debit-sheet {
+  --sf-debit-accent: var(--sf-checkout-accent-color, var(--sf-accent-color, #7C3AED));
+  width: 100%; max-width: 480px; max-height: 92dvh; overflow-y: auto;
+  background: #fff; color: #0F172A;
+  border-radius: 22px 22px 0 0;
+  padding: 22px 20px calc(18px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 12px;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+@media (min-width: 640px) {
+  .sf-debit-overlay { align-items: center; }
+  .sf-debit-sheet { border-radius: 22px; }
+}
+.sf-debit-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.sf-debit-title { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; }
+.sf-debit-amount { font-size: 19px; font-weight: 800; color: var(--sf-debit-accent); white-space: nowrap; }
+.sf-debit-sub { font-size: 13.5px; color: #64748B; line-height: 1.4; }
+.sf-debit-field { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; font-weight: 700; color: #475569; }
+.sf-debit-field select, .sf-debit-field input, .sf-debit-code {
+  width: 100%; box-sizing: border-box; height: 46px; padding: 0 12px;
+  border: 1.5px solid #E2E8F0; border-radius: 12px; background: #fff; color: #0F172A;
+  font-size: 16px; font-weight: 500; font-family: inherit; outline: none;
+}
+.sf-debit-field select:focus, .sf-debit-field input:focus, .sf-debit-code:focus { border-color: var(--sf-debit-accent); }
+.sf-debit-row { display: flex; gap: 8px; }
+.sf-debit-row .sf-debit-idtype { width: 72px; flex-shrink: 0; }
+.sf-debit-tabs { display: flex; gap: 6px; background: #F1F5F9; border-radius: 12px; padding: 4px; }
+.sf-debit-tabs button {
+  flex: 1; height: 36px; border: 0; border-radius: 9px; background: transparent;
+  font: inherit; font-size: 13.5px; font-weight: 700; color: #64748B; cursor: pointer;
+}
+.sf-debit-tabs button.on { background: #fff; color: #0F172A; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12); }
+.sf-debit-code { height: 60px; text-align: center; font-size: 28px; font-weight: 800; letter-spacing: 0.3em; }
+.sf-debit-main {
+  height: 52px; border: 0; border-radius: 14px; background: var(--sf-debit-accent); color: #fff;
+  font: inherit; font-size: 16px; font-weight: 800; cursor: pointer; margin-top: 4px;
+}
+.sf-debit-main:disabled { opacity: .45; cursor: default; }
+.sf-debit-links { display: flex; justify-content: space-between; gap: 8px; }
+.sf-debit-links button, .sf-debit-cancel {
+  border: 0; background: none; padding: 8px 2px; font: inherit; font-size: 13.5px; font-weight: 700;
+  color: var(--sf-debit-accent); cursor: pointer;
+}
+.sf-debit-links button:disabled { color: #94A3B8; cursor: default; }
+.sf-debit-cancel { color: #64748B; align-self: center; }
+.sf-debit-error { background: #FEF2F2; color: #B91C1C; border-radius: 10px; padding: 10px 12px; font-size: 13.5px; font-weight: 600; line-height: 1.35; }
+.sf-debit-wait { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 18px 0 8px; font-size: 15px; font-weight: 700; }
+.sf-debit-spinner {
+  width: 42px; height: 42px; border-radius: 50%;
+  border: 4px solid color-mix(in srgb, var(--sf-debit-accent) 18%, transparent);
+  border-top-color: var(--sf-debit-accent);
+  animation: sf-debit-spin .8s linear infinite;
+}
+@keyframes sf-debit-spin { to { transform: rotate(360deg) } }
+.sf-debit-check {
+  width: 64px; height: 64px; border-radius: 50%; background: #10B981; color: #fff;
+  display: flex; align-items: center; justify-content: center; font-size: 34px; font-weight: 800;
+}
+.sf-debit-ok { font-size: 20px; font-weight: 800; }
+
+/* a kiosk: centered and bigger, to be used standing at arm's length */
+.sf-debit-overlay.kiosk { align-items: center; }
+.sf-debit-overlay.kiosk .sf-debit-sheet { max-width: 620px; border-radius: 28px; padding: 32px 32px 26px; gap: 16px; }
+.sf-debit-overlay.kiosk .sf-debit-title, .sf-debit-overlay.kiosk .sf-debit-amount { font-size: 28px; }
+.sf-debit-overlay.kiosk .sf-debit-sub { font-size: 17px; }
+.sf-debit-overlay.kiosk .sf-debit-field { font-size: 15px; }
+.sf-debit-overlay.kiosk .sf-debit-field select, .sf-debit-overlay.kiosk .sf-debit-field input { height: 60px; font-size: 21px; border-radius: 14px; }
+.sf-debit-overlay.kiosk .sf-debit-row .sf-debit-idtype { width: 92px; }
+.sf-debit-overlay.kiosk .sf-debit-tabs button { height: 48px; font-size: 17px; }
+.sf-debit-overlay.kiosk .sf-debit-code { height: 78px; font-size: 38px; }
+.sf-debit-overlay.kiosk .sf-debit-main { height: 68px; font-size: 21px; border-radius: 18px; }
+.sf-debit-overlay.kiosk .sf-debit-links button, .sf-debit-overlay.kiosk .sf-debit-cancel { font-size: 17px; padding: 12px 4px; }
+.sf-debit-overlay.kiosk .sf-debit-error { font-size: 17px; }

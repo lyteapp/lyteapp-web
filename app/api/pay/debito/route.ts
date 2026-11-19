@@ -146,7 +146,7 @@ export async function POST(req: Request) {
       // ("Se envió una solicitud de token al cliente.")
       const st = bncField(r.value, 'Status').toUpperCase()
       const code = bncField(r.value, 'Code').toUpperCase()
-      const sent = r.ok && st !== 'RJCT' && (st === 'ACCP' || code === 'ACCP' || (!st && !code))
+      const sent = r.ok && !/RJCT|RECHAZ/.test(st) && (st === 'ACCP' || code === 'ACCP' || (!st && !code))
       if (sent) {
         await touch({ status: 'token_sent', reject_code: null, reject_description: null, last_response: r.raw })
         return json({ sent: true, amount })
@@ -191,8 +191,11 @@ export async function POST(req: Request) {
       const code = bncField(r.value, 'Code').toUpperCase()
       const reference = bncField(r.value, 'Reference') || null
       const desc = bncField(r.value, 'RejectDescription') || r.message
-      // Paid only on an explicit ACCP (as Status, or as Code with no Status)
-      if (r.ok && (st === 'ACCP' || (!st && code === 'ACCP'))) {
+      // Paid only on an explicit ACCP: as Status, or as Code next to a Status
+      // that isn't a rejection or a wait (BNC's QA server writes Status as a
+      // sentence: "Mensaje Procesado De Forma Exitosa")
+      const notFinal = /RJCT|PEND|AC00|RECHAZ|PENDIENTE|ANULAD/.test(st)
+      if (r.ok && (st === 'ACCP' || (code === 'ACCP' && !notFinal))) {
         await touch({ status: 'paid', bank_reference: reference, reject_code: null, reject_description: null, last_response: r.raw })
         await supa.from('orders').update({
           payment_status: 'approved',
@@ -207,7 +210,7 @@ export async function POST(req: Request) {
         })
         return json({ paid: true, reference, amount })
       }
-      if (r.ok && st !== 'RJCT' && !(code && code !== 'ACCP' && !st)) {
+      if (r.ok && !/RJCT|RECHAZ|ANULAD/.test(st) && !(code && code !== 'ACCP' && code !== 'AC00')) {
         // e.g. AC00 / PEND, or an OK without a verdict: not decided yet
         await touch({ status: 'unknown', bank_reference: reference, reject_code: code, reject_description: desc, last_response: r.raw })
         return fail('El banco todavía está procesando el pago. No pagues otra vez: la tienda confirmará cuando llegue.', 202, { unknown: true })

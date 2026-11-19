@@ -399,7 +399,7 @@ type Additional     = { name: string; price: number; calories?: number; fat?: nu
 type ColorVariant   = { label: string; color: string; imageUrl: string; imageUrls?: string[] }
 type NutritionInfo  = { enabled?: boolean; calories?: number; fat?: number; protein?: number; carbs?: number; diets?: string[] }
 // Dietary badges set on the product (with its nutrition info)
-const DIET_LABELS: Record<string, string> = { GF: 'Sin gluten', VG: 'Vegano', V: 'Vegetariano', P: 'Pescetariano', SA: 'Sin azúcar' }
+const DIET_LABELS: Record<string, string> = { GF: 'Sin gluten', VG: 'Vegano', V: 'Vegetariano', P: 'Pescetariano', SA: 'Sin azúcar añadida' }
 type ProductOptions = {
   variables?:     VariableGroup[]
   colors?:        string[]

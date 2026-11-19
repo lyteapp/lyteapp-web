@@ -33,7 +33,7 @@ const DIETS = [
   { code: 'VG', label: 'Vegano' },
   { code: 'V',  label: 'Vegetariano' },
   { code: 'P',  label: 'Pescetariano' },
-  { code: 'SA', label: 'Sin azúcar' },
+  { code: 'SA', label: 'Sin azúcar añadida' },
 ]
 type ProductOptions = {
   variables?:     VariableGroup[]

@@ -3421,3 +3421,13 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
 .sf-modal-kiosk[style*="--sf-kmodal-text"] :is(.sf-modal-name, .sf-modal-qty span, .sf-modal-qty button) { color: var(--sf-kmodal-text); }
 .sf-modal-kiosk[style*="--sf-kmodal-text"] .sf-modal-desc { color: color-mix(in srgb, var(--sf-kmodal-text) 62%, transparent); }
 .sf-modal-kiosk[style*="--sf-kmodal-text"] .sf-modal-qty { border-color: color-mix(in srgb, var(--sf-kmodal-text) 18%, transparent); }
+
+/* Kiosk confirmation: "Nuevo pedido" hands the screen to the next customer
+   right away (back to the welcome page, clean) */
+.sf-confirm-btn.sf-confirm-next {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 64px; margin-top: 8px; border-radius: 18px; font-size: 20px; font-weight: 700;
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease, filter 0.15s;
+}
+.sf-confirm-btn.sf-confirm-next:active { transform: scale(0.97); }

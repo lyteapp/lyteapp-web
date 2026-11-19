@@ -463,7 +463,7 @@ function cartItemCalories(item: CartItem): number | null {
 const PM_LABELS: Record<string, string> = {
   pago_movil: 'Pago Móvil', zelle: 'Zelle', paypal: 'PayPal', efectivo_usd: 'Efectivo USD',
   efectivo_bs: 'Efectivo Bs', usdt: 'USDT / Cripto', binance: 'Binance Pay',
-  transferencia: 'Transferencia Bs', punto_venta: 'Punto de venta',
+  transferencia: 'Transferencia Bs', punto_venta: 'Punto de venta', efectivo: 'Efectivo',
 }
 
 function parsePaymentMethods(raw: unknown): PaymentMethod[] {
@@ -5258,7 +5258,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
                       <div className={`sf-payment-radio${isSelected ? ' on' : ''}`} />
                       <span className="sf-payment-label">{m.label}</span>
                     </div>
-                    {isSelected && Object.keys(m.details ?? {}).length > 0 && (
+                    {/* (kiosk: the store's instructions for paying cash / by terminal
+                        are written for online orders — "send us a photo of the
+                        bills" — so they're left out where the staff collects) */}
+                    {isSelected && !staffPayKind(m.type, m.label) && Object.keys(m.details ?? {}).length > 0 && (
                       <div className="sf-payment-info">
                         {Object.entries(m.details).map(([k, v]) => (
                           <div key={k} className="sf-payment-detail-row"><span>{k}</span><strong>{v as string}</strong></div>

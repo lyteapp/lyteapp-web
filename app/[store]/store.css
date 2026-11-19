@@ -3451,12 +3451,3 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
 .sf-co-steps .sf-co-suggest-name { font-size: 17px; }
 .sf-co-steps .sf-co-suggest-price { font-size: 16px; }
 .sf-co-steps .sf-co-suggest-add { min-height: 50px; font-size: 17px; border-radius: 14px; }
-
-/* Kiosk diet filter: an option of a "build your own" product that doesn't
-   fit the filter — greyed out, dashed, can't be picked, and says why */
-.sf-modal-chip.sf-chip-blocked {
-  cursor: not-allowed; background: #F1F5F9 !important; color: #94A3B8 !important; border-style: dashed !important;
-  flex-direction: column; align-items: center; line-height: 1.15; box-shadow: none !important;
-}
-.sf-modal-chip.sf-chip-blocked :is(.sf-chip-diets, .sf-modal-chip-price, .sf-modal-chip-nutrition-dot) { opacity: 0.4; }
-.sf-chip-blocked-note { display: block; margin-top: 2px; font-size: 0.7em; font-weight: 800; color: #B91C1C; }

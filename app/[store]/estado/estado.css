@@ -2,12 +2,16 @@
 
 body { background: #F1F5F9; }
 
+/* Everything on the board is sized from this one font size, which grows
+   with the screen: a little bigger than before on a phone, ~1.2x on a
+   1280px PC, up to ~1.8x on a Full HD TV — so it reads from a distance */
 .oq-wrap {
+  font-size: clamp(17px, 1.5vw, 32px);
   min-height: 100svh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 32px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+  padding: 2em 1em calc(0.6em + env(safe-area-inset-bottom, 0px));
   position: relative;
 }
 
@@ -36,50 +40,51 @@ body { background: #F1F5F9; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 28px;
+  gap: 0.5em;
+  margin-bottom: 1.75em;
   text-align: center;
 }
 
-.oq-logo { width: 56px; height: 56px; border-radius: 16px; object-fit: cover; }
+.oq-logo { width: 3.5em; height: 3.5em; border-radius: 1em; object-fit: cover; }
 
 .oq-logo-fallback {
-  width: 56px; height: 56px;
-  border-radius: 16px;
+  /* (in its own 1.2em font size: the same 3.5em box as the logo) */
+  width: 2.92em; height: 2.92em;
+  border-radius: 0.83em;
   background: color-mix(in srgb, var(--oq-accent, #7C3AED) 12%, white);
   color: var(--oq-accent, #7C3AED);
   display: flex; align-items: center; justify-content: center;
-  font-size: 19px; font-weight: 700; letter-spacing: -0.02em;
+  font-size: 1.2em; font-weight: 700; letter-spacing: -0.02em;
 }
 
-.oq-title { font-size: 21px; font-weight: 800; color: #0F172A; letter-spacing: -0.02em; }
-.oq-subtitle { font-size: 13px; color: #94A3B8; }
+.oq-title { font-size: 1.75em; font-weight: 800; color: #0F172A; letter-spacing: -0.02em; line-height: 1.15; }
+.oq-subtitle { font-size: 0.9em; color: #94A3B8; }
 
 .oq-board {
   width: 100%;
-  max-width: 900px;
+  max-width: 60em;
   display: grid;
   grid-template-columns: 1fr;
-  gap: 24px;
+  gap: 1.5em;
 }
 @media (min-width: 640px) {
   .oq-board { grid-template-columns: 1fr 1fr; }
 }
 
-.oq-column { display: flex; flex-direction: column; gap: 10px; }
+.oq-column { display: flex; flex-direction: column; gap: 0.65em; }
 
-.oq-column-head { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
-.oq-column-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.oq-column-label { font-size: 12px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.06em; }
+.oq-column-head { display: flex; align-items: center; gap: 0.5em; margin-bottom: 0.15em; }
+.oq-column-dot { width: 0.6em; height: 0.6em; border-radius: 50%; flex-shrink: 0; }
+.oq-column-label { font-size: 1em; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.06em; }
 .oq-column-count {
-  font-size: 12px; font-weight: 700; color: #94A3B8;
-  background: white; border-radius: 100px; padding: 1px 9px; margin-left: auto;
+  font-size: 0.95em; font-weight: 700; color: #94A3B8;
+  background: white; border-radius: 100px; padding: 0.05em 0.6em; margin-left: auto;
 }
 
 .oq-card {
   background: white;
-  border-radius: 16px;
-  padding: 14px 16px;
+  border-radius: 1em;
+  padding: 0.9em 1em;
   box-shadow: 0 2px 12px rgba(15,23,42,0.06);
   animation: oq-card-in 0.3s ease both;
 }
@@ -87,13 +92,13 @@ body { background: #F1F5F9; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 0.65em;
 }
 
 /* Progress bar: fills in the store's color as the order moves along
    (lib/queueSteps), with moving stripes while it is still being made */
 .oq-progress {
-  margin-top: 12px; height: 8px; border-radius: 100px; overflow: hidden;
+  margin-top: 0.75em; height: 0.5em; border-radius: 100px; overflow: hidden;
   background: color-mix(in srgb, var(--oq-accent, #7C3AED) 14%, #F1F5F9);
 }
 .oq-progress-fill {
@@ -113,7 +118,7 @@ body { background: #F1F5F9; }
 @keyframes oq-progress-grow { from { width: 0; } }
 @keyframes oq-progress-stripes { to { background-position: 16px 0; } }
 .oq-progress-label {
-  margin-top: 6px; font-size: 11px; font-weight: 700;
+  margin-top: 0.4em; font-size: 0.8em; font-weight: 700;
   color: var(--oq-accent, #7C3AED);
 }
 @media (prefers-reduced-motion: reduce) {
@@ -125,25 +130,25 @@ body { background: #F1F5F9; }
 }
 
 .oq-card-code {
-  font-size: 12px; font-weight: 700;
-  border-radius: 6px; padding: 2px 8px;
+  font-size: 0.9em; font-weight: 700;
+  border-radius: 0.4em; padding: 0.15em 0.55em;
   flex-shrink: 0;
 }
 
-.oq-card-name { font-size: 14px; font-weight: 600; color: #0F172A; }
-.oq-card-time { font-size: 11px; color: #94A3B8; flex-shrink: 0; }
+.oq-card-name { font-size: 1.25em; font-weight: 700; color: #0F172A; line-height: 1.2; }
+.oq-card-time { font-size: 0.8em; color: #94A3B8; flex-shrink: 0; }
 
 .oq-empty {
-  font-size: 13px; color: #CBD5E1;
-  padding: 18px 0; text-align: center;
+  font-size: 0.9em; color: #CBD5E1;
+  padding: 1.1em 0; text-align: center;
   background: rgba(255,255,255,0.5);
-  border-radius: 16px;
+  border-radius: 1em;
   border: 1.5px dashed rgba(15,23,42,0.08);
 }
 
 /* pinned to the bottom of the screen (pushed down by the board above it;
    with a long list it simply follows it) */
-.oq-footer { margin-top: auto; padding-top: 32px; font-size: 11px; color: #94A3B8; }
+.oq-footer { margin-top: auto; padding-top: 2em; font-size: 0.7em; color: #94A3B8; }
 .oq-footer a { color: var(--oq-accent, #7C3AED); text-decoration: none; font-weight: 600; }
 
 /* "Retíralo en el casillero N": big, centred, for whoever is watching the
@@ -154,27 +159,28 @@ body { background: #F1F5F9; }
   animation: oq-announce-fade 0.25s ease both; cursor: pointer;
 }
 .oq-announce-card {
-  position: relative; overflow: hidden; width: min(560px, 100%);
-  padding: 40px 32px 44px; border-radius: 32px; background: white; text-align: center;
+  position: relative; overflow: hidden; width: min(34em, 100%);
+  padding: 2.4em 2em 2.7em; border-radius: 2em; background: white; text-align: center;
   box-shadow: 0 30px 80px rgba(15,23,42,0.35);
   animation: oq-announce-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 .oq-announce-kicker {
-  font-size: 15px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+  font-size: 1em; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
   color: var(--oq-accent, #7C3AED);
 }
 .oq-announce-name {
-  margin-top: 10px; font-size: clamp(40px, 9vw, 72px); font-weight: 800; letter-spacing: -0.03em;
+  margin-top: 0.15em; font-size: clamp(2.4em, 9vw, 4.5em); font-weight: 800; letter-spacing: -0.03em;
   line-height: 1.05; color: #0F172A; overflow-wrap: anywhere;
 }
-.oq-announce-code { margin-top: 6px; font-size: 18px; font-weight: 700; color: #94A3B8; }
-.oq-announce-locker { margin-top: 28px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
-.oq-announce-locker-label { font-size: 18px; font-weight: 600; color: #475569; }
+.oq-announce-code { margin-top: 0.35em; font-size: 1.1em; font-weight: 700; color: #94A3B8; }
+.oq-announce-locker { margin-top: 1.7em; display: flex; flex-direction: column; align-items: center; gap: 0.7em; }
+.oq-announce-locker-label { font-size: 1.15em; font-weight: 600; color: #475569; }
 .oq-announce-locker-num {
-  min-width: 150px; height: 150px; padding: 0 28px; border-radius: 36px;
+  /* (in its own, big font size: 1.56em = the old 150px box for 96px digits) */
+  min-width: 1.56em; height: 1.56em; padding: 0 0.3em; border-radius: 0.375em;
   display: flex; align-items: center; justify-content: center;
   background: var(--oq-accent, #7C3AED); color: white;
-  font-size: 96px; font-weight: 800; line-height: 1; letter-spacing: -0.04em;
+  font-size: 5.8em; font-weight: 800; line-height: 1; letter-spacing: -0.04em;
   box-shadow: 0 16px 40px color-mix(in srgb, var(--oq-accent, #7C3AED) 40%, transparent);
   animation: oq-announce-pulse 1.4s ease-in-out 0.5s 3;
 }

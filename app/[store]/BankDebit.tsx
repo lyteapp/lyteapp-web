@@ -25,12 +25,19 @@ const phone12 = (d: string) => (d.startsWith('58') ? d : d.startsWith('0') ? `58
 const fmtBs = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 async function api(body: Record<string, unknown>) {
+  // (a dropped connection is an answer too, so no step is left hanging)
   const r = await fetch('/api/pay/debito', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), cache: 'no-store' })
+    .catch(() => null)
+  if (!r) return { status: 0, ok: false, error: 'Sin conexión. Revisa tu internet e intenta de nuevo.' } as { status: number; ok: boolean; error?: string; amount?: number; paid?: boolean; reference?: string | null; unknown?: boolean; sent?: boolean; confirming?: boolean }
   const j = await r.json().catch(() => ({})) as Record<string, unknown>
-  return { status: r.status, ok: r.ok, ...j } as { status: number; ok: boolean; error?: string; amount?: number; paid?: boolean; reference?: string | null; unknown?: boolean; sent?: boolean }
+  return { status: r.status, ok: r.ok, ...j } as { status: number; ok: boolean; error?: string; amount?: number; paid?: boolean; reference?: string | null; unknown?: boolean; sent?: boolean; confirming?: boolean }
 }
 
-type Step = 'form' | 'code' | 'charging' | 'paid' | 'unknown'
+type Step = 'form' | 'code' | 'charging' | 'confirming' | 'paid' | 'unknown'
+
+// after the bank starts the debit, how long to keep asking for its final status
+const CONFIRM_EVERY_MS = 4000
+const CONFIRM_TRIES = 40
 
 export default function BankDebit({ orderId, phone, kiosk, onDone }: {
   orderId: string; phone: string; kiosk: boolean; onDone: (r: BankDebitResult) => void
@@ -90,9 +97,30 @@ export default function BankDebit({ orderId, phone, kiosk, onDone }: {
     const r = await api({ action: 'charge', orderId, code })
     setBusy(false)
     if (r.paid) { setReference(r.reference ?? null); setStep('paid'); return }
+    if (r.confirming) { setReference(r.reference ?? null); setStep('confirming'); return }
     if (r.unknown) { setError(r.error || ''); setStep('unknown'); return }
     setError(r.error || 'El banco no aprobó el pago'); setStep('code')
   }
+
+  // the debit was started: ask for its final status until the bank decides
+  useEffect(() => {
+    if (step !== 'confirming') return
+    let alive = true
+    let tries = 0
+    const tick = async () => {
+      if (!alive) return
+      tries++
+      const r = await api({ action: 'status', orderId })
+      if (!alive) return
+      if (r.paid) { setReference(r.reference ?? null); setStep('paid'); return }
+      if (r.status === 422) { setError(r.error || 'El banco no aprobó el pago'); setCode(''); setStep('code'); return }
+      if (r.status === 0 && tries < CONFIRM_TRIES) { setTimeout(tick, CONFIRM_EVERY_MS); return }
+      if (r.unknown || tries >= CONFIRM_TRIES) { setError(r.unknown ? (r.error || '') : ''); setStep('unknown'); return }
+      setTimeout(tick, CONFIRM_EVERY_MS)
+    }
+    const t = setTimeout(tick, CONFIRM_EVERY_MS)
+    return () => { alive = false; clearTimeout(t) }
+  }, [step, orderId])
 
   async function cancel() {
     if (!window.confirm('¿Cancelar el pago? Tu pedido no se enviará.')) return
@@ -173,6 +201,14 @@ export default function BankDebit({ orderId, phone, kiosk, onDone }: {
             <div className="sf-debit-spinner" />
             <div>Procesando el pago con tu banco…</div>
             <div className="sf-debit-sub">Puede tardar hasta 2 minutos. No cierres esta pantalla.</div>
+          </div>
+        )}
+
+        {step === 'confirming' && (
+          <div className="sf-debit-wait">
+            <div className="sf-debit-spinner" />
+            <div>Confirmando el pago con tu banco…</div>
+            <div className="sf-debit-sub">Tu banco ya recibió la orden. Esperamos su confirmación final, no cierres esta pantalla.</div>
           </div>
         )}
 

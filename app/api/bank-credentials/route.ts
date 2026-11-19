@@ -38,7 +38,7 @@ export async function GET(req: Request) {
   const who = await owner(req, storeId)
   if (!who) return Response.json({ error: 'No autorizado' }, { status: 403, headers: NO_STORE })
   const { data, error } = await who.supa.from('store_bank_credentials')
-    .select('environment, client_id, child_client_id, branch_id, api_key_last4, updated_at')
+    .select('environment, client_id, child_client_id, branch_id, merchant_rif, api_key_last4, updated_at')
     .eq('store_id', storeId!).eq('provider', provider).maybeSingle()
   if (error) return Response.json({ error: error.message }, { status: 500, headers: NO_STORE })
   if (!data) return Response.json({ connected: false }, { headers: NO_STORE })
@@ -47,6 +47,7 @@ export async function GET(req: Request) {
     environment: data.environment,
     clientId: mask(data.client_id),
     childClientId: data.child_client_id,
+    merchantRif: data.merchant_rif,
     branchId: data.branch_id,
     keyEnding: data.api_key_last4,
     updatedAt: data.updated_at,
@@ -66,6 +67,9 @@ export async function PUT(req: Request) {
   const clientId = clean(body.clientId)       // BNC: ClientGUID
   const childClientId = clean(body.childClientId, 16).toUpperCase().replace(/[^A-Z0-9]/g, '')
   const branchId = clean(body.branchId, 32)
+  // the store's RIF (J-50889503-7 → J508895037): BNC asks for it to confirm a debit's final status
+  const merchantRif = clean(body.merchantRif, 20).toUpperCase().replace(/[^A-Z0-9]/g, '')
+  if (merchantRif && !/^[VEJPG]\d{5,9}$/.test(merchantRif)) return Response.json({ error: 'Revisa el RIF (ej: J-12345678-9)' }, { status: 400, headers: NO_STORE })
 
   const { data: existing } = await who.supa.from('store_bank_credentials')
     .select('store_id, environment').eq('store_id', storeId).eq('provider', provider).maybeSingle()
@@ -75,7 +79,7 @@ export async function PUT(req: Request) {
 
   const row: Record<string, unknown> = {
     store_id: storeId, provider, environment,
-    child_client_id: childClientId || null, branch_id: branchId || null,
+    child_client_id: childClientId || null, branch_id: branchId || null, merchant_rif: merchantRif || null,
     updated_at: new Date().toISOString(), updated_by: who.userId,
   }
   if (clientId) row.client_id = clientId

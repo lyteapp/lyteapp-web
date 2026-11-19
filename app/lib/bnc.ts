@@ -52,6 +52,8 @@ export type BncCreds = {
   masterKey: string
   childClientId: string | null
   branchId: string | null
+  /** the store's RIF (ClientID), for SIMF/StatusOperation */
+  merchantRif: string | null
   workingKey: string | null
   workingKeyDay: string | null
 }
@@ -62,7 +64,7 @@ export class BncError extends Error {
 
 export async function loadBncCreds(supa: SupabaseClient, storeId: string): Promise<BncCreds | null> {
   const { data } = await supa.from('store_bank_credentials')
-    .select('environment, client_id, api_key_enc, child_client_id, branch_id, working_key_enc, working_key_day')
+    .select('environment, client_id, api_key_enc, child_client_id, branch_id, merchant_rif, working_key_enc, working_key_day')
     .eq('store_id', storeId).eq('provider', 'bnc').maybeSingle()
   if (!data || !data.client_id || !data.api_key_enc) return null
   let workingKey: string | null = null
@@ -74,6 +76,7 @@ export async function loadBncCreds(supa: SupabaseClient, storeId: string): Promi
     masterKey: openSecret(data.api_key_enc),
     childClientId: data.child_client_id || null,
     branchId: data.branch_id || null,
+    merchantRif: data.merchant_rif || null,
     workingKey,
     workingKeyDay: data.working_key_day || null,
   }

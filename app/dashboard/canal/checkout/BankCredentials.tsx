@@ -15,6 +15,7 @@ type Status = {
   clientId?: string | null
   childClientId?: string | null
   branchId?: string | null
+  merchantRif?: string | null
   keyEnding?: string | null
   updatedAt?: string
 }
@@ -40,6 +41,7 @@ export default function BankCredentials({ storeId, onConnected }: { storeId: str
   const [apiKey, setApiKey] = useState('')
   const [childClientId, setChildClientId] = useState('')
   const [branchId, setBranchId] = useState('')
+  const [merchantRif, setMerchantRif] = useState('')
   const [busy, setBusy] = useState(false)
   const [testing, setTesting] = useState(false)
   const [testOk, setTestOk] = useState(false)
@@ -58,6 +60,7 @@ export default function BankCredentials({ storeId, onConnected }: { storeId: str
     setEnvironment(s.environment ?? 'sandbox')
     setChildClientId(s.childClientId ?? '')
     setBranchId(s.branchId ?? '')
+    setMerchantRif(s.merchantRif ?? '')
   }, [onConnected])
   const fetchStatus = useCallback((): Promise<Status | Error> => (storeId
     ? call('GET', `/api/bank-credentials?storeId=${storeId}&provider=bnc`).then(s => s as Status, e => e as Error)
@@ -73,7 +76,7 @@ export default function BankCredentials({ storeId, onConnected }: { storeId: str
     if (!storeId) return
     setBusy(true); setError(''); setSaved(false)
     try {
-      await call('PUT', '/api/bank-credentials', { storeId, provider: 'bnc', environment, clientId, apiKey, childClientId, branchId })
+      await call('PUT', '/api/bank-credentials', { storeId, provider: 'bnc', environment, clientId, apiKey, childClientId, branchId, merchantRif })
       setApiKey(''); setClientId(''); setEditing(false); setSaved(true)
       setTimeout(() => setSaved(false), 2500)
       await load()
@@ -125,6 +128,7 @@ export default function BankCredentials({ storeId, onConnected }: { storeId: str
         <div className="cn-bank-summary">
           {status?.clientId && <div><span>ClientGUID</span><strong>{status.clientId}</strong></div>}
           <div><span>MasterKey</span><strong>•••• {status?.keyEnding}</strong></div>
+          <div><span>RIF</span><strong>{status?.merchantRif || 'Falta — ponlo para confirmar cada pago'}</strong></div>
           {status?.childClientId && <div><span>ChildClientID</span><strong>{status.childClientId}</strong></div>}
           {status?.branchId && <div><span>BranchID</span><strong>{status.branchId}</strong></div>}
           {when && <div><span>Guardado</span><strong>{when}</strong></div>}
@@ -152,6 +156,11 @@ export default function BankCredentials({ storeId, onConnected }: { storeId: str
             <div className="cn-label">MasterKey</div>
             <input className="cn-input" type="password" autoComplete="off" spellCheck={false} value={apiKey} onChange={e => setApiKey(e.target.value)}
               placeholder={connected ? 'Déjala vacía para mantener la actual' : 'La llave maestra que te dio el banco'} />
+          </div>
+          <div className="cn-field">
+            <div className="cn-label">RIF del comercio</div>
+            <input className="cn-input" autoComplete="off" spellCheck={false} value={merchantRif} onChange={e => setMerchantRif(e.target.value)} placeholder="Ej: J-12345678-9" />
+            <div className="cn-toggle-hint" style={{ marginTop: 6 }}>El de la cuenta BNC que cobra. Con él, lyteapp confirma con el banco el estado final de cada pago antes de darlo por pagado.</div>
           </div>
           <div className="cn-field">
             <div className="cn-label">ChildClientID <span style={{ fontWeight: 400, color: '#94A3B8' }}>(solo si BNC te lo indicó)</span></div>

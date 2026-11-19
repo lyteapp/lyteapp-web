@@ -211,6 +211,8 @@ export default function CheckoutPage() {
     METHODS.map(m => ({ ...m, enabled: false, values: {} }))
   )
   const [openMethod, setOpenMethod] = useState<string | null>(null)
+  // whether THIS store has saved its own BNC credentials (Débito inmediato needs them)
+  const [bankConnected, setBankConnected] = useState(false)
   const [savingPagos, setSavingPagos] = useState(false)
   const [successPagos, setSuccessPagos] = useState(false)
   const [pagosError, setPagosError] = useState('')
@@ -370,10 +372,15 @@ export default function CheckoutPage() {
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 13, fontWeight: 600, color: '#0F172A' }}>{m.name}</div>
-                        <div style={{ fontSize: 11, color: m.enabled ? 'var(--lyte-navy)' : '#94A3B8' }}>{m.enabled ? 'Activo' : 'Inactivo'}</div>
+                        <div style={{ fontSize: 11, color: m.enabled ? 'var(--lyte-navy)' : '#94A3B8' }}>
+                          {m.enabled ? 'Activo' : m.id === 'debito_inmediato' && !bankConnected ? 'Requiere tus credenciales de BNC (abajo)' : 'Inactivo'}
+                        </div>
                       </div>
                       <label className="cn-toggle" onClick={e => e.stopPropagation()}>
-                        <input type="checkbox" checked={m.enabled} onChange={e => setMethods(prev => prev.map(x => x.id === m.id ? { ...x, enabled: e.target.checked } : x))} />
+                        <input type="checkbox" checked={m.enabled}
+                          // this store's own BNC credentials come first (see below)
+                          disabled={m.id === 'debito_inmediato' && !bankConnected && !m.enabled}
+                          onChange={e => setMethods(prev => prev.map(x => x.id === m.id ? { ...x, enabled: e.target.checked } : x))} />
                         <span className="cn-toggle-track" />
                       </label>
                     </div>
@@ -381,7 +388,7 @@ export default function CheckoutPage() {
                       <div style={{ padding: '0 16px 16px', borderTop: '1px solid rgba(15,23,42,0.06)' }}>
                         {m.id === 'debito_inmediato' && (
                           <div className="cn-toggle-hint" style={{ paddingTop: 14 }}>
-                            El cliente elige su banco, pone su cédula y teléfono, le llega un código por SMS y paga ahí mismo, sin comprobante. Se cobra con las credenciales de BNC de abajo (&quot;Débito inmediato · BNC&quot;).
+                            El cliente elige su banco, pone su cédula y teléfono, le llega un código por SMS y paga ahí mismo, sin comprobante. El dinero llega a la cuenta BNC de esta tienda: cada comercio debe solicitar su propia API a BNC y guardar sus credenciales abajo (&quot;Débito inmediato · BNC&quot;). Sin ellas, el método no aparece en la tienda.
                           </div>
                         )}
                         <div style={{ paddingTop: m.fields.length ? 14 : 0, display: 'grid', gridTemplateColumns: m.fields.length > 2 ? '1fr 1fr' : '1fr', gap: 12 }}>
@@ -409,7 +416,7 @@ export default function CheckoutPage() {
                   {savingPagos ? 'Guardando...' : 'Guardar metodos de pago'}
                 </button>
               </div>
-              <BankCredentials storeId={storeId} />
+              <BankCredentials storeId={storeId} onConnected={setBankConnected} />
             </div>
           </div>
 

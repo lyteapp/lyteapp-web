@@ -32,7 +32,7 @@ async function call(method: string, path: string, body?: unknown) {
   return j
 }
 
-export default function BankCredentials({ storeId }: { storeId: string | null }) {
+export default function BankCredentials({ storeId, onConnected }: { storeId: string | null; onConnected?: (connected: boolean) => void }) {
   const [status, setStatus] = useState<Status | null>(null)
   const [editing, setEditing] = useState(false)
   const [environment, setEnvironment] = useState<'sandbox' | 'production'>('sandbox')
@@ -49,14 +49,16 @@ export default function BankCredentials({ storeId }: { storeId: string | null })
   const apply = useCallback((s: Status | Error) => {
     if (s instanceof Error) {
       setStatus({ connected: false })
+      onConnected?.(false)
       setError(s.message === 'No autorizado' ? 'Solo el dueño de la tienda puede ver y cambiar estas credenciales.' : s.message)
       return
     }
     setStatus(s)
+    onConnected?.(!!s.connected && !!s.clientId)
     setEnvironment(s.environment ?? 'sandbox')
     setChildClientId(s.childClientId ?? '')
     setBranchId(s.branchId ?? '')
-  }, [])
+  }, [onConnected])
   const fetchStatus = useCallback((): Promise<Status | Error> => (storeId
     ? call('GET', `/api/bank-credentials?storeId=${storeId}&provider=bnc`).then(s => s as Status, e => e as Error)
     : Promise.resolve({ connected: false })), [storeId])
@@ -116,7 +118,7 @@ export default function BankCredentials({ storeId }: { storeId: string | null })
       </div>
 
       <div className="cn-toggle-hint" style={{ marginTop: 10 }}>
-        Guarda aquí las credenciales que te dio BNC para cobrar por Débito inmediato. Quedan guardadas cifradas en el servidor: nunca se muestran ni se envían al navegador. Para cobrar, activa también el método &quot;Débito inmediato (BNC)&quot; arriba.
+        Cada tienda usa sus propias credenciales: las que BNC le dio a este comercio para cobrar a su propia cuenta por Débito inmediato. Quedan guardadas cifradas en el servidor: nunca se muestran ni se envían al navegador. Para cobrar, activa también el método &quot;Débito inmediato (BNC)&quot; arriba.
       </div>
 
       {connected && !editing && (

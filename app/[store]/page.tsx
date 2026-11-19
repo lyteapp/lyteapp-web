@@ -59,6 +59,16 @@ export default async function StorePage({ params, searchParams }: { params: Prom
 
   if (!store) notFound()
 
+  // Débito inmediato charges into the store's OWN bank account, with the
+  // credentials that store got from BNC itself — a store that turned the
+  // method on without saving them doesn't get it offered to its customers.
+  const pm = store.payment_methods as Record<string, { enabled?: boolean }> | null
+  if (pm && !Array.isArray(pm) && pm.debito_inmediato?.enabled) {
+    const { data: bank } = await supabaseService.from('store_bank_credentials')
+      .select('store_id').eq('store_id', store.id).eq('provider', 'bnc').not('client_id', 'is', null).maybeSingle()
+    if (!bank) store.payment_methods = { ...pm, debito_inmediato: { ...pm.debito_inmediato, enabled: false } }
+  }
+
   const currency = (store.store_currency ?? 'USD') as string
   const [{ data: products }, { data: categories }, { data: rateRow }, { data: zones }] = await Promise.all([
     supabase.from('products').select('*')

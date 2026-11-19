@@ -75,6 +75,8 @@ interface QueueBoardConfig {
   readyLabel: string
   customerDisplay: 'firstName' | 'fullName' | 'code'
   showLogo: boolean
+  /** Say each locker announcement out loud */
+  voice: boolean
 }
 
 const DEFAULT_QUEUE_BOARD: QueueBoardConfig = {
@@ -87,6 +89,7 @@ const DEFAULT_QUEUE_BOARD: QueueBoardConfig = {
   readyLabel: 'Listo',
   customerDisplay: 'firstName',
   showLogo: true,
+  voice: true,
 }
 
 interface TrackingConfig {
@@ -1350,6 +1353,15 @@ export default function Apariencia() {
             <div className="cn-toggle-label">Mostrar logo de la tienda</div>
           </div>
           <Toggle checked={trConfig.queueBoard.showLogo} onChange={v => setQueueBoard('showLogo', v)} />
+        </div>
+
+        {/* Voice for the locker announcements */}
+        <div className="cn-toggle-row" data-tsec="queue">
+          <div className="cn-toggle-info">
+            <div className="cn-toggle-label">Anunciar con voz</div>
+            <div className="cn-toggle-hint">Cuando un pedido entra a un casillero, la pantalla dice: «Pedido listo, María. Retirar en el casillero número 3». Al encender la pantalla, toca una vez «Activar voz».</div>
+          </div>
+          <Toggle checked={trConfig.queueBoard.voice} onChange={v => setQueueBoard('voice', v)} />
         </div>
 
         {/* Screen background: a color or a photo */}

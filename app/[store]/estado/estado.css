@@ -200,3 +200,15 @@ body { background: #F1F5F9; }
 .oq-dark .oq-footer { color: rgba(255,255,255,0.7); }
 .oq-dark .oq-footer a { color: #FFFFFF; }
 .oq-dark .oq-empty { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.22); color: rgba(255,255,255,0.65); }
+
+/* "Activar voz": a browser only lets the board speak after a touch */
+.oq-voice-btn {
+  position: fixed; right: 18px; bottom: 18px; z-index: 40;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 16px; border-radius: 99px; border: none; cursor: pointer;
+  font: inherit; font-size: 14px; font-weight: 700; color: #fff;
+  background: rgba(15, 23, 42, 0.72); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.25);
+  animation: oqVoicePulse 2.4s ease-in-out infinite;
+}
+@keyframes oqVoicePulse { 0%, 100% { box-shadow: 0 8px 24px rgba(15,23,42,0.25), 0 0 0 0 rgba(255,255,255,0.35); } 50% { box-shadow: 0 8px 24px rgba(15,23,42,0.25), 0 0 0 8px rgba(255,255,255,0); } }

@@ -33,6 +33,7 @@ type QueueBoardConfig = {
   readyLabel: string
   customerDisplay: CustomerDisplay
   showLogo: boolean
+  voice: boolean
 }
 
 type StoreInfo = {
@@ -73,6 +74,46 @@ function shortCode(id: string): string {
   return `#${id.slice(-4).toUpperCase()}`
 }
 
+// ── Voice for the locker announcements ─────────────────────────
+// The browser's own speech (no service, no cost), in the best Spanish voice
+// the screen has. Browsers only let a page speak once someone has touched
+// it, so the board shows "Activar voz" until a tap (or an announcement that
+// managed to speak on its own) proves it can.
+
+function spanishVoice(): SpeechSynthesisVoice | null {
+  const voices = window.speechSynthesis.getVoices()
+  const norm = (l: string) => l.replace('_', '-').toLowerCase()
+  for (const want of ['es-ve', 'es-419', 'es-us', 'es-mx', 'es-co', 'es-ar', 'es-es']) {
+    const v = voices.find(x => norm(x.lang) === want)
+    if (v) return v
+  }
+  return voices.find(x => norm(x.lang).startsWith('es')) ?? null
+}
+
+function say(text: string, on: { start?: () => void; blocked?: () => void } = {}) {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
+  const synth = window.speechSynthesis
+  synth.cancel()
+  const u = new SpeechSynthesisUtterance(text)
+  const v = spanishVoice()
+  if (v) u.voice = v
+  u.lang = v?.lang ?? 'es-VE'
+  u.rate = 0.92
+  u.onstart = () => on.start?.()
+  u.onerror = e => { if (e.error === 'not-allowed') on.blocked?.() }
+  synth.speak(u)
+}
+
+/** What's said: "Pedido listo, María. Retirar en el casillero número 3." —
+ *  with the order code read out character by character when the board shows
+ *  codes instead of names */
+function announcementText(o: QueueOrder, mode: CustomerDisplay): string {
+  const who = mode === 'code'
+    ? `código ${shortCode(o.id).slice(1).split('').join(' ')}`
+    : displayName(o.customer_name, mode)
+  return `Pedido listo, ${who}. Retirar en el casillero número ${o.locker_number}.`
+}
+
 function minutesAgo(iso: string): string {
   const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000))
   return mins < 1 ? 'ahora' : `hace ${mins} min`
@@ -97,6 +138,9 @@ export default function EstadoPage() {
   useEffect(() => { ordersRef.current = orders }, [orders])
   const current = announcements[0] ?? null
   const dismiss = useCallback(() => setAnnouncements(q => q.slice(1)), [])
+  // the board has been allowed to speak (a tap on "Activar voz", or an
+  // announcement that spoke on its own)
+  const [voiceOn, setVoiceOn] = useState(false)
   useEffect(() => {
     if (!current) return
     const t = setTimeout(dismiss, ANNOUNCE_MS)
@@ -130,6 +174,7 @@ export default function EstadoPage() {
             readyLabel: qb.readyLabel || 'Listo',
             customerDisplay: qb.customerDisplay ?? 'firstName',
             showLogo: qb.showLogo !== false,
+            voice: qb.voice !== false,
             bgColor: qb.bgColor,
             bgImage: qb.bgImage ?? null,
           },
@@ -141,6 +186,21 @@ export default function EstadoPage() {
 
   const storeId = store?.id
   const enabled = store?.queueBoard.enabled ?? false
+  const voice = store?.queueBoard.voice ?? false
+  const customerMode = store?.queueBoard.customerDisplay ?? 'firstName'
+
+  // Each locker announcement is said out loud as it comes up (and stops if
+  // it's tapped away before the end)
+  useEffect(() => {
+    if (!current || !voice || current.locker_number == null) return
+    say(announcementText(current, customerMode), { start: () => setVoiceOn(true) })
+    return () => { if (typeof window !== 'undefined' && 'speechSynthesis' in window) window.speechSynthesis.cancel() }
+  }, [current, voice, customerMode])
+  // the list of voices arrives a moment after the page opens on some browsers
+  useEffect(() => {
+    if (!voice || typeof window === 'undefined' || !('speechSynthesis' in window)) return
+    window.speechSynthesis.getVoices()
+  }, [voice])
 
   const applyRow = useCallback((row: QueueOrder) => {
     setOrders(prev => {
@@ -271,6 +331,18 @@ export default function EstadoPage() {
             <div className="oq-announce-timer" style={{ animationDuration: `${ANNOUNCE_MS}ms` }} />
           </div>
         </div>
+      )}
+
+      {store.queueBoard.voice && !voiceOn && (
+        // Browsers only let a page speak after a touch: one tap when the
+        // screen is turned on, and the announcements speak from then on
+        <button type="button" className="oq-voice-btn"
+          onClick={() => say('Voz activada', { start: () => setVoiceOn(true) })}>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M15.5 8.5a5 5 0 010 7M19 5a10 10 0 010 14" />
+          </svg>
+          Activar voz
+        </button>
       )}
 
       <div className="oq-footer">

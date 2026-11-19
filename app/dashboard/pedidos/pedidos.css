@@ -200,6 +200,8 @@
 }
 .pd-meta-chip svg { width: 12px; height: 12px; color: #94A3B8; flex-shrink: 0; }
 .pd-meta-chip.notes { font-style: italic; }
+.pd-meta-chip.paid { background: #ECFDF5; color: #047857; font-weight: 700; }
+.pd-meta-chip.unpaid { background: #FFFBEB; color: #B45309; font-weight: 700; }
 
 /* ── ACTIONS ── */
 .pd-actions {

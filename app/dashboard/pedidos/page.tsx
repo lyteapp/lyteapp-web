@@ -40,6 +40,8 @@ interface Order {
   delivery_type?: string | null
   service_type?: string | null
   payment_status?: string | null
+  /** who/what approved the payment — for Débito inmediato, "Débito inmediato BNC · Ref …" */
+  payment_verified_by?: string | null
   /** paid in person (cash / point of sale), see waitingPayment */
   cash_call_at?: string | null
   items?: OrderItem[]
@@ -271,7 +273,7 @@ export default function PedidosPage() {
         (payload) => {
           const updated = payload.new as Order
           setOrders(prev =>
-            prev.map(o => o.id === updated.id ? { ...o, status: updated.status, locker_number: updated.locker_number, payment_status: updated.payment_status } : o)
+            prev.map(o => o.id === updated.id ? { ...o, status: updated.status, locker_number: updated.locker_number, payment_status: updated.payment_status, payment_verified_by: updated.payment_verified_by } : o)
           )
           if (['delivered', 'cancelled', 'completed'].includes(updated.status)) {
             setDisplayOrders(prev => prev.filter(o => o.id !== updated.id))
@@ -878,6 +880,12 @@ export default function PedidosPage() {
                               </svg>
                               {order.payment_method}
                             </div>
+                          )}
+                          {order.payment_method === 'Débito inmediato' && (
+                            // the bank's answer, so the store can match it with its BNC statement
+                            order.payment_status === 'approved'
+                              ? <div className="pd-meta-chip paid">✓ Pagado{order.payment_verified_by?.includes('Ref ') ? ` · Ref ${order.payment_verified_by.split('Ref ')[1]}` : ''}</div>
+                              : <div className="pd-meta-chip unpaid">{order.status === 'cancelled' ? 'Pago no completado' : 'Pago pendiente'}</div>
                           )}
                           {order.customer_notes && (
                             <div className="pd-meta-chip notes">

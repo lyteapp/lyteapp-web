@@ -1361,6 +1361,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [kioskCatId, setKioskCatId] = useState<string | null>(null)
   // Kiosk "Inicio" with products in the cart: asks before starting over
   const [kioskHomeAsk, setKioskHomeAsk] = useState(false)
+  // Kiosk: the diet filter in the header (GF / VG / V / P picked) and its panel
+  const [dietFilter, setDietFilter] = useState<string[]>([])
+  const [dietPanel, setDietPanel] = useState(false)
   // Kiosk: the product's full-resolution photo is still loading (the loading screen shows)
   const [kioskPhotoWait, setKioskPhotoWait] = useState(false)
   // Kiosk: the welcome video was just put back in step with the other kiosks (a short notice)
@@ -3658,6 +3661,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     setLastOrder(null); setShowReorder(false); reorderCheckedRef.current = false
     setShowHeaderReorderHint(false); setHeaderReorderEmpty(false); headerReorderHintShownRef.current = false
     setKioskCatId(null); setCoStep('cart'); setProofCamOpen(false); setKioskHomeAsk(false); setKioskCash(null)
+    setDietFilter([]); setDietPanel(false)
     // The welcome overlay sits at the top of the document over the store.
     if (hp.enabled) window.scrollTo(0, 0)
     setView(hp.enabled ? 'splash' : 'catalog')
@@ -6166,12 +6170,22 @@ export default function StoreShell({ store, products, categories = [], initialBc
   // a big picture button along the bottom (its own image, or a photo of
   // one of its products). The welcome page still comes first.
   if (kioskActive) {
-    const kGroups = hasCats
+    const kGroupsAll = hasCats
       ? [
           ...catGroups.map(g => ({ key: g.cat.id, name: g.cat.name, items: g.items })),
           ...(uncategorized.length > 0 ? [{ key: '__other', name: t('store.ourProducts'), items: uncategorized }] : []),
         ]
       : [{ key: '__all', name: t('store.ourProducts'), items: visibleProducts }]
+    // The diet filter (header): only the diets some product here has, and,
+    // when some are picked, only products that are all of them (a product
+    // without nutrition facts set up doesn't count as any)
+    const DIET_ORDER = ['GF', 'VG', 'V', 'P']
+    const productDiets = (p: Product) => (p.options?.nutrition?.enabled ? p.options.nutrition.diets ?? [] : [])
+    const storeDiets = DIET_ORDER.filter(d => visibleProducts.some(p => productDiets(p).includes(d)))
+    const dietOk = (p: Product) => dietFilter.every(d => productDiets(p).includes(d))
+    const kGroups = kGroupsAll.map(g => ({ ...g, items: g.items.filter(dietOk) }))
+    const dietMatches = visibleProducts.filter(dietOk).length
+    const dietNames = dietFilter.map(d => DIET_LABELS[d]).join(' · ')
     const kCur = kGroups.find(g => g.key === kioskCatId) ?? kGroups[0]
     const kImages = kioskCfg?.categoryImages ?? {}
     // Prices in the store's own price color, or else its main color (not
@@ -6208,6 +6222,21 @@ export default function StoreShell({ store, products, categories = [], initialBc
               : <span className="sf-kiosk-name">{store.name}</span>}
           </div>
           <div className="sf-kiosk-head-side sf-kiosk-head-actions">
+            {storeDiets.length > 0 && (
+              // Diet filter: gluten free, vegan, vegetarian, pescatarian
+              <button
+                type="button"
+                className={`sf-kiosk-icon${dietFilter.length ? ' ready' : ''}`}
+                onClick={() => setDietPanel(true)}
+                aria-label={dietFilter.length ? `Filtro de dieta: ${dietNames}` : 'Filtrar por dieta'}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24" aria-hidden="true">
+                  <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" />
+                  <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
+                </svg>
+                {dietFilter.length > 0 && <span className="sf-kiosk-icon-badge">{dietFilter.length}</span>}
+              </button>
+            )}
             {cfg.enableReorder && (
               <button
                 type="button"
@@ -6235,10 +6264,55 @@ export default function StoreShell({ store, products, categories = [], initialBc
           </div>
         </header>
 
+        {dietPanel && (
+          // The diet filter's panel: tap the diets, then see the products
+          <div className="sf-diet-overlay" onClick={() => setDietPanel(false)}>
+            <div className="sf-diet-panel" role="dialog" aria-label="Filtrar por dieta" onClick={e => e.stopPropagation()}>
+              <div className="sf-diet-panel-title">Filtrar por dieta</div>
+              <div className="sf-diet-panel-sub">Solo verás los productos que cumplan todo lo que marques.</div>
+              <div className="sf-diet-options">
+                {storeDiets.map(d => {
+                  const on = dietFilter.includes(d)
+                  return (
+                    <button key={d} type="button" className={`sf-diet-option${on ? ' on' : ''}`} aria-pressed={on}
+                      onClick={() => setDietFilter(f => (f.includes(d) ? f.filter(x => x !== d) : [...f, d]))}>
+                      <span className={`sf-diet sf-diet-${d}`}>{d}</span>
+                      <span className="sf-diet-option-name">{DIET_LABELS[d]}</span>
+                      <span className="sf-diet-option-check" aria-hidden="true">
+                        {on && <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" width="18" height="18"><path d="M4.5 10.5l3.5 3.5 7.5-8" /></svg>}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+              <div className="sf-diet-panel-actions">
+                {dietFilter.length > 0 && (
+                  <button type="button" className="sf-diet-clear" onClick={() => setDietFilter([])}>Quitar filtros</button>
+                )}
+                <button type="button" className="sf-diet-see" onClick={() => setDietPanel(false)}>
+                  {dietFilter.length ? `Ver ${dietMatches} producto${dietMatches === 1 ? '' : 's'}` : 'Ver todos los productos'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <main className="sf-kiosk-main" ref={kioskMainRef}>
           {kCur ? (
             <>
               <h1 className="sf-kiosk-title">{kCur.name}</h1>
+              {dietFilter.length > 0 && (
+                <button type="button" className="sf-diet-active" onClick={() => setDietFilter([])}>
+                  <span>Solo {dietNames}</span>
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" width="16" height="16" aria-hidden="true"><path d="M15 5L5 15M5 5l10 10" /></svg>
+                </button>
+              )}
+              {kCur.items.length === 0 && dietFilter.length > 0 && (
+                <div className="sf-diet-none">
+                  En {kCur.name} no hay productos {dietNames}.
+                  <button type="button" onClick={() => setDietFilter([])}>Quitar filtro</button>
+                </div>
+              )}
               <div className="sf-kiosk-grid">
                 {kCur.items.map(p => {
                   const qty = getProdQty(p.id)
@@ -6294,7 +6368,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                 return (
                   <button
                     key={g.key} type="button" aria-pressed={on}
-                    className={`sf-kiosk-cat${on ? ' on' : ''}`}
+                    className={`sf-kiosk-cat${on ? ' on' : ''}${dietFilter.length && g.items.length === 0 ? ' dim' : ''}`}
                     onClick={() => {
                       setModalProduct(null) // a product open above closes, the category changes
                       setKioskCatId(g.key)

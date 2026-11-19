@@ -4596,7 +4596,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
         {returnCountdown !== null && !waitingPay && (
           <div className="sf-confirm-countdown">Volviendo al inicio en {returnCountdown}s</div>
         )}
-        {queueBoardEnabled && <QueueQr url={`${window.location.origin}/${store.slug}/estado`} />}
+        {/* (not while a kiosk customer waits for someone to collect the payment) */}
+        {queueBoardEnabled && !(kioskActive && waitingPay) && <QueueQr url={`${window.location.origin}/${store.slug}/estado`} />}
         {showTrackLinks && deliveryTrackId && (
           <a
             href={`/delivery/${deliveryTrackId}`}
@@ -4627,9 +4628,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
             Rastrear mi pedido
           </a>
         )}
-        {kioskActive && (
+        {kioskActive && !waitingPay && (
           // Kiosk: hand the screen to the next customer right away, without
-          // waiting for the countdown — back to the welcome page, clean
+          // waiting for the countdown — back to the welcome page, clean (not
+          // while this customer waits for someone to collect the payment)
           <button type="button" className="sf-confirm-btn sf-confirm-next"
             style={cfg.accentColor ? { background: cfg.accentColor } : undefined}
             onClick={() => resetToHome()}>

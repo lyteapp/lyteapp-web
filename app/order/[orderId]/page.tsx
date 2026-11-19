@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useEffect, useState } from 'react'
+import { use, useEffect, useState, useRef } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import './order-track.css'
 
@@ -45,6 +45,10 @@ export default function OrderTrackPage({ params }: { params: Promise<{ orderId: 
   const [customerName, setCustomerName] = useState('')
   const [orderNumber, setOrderNumber] = useState<number | null>(null)
   const [lockerNumber, setLockerNumber] = useState<number | null>(null)
+  // The store pressed "Volver a anunciar" for this order's locker: a reminder
+  // stands out for a while (and the phone buzzes, where it can)
+  const [lockerReminder, setLockerReminder] = useState(false)
+  const notifiedAt = useRef<string | null | undefined>(undefined)
   const [store, setStore]           = useState<StoreInfo | null>(null)
   const [error, setError]           = useState(false)
 
@@ -52,7 +56,7 @@ export default function OrderTrackPage({ params }: { params: Promise<{ orderId: 
     async function load() {
       const { data: order, error: oErr } = await supabase
         .from('orders')
-        .select('customer_name, status, store_id, delivery_type, order_number, locker_number')
+        .select('customer_name, status, store_id, delivery_type, order_number, locker_number, locker_notified_at')
         .eq('id', orderId)
         .maybeSingle()
 
@@ -62,6 +66,7 @@ export default function OrderTrackPage({ params }: { params: Promise<{ orderId: 
       setStatus(order.status as OrderStatus)
       setOrderNumber(order.order_number ?? null)
       setLockerNumber(order.locker_number ?? null)
+      notifiedAt.current = order.locker_notified_at ?? null
 
       const { data: st } = await supabase
         .from('stores')
@@ -79,9 +84,16 @@ export default function OrderTrackPage({ params }: { params: Promise<{ orderId: 
       .channel(`order-track-${orderId}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${orderId}` },
         (payload) => {
-          const row = payload.new as { status: OrderStatus; locker_number: number | null }
+          const row = payload.new as { status: OrderStatus; locker_number: number | null; locker_notified_at?: string | null }
           setStatus(row.status)
           setLockerNumber(row.locker_number ?? null)
+          const at = row.locker_notified_at ?? null
+          if (at && notifiedAt.current !== undefined && at !== notifiedAt.current && row.locker_number != null && row.status === 'ready') {
+            setLockerReminder(true)
+            setTimeout(() => setLockerReminder(false), 20000)
+            try { navigator.vibrate?.([200, 100, 200]) } catch { /* not on this phone */ }
+          }
+          notifiedAt.current = at
         })
       .subscribe()
     return () => { supabase.removeChannel(ch) }
@@ -168,7 +180,8 @@ export default function OrderTrackPage({ params }: { params: Promise<{ orderId: 
                 </div>
                 <div className="ot-ready-title">Tu pedido esta listo</div>
                 {lockerNumber != null ? (
-                  <div className="ot-ready-sub">
+                  <div className={`ot-ready-sub${lockerReminder ? ' ot-locker-reminder' : ''}`} role={lockerReminder ? 'alert' : undefined}>
+                    {lockerReminder && <span className="ot-locker-reminder-kicker">¡Te estamos esperando!</span>}
                     Retiralo en el <strong>casillero #{lockerNumber}</strong>
                   </div>
                 ) : (

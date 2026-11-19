@@ -154,3 +154,18 @@ body { background: #F1F5F9; }
 .lk-modal-cancel { background: #F1F5F9; color: #64748B; }
 .lk-modal-confirm { background: var(--lk-accent, #7C3AED); color: white; }
 .lk-modal-btn:disabled { opacity: 0.6; cursor: wait; }
+
+/* "Volver a anunciar": the order's locker goes up again on the queue board
+   (with its voice) and as a reminder on the customer's tracking page */
+.lk-renotify {
+  width: 100%; margin: 4px 0 14px; display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 14px 16px; border-radius: 14px; cursor: pointer; font: inherit; font-size: 16px; font-weight: 700;
+  color: var(--lk-accent, #7C3AED); background: color-mix(in srgb, var(--lk-accent, #7C3AED) 10%, white);
+  border: 1.5px solid color-mix(in srgb, var(--lk-accent, #7C3AED) 30%, transparent);
+  transition: background 0.15s, color 0.15s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.lk-renotify:active:not(:disabled) { transform: scale(0.98); }
+.lk-renotify:disabled { cursor: default; }
+.lk-renotify.done { color: #047857; background: #ECFDF5; border-color: #A7F3D0; }
+.lk-modal-ask { font-size: 14px; font-weight: 600; color: #475569; text-align: center; margin-bottom: 10px; }

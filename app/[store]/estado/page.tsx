@@ -19,6 +19,8 @@ type QueueOrder = {
   customer_name: string
   created_at: string
   locker_number: number | null
+  /** last "Volver a anunciar" from the locker screen */
+  locker_notified_at?: string | null
 }
 
 type CustomerDisplay = 'firstName' | 'fullName' | 'code'
@@ -219,7 +221,7 @@ export default function EstadoPage() {
     const cutoff = new Date(Date.now() - QUEUE_WINDOW_MS).toISOString()
     supabase
       .from('orders')
-      .select('id, status, customer_name, created_at, locker_number')
+      .select('id, status, customer_name, created_at, locker_number, locker_notified_at')
       .eq('store_id', storeId)
       .not('status', 'in', '(delivered,cancelled,completed)')
       .gte('created_at', cutoff)
@@ -239,12 +241,17 @@ export default function EstadoPage() {
           }
           const row = payload.new as QueueOrder
           // An order on the board that just got its locker (not one that
-          // already had it when the screen loaded)
+          // already had it when the screen loaded), or whose locker the
+          // locker screen asked to announce again ("Volver a anunciar")
           const before = ordersRef.current.find(o => o.id === row.id)
-          if (row.locker_number != null && row.status === 'ready' && before && before.locker_number == null
-            && !announced.current.has(row.id)) {
-            announced.current.add(row.id)
-            setAnnouncements(q => [...q, row])
+          const inLocker = row.locker_number != null && row.status === 'ready' && !!before
+          const justPut = inLocker && before!.locker_number == null
+          const again = inLocker && !!row.locker_notified_at && row.locker_notified_at !== before!.locker_notified_at
+          const key = `${row.id}:${again ? row.locker_notified_at : 'locker'}`
+          if ((justPut || again) && !announced.current.has(key)) {
+            announced.current.add(key)
+            // (if it's already up or waiting, it goes up again from the start)
+            setAnnouncements(q => [...q.filter(o => o.id !== row.id), row])
           }
           applyRow(row)
         }

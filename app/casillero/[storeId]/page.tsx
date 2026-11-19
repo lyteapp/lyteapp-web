@@ -40,6 +40,8 @@ export default function CasilleroPage() {
   const [confirming, setConfirming] = useState<LockerOrder | null>(null)
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState('')
+  // "Volver a anunciar" just went out for the locker open in the dialog
+  const [renotified, setRenotified] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -119,6 +121,28 @@ export default function CasilleroPage() {
       if (!res.ok) { setActionError(data.error ?? 'No se pudo asignar el casillero'); return }
       setOrders(prev => prev.map(o => o.id === selectedPendingId ? { ...o, locker_number: lockerNumber } : o))
       setSelectedPendingId(null)
+    } catch {
+      setActionError('No se pudo conectar con el servidor')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // Announces the order's locker again: the queue board shows it big and
+  // says it out loud once more, and the customer's tracking page reminds them
+  async function renotify() {
+    if (!confirming || busy) return
+    setBusy(true); setActionError('')
+    try {
+      const res = await fetch('/api/casillero/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: confirming.id, storeId }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { setActionError(data.error ?? 'No se pudo volver a anunciar'); return }
+      setRenotified(true)
+      setTimeout(() => setRenotified(false), 2500)
     } catch {
       setActionError('No se pudo conectar con el servidor')
     } finally {
@@ -211,7 +235,7 @@ export default function CasilleroPage() {
               key={n}
               className={`lk-locker${order ? ' lk-locker-occupied' : ''}${assignable ? ' lk-locker-assignable' : ''}`}
               onClick={() => {
-                if (order) { setConfirming(order); setActionError('') }
+                if (order) { setConfirming(order); setActionError(''); setRenotified(false) }
                 else if (assignable) assignLocker(n)
               }}
             >
@@ -233,10 +257,19 @@ export default function CasilleroPage() {
           <div className="lk-modal" onClick={e => e.stopPropagation()}>
             <div className="lk-modal-title">Casillero {confirming.locker_number}</div>
             <div className="lk-modal-sub">
-              Confirmar que <strong>{confirming.customer_name}</strong> retiro su pedido
-              {confirming.order_number != null ? ` #${confirming.order_number}` : ''}?
+              Pedido de <strong>{confirming.customer_name}</strong>
+              {confirming.order_number != null ? ` #${confirming.order_number}` : ''}
             </div>
             {actionError && <div className="lk-modal-error">{actionError}</div>}
+            <button className={`lk-renotify${renotified ? ' done' : ''}`} disabled={busy || renotified} onClick={renotify}>
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                {renotified
+                  ? <path d="M5 12.5l4.5 4.5L19 7.5" />
+                  : <><path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M15.5 8.5a5 5 0 010 7M19 5a10 10 0 010 14" /></>}
+              </svg>
+              {renotified ? 'Anunciado otra vez' : 'Volver a anunciar'}
+            </button>
+            <div className="lk-modal-ask">¿Ya retiró su pedido?</div>
             <div className="lk-modal-actions">
               <button className="lk-modal-btn lk-modal-cancel" disabled={busy} onClick={() => setConfirming(null)}>
                 Cancelar

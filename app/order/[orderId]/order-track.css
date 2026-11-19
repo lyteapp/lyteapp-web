@@ -270,3 +270,13 @@ body { background: #F1F5F9; }
   text-decoration: none;
   font-weight: 600;
 }
+
+/* "Volver a anunciar" from the store: the locker line stands out for a while */
+.ot-locker-reminder {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  margin-top: 6px; padding: 12px 16px; border-radius: 14px;
+  background: #FEF3C7; color: #78350F; font-size: 16px;
+  animation: otReminderPulse 1.2s ease-in-out 3;
+}
+.ot-locker-reminder-kicker { font-size: 13px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
+@keyframes otReminderPulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245,158,11,0.5); } 50% { transform: scale(1.03); box-shadow: 0 0 0 10px rgba(245,158,11,0); } }

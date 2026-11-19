@@ -87,7 +87,11 @@ export function bncReference(prefix = 'LY') {
   return `${prefix}${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2, 6).toUpperCase()}`
 }
 
-type Envelope = { status?: string; message?: string; value?: string; validation?: string }
+type Envelope = {
+  status?: string; message?: string; value?: string; validation?: string
+  /** HTTP status, and the body as it came when it isn't the documented envelope */
+  http?: number; body?: string
+}
 
 async function post(environment: string, path: string, body: unknown, timeoutMs: number): Promise<Envelope> {
   const ctrl = new AbortController()
@@ -101,10 +105,18 @@ async function post(environment: string, path: string, body: unknown, timeoutMs:
       cache: 'no-store',
     })
     const text = (await r.text()).trim()
-    try { return JSON.parse(text) as Envelope } catch { /* not JSON: see below */ }
+    let parsed: unknown = undefined
+    try { parsed = JSON.parse(text) } catch { /* not JSON: see below */ }
+    if (parsed && typeof parsed === 'object') {
+      const env = parsed as Envelope
+      // the documented shape has "status"; anything else (an ASP.NET error
+      // like {"Message": "..."}, an empty object) is kept whole to read later
+      return 'status' in env ? { ...env, http: r.status } : { http: r.status, body: text.slice(0, 1000) }
+    }
     // A refusal comes as bare text with HTTP 409, e.g. "EPICNFNo es posible
     // encontrar al cliente…": the same 6-character code + message as a KO
-    if (/^[A-Z0-9]{6}/.test(text)) return { status: 'KO', message: text.slice(0, 300) }
+    if (/^[A-Z0-9]{6}/.test(text)) return { status: 'KO', message: text.slice(0, 300), http: r.status }
+    if (!text) return { http: r.status, body: '(vacío)' }
     throw new BncError(`El banco respondió algo inesperado (HTTP ${r.status})`, 'HTTP')
   } catch (e) {
     if (e instanceof BncError) throw e
@@ -168,7 +180,7 @@ export async function bncLogon(supa: SupabaseClient, creds: BncCreds): Promise<s
 export type BncResult = {
   ok: boolean; message: string; code: string; value: Record<string, unknown> | null
   /** what came back, for the record (no secrets in it) */
-  raw: { status: string | null; message: string | null; value: Record<string, unknown> | null }
+  raw: { status: string | null; message: string | null; value: Record<string, unknown> | null; http: number | null; body?: string }
 }
 
 // One call with the day's WorkingKey (logging on first when there's none for
@@ -184,14 +196,15 @@ export async function bncCall(
       : await bncLogon(supa, creds)
     const env = await post(creds.environment, path, envelope(creds, payload, wk, reference), opts.timeoutMs ?? 60000)
     if (isRwk(env) && attempt === 0) { creds.workingKey = null; continue }
-    const { code, text } = splitMessage(env.message)
+    const { code, text: msgText } = splitMessage(env.message)
+    const text = msgText || (env.body ? `respuesta inesperada (HTTP ${env.http ?? '?'})` : '')
     const value = openValue(env, wk)
     return {
       ok: (env.status ?? '').toUpperCase() === 'OK',
       message: text,
       code,
       value,
-      raw: { status: env.status ?? null, message: env.message ?? null, value },
+      raw: { status: env.status ?? null, message: env.message ?? null, value, http: env.http ?? null, ...(env.body ? { body: env.body } : {}) },
     }
   }
   throw new BncError('El banco pidió renovar la llave de trabajo dos veces seguidas', 'RWK')

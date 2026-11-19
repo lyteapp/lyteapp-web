@@ -65,6 +65,9 @@ async function amountFor(supa: SupabaseClient, order: Order) {
   return { amount: Math.round(Number(order.total) * rate * 100) / 100, rate }
 }
 
+// letters, digits and spaces only, no accents ("Pedido #12 Viñedo" → "Pedido 12 Vinedo")
+const plain = (v: string, max: number) =>
+  v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max)
 const digits = (v: unknown, max: number) => (typeof v === 'string' || typeof v === 'number' ? String(v).replace(/\D/g, '').slice(0, max) : '')
 
 export async function POST(req: Request) {
@@ -170,17 +173,20 @@ export async function POST(req: Request) {
       const concept = `Pedido ${order.order_number ? `#${order.order_number}` : order.id.slice(0, 8).toUpperCase()} ${store.data?.name ?? ''}`.trim().slice(0, 100)
       let r
       try {
+        // field for field like BNC's own example: Amount as text with two
+        // decimals, ChildClientID / BranchID always present ("" when unused),
+        // plain-letter Concept and DebtorName
         r = await bncCall(supa, creds, '/SIMF/DebitBeginner', {
           DebtorBank: debit.debtor_bank,
           DebtorAccount: debit.debtor_account,
           DebtorAccType: debit.debtor_acc_type,
-          Concept: concept,
+          Concept: plain(concept, 100),
           AddtlInf: token,
           DebtorID: debit.debtor_id,
-          Amount: amount,
-          DebtorName: debit.debtor_name,
-          ...(creds.childClientId ? { ChildClientID: creds.childClientId } : {}),
-          ...(creds.branchId ? { BranchID: creds.branchId } : {}),
+          Amount: amount.toFixed(2),
+          DebtorName: plain(debit.debtor_name ?? order.customer_name, 40),
+          ChildClientID: creds.childClientId ?? '',
+          BranchID: creds.branchId ?? '',
         }, { reference: bncReference('DB'), timeoutMs: 125_000 })
       } catch (e) {
         // no answer: it may or may not have gone through — the store checks

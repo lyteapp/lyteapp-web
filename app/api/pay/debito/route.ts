@@ -37,7 +37,7 @@ type Debit = {
   order_id: string; amount_ves: number; status: string; token_requests: number; last_token_at: string | null
   charge_attempts: number; debtor_bank: string | null; debtor_id: string | null; debtor_acc_type: string | null
   debtor_account: string | null; debtor_name: string | null; bank_reference: string | null
-  reject_code: string | null; reject_description: string | null
+  reject_code: string | null; reject_description: string | null; request_reference: string | null
 }
 
 async function loadOrder(supa: SupabaseClient, orderId: string) {
@@ -136,12 +136,20 @@ export async function POST(req: Request) {
   // ACCP with no rejection code → paid; a rejection code (even under
   // "PEND", which is how an annulled one shows: "Anulado PEND (TKCM …)") →
   // rejected; otherwise still confirming, and the checkout asks again.
-  const settle = async (reference: string, tries: number) => {
+  // (which reference BNC wants here isn't clear — "la referencia que fue
+  // enviada" — so on "SMF001 Operación no encontrada" with the bank's own
+  // reference, lyteapp's request Reference is tried too)
+  const settle = async (reference: string, requestReference: string | null, tries: number) => {
     for (let i = 0; i < tries; i++) {
       if (i > 0) await new Promise(res => setTimeout(res, 3000))
       let r
       try {
         r = await bncCall(supa, creds, '/SIMF/StatusOperation', { Reference: reference, ClientID: creds.merchantRif, OperationType: 'DEB' })
+        if (!r.ok && r.code === 'SMF001' && requestReference) {
+          const alt = await bncCall(supa, creds, '/SIMF/StatusOperation', { Reference: requestReference, ClientID: creds.merchantRif, OperationType: 'DEB' })
+          await touch({ last_response: { byBankReference: r.raw, byRequestReference: alt.raw } })
+          if (alt.ok || alt.code !== 'SMF001') r = alt
+        }
       } catch { continue }
       const st = bncField(r.value, 'Status').toUpperCase()
       const code = bncField(r.value, 'Code').toUpperCase()
@@ -155,7 +163,7 @@ export async function POST(req: Request) {
         await touch({ status: 'rejected', reject_code: code || st, reject_description: r.message, last_response: r.raw })
         return fail(rejectMessage(code, r.message), 422, { code })
       }
-      await touch({ last_response: r.raw })
+      if (r.code !== 'SMF001') await touch({ last_response: r.raw })
     }
     return json({ confirming: true, reference, amount })
   }
@@ -216,6 +224,8 @@ export async function POST(req: Request) {
 
       const store = await supa.from('stores').select('name').eq('id', order.store_id).maybeSingle()
       const concept = `Pedido ${order.order_number ? `#${order.order_number}` : order.id.slice(0, 8).toUpperCase()} ${store.data?.name ?? ''}`.trim().slice(0, 100)
+      const requestReference = bncReference('DB')
+      await touch({ request_reference: requestReference })
       let r
       try {
         // field for field like BNC's own example: Amount as text with two
@@ -232,7 +242,7 @@ export async function POST(req: Request) {
           DebtorName: plain(debit.debtor_name ?? order.customer_name, 40),
           ChildClientID: creds.childClientId ?? '',
           BranchID: creds.branchId ?? '',
-        }, { reference: bncReference('DB'), timeoutMs: 125_000 })
+        }, { reference: requestReference, timeoutMs: 125_000 })
       } catch (e) {
         // no answer: it may or may not have gone through — the store checks
         await touch({ status: 'unknown', reject_description: (e as Error).message, last_response: { error: (e as Error).message, code: e instanceof BncError ? e.code : null } })
@@ -253,12 +263,12 @@ export async function POST(req: Request) {
         // to ask — the old behaviour: paid on ACCP.)
         if (!creds.merchantRif || !reference) return markPaid(reference, r.raw)
         await touch({ status: 'confirming', bank_reference: reference, reject_code: null, reject_description: null, last_response: r.raw })
-        return settle(reference, 3)
+        return settle(reference, requestReference, 3)
       }
       if (r.ok && !/RJCT|RECHAZ|ANULAD/.test(st) && !(code && code !== 'ACCP' && code !== 'AC00')) {
         // e.g. AC00 / PEND, or an OK without a verdict: not decided yet
         await touch({ status: reference && creds.merchantRif ? 'confirming' : 'unknown', bank_reference: reference, reject_code: code, reject_description: desc, last_response: r.raw })
-        if (reference && creds.merchantRif) return settle(reference, 3)
+        if (reference && creds.merchantRif) return settle(reference, requestReference, 3)
         return fail('El banco todavía está procesando el pago. No pagues otra vez: la tienda confirmará cuando llegue.', 202, { unknown: true })
       }
       await touch({ status: 'rejected', bank_reference: reference, reject_code: code || r.code, reject_description: desc, last_response: r.raw })
@@ -267,7 +277,7 @@ export async function POST(req: Request) {
 
     // the checkout asks again every few seconds while a debit is confirming
     if (action === 'status') {
-      if (debit.status === 'confirming' && debit.bank_reference) return settle(debit.bank_reference, 1)
+      if (debit.status === 'confirming' && debit.bank_reference) return settle(debit.bank_reference, debit.request_reference, 1)
       if (debit.status === 'rejected') return fail(rejectMessage(String(debit.reject_code ?? ''), debit.reject_description ?? undefined), 422)
       if (debit.status === 'unknown') return fail('No pagues otra vez: la tienda confirmará cuando llegue el pago.', 202, { unknown: true })
       return json({ status: debit.status })

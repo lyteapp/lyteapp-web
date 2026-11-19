@@ -3446,3 +3446,9 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
 .sf-cash-waiting i:nth-child(2) { animation-delay: 0.2s; }
 .sf-cash-waiting i:nth-child(3) { animation-delay: 0.4s; margin-right: 6px; }
 @keyframes sfCashDot { 0%, 80%, 100% { opacity: 0.25; transform: scale(0.8); } 40% { opacity: 1; transform: none; } }
+.sf-cash-total b { font-size: 18px; font-weight: 700; color: #475569; }
+/* kiosk, a payment the staff collects there: what happens next */
+.sf-staff-pay-note {
+  margin-top: 10px; padding: 12px 14px; border-radius: 12px;
+  background: #FFFBEB; border: 1px solid #FDE68A; color: #92400E; font-size: 15px; font-weight: 600; line-height: 1.35;
+}

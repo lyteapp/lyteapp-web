@@ -1311,7 +1311,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [orderId, setOrderId]       = useState('')
   // Kiosk: this order is being paid cash at the kiosk — the customer waits
   // there until the staff (alerted on the Caja screen) collects it
-  const [kioskCash, setKioskCash] = useState<{ id: string; total: number; number: number | null; paid: boolean } | null>(null)
+  // (kind: cash, or card on the store's point-of-sale terminal; ves: the
+  // amount in bolívares, when the method is charged in Bs)
+  const [kioskCash, setKioskCash] = useState<{ id: string; total: number; ves: number | null; number: number | null; paid: boolean; kind: 'cash' | 'pos' } | null>(null)
   const [deliveryTrackId, setDeliveryTrackId] = useState('')
   const [pickupTrackId, setPickupTrackId]     = useState('')
   const [locationState, setLocationState] = useState<'idle' | 'requesting' | 'granted' | 'denied'>('idle')
@@ -2035,6 +2037,15 @@ export default function StoreShell({ store, products, categories = [], initialBc
     return Object.values(cart).filter(i => (i.productId ?? i.id) === productId).reduce((s, i) => s + i.quantity, 0)
   }
   const enabledMethods = parsePaymentMethods(store.payment_methods)
+  // Kiosk: payments the staff collects at the kiosk itself — cash, or card
+  // on the point-of-sale terminal (until one is built into the kiosk). No
+  // receipt photo for these; the Caja screen calls someone over instead.
+  const staffPayKind = (type: string, label: string): 'cash' | 'pos' | null => {
+    if (!kioskActive) return null
+    const s = `${type} ${label}`
+    return /efectivo|cash/i.test(s) ? 'cash' : /punto|\bpos\b/i.test(s) ? 'pos' : null
+  }
+  const selectedStaffPay = staffPayKind(selectedPayment, (enabledMethods.find(m => m.type === selectedPayment)?.label ?? '') || paymentFreeText)
   const showInstallBtn = !installed && (isIos || !!installPrompt)
 
   const VES_METHODS = new Set(['pago_movil', 'efectivo_bs', 'transferencia', 'punto_venta'])
@@ -3432,7 +3443,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       return 'Selecciona la tienda donde vas a retirar tu pedido'
     if (is('pay')) {
       if (requirePaymentMethod && !selectedPayment && !paymentFreeText.trim()) return 'Debes seleccionar un metodo de pago para continuar'
-      if (requirePaymentProof && (selectedPayment || paymentFreeText.trim()) && !paymentProofFile) return 'Debes subir el comprobante de pago para continuar'
+      if (requirePaymentProof && !selectedStaffPay && (selectedPayment || paymentFreeText.trim()) && !paymentProofFile) return 'Debes subir el comprobante de pago para continuar'
     }
     return null
   }
@@ -3453,7 +3464,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     const isNational = deliveryType === 'national'
     // Kiosk + cash: the customer waits at the kiosk to pay, the Caja screen
     // alerts the staff to come collect it and bring change
-    const kioskCashPay = kioskActive && /efectivo|cash/i.test(`${selectedPayment} ${paymentLabel}`)
+    const staffPay = selectedStaffPay
 
     try {
       const newOrderId = crypto.randomUUID()
@@ -3486,7 +3497,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           delivery_type: isPickup ? 'pickup' : isNational ? 'national' : 'delivery',
           service_type: askServiceType ? serviceType : null,
           payment_proof_url: proofUrl,
-          kiosk_cash: kioskCashPay,
+          kiosk_cash: !!staffPay,
           items: cartItems.map(i => ({
             product_id: i.productId ?? i.id,
             product_name: i.name, product_price: i.price,
@@ -3587,7 +3598,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       }
 
       const shortId = newOrderId.slice(0, 8).toUpperCase()
-      setKioskCash(kioskCashPay ? { id: newOrderId, total: orderTotal, number: orderNumber ?? null, paid: false } : null)
+      setKioskCash(staffPay ? { id: newOrderId, total: orderTotal, ves: vesAmount, number: orderNumber ?? null, paid: false, kind: staffPay } : null)
       setOrderId(shortId); setCart({}); clearSavedCart()
       if (isPickup) setPickupTrackId(newOrderId)
       else setPickupTrackId('')
@@ -4530,14 +4541,22 @@ export default function StoreShell({ store, products, categories = [], initialBc
             <>
               <div className="sf-confirm-check sf-cash-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: 34, height: 34 }}>
-                  <rect x="2.5" y="6" width="19" height="12" rx="2" /><circle cx="12" cy="12" r="2.6" /><path d="M6 9.5v5M18 9.5v5" />
+                  {kioskCash.kind === 'pos'
+                    ? <><rect x="5" y="2.5" width="14" height="19" rx="2.5" /><rect x="8" y="5.5" width="8" height="5" rx="1" /><path d="M8.5 14h1M11.5 14h1M14.5 14h1M8.5 17h1M11.5 17h1M14.5 17h1" /></>
+                    : <><rect x="2.5" y="6" width="19" height="12" rx="2" /><circle cx="12" cy="12" r="2.6" /><path d="M6 9.5v5M18 9.5v5" /></>}
                 </svg>
               </div>
-              <h1 className="sf-confirm-title">Paga en efectivo aquí</h1>
-              <p className="sf-confirm-sub">Ya avisamos al personal: alguien viene a cobrarte y darte el cambio. Espera aquí, por favor.</p>
+              <h1 className="sf-confirm-title">{kioskCash.kind === 'pos' ? 'Paga con punto de venta aquí' : 'Paga en efectivo aquí'}</h1>
+              <p className="sf-confirm-sub">
+                {kioskCash.kind === 'pos'
+                  ? 'Ya avisamos al personal: alguien viene con el punto de venta a cobrarte. Espera aquí, por favor.'
+                  : 'Ya avisamos al personal: alguien viene a cobrarte y darte el cambio. Espera aquí, por favor.'}
+              </p>
               <div className="sf-cash-total">
                 <span>Total a pagar</span>
-                <strong>{currencySymbol}{kioskCash.total.toFixed(2)}</strong>
+                {kioskCash.ves
+                  ? <><strong>Bs {kioskCash.ves.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong><b>{currencySymbol}{kioskCash.total.toFixed(2)}</b></>
+                  : <strong>{currencySymbol}{kioskCash.total.toFixed(2)}</strong>}
                 <em>Pedido {kioskCash.number != null ? `#${kioskCash.number}` : orderId}</em>
               </div>
               <div className="sf-cash-waiting"><i /><i /><i /> Esperando al personal</div>
@@ -5246,7 +5265,15 @@ export default function StoreShell({ store, products, categories = [], initialBc
                         ))}
                       </div>
                     )}
-                    {isSelected && requirePaymentProof && (
+                    {isSelected && staffPayKind(m.type, m.label) && (
+                      // kiosk: nothing to upload, someone comes to collect it
+                      <div className="sf-staff-pay-note">
+                        {staffPayKind(m.type, m.label) === 'pos'
+                          ? 'Al terminar, alguien viene con el punto de venta a cobrarte aquí.'
+                          : 'Al terminar, alguien viene a cobrarte aquí y te da el cambio.'}
+                      </div>
+                    )}
+                    {isSelected && requirePaymentProof && !staffPayKind(m.type, m.label) && (
                       <div className="sf-proof-upload" onClick={e => e.stopPropagation()}>
                         <div className="sf-proof-total">
                           <span>Total a pagar</span>

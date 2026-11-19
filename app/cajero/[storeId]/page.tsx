@@ -221,7 +221,9 @@ export default function CajeroPage() {
     }
   }
 
-  // ── Kiosk customers waiting to pay cash ──
+  // a kiosk call to charge on the point-of-sale terminal (not cash)
+  const isPos = (o: Order) => /punto/i.test(o.payment_method ?? '')
+  // ── Kiosk customers waiting to pay cash (or by card on the terminal) ──
   // Each one shows as a loud alert at the top (with a chime every few
   // seconds) until "Cobrado" marks its payment collected — which also tells
   // the kiosk, so it frees itself for the next customer
@@ -382,15 +384,25 @@ export default function CajeroPage() {
             <div key={o.id} className="cj-cash-call">
               <div className="cj-cash-call-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="30" height="30">
-                  <rect x="2.5" y="6" width="19" height="12" rx="2" /><circle cx="12" cy="12" r="2.6" /><path d="M6 9.5v5M18 9.5v5" />
+                  {isPos(o)
+                    ? <><rect x="5" y="2.5" width="14" height="19" rx="2.5" /><rect x="8" y="5.5" width="8" height="5" rx="1" /><path d="M8.5 14h1M11.5 14h1M14.5 14h1M8.5 17h1M11.5 17h1M14.5 17h1" /></>
+                    : <><rect x="2.5" y="6" width="19" height="12" rx="2" /><circle cx="12" cy="12" r="2.6" /><path d="M6 9.5v5M18 9.5v5" /></>}
                 </svg>
               </div>
               <div className="cj-cash-call-text">
-                <div className="cj-cash-call-kicker">Cobro en efectivo en el kiosko</div>
+                <div className="cj-cash-call-kicker">{isPos(o) ? 'Cobro con punto de venta en el kiosko' : 'Cobro en efectivo en el kiosko'}</div>
                 <div className="cj-cash-call-name">
                   {o.customer_name}{o.order_number != null ? <span> · #{o.order_number}</span> : null}
                 </div>
-                <div className="cj-cash-call-sub">Ve al kiosko a cobrar <strong>${Number(o.total).toFixed(2)}</strong> y lleva el cambio</div>
+                {isPos(o) ? (
+                  <div className="cj-cash-call-sub">
+                    Lleva el punto de venta al kiosko y cobra <strong>{bcvRate > 0
+                      ? `Bs ${(Number(o.total) * bcvRate).toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                      : `$${Number(o.total).toFixed(2)}`}</strong>{bcvRate > 0 ? ` ($${Number(o.total).toFixed(2)})` : ''}
+                  </div>
+                ) : (
+                  <div className="cj-cash-call-sub">Ve al kiosko a cobrar <strong>${Number(o.total).toFixed(2)}</strong> y lleva el cambio</div>
+                )}
               </div>
               <button className="cj-cash-call-btn" disabled={verifying.has(o.id)} onClick={() => collectCash(o.id)}>
                 {verifying.has(o.id) ? '...' : 'Cobrado'}

@@ -1,6 +1,6 @@
 import { after, connection } from 'next/server'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { BncError, bncCall, bncReference, loadBncCreds, rejectMessage } from '../../../lib/bnc'
+import { BncError, bncCall, bncField, bncReference, loadBncCreds, rejectMessage } from '../../../lib/bnc'
 
 // Débito inmediato (BNC) for an order the storefront just created with that
 // payment method. The browser only ever says which order and the payer's
@@ -142,13 +142,16 @@ export async function POST(req: Request) {
         ...(creds.childClientId ? { ChildClientID: creds.childClientId } : {}),
         ...(creds.branchId ? { BranchID: creds.branchId } : {}),
       })
-      const st = String(r.value?.Status ?? '')
-      if (r.ok && st === 'ACCP') {
-        await touch({ status: 'token_sent', reject_code: null, reject_description: null })
+      // Sent: "ACCP" as Status or Code — or an OK with no verdict at all
+      // ("Se envió una solicitud de token al cliente.")
+      const st = bncField(r.value, 'Status').toUpperCase()
+      const code = bncField(r.value, 'Code').toUpperCase()
+      const sent = r.ok && st !== 'RJCT' && (st === 'ACCP' || code === 'ACCP' || (!st && !code))
+      if (sent) {
+        await touch({ status: 'token_sent', reject_code: null, reject_description: null, last_response: r.raw })
         return json({ sent: true, amount })
       }
-      const code = String(r.value?.Code ?? r.code ?? '')
-      await touch({ reject_code: code, reject_description: String(r.value?.RejectDescription ?? r.message ?? '') })
+      await touch({ reject_code: code || r.code, reject_description: bncField(r.value, 'RejectDescription') || r.message, last_response: r.raw })
       return fail(r.ok ? rejectMessage(code) : `El banco no pudo enviar el código${r.message ? `: ${r.message}` : ''}`, 422, { code })
     }
 
@@ -181,13 +184,16 @@ export async function POST(req: Request) {
         }, { reference: bncReference('DB'), timeoutMs: 125_000 })
       } catch (e) {
         // no answer: it may or may not have gone through — the store checks
-        await touch({ status: 'unknown', reject_description: (e as Error).message })
+        await touch({ status: 'unknown', reject_description: (e as Error).message, last_response: { error: (e as Error).message, code: e instanceof BncError ? e.code : null } })
         return fail('No supimos la respuesta del banco. No pagues otra vez: la tienda revisará si el cobro llegó.', 504, { unknown: true })
       }
-      const st = String(r.value?.Status ?? '')
-      const reference = r.value?.Reference ? String(r.value.Reference) : null
-      if (r.ok && st === 'ACCP') {
-        await touch({ status: 'paid', bank_reference: reference, reject_code: null, reject_description: null })
+      const st = bncField(r.value, 'Status').toUpperCase()
+      const code = bncField(r.value, 'Code').toUpperCase()
+      const reference = bncField(r.value, 'Reference') || null
+      const desc = bncField(r.value, 'RejectDescription') || r.message
+      // Paid only on an explicit ACCP (as Status, or as Code with no Status)
+      if (r.ok && (st === 'ACCP' || (!st && code === 'ACCP'))) {
+        await touch({ status: 'paid', bank_reference: reference, reject_code: null, reject_description: null, last_response: r.raw })
         await supa.from('orders').update({
           payment_status: 'approved',
           payment_verified_by: `Débito inmediato BNC${reference ? ` · Ref ${reference}` : ''}`,
@@ -201,19 +207,19 @@ export async function POST(req: Request) {
         })
         return json({ paid: true, reference, amount })
       }
-      const code = String(r.value?.Code ?? r.code ?? '')
-      const desc = String(r.value?.RejectDescription ?? r.message ?? '')
-      if (r.ok && st && st !== 'RJCT') {
-        // e.g. AC00 / PEND: the bank hasn't decided yet
-        await touch({ status: 'unknown', bank_reference: reference, reject_code: code, reject_description: desc })
+      if (r.ok && st !== 'RJCT' && !(code && code !== 'ACCP' && !st)) {
+        // e.g. AC00 / PEND, or an OK without a verdict: not decided yet
+        await touch({ status: 'unknown', bank_reference: reference, reject_code: code, reject_description: desc, last_response: r.raw })
         return fail('El banco todavía está procesando el pago. No pagues otra vez: la tienda confirmará cuando llegue.', 202, { unknown: true })
       }
-      await touch({ status: 'rejected', bank_reference: reference, reject_code: code, reject_description: desc })
+      await touch({ status: 'rejected', bank_reference: reference, reject_code: code || r.code, reject_description: desc, last_response: r.raw })
       return fail(r.ok ? rejectMessage(code, desc) : `El banco no procesó el pago${r.message ? `: ${r.message}` : ''}`, 422, { code })
     }
   } catch (e) {
     const msg = e instanceof BncError ? e.message : 'Error inesperado con el banco'
-    if (action === 'charge') await touch({ status: 'rejected', reject_description: msg })
+    const errLog = { last_response: { error: msg, code: e instanceof BncError ? e.code : null } }
+    if (action === 'charge') await touch({ status: 'rejected', reject_description: msg, ...errLog })
+    else await touch({ reject_description: msg, ...errLog })
     return fail(msg, 502)
   }
 

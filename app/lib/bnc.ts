@@ -123,8 +123,24 @@ function envelope(creds: BncCreds, payload: Record<string, unknown>, secret: str
   }
 }
 
-const messageCode = (m?: string) => (m ?? '').slice(0, 6)
+// A message is usually a 6-character code + text ("000000Consulta exitosa",
+// "EPICNFNo es posible…"), but not always ("Se envió una solicitud de token
+// al cliente.") — only take a code when there is one.
+function splitMessage(m?: string) {
+  const t = (m ?? '').trim()
+  return /^[A-Z0-9]{6}/.test(t) ? { code: t.slice(0, 6), text: t.slice(6).trim() } : { code: '', text: t }
+}
+const messageCode = (m?: string) => splitMessage(m).code
 const isRwk = (env: Envelope) => /RWK/.test(messageCode(env.message))
+
+// A field of the bank's decrypted answer, whatever its casing ("Status" /
+// "status"), as upper-case text ('' when missing)
+export function bncField(value: Record<string, unknown> | null, name: string): string {
+  if (!value) return ''
+  const key = Object.keys(value).find(k => k.toLowerCase() === name.toLowerCase())
+  const v = key ? value[key] : undefined
+  return v === undefined || v === null ? '' : String(v).trim()
+}
 
 function openValue(env: Envelope, secret: string): Record<string, unknown> | null {
   if (!env.value) return null
@@ -138,8 +154,8 @@ export async function bncLogon(supa: SupabaseClient, creds: BncCreds): Promise<s
   const value = openValue(env, creds.masterKey)
   const wk = typeof value?.WorkingKey === 'string' ? value.WorkingKey : null
   if (env.status !== 'OK' || !wk) {
-    const msg = (env.message ?? '').slice(6).trim()
-    throw new BncError(msg || 'El banco no aceptó las credenciales', messageCode(env.message))
+    const { code, text } = splitMessage(env.message)
+    throw new BncError(text || 'El banco no aceptó las credenciales', code)
   }
   creds.workingKey = wk
   creds.workingKeyDay = caracasDay()
@@ -149,7 +165,11 @@ export async function bncLogon(supa: SupabaseClient, creds: BncCreds): Promise<s
   return wk
 }
 
-export type BncResult = { ok: boolean; message: string; code: string; value: Record<string, unknown> | null }
+export type BncResult = {
+  ok: boolean; message: string; code: string; value: Record<string, unknown> | null
+  /** what came back, for the record (no secrets in it) */
+  raw: { status: string | null; message: string | null; value: Record<string, unknown> | null }
+}
 
 // One call with the day's WorkingKey (logging on first when there's none for
 // today, and once more if the bank asks for a fresh one).
@@ -164,11 +184,14 @@ export async function bncCall(
       : await bncLogon(supa, creds)
     const env = await post(creds.environment, path, envelope(creds, payload, wk, reference), opts.timeoutMs ?? 60000)
     if (isRwk(env) && attempt === 0) { creds.workingKey = null; continue }
+    const { code, text } = splitMessage(env.message)
+    const value = openValue(env, wk)
     return {
-      ok: env.status === 'OK',
-      message: (env.message ?? '').slice(6).trim(),
-      code: messageCode(env.message),
-      value: openValue(env, wk),
+      ok: (env.status ?? '').toUpperCase() === 'OK',
+      message: text,
+      code,
+      value,
+      raw: { status: env.status ?? null, message: env.message ?? null, value },
     }
   }
   throw new BncError('El banco pidió renovar la llave de trabajo dos veces seguidas', 'RWK')

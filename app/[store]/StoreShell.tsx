@@ -1718,7 +1718,11 @@ export default function StoreShell({ store, products, categories = [], initialBc
       {(modalProduct?.options?.nutrition?.diets ?? []).filter(d => DIET_LABELS[d]).length > 0 && (
         <div className="sf-modal-diets">
           {modalProduct!.options!.nutrition!.diets!.filter(d => DIET_LABELS[d]).map(d => (
-            <span key={d} className={`sf-diet sf-diet-${d}`} title={DIET_LABELS[d]} aria-label={DIET_LABELS[d]}>{d}</span>
+            // (a kiosk spells each one out next to its circle)
+            <span key={d} className="sf-diet-item">
+              <span className={`sf-diet sf-diet-${d}`} title={DIET_LABELS[d]} aria-label={DIET_LABELS[d]}>{d}</span>
+              {kioskActive && <span className="sf-diet-name">{DIET_LABELS[d]}</span>}
+            </span>
           ))}
         </div>
       )}

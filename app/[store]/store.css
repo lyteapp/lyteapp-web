@@ -1726,7 +1726,8 @@ video.sf-banner-img { object-fit: cover; }
   display: grid; grid-template-columns: repeat(2, auto); gap: 5px;
   padding-left: 14px; border-left: 1px solid rgba(15, 23, 42, 0.08);
 }
-.sf-modal-diets:has(.sf-diet:only-child) { grid-template-columns: auto; }
+.sf-modal-diets:has(.sf-diet-item:only-child) { grid-template-columns: auto; }
+.sf-diet-item { display: contents; }
 .sf-diet {
   width: 28px; height: 28px; border-radius: 50%;
   display: inline-flex; align-items: center; justify-content: center;
@@ -3256,6 +3257,25 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
 @keyframes sfDockNutIn { from { opacity: 0; transform: translateY(45%); } to { opacity: 1; transform: none; } }
 /* the phone's nutrition badge, in the dock: in place, not floating */
 .sf-kiosk-dock-nut .sf-modal-nutrition-badge.sf-kiosk-nut-badge { position: static; transform: none; max-width: 100%; box-shadow: 0 6px 18px rgba(15,23,42,0.1); }
+/* …across the whole bottom: the ring, the three macros spread out in a
+   row, and each diet's circle with its name */
+.sf-kiosk-dock-nut .sf-kiosk-nut-badge { width: 100%; justify-content: space-between; gap: 28px; padding: 14px 28px; border-radius: 22px; }
+.sf-kiosk-nut-badge .sf-modal-nutrition-legend {
+  flex: 1; min-width: 0; flex-direction: row; flex-wrap: wrap; justify-content: space-evenly; align-items: center;
+  gap: 10px 24px; font-size: 19px;
+}
+.sf-kiosk-nut-badge .sf-modal-nutrition-legend-item { gap: 10px; }
+.sf-kiosk-nut-badge .sf-modal-nutrition-legend-item strong { font-size: 21px; }
+.sf-kiosk-nut-badge .sf-modal-nutrition-dot { width: 14px; height: 14px; }
+.sf-kiosk-nut-badge .sf-modal-diets { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding-left: 24px; flex-shrink: 0; }
+.sf-kiosk-nut-badge .sf-diet-item { display: inline-flex; align-items: center; gap: 10px; }
+.sf-kiosk-nut-badge .sf-diet { width: 34px; height: 34px; font-size: 12px; flex-shrink: 0; }
+.sf-kiosk-nut-badge .sf-diet-name { font-size: 16px; font-weight: 700; color: #0F172A; white-space: nowrap; }
+/* a portrait tablet hasn't the width for the three side by side: stacked */
+@media (orientation: portrait) {
+  .sf-kiosk-nut-badge .sf-modal-nutrition-legend { flex-direction: column; flex-wrap: nowrap; align-items: flex-start; justify-content: center; gap: 6px; font-size: 18px; padding-left: 8px; }
+  .sf-kiosk-nut-badge .sf-modal-nutrition-legend-item strong { font-size: 19px; }
+}
 
 /* Kiosk touch: no wait for a possible double-tap zoom on anything, no grey
    tap flash, no text getting selected or the iOS callout popping up under a

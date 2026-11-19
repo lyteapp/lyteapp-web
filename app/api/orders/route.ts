@@ -6,7 +6,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const {
       id, store_id, customer_name, customer_phone, customer_notes,
-      payment_method, total, delivery_type, service_type, payment_proof_url, items, kiosk_cash,
+      payment_method, total, delivery_type, service_type, payment_proof_url, items, kiosk_cash, from_kiosk,
     } = body
 
     if (!id || !store_id || !customer_name || !customer_phone) {
@@ -39,9 +39,11 @@ export async function POST(req: NextRequest) {
       service_type: service_type === 'dine_in' || service_type === 'takeout' ? service_type : null,
       order_number: orderNumber ?? null,
       payment_proof_url: payment_proof_url || null,
-      // a kiosk customer paying cash waits at the kiosk: the Caja screen
-      // alerts the staff until the payment is marked collected
+      // a payment the staff collects in person (cash at a kiosk, or the
+      // point-of-sale terminal): the Caja screen shows it until it's marked
+      // collected — loudly when the customer is waiting at a kiosk
       cash_call_at: kiosk_cash === true ? new Date().toISOString() : null,
+      from_kiosk: from_kiosk === true,
       payment_status: payment_proof_url || kiosk_cash === true ? 'pending' : null,
     })
 

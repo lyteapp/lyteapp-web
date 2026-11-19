@@ -17,8 +17,10 @@ type Order = {
   created_at: string
   delivery_type: string | null
   order_number?: number | null
-  /** a kiosk customer chose cash and is waiting at the kiosk to pay */
+  /** a payment the staff collects in person (cash at a kiosk, point of sale) */
   cash_call_at?: string | null
+  /** placed at a kiosk: the customer is waiting there */
+  from_kiosk?: boolean
 }
 
 // A short two-note chime, made on the spot (no sound file)
@@ -227,8 +229,12 @@ export default function CajeroPage() {
   // Each one shows as a loud alert at the top (with a chime every few
   // seconds) until "Cobrado" marks its payment collected — which also tells
   // the kiosk, so it frees itself for the next customer
-  const cashCalls = orders.filter(o =>
+  const toCollect = orders.filter(o =>
     o.cash_call_at && o.payment_status !== 'approved' && o.status !== 'cancelled' && isToday(o.cash_call_at))
+  // loud: someone waiting at a kiosk; quiet: online orders paid on the
+  // point-of-sale terminal at pickup or on delivery
+  const cashCalls = toCollect.filter(o => o.from_kiosk)
+  const posToCollect = toCollect.filter(o => !o.from_kiosk)
   const calling = cashCalls.length > 0
   useEffect(() => {
     const unlock = () => {
@@ -410,6 +416,32 @@ export default function CajeroPage() {
             </div>
           ))}
           {!soundOn && <div className="cj-cash-sound">Toca la pantalla una vez para activar el sonido de estas alertas</div>}
+        </div>
+      )}
+
+      {/* ONLINE ORDERS TO CHARGE ON THE POINT-OF-SALE TERMINAL */}
+      {posToCollect.length > 0 && (
+        <div className="cj-pos-todo">
+          <div className="cj-pos-todo-title">Por cobrar con punto de venta · {posToCollect.length}</div>
+          {posToCollect.map(o => (
+            <div key={o.id} className="cj-pos-todo-row">
+              <div className="cj-pos-todo-text">
+                <div className="cj-pos-todo-name">
+                  {o.customer_name}{o.order_number != null ? <span> · #{o.order_number}</span> : null}
+                </div>
+                <div className="cj-pos-todo-sub">
+                  <strong>{bcvRate > 0
+                    ? `Bs ${(Number(o.total) * bcvRate).toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    : `$${Number(o.total).toFixed(2)}`}</strong>{bcvRate > 0 ? ` ($${Number(o.total).toFixed(2)})` : ''}
+                  {' · '}
+                  {o.delivery_type === 'delivery' ? 'Delivery: que el repartidor lleve el punto de venta' : 'Cóbrale con el punto cuando venga a retirar'}
+                </div>
+              </div>
+              <button className="cj-pos-todo-btn" disabled={verifying.has(o.id)} onClick={() => collectCash(o.id)}>
+                {verifying.has(o.id) ? '...' : 'Cobrado'}
+              </button>
+            </div>
+          ))}
         </div>
       )}
 

@@ -2037,13 +2037,15 @@ export default function StoreShell({ store, products, categories = [], initialBc
     return Object.values(cart).filter(i => (i.productId ?? i.id) === productId).reduce((s, i) => s + i.quantity, 0)
   }
   const enabledMethods = parsePaymentMethods(store.payment_methods)
-  // Kiosk: payments the staff collects at the kiosk itself — cash, or card
-  // on the point-of-sale terminal (until one is built into the kiosk). No
-  // receipt photo for these; the Caja screen calls someone over instead.
+  // Payments the staff collects in person, so no receipt photo: the store's
+  // point-of-sale terminal (anywhere — online it's charged at pickup or on
+  // delivery), and, at a kiosk, cash too. The Caja screen lists them to
+  // collect (calling someone over when a kiosk customer is waiting).
   const staffPayKind = (type: string, label: string): 'cash' | 'pos' | null => {
-    if (!kioskActive) return null
     const s = `${type} ${label}`
-    return /efectivo|cash/i.test(s) ? 'cash' : /punto|\bpos\b/i.test(s) ? 'pos' : null
+    if (/punto|\bpos\b/i.test(s)) return 'pos'
+    if (kioskActive && /efectivo|cash/i.test(s)) return 'cash'
+    return null
   }
   const selectedStaffPay = staffPayKind(selectedPayment, (enabledMethods.find(m => m.type === selectedPayment)?.label ?? '') || paymentFreeText)
   const showInstallBtn = !installed && (isIos || !!installPrompt)
@@ -3498,6 +3500,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           service_type: askServiceType ? serviceType : null,
           payment_proof_url: proofUrl,
           kiosk_cash: !!staffPay,
+          from_kiosk: kioskActive,
           items: cartItems.map(i => ({
             product_id: i.productId ?? i.id,
             product_name: i.name, product_price: i.price,
@@ -3598,7 +3601,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
       }
 
       const shortId = newOrderId.slice(0, 8).toUpperCase()
-      setKioskCash(staffPay ? { id: newOrderId, total: orderTotal, ves: vesAmount, number: orderNumber ?? null, paid: false, kind: staffPay } : null)
+      setKioskCash(staffPay && kioskActive ? { id: newOrderId, total: orderTotal, ves: vesAmount, number: orderNumber ?? null, paid: false, kind: staffPay } : null)
       setOrderId(shortId); setCart({}); clearSavedCart()
       if (isPickup) setPickupTrackId(newOrderId)
       else setPickupTrackId('')
@@ -5269,11 +5272,15 @@ export default function StoreShell({ store, products, categories = [], initialBc
                       </div>
                     )}
                     {isSelected && staffPayKind(m.type, m.label) && (
-                      // kiosk: nothing to upload, someone comes to collect it
+                      // nothing to upload: the staff charges it in person
                       <div className="sf-staff-pay-note">
-                        {staffPayKind(m.type, m.label) === 'pos'
-                          ? 'Al terminar, alguien viene con el punto de venta a cobrarte aquí.'
-                          : 'Al terminar, alguien viene a cobrarte aquí y te da el cambio.'}
+                        {staffPayKind(m.type, m.label) === 'cash'
+                          ? 'Al terminar, alguien viene a cobrarte aquí y te da el cambio.'
+                          : kioskActive
+                            ? 'Al terminar, alguien viene con el punto de venta a cobrarte aquí.'
+                            : deliveryType === 'delivery'
+                              ? 'Pagas con tarjeta en el punto de venta cuando recibas tu pedido.'
+                              : 'Pagas con tarjeta en el punto de venta cuando retires tu pedido.'}
                       </div>
                     )}
                     {isSelected && requirePaymentProof && !staffPayKind(m.type, m.label) && (

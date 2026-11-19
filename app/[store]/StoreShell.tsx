@@ -1673,73 +1673,56 @@ export default function StoreShell({ store, products, categories = [], initialBc
     }
   }
 
-  // Kiosk: the open product's nutrition facts as a card (ring with the
-  // calories, a column per macro, the diets up top) in the store's colors,
-  // following the picked options live. It takes the category bar's place at
-  // the bottom of the screen while the product is open (see the kiosk dock).
-  const renderKioskNutrition = (still = false, where = 'dock') => {
-    if (!kioskActive || !modalProduct || !modalNutritionEnabled || !modalNutritionDisplay) return null
+  // The product's nutrition badge — the ring with the calories, the macros
+  // with their dots, the diets — as on a phone: floating over the product
+  // sheet there, and at a kiosk in the bottom dock in place of the category
+  // bar (see the kiosk dock); it follows the picked options live.
+  const renderNutritionBadge = (extraClass: string) => {
+    if (!modalProduct || !modalNutritionEnabled || !modalNutritionDisplay) return null
     const d = modalNutritionDisplay
-    const total = d.protein + d.carbs + d.fat
-    // proteins in the store's color, carbs green, fats amber (set on .sf-knut)
-    const tone: Record<string, string> = { protein: 'var(--kn-1)', carbs: 'var(--kn-2)', fat: 'var(--kn-3)' }
-    const macros = [
-      { key: 'protein', label: 'Proteínas', g: d.protein, color: tone.protein },
-      { key: 'carbs', label: 'Carbohidratos', g: d.carbs, color: tone.carbs },
-      { key: 'fat', label: 'Grasas', g: d.fat, color: tone.fat },
-    ]
-    const diets = (modalProduct.options?.nutrition?.diets ?? []).filter(k => DIET_LABELS[k])
-    const gloss = `sfKnutGloss-${where}`
     return (
-      <div className={`sf-knut sf-knut-${where}${still ? ' still' : ''}`}>
-        {/* the colors glowing through the glass */}
-        <div className="sf-knut-glow" aria-hidden="true"><i /><i /><i /></div>
-        <div className="sf-knut-head">
-          <div className="sf-knut-title">Valor nutricional</div>
-          {diets.length > 0 && (
-            <div className="sf-knut-diets">
-              {diets.map(k => <span key={k} className={`sf-knut-diet sf-diet-${k}`}>{DIET_LABELS[k]}</span>)}
-            </div>
-          )}
-        </div>
-        <div className="sf-knut-main">
-          <div className="sf-knut-ring">
-            <svg viewBox="0 0 80 80" aria-hidden="true">
-              <defs>
-                {/* light falling on a glass tube: bright on top, a faint edge below */}
-                <linearGradient id={gloss} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0" stopColor="#fff" stopOpacity="0.55" />
-                  <stop offset="0.45" stopColor="#fff" stopOpacity="0.08" />
-                  <stop offset="0.8" stopColor="#fff" stopOpacity="0" />
-                  <stop offset="1" stopColor="#fff" stopOpacity="0.35" />
-                </linearGradient>
-              </defs>
-              <circle cx="40" cy="40" r={modalNutritionRadius} fill="none" className="sf-knut-track" strokeWidth="9" />
-              <g className="sf-knut-segs">
-                {modalNutritionSegments.map(sg => (
-                  <circle key={sg.key} cx="40" cy="40" r={modalNutritionRadius} fill="none"
-                    style={{ stroke: tone[sg.key] ?? sg.color }} strokeWidth="9"
-                    strokeDasharray={`${sg.len} ${modalNutritionCircumference - sg.len}`}
-                    strokeDashoffset={sg.dashOffset} transform="rotate(-90 40 40)" />
-                ))}
-              </g>
-              <circle cx="40" cy="40" r={modalNutritionRadius} fill="none" stroke={`url(#${gloss})`} strokeWidth="9" />
-              <circle cx="40" cy="40" r={modalNutritionRadius - 4} fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="0.6" />
-              <circle cx="40" cy="40" r={modalNutritionRadius + 4} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.6" />
-            </svg>
-            <div className="sf-knut-kcal"><strong>{Math.round(d.calories)}</strong><span>kcal</span></div>
-          </div>
-          <div className="sf-knut-macros">
-            {macros.map(m => (
-              <div key={m.key} className="sf-knut-macro">
-                <strong>{Math.round(m.g)} g</strong>
-                <span><i style={{ background: m.color }} />{m.label}</span>
-                <div className="sf-knut-bar"><span style={{ width: `${total > 0 ? (m.g / total) * 100 : 0}%`, background: m.color, color: m.color }} /></div>
-              </div>
-            ))}
-          </div>
+    <div className={`sf-modal-nutrition-badge ${extraClass}`}>
+      <div className="sf-modal-nutrition-chart">
+        <svg viewBox="0 0 80 80">
+          <circle cx="40" cy="40" r={modalNutritionRadius} fill="none" stroke="rgba(15,23,42,0.08)" strokeWidth="10" />
+          {modalNutritionSegments.map(s => (
+            <circle
+              key={s.key} cx="40" cy="40" r={modalNutritionRadius} fill="none"
+              stroke={s.color} strokeWidth="10"
+              strokeDasharray={`${s.len} ${modalNutritionCircumference - s.len}`}
+              strokeDashoffset={s.dashOffset}
+              strokeLinecap="round"
+              transform="rotate(-90 40 40)"
+            />
+          ))}
+        </svg>
+        <div className="sf-modal-nutrition-kcal">
+          <strong>{Math.round(d.calories)}</strong>
+          <span>kcal</span>
         </div>
       </div>
+      <div className="sf-modal-nutrition-legend">
+        <div className="sf-modal-nutrition-legend-item">
+          <span className="sf-modal-nutrition-dot" style={{ background: '#F59E0B' }} />
+          Grasas <strong>{Math.round(d.fat)}g</strong>
+        </div>
+        <div className="sf-modal-nutrition-legend-item">
+          <span className="sf-modal-nutrition-dot" style={{ background: 'var(--sf-accent-color, #7C3AED)' }} />
+          Proteínas <strong>{Math.round(d.protein)}g</strong>
+        </div>
+        <div className="sf-modal-nutrition-legend-item">
+          <span className="sf-modal-nutrition-dot" style={{ background: '#10B981' }} />
+          Carbos <strong>{Math.round(d.carbs)}g</strong>
+        </div>
+      </div>
+      {(modalProduct?.options?.nutrition?.diets ?? []).filter(d => DIET_LABELS[d]).length > 0 && (
+        <div className="sf-modal-diets">
+          {modalProduct!.options!.nutrition!.diets!.filter(d => DIET_LABELS[d]).map(d => (
+            <span key={d} className={`sf-diet sf-diet-${d}`} title={DIET_LABELS[d]} aria-label={DIET_LABELS[d]}>{d}</span>
+          ))}
+        </div>
+      )}
+    </div>
     )
   }
 
@@ -2855,50 +2838,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           </div>
         )}
         <div className={`sf-modal-wrap${modalFull ? ' sf-modal-wrap-fullpage' : ''}`}>
-          {modalNutritionEnabled && modalNutritionDisplay && !kioskActive && (
-            <div className="sf-modal-nutrition-badge sf-modal-nutrition-badge-float">
-              <div className="sf-modal-nutrition-chart">
-                <svg viewBox="0 0 80 80">
-                  <circle cx="40" cy="40" r={modalNutritionRadius} fill="none" stroke="rgba(15,23,42,0.08)" strokeWidth="10" />
-                  {modalNutritionSegments.map(s => (
-                    <circle
-                      key={s.key} cx="40" cy="40" r={modalNutritionRadius} fill="none"
-                      stroke={s.color} strokeWidth="10"
-                      strokeDasharray={`${s.len} ${modalNutritionCircumference - s.len}`}
-                      strokeDashoffset={s.dashOffset}
-                      strokeLinecap="round"
-                      transform="rotate(-90 40 40)"
-                    />
-                  ))}
-                </svg>
-                <div className="sf-modal-nutrition-kcal">
-                  <strong>{Math.round(modalNutritionDisplay.calories)}</strong>
-                  <span>kcal</span>
-                </div>
-              </div>
-              <div className="sf-modal-nutrition-legend">
-                <div className="sf-modal-nutrition-legend-item">
-                  <span className="sf-modal-nutrition-dot" style={{ background: '#F59E0B' }} />
-                  Grasas <strong>{Math.round(modalNutritionDisplay.fat)}g</strong>
-                </div>
-                <div className="sf-modal-nutrition-legend-item">
-                  <span className="sf-modal-nutrition-dot" style={{ background: 'var(--sf-accent-color, #7C3AED)' }} />
-                  Proteínas <strong>{Math.round(modalNutritionDisplay.protein)}g</strong>
-                </div>
-                <div className="sf-modal-nutrition-legend-item">
-                  <span className="sf-modal-nutrition-dot" style={{ background: '#10B981' }} />
-                  Carbos <strong>{Math.round(modalNutritionDisplay.carbs)}g</strong>
-                </div>
-              </div>
-              {(modalProduct?.options?.nutrition?.diets ?? []).filter(d => DIET_LABELS[d]).length > 0 && (
-                <div className="sf-modal-diets">
-                  {modalProduct!.options!.nutrition!.diets!.filter(d => DIET_LABELS[d]).map(d => (
-                    <span key={d} className={`sf-diet sf-diet-${d}`} title={DIET_LABELS[d]} aria-label={DIET_LABELS[d]}>{d}</span>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+          {!kioskActive && renderNutritionBadge('sf-modal-nutrition-badge-float')}
         <div
           className={`sf-modal${cfgModalHalf ? ' sf-modal-half' : ''}${modalFull ? ' sf-modal-fullpage' : ''}${kioskActive ? ' sf-modal-kiosk' : ''}${cfgModalDark ? ' sf-modal-dark' : ''}`}
           style={{
@@ -6365,7 +6305,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
               })}
             </nav>
           )}
-          {kioskDockNut && <div className="sf-kiosk-dock-nut">{renderKioskNutrition(false, 'dock')}</div>}
+          {kioskDockNut && <div className="sf-kiosk-dock-nut">{renderNutritionBadge('sf-kiosk-nut-badge')}</div>}
         </div>
 
         {kioskHomeAsk && (

@@ -3231,92 +3231,6 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
 .sf-kiosk .sf-modal-img-strip, .sf-kiosk .sf-modal-img-frame { height: 100%; }
 .sf-kiosk .sf-modal-img-wrap { cursor: default; }
 
-/* Kiosk: nutrition facts as a card at the top of the product's options,
-   in "liquid glass": frosted translucent glass with bright edges, the macro
-   colors glowing softly through it, a glossy ring around a glass disc */
-.sf-knut {
-  /* proteins in the store's color, carbs green, fats amber */
-  --kn-1: var(--sf-accent-color, #7C3AED);
-  --kn-2: #10B981;
-  --kn-3: #F59E0B;
-  position: relative; isolation: isolate; overflow: hidden; flex-shrink: 0;
-  margin: 0 0 16px; padding: 14px 20px 16px; border-radius: 26px;
-  background: linear-gradient(150deg, rgba(255,255,255,0.72) 0%, rgba(255,255,255,0.38) 55%, rgba(255,255,255,0.55) 100%);
-  -webkit-backdrop-filter: blur(28px) saturate(185%); backdrop-filter: blur(28px) saturate(185%);
-  /* a fine edge all the way round (white on white would leave the corners
-     undefined), light catching the top, an even soft shadow */
-  border: 1px solid rgba(15,23,42,0.07);
-  box-shadow:
-    inset 0 1.5px 0 rgba(255,255,255,0.95),
-    inset 0 -1px 0 rgba(255,255,255,0.5),
-    inset 0 -18px 30px -24px rgba(15,23,42,0.14),
-    0 12px 30px -10px rgba(15,23,42,0.16),
-    0 1px 3px rgba(15,23,42,0.06);
-  animation: sfKnutIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-/* the specular sheen across the top of the glass */
-.sf-knut::after {
-  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; border-radius: inherit; clip-path: inset(0 round 26px);
-  background:
-    linear-gradient(170deg, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0.12) 28%, rgba(255,255,255,0) 45%),
-    radial-gradient(120% 60% at 0% 0%, rgba(255,255,255,0.5), transparent 60%);
-}
-@keyframes sfKnutIn { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: none; } }
-.sf-knut.still { animation: none; }
-/* the glow is cut to the card's rounded shape by its own layer: Safari
-   doesn't round off blurred content with the card's overflow alone, which
-   left little square corners sticking out */
-.sf-knut-glow {
-  position: absolute; inset: 0; z-index: -2; pointer-events: none; opacity: 0.5;
-  border-radius: inherit; overflow: hidden; clip-path: inset(0 round 26px);
-}
-.sf-knut-glow i { position: absolute; border-radius: 50%; filter: blur(34px); }
-.sf-knut-glow i:nth-child(1) { width: 190px; height: 190px; left: -30px; top: -20px; background: var(--kn-1); opacity: 0.55; }
-.sf-knut-glow i:nth-child(2) { width: 220px; height: 160px; right: 10%; top: -30px; background: var(--kn-2); opacity: 0.4; }
-.sf-knut-glow i:nth-child(3) { width: 200px; height: 150px; right: -30px; bottom: -30px; background: var(--kn-3); opacity: 0.4; }
-.sf-knut-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 28px; margin-bottom: 10px; }
-.sf-knut-title { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(15,23,42,0.55); white-space: nowrap; }
-.sf-knut-main { display: flex; align-items: center; gap: 22px; }
-.sf-knut-ring { position: relative; width: 96px; height: 96px; flex-shrink: 0; }
-.sf-knut-ring svg { width: 100%; height: 100%; display: block; overflow: visible; }
-.sf-knut-track { stroke: rgba(255,255,255,0.55); }
-.sf-knut-segs { filter: drop-shadow(0 3px 5px rgba(15,23,42,0.18)); }
-/* the glass disc in the middle */
-.sf-knut-kcal {
-  position: absolute; inset: 16px; border-radius: 50%;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05;
-  background: linear-gradient(160deg, rgba(255,255,255,0.85), rgba(255,255,255,0.45));
-  -webkit-backdrop-filter: blur(12px) saturate(170%); backdrop-filter: blur(12px) saturate(170%);
-  box-shadow: inset 0 1.5px 0 rgba(255,255,255,1), inset 0 -2px 6px rgba(15,23,42,0.08), 0 4px 12px rgba(15,23,42,0.12);
-}
-.sf-knut-kcal strong { font-size: 22px; font-weight: 800; color: #0F172A; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-.sf-knut-kcal span { font-size: 10px; font-weight: 700; color: rgba(15,23,42,0.45); text-transform: uppercase; letter-spacing: 0.08em; }
-/* a column per macro: grams, name, a glass tube */
-.sf-knut-macros { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-.sf-knut-macro { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.sf-knut-macro > strong { font-size: 21px; font-weight: 800; color: #0F172A; font-variant-numeric: tabular-nums; white-space: nowrap; letter-spacing: -0.01em; }
-.sf-knut-macro > span { display: flex; align-items: center; gap: 6px; font-size: 13.5px; color: rgba(15,23,42,0.65); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sf-knut-macro > span i { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 1px 3px rgba(15,23,42,0.2); }
-.sf-knut-bar {
-  margin-top: 4px; height: 8px; border-radius: 99px; overflow: hidden;
-  background: rgba(255,255,255,0.5);
-  box-shadow: inset 0 1px 2px rgba(15,23,42,0.12), 0 1px 0 rgba(255,255,255,0.8);
-}
-.sf-knut-bar span { position: relative; display: block; height: 100%; border-radius: 99px; box-shadow: 0 0 10px -2px currentColor; }
-.sf-knut-bar span::after {
-  content: ''; position: absolute; inset: 1px 3px auto; height: 45%; border-radius: 99px;
-  background: linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0));
-}
-.sf-knut-diets { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; min-width: 0; }
-.sf-knut-diet {
-  position: relative; overflow: hidden; padding: 4px 11px; border-radius: 99px; color: #fff; font-size: 12.5px; font-weight: 700; white-space: nowrap;
-  text-shadow: 0 1px 1px rgba(0,0,0,0.15);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -1px 2px rgba(0,0,0,0.12), 0 3px 8px -3px rgba(15,23,42,0.35);
-}
-.sf-knut-diet::after {
-  content: ''; position: absolute; inset: 0 0 50%; pointer-events: none;
-  background: linear-gradient(rgba(255,255,255,0.38), rgba(255,255,255,0.05));
-}
 /* The kiosk dock: the bottom of the screen, shared by the category bar and
    (while a product with nutrition facts is open) that product's nutrition
    card — stacked in one grid cell so its height doesn't jump; the bar
@@ -3338,20 +3252,8 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
   animation: sfDockNutIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
 }
 @keyframes sfDockNutIn { from { opacity: 0; transform: translateY(45%); } to { opacity: 1; transform: none; } }
-.sf-kiosk-dock-nut .sf-knut { width: 100%; max-width: 920px; margin: 0; animation: none; }
-/* dark product sheet: smoked glass */
-:is(.sf-modal-dark, .sf-kiosk-dark) .sf-knut {
-  background: linear-gradient(150deg, rgba(255,255,255,0.14), rgba(255,255,255,0.05));
-  border-color: rgba(255,255,255,0.18);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), inset 0 0 0 1px rgba(255,255,255,0.05), 0 18px 40px -18px rgba(0,0,0,0.6);
-}
-:is(.sf-modal-dark, .sf-kiosk-dark) .sf-knut::after { background: linear-gradient(170deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 40%); }
-:is(.sf-modal-dark, .sf-kiosk-dark) .sf-knut-kcal { background: linear-gradient(160deg, rgba(255,255,255,0.2), rgba(255,255,255,0.06)); box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 4px 12px rgba(0,0,0,0.35); }
-:is(.sf-modal-dark, .sf-kiosk-dark) :is(.sf-knut-title, .sf-knut-kcal span) { color: rgba(241,245,249,0.6); }
-:is(.sf-modal-dark, .sf-kiosk-dark) :is(.sf-knut-kcal strong, .sf-knut-macro > strong) { color: #F8FAFC; }
-:is(.sf-modal-dark, .sf-kiosk-dark) .sf-knut-macro > span { color: rgba(241,245,249,0.75); }
-:is(.sf-modal-dark, .sf-kiosk-dark) .sf-knut-track { stroke: rgba(255,255,255,0.12); }
-:is(.sf-modal-dark, .sf-kiosk-dark) .sf-knut-bar { background: rgba(255,255,255,0.1); box-shadow: inset 0 1px 2px rgba(0,0,0,0.3); }
+/* the phone's nutrition badge, in the dock: in place, not floating */
+.sf-kiosk-dock-nut .sf-modal-nutrition-badge.sf-kiosk-nut-badge { position: static; transform: none; max-width: 100%; box-shadow: 0 6px 18px rgba(15,23,42,0.1); }
 
 /* Kiosk touch: no wait for a possible double-tap zoom on anything, no grey
    tap flash, no text getting selected or the iOS callout popping up under a

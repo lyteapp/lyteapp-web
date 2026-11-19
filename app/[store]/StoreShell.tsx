@@ -1681,7 +1681,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     if (!kioskActive || !modalProduct || !modalNutritionEnabled || !modalNutritionDisplay) return null
     const d = modalNutritionDisplay
     const total = d.protein + d.carbs + d.fat
-    // three tones of the store's own color (set on .sf-knut)
+    // proteins in the store's color, carbs green, fats amber (set on .sf-knut)
     const tone: Record<string, string> = { protein: 'var(--kn-1)', carbs: 'var(--kn-2)', fat: 'var(--kn-3)' }
     const macros = [
       { key: 'protein', label: 'Proteínas', g: d.protein, color: tone.protein },

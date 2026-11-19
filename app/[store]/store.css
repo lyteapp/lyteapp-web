@@ -3235,10 +3235,10 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
    in "liquid glass": frosted translucent glass with bright edges, the macro
    colors glowing softly through it, a glossy ring around a glass disc */
 .sf-knut {
-  /* three tones of the store's color: itself, lighter, deeper */
+  /* proteins in the store's color, carbs green, fats amber */
   --kn-1: var(--sf-accent-color, #7C3AED);
-  --kn-2: color-mix(in oklab, var(--kn-1) 55%, #fff);
-  --kn-3: color-mix(in oklab, var(--kn-1) 62%, #0B1220);
+  --kn-2: #10B981;
+  --kn-3: #F59E0B;
   position: relative; isolation: isolate; overflow: hidden; flex-shrink: 0;
   margin: 0 0 16px; padding: 14px 20px 16px; border-radius: 26px;
   background: linear-gradient(150deg, rgba(255,255,255,0.72) 0%, rgba(255,255,255,0.38) 55%, rgba(255,255,255,0.55) 100%);
@@ -3271,9 +3271,9 @@ html.sf-kiosk-lock, html.sf-kiosk-lock body { overflow: hidden; height: 100%; }
   border-radius: inherit; overflow: hidden; clip-path: inset(0 round 26px);
 }
 .sf-knut-glow i { position: absolute; border-radius: 50%; filter: blur(34px); }
-.sf-knut-glow i:nth-child(1) { width: 190px; height: 190px; left: -30px; top: -20px; background: var(--kn-1); opacity: 0.5; }
-.sf-knut-glow i:nth-child(2) { width: 220px; height: 160px; right: 10%; top: -30px; background: var(--kn-2); opacity: 0.55; }
-.sf-knut-glow i:nth-child(3) { width: 200px; height: 150px; right: -30px; bottom: -30px; background: var(--kn-2); opacity: 0.4; }
+.sf-knut-glow i:nth-child(1) { width: 190px; height: 190px; left: -30px; top: -20px; background: var(--kn-1); opacity: 0.55; }
+.sf-knut-glow i:nth-child(2) { width: 220px; height: 160px; right: 10%; top: -30px; background: var(--kn-2); opacity: 0.4; }
+.sf-knut-glow i:nth-child(3) { width: 200px; height: 150px; right: -30px; bottom: -30px; background: var(--kn-3); opacity: 0.4; }
 .sf-knut-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 28px; margin-bottom: 10px; }
 .sf-knut-title { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(15,23,42,0.55); white-space: nowrap; }
 .sf-knut-main { display: flex; align-items: center; gap: 22px; }

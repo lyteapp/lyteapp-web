@@ -471,6 +471,13 @@ export default function EstadoPage() {
   )
 }
 
+// How long each page of a column stays up when its orders don't all fit
+const PAGE_MS = 8000
+
+/** One column of the board. It never scrolls: when its orders don't all fit
+ *  in the screen's height they're split into pages that take turns by
+ *  themselves, like an airport's departures board (the dots show which page
+ *  is up). How many fit is measured from the column's own height and a card's. */
 function QueueColumn({
   label, dotColor, orders, customerDisplay, accentColor, showTime,
 }: {
@@ -481,14 +488,54 @@ function QueueColumn({
   accentColor: string
   showTime?: boolean
 }) {
+  const listRef = useRef<HTMLDivElement | null>(null)
+  const [perPage, setPerPage] = useState(0)
+  const [turn, setTurn] = useState(0)
+
+  // how many cards fit, measured again whenever the column's size changes
+  useEffect(() => {
+    const list = listRef.current
+    if (!list) return
+    const measure = () => {
+      const card = list.querySelector('.oq-card') as HTMLElement | null
+      if (!card) return
+      const gap = parseFloat(getComputedStyle(list.firstElementChild as Element ?? list).rowGap) || 0
+      const fit = Math.max(1, Math.floor((list.clientHeight + gap) / (card.offsetHeight + gap)))
+      setPerPage(p => (p === fit ? p : fit))
+    }
+    const ro = new ResizeObserver(measure)
+    ro.observe(list)
+    measure()
+    return () => ro.disconnect()
+  }, [orders.length])
+
+  const size = perPage || orders.length || 1
+  const pages = Math.max(1, Math.ceil(orders.length / size))
+  const page = turn % pages
+  const shown = orders.slice(page * size, page * size + size)
+
+  // the pages take turns
+  useEffect(() => {
+    if (pages <= 1) return
+    const t = setInterval(() => setTurn(n => n + 1), PAGE_MS)
+    return () => clearInterval(t)
+  }, [pages])
+
   return (
     <div className="oq-column">
       <div className="oq-column-head">
         <div className="oq-column-dot" style={{ background: dotColor }} />
         <span className="oq-column-label">{label}</span>
+        {pages > 1 && (
+          <span className="oq-pages" aria-label={`Página ${page + 1} de ${pages}`}>
+            {Array.from({ length: pages }, (_, i) => <i key={i} className={i === page ? 'on' : ''} />)}
+          </span>
+        )}
         <span className="oq-column-count">{orders.length}</span>
       </div>
-      {orders.map(o => {
+      <div className="oq-column-list" ref={listRef}>
+        <div key={pages > 1 ? page : 'all'} className={`oq-page${pages > 1 ? ' turning' : ''}`}>
+      {shown.map(o => {
         const step = queueStep(o.status)
         return (
         <div key={o.id} className="oq-card">
@@ -521,6 +568,8 @@ function QueueColumn({
         </div>
         )
       })}
+        </div>
+      </div>
     </div>
   )
 }

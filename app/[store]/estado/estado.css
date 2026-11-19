@@ -1,13 +1,18 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body { background: #F1F5F9; }
+/* the board's page never shows a scrollbar */
+html:has(.oq-wrap), body:has(.oq-wrap) { overflow: hidden; scrollbar-width: none; }
+html:has(.oq-wrap)::-webkit-scrollbar, body:has(.oq-wrap)::-webkit-scrollbar { display: none; }
 
 /* Everything on the board is sized from this one font size, which grows
    with the screen: a little bigger than before on a phone, ~1.2x on a
    1280px PC, up to ~1.8x on a Full HD TV — so it reads from a distance */
 .oq-wrap {
   font-size: clamp(17px, 1.5vw, 32px);
-  min-height: 100svh;
+  /* exactly the screen, never scrolling: a column with more orders than
+     fit shows them in pages that take turns */
+  height: 100vh; height: 100svh; overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -63,15 +68,32 @@ body { background: #F1F5F9; }
 .oq-board {
   width: 100%;
   max-width: 60em;
+  flex: 1; min-height: 0;
   display: grid;
   grid-template-columns: 1fr;
+  grid-auto-rows: minmax(0, 1fr);
   gap: 1.2em;
 }
 @media (min-width: 640px) {
   .oq-board { grid-template-columns: 1fr 1fr; }
 }
 
-.oq-column { display: flex; flex-direction: column; gap: 0.45em; }
+.oq-column { display: flex; flex-direction: column; gap: 0.45em; min-height: 0; }
+/* the cards' area: as tall as the screen leaves; the cards inside are the
+   current page (a new page comes in with a short rise, like a departures
+   board turning) */
+.oq-column-list { flex: 1; min-height: 0; overflow: hidden; }
+.oq-page { display: flex; flex-direction: column; gap: 0.45em; }
+.oq-page.turning { animation: oq-page-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.oq-page.turning > .oq-card { animation: none; }
+@keyframes oq-page-in { from { opacity: 0; transform: translateY(0.8em); } }
+@media (prefers-reduced-motion: reduce) { .oq-page.turning { animation: none; } }
+/* which page is up */
+.oq-pages { display: inline-flex; gap: 0.35em; margin-left: 0.4em; }
+.oq-pages i { width: 0.45em; height: 0.45em; border-radius: 50%; background: rgba(15,23,42,0.18); transition: background 0.3s, transform 0.3s; }
+.oq-pages i.on { background: var(--oq-accent, #7C3AED); transform: scale(1.25); }
+.oq-dark .oq-pages i { background: rgba(255,255,255,0.3); }
+.oq-dark .oq-pages i.on { background: #FFFFFF; }
 
 .oq-column-head { display: flex; align-items: center; gap: 0.5em; margin-bottom: 0.15em; }
 .oq-column-dot { width: 0.6em; height: 0.6em; border-radius: 50%; flex-shrink: 0; }
@@ -136,7 +158,7 @@ body { background: #F1F5F9; }
   flex-shrink: 0;
 }
 
-.oq-card-name { font-size: 1.25em; font-weight: 700; color: #0F172A; line-height: 1.2; }
+.oq-card-name { font-size: 1.25em; font-weight: 700; color: #0F172A; line-height: 1.2; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .oq-card-time { font-size: 0.8em; color: #94A3B8; flex-shrink: 0; }
 
 .oq-empty {
@@ -149,7 +171,7 @@ body { background: #F1F5F9; }
 
 /* pinned to the bottom of the screen (pushed down by the board above it;
    with a long list it simply follows it) */
-.oq-footer { margin-top: auto; padding-top: 2em; font-size: 0.7em; color: #94A3B8; }
+.oq-footer { flex-shrink: 0; padding-top: 0.8em; font-size: 0.7em; color: #94A3B8; }
 .oq-footer a { color: var(--oq-accent, #7C3AED); text-decoration: none; font-weight: 600; }
 
 /* "Retíralo en el casillero N": big, centred, for whoever is watching the

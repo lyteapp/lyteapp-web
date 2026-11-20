@@ -11,12 +11,8 @@ import LyteLeafLoader from '../../components/LyteLeafLoader'
 
 type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'ready' | 'delivered' | 'cancelled'
 
-// Selected variable values are stored per-group; older orders placed before
-// multi-select shipped have a plain string here instead of string[].
-function variableValueLabel(v: string[] | string | undefined): string {
-  if (!v) return ''
-  return Array.isArray(v) ? v.join(', ') : v
-}
+// (a selected variable is string[] per group; orders placed before
+// multi-select shipped have a plain string — the display handles both)
 
 interface OrderItem {
   id: string
@@ -162,6 +158,15 @@ export default function PedidosPage() {
   const [displayOrders, setDisplayOrders] = useState<DisplayOrder[]>([])
   const [displayUpdating, setDisplayUpdating] = useState<string | null>(null)
   const [displayLoading, setDisplayLoading] = useState(false)
+  // the kitchen display's text size (A− / A+), remembered on this screen
+  const [kScale, setKScale] = useState(() => {
+    try { const v = Number(localStorage.getItem('lyte-kitchen-scale')); return v >= 0.8 && v <= 1.8 ? v : 1 } catch { return 1 }
+  })
+  const bumpKScale = (d: number) => setKScale(prev => {
+    const next = Math.round(Math.min(1.8, Math.max(0.8, prev + d)) * 10) / 10
+    try { localStorage.setItem('lyte-kitchen-scale', String(next)) } catch {}
+    return next
+  })
   const [now, setNow] = useState(() => Date.now())
   const [warnMins, setWarnMins]   = useState(() => Number(typeof window !== 'undefined' ? (localStorage.getItem('pd-warn-mins') ?? '10') : '10'))
   const [alertMins, setAlertMins] = useState(() => Number(typeof window !== 'undefined' ? (localStorage.getItem('pd-alert-mins') ?? '20') : '20'))
@@ -650,13 +655,19 @@ export default function PedidosPage() {
       </div>
 
       {displayMode && (
-        <div className="pd-display">
+        <div className="pd-display" style={{ '--k': kScale } as React.CSSProperties}>
           <div className="pd-display-header">
             <div className="pd-display-title">
               Comandas
               {displayOrders.length > 0 && <span className="pd-display-count">{displayOrders.length}</span>}
             </div>
-            <button className="pd-display-close" onClick={() => setDisplayMode(false)}>Cerrar</button>
+            <div className="pd-display-tools">
+              <div className="pd-k-size" aria-label="Tamaño del texto">
+                <button type="button" onClick={() => bumpKScale(-0.1)} disabled={kScale <= 0.8} aria-label="Letra más pequeña">A−</button>
+                <button type="button" onClick={() => bumpKScale(0.1)} disabled={kScale >= 1.8} aria-label="Letra más grande">A+</button>
+              </div>
+              <button className="pd-display-close" onClick={() => setDisplayMode(false)}>Cerrar</button>
+            </div>
           </div>
           {displayLoading ? (
             <div className="pd-display-loading"><LyteLeafLoader size={44} /></div>
@@ -702,21 +713,32 @@ export default function PedidosPage() {
                               <span className="pd-comanda-price">${Number(item.subtotal).toFixed(2)}</span>
                             </div>
                             {opts && (
-                              <div className="pd-comanda-item-opts">
-                                {opts.variables && Object.entries(opts.variables).map(([k, v], idx) => (
-                                  <span key={k} className={`pd-comanda-opt-tag pd-comanda-opt-c${idx % 6}`}>
-                                    <span className="pd-comanda-opt-tag-key">{k}:</span>{variableValueLabel(v)}
-                                  </span>
-                                ))}
+                              // one line per choice group, the choice big and
+                              // white — read at a glance from the kitchen line
+                              <div className="pd-k-opts">
+                                {opts.variables && Object.entries(opts.variables).map(([k, v], idx) => {
+                                  const values = (Array.isArray(v) ? v : [v]).filter(Boolean)
+                                  if (!values.length) return null
+                                  return (
+                                    <div key={k} className={`pd-k-opt pd-k-c${idx % 6}`}>
+                                      <span className="pd-k-label">{k}</span>
+                                      <span className="pd-k-vals">{values.map((x, j) => <span key={j} className="pd-k-val">{x}</span>)}</span>
+                                    </div>
+                                  )
+                                })}
                                 {opts.color && (
-                                  <span className={`pd-comanda-opt-tag pd-comanda-opt-c${Object.keys(opts.variables ?? {}).length % 6}`}>
-                                    <span className="pd-comanda-opt-tag-key">Color:</span>{opts.color}
-                                  </span>
+                                  <div className={`pd-k-opt pd-k-c${Object.keys(opts.variables ?? {}).length % 6}`}>
+                                    <span className="pd-k-label">Color</span>
+                                    <span className="pd-k-vals"><span className="pd-k-val">{opts.color}</span></span>
+                                  </div>
                                 )}
-                                {opts.additionals?.map((a, j) => (
-                                  <span key={j} className="pd-comanda-opt-add">+ {a.name} ${Number(a.price).toFixed(2)}</span>
-                                ))}
-                                {opts.notes && <span className="pd-comanda-opt-note">{opts.notes}</span>}
+                                {!!opts.additionals?.length && (
+                                  <div className="pd-k-opt pd-k-add">
+                                    <span className="pd-k-label">Extras</span>
+                                    <span className="pd-k-vals">{opts.additionals.map((a, j) => <span key={j} className="pd-k-val">+ {a.name}</span>)}</span>
+                                  </div>
+                                )}
+                                {opts.notes && <div className="pd-k-note">{opts.notes}</div>}
                               </div>
                             )}
                           </div>

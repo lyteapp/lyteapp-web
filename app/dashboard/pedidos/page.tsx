@@ -8,6 +8,7 @@ import { useT } from '../../lib/LocaleProvider'
 import type { TranslationKey } from '../../lib/i18n'
 import './pedidos.css'
 import LyteLeafLoader from '../../components/LyteLeafLoader'
+import CajaPinPad from './CajaPinPad'
 
 type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'ready' | 'delivered' | 'cancelled'
 
@@ -158,6 +159,8 @@ export default function PedidosPage() {
   const [displayOrders, setDisplayOrders] = useState<DisplayOrder[]>([])
   const [displayUpdating, setDisplayUpdating] = useState<string | null>(null)
   const [displayLoading, setDisplayLoading] = useState(false)
+  // the order whose counter payment the kitchen is marking collected (PIN pad)
+  const [pinOrder, setPinOrder] = useState<DisplayOrder | null>(null)
   // the kitchen display's text size (A− / A+), remembered on this screen
   const [kScale, setKScale] = useState(() => {
     try { const v = Number(localStorage.getItem('lyte-kitchen-scale')); return v >= 0.8 && v <= 1.8 ? v : 1 } catch { return 1 }
@@ -656,6 +659,18 @@ export default function PedidosPage() {
 
       {displayMode && (
         <div className="pd-display" style={{ '--k': kScale } as React.CSSProperties}>
+          {pinOrder && storeId && (
+            <CajaPinPad
+              storeId={storeId} order={pinOrder}
+              onClose={() => setPinOrder(null)}
+              onDone={() => {
+                // collected: confirmed at once (realtime brings the same change)
+                setDisplayOrders(prev => prev.map(o => o.id === pinOrder.id
+                  ? { ...o, payment_status: 'approved', status: o.status === 'pending' ? 'confirmed' : o.status } : o))
+                setPinOrder(null)
+              }}
+            />
+          )}
           <div className="pd-display-header">
             <div className="pd-display-title">
               Comandas
@@ -753,6 +768,12 @@ export default function PedidosPage() {
                   <div className="pd-comanda-actions">
                     {waitingPayment(order) && (
                       <div className="pd-wait-pay">{waitingDebit(order) ? 'Esperando Débito inmediato · se confirma cuando el banco apruebe' : 'Esperando pago en caja · se confirma al cobrar'}</div>
+                    )}
+                    {waitingPayment(order) && !waitingDebit(order) && storeId && (
+                      // Caja behind: the kitchen can release it, with a cashier's PIN
+                      <button className="pd-comanda-btn collect" onClick={() => setPinOrder(order)}>
+                        Cobrado <span className="pd-comanda-btn-sub">· con PIN de caja</span>
+                      </button>
                     )}
                     {order.status === 'pending' && !waitingPayment(order) && (
                       <button className="pd-comanda-btn confirm" disabled={displayUpdating === order.id} onClick={() => updateDisplayStatus(order.id, 'confirmed')}>

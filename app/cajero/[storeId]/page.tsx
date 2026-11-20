@@ -164,12 +164,22 @@ export default function CajeroPage() {
     }
 
     connect()
-    pollRef.current = setInterval(() => doFetch(pin), 30000)
+    // the live stream can drop without anyone noticing (a sleeping tablet,
+    // a flaky Wi-Fi): a short poll as well, and an immediate one whenever
+    // the screen comes back, so a charge to collect is never missed
+    pollRef.current = setInterval(() => { if (document.visibilityState === 'visible') doFetch(pin) }, 8000)
+    const refresh = () => { if (document.visibilityState === 'visible') doFetch(pin) }
+    document.addEventListener('visibilitychange', refresh)
+    window.addEventListener('focus', refresh)
+    window.addEventListener('online', refresh)
 
     return () => {
       abort.abort()
       clearTimeout(reconnectTimer)
       if (pollRef.current) clearInterval(pollRef.current)
+      document.removeEventListener('visibilitychange', refresh)
+      window.removeEventListener('focus', refresh)
+      window.removeEventListener('online', refresh)
     }
   }, [authState, storeId, doFetch])
 
@@ -253,6 +263,37 @@ export default function CajeroPage() {
     const t = setInterval(ring, 7000)
     return () => clearInterval(t)
   }, [calling, soundOn])
+  // any new charge to collect (online point of sale too) chimes once
+  const seenToCollect = useRef<Set<string> | null>(null)
+  const toCollectKey = toCollect.map(o => o.id).join(',')
+  useEffect(() => {
+    const ids = toCollectKey ? toCollectKey.split(',') : []
+    const seen = seenToCollect.current
+    seenToCollect.current = new Set(ids)
+    if (!seen) return // (first load: nothing is "new")
+    if (ids.some(id => !seen.has(id))) { const ctx = audioRef.current; if (ctx && ctx.state === 'running') chime(ctx) }
+  }, [toCollectKey])
+  // the count in the tab's title, seen even from another tab
+  useEffect(() => {
+    const base = 'Caja'
+    document.title = toCollect.length ? `(${toCollect.length}) Por cobrar · ${base}` : base
+  }, [toCollect.length])
+  // keep the screen awake while Caja is open (re-asked when it comes back)
+  useEffect(() => {
+    if (authState !== 'ok') return
+    type WakeLock = { release: () => Promise<void> }
+    let lock: WakeLock | null = null
+    const ask = async () => {
+      try {
+        const wl = (navigator as unknown as { wakeLock?: { request: (t: 'screen') => Promise<WakeLock> } }).wakeLock
+        if (wl && document.visibilityState === 'visible') lock = await wl.request('screen')
+      } catch { /* not allowed here: fine */ }
+    }
+    ask()
+    const again = () => { if (document.visibilityState === 'visible') ask() }
+    document.addEventListener('visibilitychange', again)
+    return () => { document.removeEventListener('visibilitychange', again); lock?.release().catch(() => {}) }
+  }, [authState])
 
   async function collectCash(orderId: string) {
     const pin = sessionStorage.getItem(SESSION_KEY(storeId)) ?? ''
@@ -383,6 +424,12 @@ export default function CajeroPage() {
         </div>
       </header>
 
+      {!soundOn && (
+        <button type="button" className="cj-sound-banner">
+          🔔 Toca aquí para activar el sonido de los cobros
+        </button>
+      )}
+
       {/* KIOSK CASH CALLS */}
       {calling && (
         <div className="cj-cash-calls" role="alert">
@@ -415,7 +462,6 @@ export default function CajeroPage() {
               </button>
             </div>
           ))}
-          {!soundOn && <div className="cj-cash-sound">Toca la pantalla una vez para activar el sonido de estas alertas</div>}
         </div>
       )}
 

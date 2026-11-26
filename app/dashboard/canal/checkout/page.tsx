@@ -301,6 +301,31 @@ export default function CheckoutPage() {
     return !err
   }
 
+  // Pago Móvil: the store's own payment QR (the image its bank app makes),
+  // shown to the customer at checkout — saved as that method's values.qr
+  const [qrUploading, setQrUploading] = useState(false)
+  async function onPagoMovilQr(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || !storeId) return
+    if (!file.type.startsWith('image/')) { setPagosError('Sube una imagen del QR (PNG o JPG)'); return }
+    if (file.size > 5 * 1024 * 1024) { setPagosError('La imagen del QR es muy pesada (máximo 5 MB)'); return }
+    setPagosError(''); setQrUploading(true)
+    try {
+      const ext = (file.name.split('.').pop() || 'png').toLowerCase()
+      // (not recompressed: a blurred QR doesn't scan)
+      const path = `payments/${storeId}-pago-movil-qr-${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage.from('store-assets')
+        .upload(path, file, { upsert: true, contentType: file.type, cacheControl: '31536000' })
+      if (upErr) throw upErr
+      const url = supabase.storage.from('store-assets').getPublicUrl(path).data.publicUrl
+      setMethods(prev => prev.map(x => x.id === 'pago_movil' ? { ...x, values: { ...x.values, qr: url } } : x))
+    } catch (err) {
+      setPagosError(err instanceof Error ? err.message : 'No se pudo subir el QR')
+    }
+    setQrUploading(false)
+  }
+
   async function savePagos() {
     if (!storeId) return false
     setSavingPagos(true); setPagosError(''); setSuccessPagos(false)
@@ -404,6 +429,31 @@ export default function CheckoutPage() {
                             </div>
                           ))}
                         </div>
+                        {m.id === 'pago_movil' && (
+                          <div className="cn-field" style={{ marginTop: 14, marginBottom: 0 }}>
+                            <div className="cn-label">QR de Pago Móvil <span style={{ fontWeight: 400, color: '#94A3B8' }}>(opcional)</span></div>
+                            <div className="cn-toggle-hint" style={{ marginBottom: 8 }}>
+                              La imagen del QR que te da la app de tu banco para cobrar. El cliente lo ve al elegir Pago Móvil: en el kiosko lo escanea con su teléfono, y en el teléfono lo guarda y lo abre en su banco.
+                            </div>
+                            {m.values.qr ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <img src={m.values.qr} alt="QR de Pago Móvil" style={{ width: 96, height: 96, objectFit: 'contain', borderRadius: 10, border: '1px solid rgba(15,23,42,0.1)', background: 'white' }} />
+                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                  <label className="cn-pill-btn" style={{ cursor: 'pointer' }}>
+                                    {qrUploading ? 'Subiendo…' : 'Cambiar'}
+                                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={onPagoMovilQr} disabled={qrUploading} />
+                                  </label>
+                                  <button type="button" className="cn-pill-btn" onClick={() => setMethods(prev => prev.map(x => x.id === 'pago_movil' ? { ...x, values: Object.fromEntries(Object.entries(x.values).filter(([k]) => k !== 'qr')) } : x))}>Quitar</button>
+                                </div>
+                              </div>
+                            ) : (
+                              <label className="cn-pill-btn" style={{ cursor: 'pointer', display: 'inline-flex' }}>
+                                {qrUploading ? 'Subiendo…' : 'Subir imagen del QR'}
+                                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={onPagoMovilQr} disabled={qrUploading} />
+                              </label>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

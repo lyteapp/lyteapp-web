@@ -5361,9 +5361,15 @@ export default function StoreShell({ store, products, categories = [], initialBc
                     )}
                     {isSelected && !staffPayKind(m.type, m.label) && m.type !== 'debito_inmediato' && Object.keys(m.details ?? {}).length > 0 && (
                       <div className="sf-payment-info">
-                        {Object.entries(m.details).map(([k, v]) => (
+                        {Object.entries(m.details).filter(([k]) => k !== 'qr').map(([k, v]) => (
                           <div key={k} className="sf-payment-detail-row"><span>{k}</span><strong>{v as string}</strong></div>
                         ))}
+                        {m.type === 'pago_movil' && m.details.qr && (
+                          <div className="sf-payment-qr" onClick={e => e.stopPropagation()}>
+                            <img src={m.details.qr} alt="QR de Pago Móvil" />
+                            <span>{kioskActive ? 'Escanéalo con tu teléfono para pagar.' : 'Mantén pulsado el QR para guardarlo y ábrelo desde tu banco.'}</span>
+                          </div>
+                        )}
                       </div>
                     )}
                     {isSelected && staffPayKind(m.type, m.label) && (

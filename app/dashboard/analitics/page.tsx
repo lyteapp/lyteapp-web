@@ -440,17 +440,22 @@ export default function AnaliticsPage() {
   const zoneCountMax = Math.max(...zoneCounts.map(z => z.count), 1)
 
   // ── Product computations ──
-  const topProducts = useMemo(() => {
+  const productSales = useMemo(() => {
     const map: Record<string, { name: string; qty: number; revenue: number }> = {}
+    allProducts.forEach(product => {
+      map[product.id] = { name: product.name, qty: 0, revenue: 0 }
+    })
     orderItems.forEach(item => {
-      const key = item.product_id ?? item.product_name
+      const key = item.product_id ?? `name:${item.product_name}`
       if (!map[key]) map[key] = { name: item.product_name, qty: 0, revenue: 0 }
       map[key].qty += item.quantity
       map[key].revenue += Number(item.unit_price) * item.quantity
     })
-    return Object.values(map).sort((a, b) => b.qty - a.qty).slice(0, 10)
-  }, [orderItems])
-  const topProductMax = Math.max(...topProducts.map(p => p.qty), 1)
+    return Object.entries(map)
+      .map(([id, product]) => ({ id, ...product }))
+      .sort((a, b) => b.qty - a.qty || a.name.localeCompare(b.name))
+  }, [orderItems, allProducts])
+  const topProductMax = Math.max(...productSales.map(p => p.qty), 1)
 
   const slowProducts = useMemo(() => {
     const qtys: Record<string, number> = {}
@@ -852,19 +857,19 @@ export default function AnaliticsPage() {
       {/* ── PRODUCTOS TAB ── */}
       {activeTab === 'productos' && (
         <div className="dh-card" style={{ padding: '20px 24px' }}>
-          {orderItems.length === 0 ? (
-            <div className="an-empty">Sin pedidos en este periodo</div>
+          {productSales.length === 0 ? (
+            <div className="an-empty">No hay productos registrados</div>
           ) : (
             <>
-              {/* Top productos */}
+              {/* Ventas por producto */}
               <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Top productos mas vendidos
+                Unidades vendidas por producto
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 28 }}>
-                {topProducts.map((p, i) => {
+                {productSales.map((p, i) => {
                   const pct = (p.qty / topProductMax) * 100
                   return (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{ width: 20, fontSize: 11, fontWeight: 700, color: i < 3 ? 'var(--lyte-navy)' : '#CBD5E1', flexShrink: 0, textAlign: 'right' }}>{i + 1}</div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 12, fontWeight: 600, color: '#0F172A', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>

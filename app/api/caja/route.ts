@@ -60,7 +60,7 @@ export async function GET(req: Request) {
 
   const { data: orders } = await supa
     .from('orders')
-    .select('id,customer_name,customer_phone,payment_method,payment_proof_url,payment_status,payment_verified_by,payment_split,payment_modified_by,payment_modified_at,total,status,created_at,delivery_type,order_number,cash_call_at,from_kiosk')
+    .select('id,customer_name,customer_phone,payment_method,payment_proof_url,payment_status,payment_verified_by,payment_split,payment_modified_by,payment_modified_at,payment_note,payment_note_by,payment_note_at,total,status,created_at,delivery_type,order_number,cash_call_at,from_kiosk')
     .eq('store_id', storeId)
     .order('created_at', { ascending: false })
     .limit(500)
@@ -136,10 +136,35 @@ async function setPayment(req: Request, body: Record<string, unknown>) {
   return Response.json({ ok: true, by: who, modified: wasRecorded, update })
 }
 
+// A note on an order's payment, left by the cashier (an empty note removes it)
+async function setNote(req: Request, body: Record<string, unknown>) {
+  const { orderId, storeId, verifiedBy } = body as { orderId?: string; storeId?: string; verifiedBy?: string }
+  if (!orderId || !storeId || typeof body.note !== 'string') return Response.json({ error: 'Missing fields' }, { status: 400 })
+  const note = body.note.trim()
+  if (note.length > 300) return Response.json({ error: 'La nota es muy larga (máximo 300 caracteres)' }, { status: 400 })
+
+  const pin = req.headers.get('x-cajero-pin') ?? ''
+  const result = await verifyPin(storeId, pin)
+  if (result.denied) return Response.json({ error: 'PIN incorrecto' }, { status: 401 })
+  if (!result.store) return Response.json({ error: 'Tienda no encontrada' }, { status: 404 })
+
+  const { data: order } = await supa.from('orders').select('store_id').eq('id', orderId).maybeSingle()
+  if (!order || order.store_id !== storeId) return Response.json({ error: 'Not found' }, { status: 404 })
+
+  const who = result.cajera?.name || verifiedBy || 'Caja'
+  const update = note
+    ? { payment_note: note, payment_note_by: who, payment_note_at: new Date().toISOString() }
+    : { payment_note: null, payment_note_by: null, payment_note_at: null }
+  const { error } = await supa.from('orders').update(update).eq('id', orderId)
+  if (error) return Response.json({ error: 'No se pudo guardar la nota' }, { status: 500 })
+  return Response.json({ ok: true, update })
+}
+
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null)
   if (!body) return Response.json({ error: 'Invalid body' }, { status: 400 })
   if (body.action === 'set_payment') return setPayment(req, body)
+  if (body.action === 'set_note') return setNote(req, body)
 
   const { orderId, status, storeId, verifiedBy, source } = body
   if (!orderId || !status || !storeId) return Response.json({ error: 'Missing fields' }, { status: 400 })

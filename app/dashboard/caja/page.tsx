@@ -16,6 +16,8 @@ type Order = {
   payment_verified_by: string | null
   payment_split?: { method: string; amount: number }[] | null
   payment_modified_by?: string | null
+  payment_note?: string | null
+  payment_note_by?: string | null
   total: number
   status: string
   created_at: string
@@ -166,7 +168,7 @@ export default function CajaPage() {
     const since = new Date(); since.setDate(since.getDate() - 90)
     const { data } = await supabase
       .from('orders')
-      .select('id,customer_name,customer_phone,payment_method,payment_proof_url,payment_verified_by,payment_split,payment_modified_by,total,status,created_at')
+      .select('id,customer_name,customer_phone,payment_method,payment_proof_url,payment_verified_by,payment_split,payment_modified_by,payment_note,payment_note_by,total,status,created_at')
       .eq('store_id', sid)
       .gte('created_at', since.toISOString())
       .order('created_at', { ascending: false })
@@ -371,6 +373,9 @@ export default function CajaPage() {
                       )}
                       {order.payment_modified_by && (
                         <span className="cx-pay-modified">MODIFICADO POR {order.payment_modified_by}</span>
+                      )}
+                      {order.payment_note && (
+                        <span className="cx-pay-note">Nota: {order.payment_note}{order.payment_note_by ? ` — ${order.payment_note_by}` : ''}</span>
                       )}
                     </div>
                     <div className="cx-pay-right">

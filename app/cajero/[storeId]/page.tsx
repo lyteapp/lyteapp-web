@@ -17,6 +17,9 @@ type Order = {
   /** who last changed a payment already recorded */
   payment_modified_by?: string | null
   payment_modified_at?: string | null
+  /** a cashier's note on the payment, and who wrote it */
+  payment_note?: string | null
+  payment_note_by?: string | null
   total: number
   status: string
   created_at: string
@@ -113,6 +116,10 @@ export default function CajeroPage() {
   const [payEdit, setPayEdit]       = useState<{ order: Order; lines: { method: string; amount: string }[] } | null>(null)
   const [paySaving, setPaySaving]   = useState(false)
   const [payError, setPayError]     = useState('')
+  // the note on a payment
+  const [noteEdit, setNoteEdit]     = useState<{ order: Order; text: string } | null>(null)
+  const [noteSaving, setNoteSaving] = useState(false)
+  const [noteError, setNoteError]   = useState('')
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   // the alert's sound: browsers only allow it after a touch on the page
   const audioRef = useRef<AudioContext | null>(null)
@@ -268,8 +275,23 @@ export default function CajeroPage() {
     setPayEdit({ order, lines })
   }
 
+  // Typing an amount settles the rest by itself: what's left of the total goes
+  // to the last line the cashier isn't typing in, so the parts always add up
+  function balanceLines(lines: { method: string; amount: string }[], total: number, typing: number) {
+    let target = -1
+    for (let j = lines.length - 1; j >= 0; j--) if (j !== typing) { target = j; break }
+    if (target < 0) return lines
+    const others = lines.reduce((a, l, j) => (j === target ? a : a + (num(l.amount) || 0)), 0)
+    const left = Math.round((total - others) * 100) / 100
+    return lines.map((l, j) => (j === target ? { ...l, amount: left > 0 ? left.toFixed(2) : '' } : l))
+  }
+
   function setPayLine(i: number, patch: Partial<{ method: string; amount: string }>) {
-    setPayEdit(p => p && { ...p, lines: p.lines.map((l, j) => j === i ? { ...l, ...patch } : l) })
+    setPayEdit(p => {
+      if (!p) return p
+      const lines = p.lines.map((l, j) => j === i ? { ...l, ...patch } : l)
+      return { ...p, lines: patch.amount !== undefined ? balanceLines(lines, Number(p.order.total), i) : lines }
+    })
   }
 
   function addPayLine() {
@@ -285,8 +307,8 @@ export default function CajeroPage() {
   async function savePayment() {
     if (!payEdit) return
     const { order, lines } = payEdit
-    const parts = lines.map(l => ({ method: l.method, amount: num(l.amount) }))
-    if (parts.some(l => !(l.amount > 0))) { setPayError('Escribe el monto de cada forma de pago'); return }
+    const parts = lines.map(l => ({ method: l.method, amount: num(l.amount) })).filter(l => l.amount > 0)
+    if (!parts.length) { setPayError('Escribe el monto de cada forma de pago'); return }
     const total = Number(order.total)
     if (Math.abs(parts.reduce((a, l) => a + l.amount, 0) - total) > 0.01) { setPayError(`Las partes deben sumar $${total.toFixed(2)}`); return }
     const pin = sessionStorage.getItem(SESSION_KEY(storeId)) ?? ''
@@ -305,6 +327,34 @@ export default function CajeroPage() {
       setPayError('Error de conexion. Intentalo de nuevo.')
     } finally {
       setPaySaving(false)
+    }
+  }
+
+  function openNoteEditor(order: Order, e: React.MouseEvent) {
+    e.stopPropagation()
+    setNoteError('')
+    setNoteEdit({ order, text: order.payment_note ?? '' })
+  }
+
+  async function saveNote() {
+    if (!noteEdit) return
+    const { order, text } = noteEdit
+    const pin = sessionStorage.getItem(SESSION_KEY(storeId)) ?? ''
+    setNoteSaving(true); setNoteError('')
+    try {
+      const res = await fetch('/api/caja', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-cajero-pin': pin },
+        body: JSON.stringify({ action: 'set_note', orderId: order.id, storeId, note: text, verifiedBy: cajeraName }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) { setNoteError(json.error ?? 'No se pudo guardar la nota'); return }
+      setOrders(prev => prev.map(o => o.id === order.id ? { ...o, ...json.update } : o))
+      setNoteEdit(null)
+    } catch {
+      setNoteError('Error de conexion. Intentalo de nuevo.')
+    } finally {
+      setNoteSaving(false)
     }
   }
 
@@ -672,6 +722,12 @@ export default function CajeroPage() {
                     </div>
                   </div>
                   <div className="cj-card-footer">
+                    {order.payment_note && (
+                      <div className="cj-note">
+                        <span className="cj-note-k">Nota</span> {order.payment_note}
+                        {order.payment_note_by && <em> — {order.payment_note_by}</em>}
+                      </div>
+                    )}
                     {order.payment_modified_by && (
                       <div className="cj-modified-badge">
                         MODIFICADO POR {order.payment_modified_by}
@@ -702,6 +758,9 @@ export default function CajeroPage() {
                         <button className="cj-mixed-btn" onClick={e => openPayEditor(order, e)}>Pago mixto</button>
                       </div>
                     )}
+                    <button className="cj-note-btn" onClick={e => openNoteEditor(order, e)}>
+                      {order.payment_note ? 'Editar nota' : '+ Agregar nota'}
+                    </button>
                   </div>
                 </div>
               )
@@ -719,6 +778,7 @@ export default function CajeroPage() {
               {payEdit.order.customer_name} · Total <strong>${payTotal.toFixed(2)}</strong>
               {bcvRate > 0 && ` (Bs ${(payTotal * bcvRate).toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`}
             </div>
+            <div className="cj-modal-hint">Escribe un monto y el resto se calcula solo.</div>
 
             {payEdit.lines.map((l, i) => {
               const amt = num(l.amount)
@@ -733,16 +793,16 @@ export default function CajeroPage() {
                       className="cj-pay-input"
                       inputMode="decimal"
                       value={l.amount}
-                      onChange={e => setPayLine(i, { amount: e.target.value })}
+                      onChange={e => setPayLine(i, { amount: e.target.value.replace(/[^\d.,]/g, '') })}
                       placeholder="0.00"
                       autoComplete="off"
                     />
                   </div>
                   {payEdit.lines.length > 1 && (
-                    <button className="cj-pay-del" aria-label="Quitar" onClick={() => setPayEdit(p => p && { ...p, lines: p.lines.filter((_, j) => j !== i) })}>×</button>
+                    <button className="cj-pay-del" aria-label="Quitar" onClick={() => setPayEdit(p => p && { ...p, lines: balanceLines(p.lines.filter((_, j) => j !== i), Number(p.order.total), -1) })}>×</button>
                   )}
-                  {getCurrencyInfo(l.method).currency === 'VES' && bcvRate > 0 && amt > 0 && (
-                    <div className="cj-pay-hint">≈ Bs {(amt * bcvRate).toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                  {amt > 0 && (
+                    <div className="cj-pay-guide">Cobrar <strong>{lineAmount({ method: l.method, amount: amt })}</strong></div>
                   )}
                 </div>
               )
@@ -767,6 +827,31 @@ export default function CajeroPage() {
               <button className="cj-modal-save" disabled={paySaving || Math.abs(payRemaining) >= 0.01} onClick={savePayment}>
                 {paySaving ? 'Guardando...' : 'Guardar pago'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NOTE ON A PAYMENT */}
+      {noteEdit && (
+        <div className="cj-modal" onClick={() => { if (!noteSaving) setNoteEdit(null) }}>
+          <div className="cj-modal-card" onClick={e => e.stopPropagation()}>
+            <div className="cj-modal-title">Nota del cobro</div>
+            <div className="cj-modal-sub">{noteEdit.order.customer_name} · ${Number(noteEdit.order.total).toFixed(2)}</div>
+            <textarea
+              className="cj-note-input"
+              rows={4}
+              maxLength={300}
+              value={noteEdit.text}
+              onChange={e => setNoteEdit(n => n && { ...n, text: e.target.value })}
+              placeholder="Ej: dejó $2 de propina, falta vuelto, pagó un amigo..."
+              autoFocus
+            />
+            <div className="cj-note-count">{noteEdit.text.length}/300 · la nota queda con tu nombre</div>
+            {noteError && <div className="cj-pin-error">{noteError}</div>}
+            <div className="cj-modal-actions">
+              <button className="cj-modal-cancel" disabled={noteSaving} onClick={() => setNoteEdit(null)}>Cancelar</button>
+              <button className="cj-modal-save" disabled={noteSaving} onClick={saveNote}>{noteSaving ? 'Guardando...' : 'Guardar nota'}</button>
             </div>
           </div>
         </div>

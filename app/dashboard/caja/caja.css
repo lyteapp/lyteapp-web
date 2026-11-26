@@ -548,6 +548,7 @@
   white-space: nowrap;
 }
 .cx-pay-split { font-size: 11px; color: #64748B; }
+.cx-pay-note { font-size: 11px; color: #475569; font-style: italic; overflow-wrap: anywhere; }
 .cx-pay-modified {
   font-size: 10px; font-weight: 800; letter-spacing: 0.04em;
   color: #92400E; background: #FEF3C7; padding: 2px 7px; border-radius: 6px; white-space: nowrap;

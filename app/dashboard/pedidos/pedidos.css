@@ -212,6 +212,15 @@
 .pd-meta-chip.notes { font-style: italic; }
 .pd-meta-chip.paid { background: #ECFDF5; color: #047857; font-weight: 700; }
 .pd-meta-chip.unpaid { background: #FFFBEB; color: #B45309; font-weight: 700; }
+.pd-verify-btn {
+  padding: 5px 11px; border-radius: 100px; border: 1.5px solid var(--lyte-navy); background: none;
+  color: var(--lyte-navy); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.pd-verify-btn:disabled { opacity: 0.55; cursor: default; }
+.pd-debit-msg { flex-basis: 100%; font-size: 12px; font-weight: 600; padding: 6px 10px; border-radius: 8px; background: #F1F5F9; color: #475569; }
+.pd-debit-msg.paid { background: #ECFDF5; color: #047857; }
+.pd-debit-msg.rejected { background: #FEF2F2; color: #B91C1C; }
+.pd-debit-msg.pending { background: #FFFBEB; color: #B45309; }
 
 /* ── ACTIONS ── */
 .pd-actions {

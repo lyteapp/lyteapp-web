@@ -213,6 +213,9 @@ export default function PedidosPage() {
   const displayModeRef = useRef(false)
   const displayDateRef = useRef('')
   const bcChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  // "Verificar pago": a Débito inmediato whose result the customer's screen never saw
+  const [debitChecking, setDebitChecking] = useState<string | null>(null)
+  const [debitMsg, setDebitMsg] = useState<Record<string, { result: string; message: string }>>({})
 
   const loadOrders = useCallback(async (sid: string) => {
     const { data } = await supabase
@@ -261,6 +264,46 @@ export default function PedidosPage() {
   }
 
   useEffect(() => { displayModeRef.current = displayMode }, [displayMode])
+
+  async function reconcileDebit(body: Record<string, unknown>) {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return null
+    const res = await fetch('/api/pay/debito/reconcile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ storeId, ...body }),
+    }).catch(() => null)
+    return res && res.ok ? await res.json() as { result?: string; message?: string; reference?: string | null; results?: { orderId: string; result: string; message: string; reference?: string | null }[] } : null
+  }
+
+  const markDebitPaid = (orderId: string, reference?: string | null) =>
+    setOrders(prev => prev.map(o => o.id === orderId
+      ? { ...o, payment_status: 'approved', payment_verified_by: `Débito inmediato BNC${reference ? ` · Ref ${reference}` : ''}` } : o))
+
+  async function verifyDebit(orderId: string) {
+    setDebitChecking(orderId)
+    const res = await reconcileDebit({ orderId })
+    setDebitChecking(null)
+    if (!res?.result) { setDebitMsg(m => ({ ...m, [orderId]: { result: 'unknown', message: 'No se pudo consultar al banco. Intenta de nuevo.' } })); return }
+    setDebitMsg(m => ({ ...m, [orderId]: { result: res.result!, message: res.message ?? '' } }))
+    if (res.result === 'paid') markDebitPaid(orderId, res.reference)
+  }
+
+  // While Pedidos is open, orders waiting on a Débito inmediato are asked about now and then
+  const hasWaitingDebit = orders.some(waitingDebit)
+  useEffect(() => {
+    if (!storeId || !hasWaitingDebit) return
+    let off = false
+    const run = async () => {
+      const res = await reconcileDebit({})
+      if (off || !res?.results) return
+      for (const r of res.results) if (r.result === 'paid') markDebitPaid(r.orderId, r.reference)
+    }
+    const first = setTimeout(run, 2000)
+    const t = setInterval(run, 90_000)
+    return () => { off = true; clearTimeout(first); clearInterval(t) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeId, hasWaitingDebit])
 
   useEffect(() => {
     if (!displayMode) return
@@ -964,6 +1007,14 @@ export default function PedidosPage() {
                             order.payment_status === 'approved'
                               ? <div className="pd-meta-chip paid">✓ Pagado{order.payment_verified_by?.includes('Ref ') ? ` · Ref ${order.payment_verified_by.split('Ref ')[1]}` : ''}</div>
                               : <div className="pd-meta-chip unpaid">{order.status === 'cancelled' ? 'Pago no completado' : 'Pago pendiente'}</div>
+                          )}
+                          {order.payment_method === 'Débito inmediato' && order.payment_status !== 'approved' && (
+                            <button className="pd-verify-btn" disabled={debitChecking === order.id} onClick={() => verifyDebit(order.id)}>
+                              {debitChecking === order.id ? 'Consultando al banco…' : 'Verificar pago con el banco'}
+                            </button>
+                          )}
+                          {debitMsg[order.id] && (
+                            <div className={`pd-debit-msg ${debitMsg[order.id].result}`}>{debitMsg[order.id].message}</div>
                           )}
                           {order.customer_notes && (
                             <div className="pd-meta-chip notes">

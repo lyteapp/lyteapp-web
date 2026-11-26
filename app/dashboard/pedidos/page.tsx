@@ -21,6 +21,38 @@ interface OrderItem {
   product_price: number
   quantity: number
   subtotal: number
+  selected_options?: SelectedOptions | null
+}
+
+type SelectedOptions = {
+  variables?: Record<string, string[] | string>
+  color?: string
+  additionals?: { name: string; price: number }[]
+  notes?: string
+}
+
+// What the customer picked for one product (size, base, extras, notes…)
+function hasOptions(o?: SelectedOptions | null): o is SelectedOptions {
+  if (!o) return false
+  const groups = Object.values(o.variables ?? {}).some(v => (Array.isArray(v) ? v : [v]).some(Boolean))
+  return groups || !!o.color || !!o.additionals?.length || !!o.notes
+}
+
+function ItemOptions({ opts }: { opts: SelectedOptions }) {
+  return (
+    <div className="pd-item-opts">
+      {opts.variables && Object.entries(opts.variables).map(([k, v]) => {
+        const values = (Array.isArray(v) ? v : [v]).filter(Boolean)
+        if (!values.length) return null
+        return <div key={k} className="pd-opt"><span className="pd-opt-k">{k}</span>{values.join(' · ')}</div>
+      })}
+      {opts.color && <div className="pd-opt"><span className="pd-opt-k">Color</span>{opts.color}</div>}
+      {!!opts.additionals?.length && (
+        <div className="pd-opt"><span className="pd-opt-k">Extras</span>{opts.additionals.map(a => `+ ${a.name}`).join(' · ')}</div>
+      )}
+      {opts.notes && <div className="pd-opt pd-opt-note">{opts.notes}</div>}
+    </div>
+  )
 }
 
 interface Order {
@@ -906,9 +938,12 @@ export default function PedidosPage() {
                         <div className="pd-items-title">{t('orders.items')}</div>
                         <div className="pd-items">
                           {order.items.map(item => (
-                            <div key={item.id} className="pd-item">
+                            <div key={item.id} className={`pd-item${hasOptions(item.selected_options) ? ' pd-item--opts' : ''}`}>
                               <div className="pd-item-qty">{item.quantity}</div>
-                              <div className="pd-item-name">{item.product_name}</div>
+                              <div className="pd-item-body">
+                                <div className="pd-item-name">{item.product_name}</div>
+                                {hasOptions(item.selected_options) && <ItemOptions opts={item.selected_options} />}
+                              </div>
                               <div className="pd-item-price">{fmt(item.subtotal)}</div>
                             </div>
                           ))}

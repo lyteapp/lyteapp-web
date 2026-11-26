@@ -187,6 +187,16 @@
   font-size: 13px; font-weight: 600; color: #475569;
   flex-shrink: 0;
 }
+.pd-item-body { flex: 1; min-width: 0; }
+.pd-item--opts { align-items: flex-start; }
+.pd-item--opts .pd-item-name, .pd-item--opts .pd-item-price { line-height: 24px; }
+.pd-item-opts { display: flex; flex-direction: column; gap: 2px; margin: 2px 0 6px; }
+.pd-opt { font-size: 12px; color: #475569; line-height: 1.4; }
+.pd-opt-k {
+  display: inline-block; margin-right: 6px; font-size: 10px; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase; color: rgba(15,23,42,0.45);
+}
+.pd-opt-note { font-style: italic; }
 
 .pd-meta {
   display: flex; flex-wrap: wrap; gap: 8px;

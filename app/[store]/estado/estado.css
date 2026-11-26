@@ -230,6 +230,15 @@ html:has(.oq-wrap)::-webkit-scrollbar, body:has(.oq-wrap)::-webkit-scrollbar { d
 .oq-dark .oq-footer a { color: #FFFFFF; }
 .oq-dark .oq-empty { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.22); color: rgba(255,255,255,0.65); }
 
+/* Small QR of this screen's own link, bottom-left */
+.oq-share {
+  position: fixed; left: 18px; bottom: 18px; z-index: 30;
+  width: 5.5em; height: 5.5em; padding: 0.4em; box-sizing: border-box;
+  background: #FFFFFF; border-radius: 0.7em;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.18);
+}
+@media (max-width: 640px) { .oq-share { display: none; } }
+
 /* "Activar voz": a browser only lets the board speak after a touch */
 .oq-voice-btn {
   position: fixed; right: 18px; bottom: 18px; z-index: 40;

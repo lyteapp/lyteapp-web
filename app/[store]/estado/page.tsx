@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
+import { QRCodeSVG } from 'qrcode.react'
 import { queueStep, queueBackground } from '../../lib/queueSteps'
 import './estado.css'
 
@@ -486,6 +487,11 @@ export default function EstadoPage() {
 
       <div className="oq-footer">
         Powered by <a href="https://lyte-app.com" target="_blank" rel="noreferrer">LyteApp</a>
+      </div>
+
+      {/* small QR of this same screen, to share its link (hidden on phones: they already have it) */}
+      <div className="oq-share" title="Escanea para ver el estatus de los pedidos">
+        <QRCodeSVG value={`${window.location.origin}/${storeSlug}/estado`} size={128} bgColor="#ffffff" fgColor="#0F172A" style={{ width: '100%', height: '100%' }} />
       </div>
     </div>
   )

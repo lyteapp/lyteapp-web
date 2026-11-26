@@ -60,7 +60,7 @@ export async function GET(req: Request) {
 
   const { data: orders } = await supa
     .from('orders')
-    .select('id,customer_name,customer_phone,payment_method,payment_proof_url,payment_status,payment_verified_by,total,status,created_at,delivery_type,order_number,cash_call_at,from_kiosk')
+    .select('id,customer_name,customer_phone,payment_method,payment_proof_url,payment_status,payment_verified_by,payment_split,payment_modified_by,payment_modified_at,total,status,created_at,delivery_type,order_number,cash_call_at,from_kiosk')
     .eq('store_id', storeId)
     .order('created_at', { ascending: false })
     .limit(500)
@@ -72,9 +72,74 @@ export async function GET(req: Request) {
   })
 }
 
+// The ways Caja can record a payment (the labels the Caja screens know)
+const PAY_METHODS = ['Efectivo USD', 'Efectivo Bs', 'Punto de Venta', 'Pago Móvil', 'Transferencia Bs', 'Zelle', 'USDT', 'Binance Pay']
+
+type PayLine = { method: string; amount: number }
+
+function parseSplit(raw: unknown): PayLine[] | null {
+  if (!Array.isArray(raw) || raw.length < 1 || raw.length > PAY_METHODS.length) return null
+  const byMethod = new Map<string, number>()
+  for (const l of raw) {
+    const method = (l as PayLine | null)?.method
+    const amount = Number((l as PayLine | null)?.amount)
+    if (typeof method !== 'string' || !PAY_METHODS.includes(method)) return null
+    if (!Number.isFinite(amount) || amount <= 0 || amount > 1_000_000) return null
+    byMethod.set(method, Math.round(((byMethod.get(method) ?? 0) + amount) * 100) / 100)
+  }
+  return [...byMethod.entries()].map(([method, amount]) => ({ method, amount }))
+}
+
+// Record how an order was paid (one method or several) from Caja. The first
+// time it is the cashier verifying the payment; changing one already
+// recorded is marked as modified, with who did it.
+async function setPayment(req: Request, body: Record<string, unknown>) {
+  const { orderId, storeId, verifiedBy } = body as { orderId?: string; storeId?: string; verifiedBy?: string }
+  if (!orderId || !storeId) return Response.json({ error: 'Missing fields' }, { status: 400 })
+  const split = parseSplit(body.split)
+  if (!split) return Response.json({ error: 'Pago inválido' }, { status: 400 })
+
+  const pin = req.headers.get('x-cajero-pin') ?? ''
+  const result = await verifyPin(storeId, pin)
+  if (result.denied) return Response.json({ error: 'PIN incorrecto' }, { status: 401 })
+  if (!result.store) return Response.json({ error: 'Tienda no encontrada' }, { status: 404 })
+
+  const { data: order } = await supa.from('orders')
+    .select('store_id, status, total, cash_call_at, delivery_type, payment_status, payment_verified_by, payment_split')
+    .eq('id', orderId).maybeSingle()
+  if (!order || order.store_id !== storeId) return Response.json({ error: 'Not found' }, { status: 404 })
+  if (order.status === 'cancelled') return Response.json({ error: 'El pedido está cancelado' }, { status: 400 })
+
+  const sum = Math.round(split.reduce((a, l) => a + l.amount, 0) * 100)
+  if (Math.abs(sum - Math.round(Number(order.total) * 100)) > 1) {
+    return Response.json({ error: `Las partes deben sumar $${Number(order.total).toFixed(2)}` }, { status: 400 })
+  }
+
+  const who = result.cajera?.name || verifiedBy || 'Caja'
+  const wasRecorded = !!order.payment_verified_by || !!order.payment_split
+  const update: Record<string, unknown> = {
+    payment_method: split.length > 1 ? 'Mixto' : split[0].method,
+    payment_split: split.length > 1 ? split : null,
+    payment_status: 'approved',
+  }
+  if (wasRecorded) {
+    update.payment_modified_by = who
+    update.payment_modified_at = new Date().toISOString()
+  } else {
+    update.payment_verified_by = who
+    // a counter / kiosk payment is confirmed the moment it is collected
+    if (order.cash_call_at && order.delivery_type !== 'delivery' && order.status === 'pending') update.status = 'confirmed'
+  }
+
+  const { error } = await supa.from('orders').update(update).eq('id', orderId)
+  if (error) return Response.json({ error: 'No se pudo guardar el pago' }, { status: 500 })
+  return Response.json({ ok: true, by: who, modified: wasRecorded, update })
+}
+
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null)
   if (!body) return Response.json({ error: 'Invalid body' }, { status: 400 })
+  if (body.action === 'set_payment') return setPayment(req, body)
 
   const { orderId, status, storeId, verifiedBy, source } = body
   if (!orderId || !status || !storeId) return Response.json({ error: 'Missing fields' }, { status: 400 })

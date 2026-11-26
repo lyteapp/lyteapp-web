@@ -12,6 +12,11 @@ type Order = {
   payment_proof_url: string | null
   payment_status: string | null
   payment_verified_by: string | null
+  /** a mixed payment: each part with its own method (amounts in the order's currency) */
+  payment_split?: { method: string; amount: number }[] | null
+  /** who last changed a payment already recorded */
+  payment_modified_by?: string | null
+  payment_modified_at?: string | null
   total: number
   status: string
   created_at: string
@@ -64,6 +69,19 @@ function getCurrencyInfo(method: string | null) {
   return METHOD_CURRENCY[method.toLowerCase().trim()] ?? { label: method, currency: 'USD', symbol: '$' }
 }
 
+// The ways a payment can be recorded (same list the server accepts)
+const PAY_METHODS = ['Efectivo USD', 'Efectivo Bs', 'Punto de Venta', 'Pago Móvil', 'Transferencia Bs', 'Zelle', 'USDT', 'Binance Pay']
+const plain = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+function canonicalMethod(m: string | null) {
+  const k = plain(m ?? '')
+  const hit = PAY_METHODS.find(p => plain(p) === k)
+  if (hit) return hit
+  if (k === 'transferencia') return 'Transferencia Bs'
+  if (k === 'punto_venta') return 'Punto de Venta'
+  if (k === 'binance') return 'Binance Pay'
+  return 'Efectivo USD'
+}
+
 function isToday(iso: string) {
   const d = new Date(iso), n = new Date()
   return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate()
@@ -91,6 +109,10 @@ export default function CajeroPage() {
   const [bcvRate, setBcvRate]       = useState<number>(0)
   const [lightbox, setLightbox]     = useState<string | null>(null)
   const [verifying, setVerifying]   = useState<Set<string>>(new Set())
+  // the payment editor (mixed payment / edit): the order and its parts
+  const [payEdit, setPayEdit]       = useState<{ order: Order; lines: { method: string; amount: string }[] } | null>(null)
+  const [paySaving, setPaySaving]   = useState(false)
+  const [payError, setPayError]     = useState('')
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   // the alert's sound: browsers only allow it after a touch on the page
   const audioRef = useRef<AudioContext | null>(null)
@@ -231,6 +253,68 @@ export default function CajeroPage() {
     } finally {
       setVerifying(prev => { const s = new Set(prev); s.delete(orderId); return s })
     }
+  }
+
+  // ── Mixed payment / edit a recorded payment ──
+  const num = (s: string) => Math.round(parseFloat(s.replace(',', '.')) * 100) / 100
+  const isRecorded = (o: Order) => !!o.payment_verified_by || !!o.payment_split?.length
+
+  function openPayEditor(order: Order, e: React.MouseEvent) {
+    e.stopPropagation()
+    const lines = order.payment_split?.length
+      ? order.payment_split.map(l => ({ method: l.method, amount: Number(l.amount).toFixed(2) }))
+      : [{ method: canonicalMethod(order.payment_method), amount: Number(order.total).toFixed(2) }]
+    setPayError('')
+    setPayEdit({ order, lines })
+  }
+
+  function setPayLine(i: number, patch: Partial<{ method: string; amount: string }>) {
+    setPayEdit(p => p && { ...p, lines: p.lines.map((l, j) => j === i ? { ...l, ...patch } : l) })
+  }
+
+  function addPayLine() {
+    setPayEdit(p => {
+      if (!p) return p
+      const left = Math.round((Number(p.order.total) - p.lines.reduce((a, l) => a + (num(l.amount) || 0), 0)) * 100) / 100
+      const used = new Set(p.lines.map(l => l.method))
+      const method = PAY_METHODS.find(m => !used.has(m)) ?? PAY_METHODS[0]
+      return { ...p, lines: [...p.lines, { method, amount: left > 0 ? left.toFixed(2) : '' }] }
+    })
+  }
+
+  async function savePayment() {
+    if (!payEdit) return
+    const { order, lines } = payEdit
+    const parts = lines.map(l => ({ method: l.method, amount: num(l.amount) }))
+    if (parts.some(l => !(l.amount > 0))) { setPayError('Escribe el monto de cada forma de pago'); return }
+    const total = Number(order.total)
+    if (Math.abs(parts.reduce((a, l) => a + l.amount, 0) - total) > 0.01) { setPayError(`Las partes deben sumar $${total.toFixed(2)}`); return }
+    const pin = sessionStorage.getItem(SESSION_KEY(storeId)) ?? ''
+    setPaySaving(true); setPayError('')
+    try {
+      const res = await fetch('/api/caja', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-cajero-pin': pin },
+        body: JSON.stringify({ action: 'set_payment', orderId: order.id, storeId, split: parts, verifiedBy: cajeraName }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) { setPayError(json.error ?? 'No se pudo guardar el pago'); return }
+      setOrders(prev => prev.map(o => o.id === order.id ? { ...o, ...json.update } : o))
+      setPayEdit(null)
+    } catch {
+      setPayError('Error de conexion. Intentalo de nuevo.')
+    } finally {
+      setPaySaving(false)
+    }
+  }
+
+  // one part of a payment, in its own currency
+  const lineAmount = (l: { method: string; amount: number }) => {
+    const i = getCurrencyInfo(l.method)
+    if (i.currency === 'VES') {
+      return bcvRate > 0 ? `Bs ${(l.amount * bcvRate).toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `$${l.amount.toFixed(2)}`
+    }
+    return `${i.symbol}${l.amount.toFixed(2)}`
   }
 
   // a kiosk call to charge on the point-of-sale terminal (not cash)
@@ -394,12 +478,19 @@ export default function CajeroPage() {
 
   const methodTotals = Object.values(
     todayOrders.reduce((acc, o) => {
-      const info = getCurrencyInfo(o.payment_method)
-      if (!acc[info.label]) acc[info.label] = { ...info, total: 0 }
-      acc[info.label].total += Number(o.total)
+      // a mixed payment counts each part under its own method
+      const parts = o.payment_split?.length ? o.payment_split : [{ method: o.payment_method ?? '', amount: Number(o.total) }]
+      for (const p of parts) {
+        const info = getCurrencyInfo(p.method || null)
+        if (!acc[info.label]) acc[info.label] = { ...info, total: 0 }
+        acc[info.label].total += Number(p.amount)
+      }
       return acc
     }, {} as Record<string, { label: string; currency: string; symbol: string; total: number }>)
   )
+
+  const payTotal = payEdit ? Number(payEdit.order.total) : 0
+  const payRemaining = payEdit ? Math.round((payTotal - payEdit.lines.reduce((a, l) => a + (num(l.amount) || 0), 0)) * 100) / 100 : 0
 
   return (
     <div className="cj-root" onContextMenu={e => e.preventDefault()} style={{ userSelect: 'none' }}>
@@ -563,6 +654,13 @@ export default function CajeroPage() {
                           </a>
                         )}
                       </div>
+                      {order.payment_split && order.payment_split.length > 0 && (
+                        <div className="cj-split">
+                          {order.payment_split.map(l => (
+                            <span key={l.method}>{l.method} · <strong>{lineAmount(l)}</strong></span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       {hasProof && (
@@ -574,21 +672,35 @@ export default function CajeroPage() {
                     </div>
                   </div>
                   <div className="cj-card-footer">
+                    {order.payment_modified_by && (
+                      <div className="cj-modified-badge">
+                        MODIFICADO POR {order.payment_modified_by}
+                        {order.payment_modified_at && (
+                          <span> · {new Date(order.payment_modified_at).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</span>
+                        )}
+                      </div>
+                    )}
                     {order.payment_verified_by ? (
-                      <div className="cj-verified-badge">
-                        <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
-                        </svg>
-                        Verificado por {order.payment_verified_by}
+                      <div className="cj-footer-row">
+                        <div className="cj-verified-badge">
+                          <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                          </svg>
+                          Verificado por {order.payment_verified_by}
+                        </div>
+                        <button className="cj-edit-btn" onClick={e => openPayEditor(order, e)}>Editar pago</button>
                       </div>
                     ) : (
-                      <button
-                        className="cj-verify-btn"
-                        disabled={verifying.has(order.id)}
-                        onClick={e => verifyPayment(order.id, e)}
-                      >
-                        {verifying.has(order.id) ? 'Verificando...' : 'Verificar pago'}
-                      </button>
+                      <div className="cj-footer-row">
+                        <button
+                          className="cj-verify-btn"
+                          disabled={verifying.has(order.id)}
+                          onClick={e => verifyPayment(order.id, e)}
+                        >
+                          {verifying.has(order.id) ? 'Verificando...' : 'Verificar pago'}
+                        </button>
+                        <button className="cj-mixed-btn" onClick={e => openPayEditor(order, e)}>Pago mixto</button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -597,6 +709,68 @@ export default function CajeroPage() {
           </div>
         )}
       </div>
+
+      {/* PAYMENT EDITOR: a mixed payment, or changing one already recorded */}
+      {payEdit && (
+        <div className="cj-modal" onClick={() => { if (!paySaving) setPayEdit(null) }}>
+          <div className="cj-modal-card" onClick={e => e.stopPropagation()}>
+            <div className="cj-modal-title">{isRecorded(payEdit.order) ? 'Editar pago' : 'Pago mixto'}</div>
+            <div className="cj-modal-sub">
+              {payEdit.order.customer_name} · Total <strong>${payTotal.toFixed(2)}</strong>
+              {bcvRate > 0 && ` (Bs ${(payTotal * bcvRate).toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`}
+            </div>
+
+            {payEdit.lines.map((l, i) => {
+              const amt = num(l.amount)
+              return (
+                <div className="cj-pay-line" key={i}>
+                  <select className="cj-pay-select" value={l.method} onChange={e => setPayLine(i, { method: e.target.value })}>
+                    {PAY_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                  <div className="cj-pay-amount-wrap">
+                    <span>$</span>
+                    <input
+                      className="cj-pay-input"
+                      inputMode="decimal"
+                      value={l.amount}
+                      onChange={e => setPayLine(i, { amount: e.target.value })}
+                      placeholder="0.00"
+                      autoComplete="off"
+                    />
+                  </div>
+                  {payEdit.lines.length > 1 && (
+                    <button className="cj-pay-del" aria-label="Quitar" onClick={() => setPayEdit(p => p && { ...p, lines: p.lines.filter((_, j) => j !== i) })}>×</button>
+                  )}
+                  {getCurrencyInfo(l.method).currency === 'VES' && bcvRate > 0 && amt > 0 && (
+                    <div className="cj-pay-hint">≈ Bs {(amt * bcvRate).toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                  )}
+                </div>
+              )
+            })}
+
+            {payEdit.lines.length < PAY_METHODS.length && (
+              <button className="cj-pay-add" onClick={addPayLine}>+ Agregar forma de pago</button>
+            )}
+
+            <div className={`cj-pay-remaining ${Math.abs(payRemaining) < 0.01 ? 'ok' : 'off'}`}>
+              {Math.abs(payRemaining) < 0.01
+                ? 'La suma coincide con el total'
+                : payRemaining > 0 ? `Faltan $${payRemaining.toFixed(2)}` : `Te pasas por $${Math.abs(payRemaining).toFixed(2)}`}
+            </div>
+            {isRecorded(payEdit.order) && (
+              <div className="cj-modal-note">Quedará marcado como MODIFICADO POR {cajeraName || 'Caja'}.</div>
+            )}
+            {payError && <div className="cj-pin-error">{payError}</div>}
+
+            <div className="cj-modal-actions">
+              <button className="cj-modal-cancel" disabled={paySaving} onClick={() => setPayEdit(null)}>Cancelar</button>
+              <button className="cj-modal-save" disabled={paySaving || Math.abs(payRemaining) >= 0.01} onClick={savePayment}>
+                {paySaving ? 'Guardando...' : 'Guardar pago'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* LIGHTBOX */}
       {lightbox && (

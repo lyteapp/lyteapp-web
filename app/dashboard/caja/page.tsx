@@ -14,6 +14,8 @@ type Order = {
   payment_method: string | null
   payment_proof_url: string | null
   payment_verified_by: string | null
+  payment_split?: { method: string; amount: number }[] | null
+  payment_modified_by?: string | null
   total: number
   status: string
   created_at: string
@@ -164,7 +166,7 @@ export default function CajaPage() {
     const since = new Date(); since.setDate(since.getDate() - 90)
     const { data } = await supabase
       .from('orders')
-      .select('id,customer_name,customer_phone,payment_method,payment_proof_url,payment_verified_by,total,status,created_at')
+      .select('id,customer_name,customer_phone,payment_method,payment_proof_url,payment_verified_by,payment_split,payment_modified_by,total,status,created_at')
       .eq('store_id', sid)
       .gte('created_at', since.toISOString())
       .order('created_at', { ascending: false })
@@ -257,9 +259,13 @@ export default function CajaPage() {
   // Per-method totals
   const methodTotals = Object.values(
     filteredOrders.reduce((acc, o) => {
-      const info = getCurrencyInfo(o.payment_method)
-      if (!acc[info.label]) acc[info.label] = { ...info, total: 0 }
-      acc[info.label].total += Number(o.total)
+      // a mixed payment counts each part under its own method
+      const parts = o.payment_split?.length ? o.payment_split : [{ method: o.payment_method ?? '', amount: Number(o.total) }]
+      for (const p of parts) {
+        const info = getCurrencyInfo(p.method || null)
+        if (!acc[info.label]) acc[info.label] = { ...info, total: 0 }
+        acc[info.label].total += Number(p.amount)
+      }
       return acc
     }, {} as Record<string, { label: string; currency: string; symbol: string; total: number }>)
   )
@@ -355,8 +361,16 @@ export default function CajaPage() {
                     <div className="cx-pay-info">
                       <div className="cx-pay-name">{order.customer_name}</div>
                       <span className="cx-method-chip">{info.label}</span>
+                      {order.payment_split && order.payment_split.length > 0 && (
+                        <span className="cx-pay-split">
+                          {order.payment_split.map(l => `${l.method} $${Number(l.amount).toFixed(2)}`).join(' · ')}
+                        </span>
+                      )}
                       {order.payment_verified_by && (
                         <span className="cx-pay-verified">Verificado por {order.payment_verified_by}</span>
+                      )}
+                      {order.payment_modified_by && (
+                        <span className="cx-pay-modified">MODIFICADO POR {order.payment_modified_by}</span>
                       )}
                     </div>
                     <div className="cx-pay-right">

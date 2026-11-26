@@ -111,7 +111,7 @@ export async function POST(req: Request) {
     return Response.json({ ok: true }, { headers: NO_STORE })
   } catch (e) {
     const msg = e instanceof BncError ? e.message : 'No se pudo conectar con el banco'
-    return Response.json({ error: `BNC respondió: ${msg}` }, { status: 502, headers: NO_STORE })
+    return Response.json({ error: e instanceof BncError && e.code === 'CFG' ? msg : `BNC respondió: ${msg}` }, { status: 502, headers: NO_STORE })
   }
 }
 

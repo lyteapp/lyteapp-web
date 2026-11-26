@@ -38,11 +38,15 @@ export function bncHash(text: string): string {
   return createHash('sha256').update(text.trim(), 'utf8').digest('hex')
 }
 
-// Only the quality (test) server is published. A production URL, if BNC
-// gives a different one, goes in BNC_PRODUCTION_URL.
+// Only the quality (test) server is published, and it simulates payments. The
+// production URL BNC gives goes in BNC_PRODUCTION_URL; "production" never
+// falls back to the test server (it would mark orders paid with no money moved).
 const QA_URL = process.env.BNC_SANDBOX_URL || 'https://servicios.bncenlinea.com:16500/api'
 function baseUrl(environment: string) {
-  return environment === 'production' ? (process.env.BNC_PRODUCTION_URL || QA_URL).replace(/\/$/, '') : QA_URL
+  if (environment !== 'production') return QA_URL
+  const prod = process.env.BNC_PRODUCTION_URL?.trim()
+  if (!prod) throw new BncError('Falta la dirección del servidor de producción de BNC. Pídesela al banco y configúrala; mientras tanto usa el ambiente de pruebas.', 'CFG')
+  return prod.replace(/\/$/, '')
 }
 
 export type BncCreds = {

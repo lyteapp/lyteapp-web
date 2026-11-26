@@ -16,6 +16,7 @@ type Order = {
   payment_verified_by: string | null
   payment_split?: { method: string; amount: number }[] | null
   payment_modified_by?: string | null
+  payment_modified_at?: string | null
   payment_note?: string | null
   payment_note_by?: string | null
   total: number
@@ -168,7 +169,7 @@ export default function CajaPage() {
     const since = new Date(); since.setDate(since.getDate() - 90)
     const { data } = await supabase
       .from('orders')
-      .select('id,customer_name,customer_phone,payment_method,payment_proof_url,payment_verified_by,payment_split,payment_modified_by,payment_note,payment_note_by,total,status,created_at')
+      .select('id,customer_name,customer_phone,payment_method,payment_proof_url,payment_verified_by,payment_split,payment_modified_by,payment_modified_at,payment_note,payment_note_by,total,status,created_at')
       .eq('store_id', sid)
       .gte('created_at', since.toISOString())
       .order('created_at', { ascending: false })
@@ -356,6 +357,14 @@ export default function CajaPage() {
                   : `${info.symbol}${amount.toFixed(2)}`
                 const orderNum = filteredOrders.length - idx
                 const hasProof = !!order.payment_proof_url
+                // what the payment was modified to: each part in its own currency
+                const parts = order.payment_split?.length ? order.payment_split : [{ method: order.payment_method ?? '', amount }]
+                const partText = (p: { method: string; amount: number }) => {
+                  const pi = getCurrencyInfo(p.method || null)
+                  const usd = `$${Number(p.amount).toFixed(2)}`
+                  if (pi.currency === 'VES' && bcvRate > 0) return `${pi.label} Bs ${(Number(p.amount) * bcvRate).toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${usd})`
+                  return `${pi.label} ${pi.symbol}${Number(p.amount).toFixed(2)}`
+                }
 
                 return (
                   <div key={order.id} className={`cx-pay-row${hasProof ? ' cx-pay-row--proof' : ''}`} onClick={() => hasProof && setLightbox(order.payment_proof_url!)}>
@@ -363,7 +372,7 @@ export default function CajaPage() {
                     <div className="cx-pay-info">
                       <div className="cx-pay-name">{order.customer_name}</div>
                       <span className="cx-method-chip">{info.label}</span>
-                      {order.payment_split && order.payment_split.length > 0 && (
+                      {order.payment_split && order.payment_split.length > 0 && !order.payment_modified_by && (
                         <span className="cx-pay-split">
                           {order.payment_split.map(l => `${l.method} $${Number(l.amount).toFixed(2)}`).join(' · ')}
                         </span>
@@ -373,6 +382,14 @@ export default function CajaPage() {
                       )}
                       {order.payment_modified_by && (
                         <span className="cx-pay-modified">MODIFICADO POR {order.payment_modified_by}</span>
+                      )}
+                      {order.payment_modified_by && (
+                        <div className="cx-pay-modified-box">
+                          <b>Modificado a:</b> {parts.map(partText).join(' · ')}
+                          {order.payment_modified_at && (
+                            <span> · {new Date(order.payment_modified_at).toLocaleString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                          )}
+                        </div>
                       )}
                       {order.payment_note && (
                         <span className="cx-pay-note">Nota: {order.payment_note}{order.payment_note_by ? ` — ${order.payment_note_by}` : ''}</span>

@@ -549,6 +549,11 @@
 }
 .cx-pay-split { font-size: 11px; color: #64748B; }
 .cx-pay-note { font-size: 11px; color: #475569; font-style: italic; overflow-wrap: anywhere; }
+.cx-pay-modified-box {
+  flex-basis: 100%; padding: 6px 10px; border-radius: 8px; border-left: 3px solid #F59E0B;
+  background: #FFFBEB; color: #78350F; font-size: 12px; line-height: 1.45; overflow-wrap: anywhere;
+}
+.cx-pay-modified-box span { color: #A16207; }
 .cx-pay-modified {
   font-size: 10px; font-weight: 800; letter-spacing: 0.04em;
   color: #92400E; background: #FEF3C7; padding: 2px 7px; border-radius: 6px; white-space: nowrap;

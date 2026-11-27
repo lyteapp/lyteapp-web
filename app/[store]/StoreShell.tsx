@@ -730,6 +730,9 @@ type Store = {
   description: string | null; whatsapp: string | null; instagram: string | null
   payment_methods: unknown; template: string | null
   store_currency?: string | null
+  // where the store is: the delivery map opens here
+  store_lat?: number | null
+  store_lng?: number | null
   brand_color?: string | null
   template_config?: TemplateConfig | null
   checkout_settings?: {
@@ -4766,6 +4769,21 @@ export default function StoreShell({ store, products, categories = [], initialBc
   }
   const submitDisabled = submitting || cartItems.length === 0 || zoneProblem !== null
 
+  // Where the delivery map opens: the store's own spot, else the middle of its
+  // delivery zones. The customer's own point only when it is a usable one (not
+  // one already outside every zone, which would drop them far from the store).
+  const mapStart = store.store_lat != null && store.store_lng != null
+    ? { lat: Number(store.store_lat), lng: Number(store.store_lng) }
+    : deliveryZones.length > 0
+      ? {
+          lat: deliveryZones.reduce((a, z) => a + Number(z.center_lat), 0) / deliveryZones.length,
+          lng: deliveryZones.reduce((a, z) => a + Number(z.center_lng), 0) / deliveryZones.length,
+        }
+      : { lat: 10.4806, lng: -66.9036 }
+  const mapFrom = customerLat !== null && customerLng !== null && !(zoneRule && matchedZone === null)
+    ? { lat: customerLat, lng: customerLng }
+    : mapStart
+
   if (view === 'checkout') return (
     <>
     {installed && <div className="sf-statusbar-strip" />}
@@ -4774,8 +4792,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
       {renderCheckoutTransition()}
       {showMapPicker && mapboxToken && (
         <LocationMapPicker
-          initialLat={customerLat ?? 10.4806}
-          initialLng={customerLng ?? -66.9036}
+          initialLat={mapFrom.lat}
+          initialLng={mapFrom.lng}
           mapboxToken={mapboxToken}
           onConfirm={(lat, lng) => {
             setCustomerLat(lat)

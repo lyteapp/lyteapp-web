@@ -827,6 +827,18 @@ function buildBlockSizeCSS(blocks: ContentBlock[] | undefined, device: 'tablet' 
   return parts.length ? `@media (min-width:${minWidthPx}px){${parts.join('')}}` : ''
 }
 
+// Instagram, Facebook, TikTok... open links in their own browser, which often
+// refuses the GPS with no way for the customer to allow it
+function inAppBrowserName(): string | null {
+  if (typeof navigator === 'undefined') return null
+  const ua = navigator.userAgent
+  if (/Instagram/i.test(ua)) return 'Instagram'
+  if (/FBAN|FBAV|FB_IAB/i.test(ua)) return 'Facebook'
+  if (/TikTok|musical_ly|BytedanceWebview/i.test(ua)) return 'TikTok'
+  if (/Snapchat/i.test(ua)) return 'Snapchat'
+  return null
+}
+
 function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371000
   const dLat = (lat2 - lat1) * Math.PI / 180
@@ -1329,6 +1341,8 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [deliveryTrackId, setDeliveryTrackId] = useState('')
   const [pickupTrackId, setPickupTrackId]     = useState('')
   const [locationState, setLocationState] = useState<'idle' | 'requesting' | 'granted' | 'denied'>('idle')
+  // why sharing the location didn't work (shown while the state is back to idle)
+  const [locationNote, setLocationNote] = useState('')
   const [showMapPicker, setShowMapPicker] = useState(false)
   const [customerLat, setCustomerLat] = useState<number | null>(null)
   const [customerLng, setCustomerLng] = useState<number | null>(null)
@@ -3388,20 +3402,58 @@ export default function StoreShell({ store, products, categories = [], initialBc
     })
   }
 
+  // What to tell the customer when sharing the location didn't work
+  function locationMessage(): string {
+    if (locationState !== 'denied') return locationNote
+    const app = inAppBrowserName()
+    const orMap = mapboxToken ? ', o márcala en el mapa' : ''
+    return app
+      ? `${app} no deja compartir la ubicación. Abre esta tienda en Chrome o Safari (menú ⋯ → "Abrir en el navegador")${orMap}.`
+      : `La ubicación está bloqueada. Toca el candado junto a la dirección del sitio (o ve a los ajustes del teléfono → Ubicación), permite el acceso y vuelve a intentar${orMap}.`
+  }
+
   function requestLocation() {
-    if (!navigator.geolocation) return
+    setLocationNote('')
+    const orMap = mapboxToken ? ', o márcala en el mapa' : ''
+    if (!navigator.geolocation) {
+      setLocationState('idle')
+      const app = inAppBrowserName()
+      setLocationNote(app
+        ? `${app} no deja compartir la ubicación desde su navegador. Abre esta tienda en Chrome o Safari (menú ⋯ → "Abrir en el navegador")${orMap}.`
+        : `Tu navegador no permite compartir la ubicación. Prueba con otro navegador${orMap}.`)
+      return
+    }
     setLocationState('requesting')
+    const granted = (pos: GeolocationPosition) => {
+      setCustomerLat(pos.coords.latitude)
+      setCustomerLng(pos.coords.longitude)
+      setLocationState('granted')
+    }
+    const failed = (err: GeolocationPositionError) => {
+      // code 1 = permission denied; 2 = unavailable; 3 = timeout
+      if (err.code === 1) { setLocationState('denied'); return }
+      setLocationState('idle')
+      setLocationNote(err.code === 3
+        ? `Tu dispositivo tardó demasiado en dar la ubicación. Activa el GPS y vuelve a intentar${orMap}.`
+        : `No pudimos detectar tu ubicación. Revisa que el GPS esté encendido y vuelve a intentar${orMap}.`)
+    }
     navigator.geolocation.getCurrentPosition(
-      pos => {
-        setCustomerLat(pos.coords.latitude)
-        setCustomerLng(pos.coords.longitude)
-        setLocationState('granted')
-      },
+      granted,
       (err) => {
-        // code 1 = PERMISSION_DENIED; 2/3 = unavailable/timeout → allow retry
-        setLocationState(err.code === 1 ? 'denied' : 'idle')
+        if (err.code === 1) { failed(err); return }
+        // precise GPS didn't answer in time (a laptop, indoors): settle for an
+        // approximate fix, but only one good enough to place the customer in a zone
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            if (pos.coords.accuracy <= 1000) { granted(pos); return }
+            setLocationState('idle')
+            setLocationNote(`Tu ubicación salió muy aproximada para confirmar tu zona. Activa el GPS y vuelve a intentar${orMap}.`)
+          },
+          failed,
+          { enableHighAccuracy: false, timeout: 15000, maximumAge: 120000 },
+        )
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 },
     )
   }
 
@@ -4286,6 +4338,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   ) : (
                     <div className="sf-splash-cedula-hint found">Ubicacion compartida</div>
                   )}
+                  {locationState !== 'granted' && locationMessage() && (
+                    <div className="sf-splash-cedula-hint error">{locationMessage()}</div>
+                  )}
                   <input
                     className="sf-splash-cedula sf-splash-ns-input" type="text" placeholder="Tu direccion" style={{ marginTop: 12 }}
                     value={customerAddress} onChange={e => { setSplashError(''); setCustomerAddress(e.target.value) }}
@@ -4427,6 +4482,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
                       </svg>
                       {locationState === 'requesting' ? 'Obteniendo ubicacion...' : 'Compartir mi ubicacion'}
                     </button>
+                  )}
+                  {locationState !== 'granted' && locationMessage() && (
+                    <div className="sf-splash-cedula-hint error">{locationMessage()}</div>
                   )}
                   {locationState === 'granted' && (
                     <>
@@ -5097,6 +5155,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                       setCustomerLng(null)
                       setCustomerAddress('')
                       setLocationState('idle')
+                      setLocationNote('')
                       setShowSavePrompt(false)
                       setNewLocLabel('')
                     }}
@@ -5116,6 +5175,9 @@ export default function StoreShell({ store, products, categories = [], initialBc
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {locationState === 'idle' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {locationMessage() && (
+                      <div role="status" style={{ background: '#FFF7ED', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#92400E' }}>{locationMessage()}</div>
+                    )}
                     <button type="button" onClick={requestLocation} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: coAccent, color: 'white', border: 'none', borderRadius: 10, padding: '11px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, width: '100%' }}>
                       <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15">
                         <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
@@ -5155,7 +5217,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
                       <svg viewBox="0 0 20 20" fill="#F59E0B" width="14" height="14" style={{ flexShrink: 0 }}>
                         <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
                       </svg>
-                      <span>Ubicacion bloqueada. Ve a Configuracion &gt; Privacidad &gt; Ubicacion y activa el permiso, luego intenta de nuevo.</span>
+                      <span>{locationMessage()}</span>
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button type="button" onClick={requestLocation} style={{ background: 'none', border: '1px solid #F59E0B', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, color: '#92400E', cursor: 'pointer' }}>

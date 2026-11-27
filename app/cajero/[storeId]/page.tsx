@@ -31,6 +31,33 @@ type Order = {
   from_kiosk?: boolean
 }
 
+type SelectedOptions = {
+  variables?: Record<string, string[] | string>
+  color?: string
+  additionals?: { name: string; price: number }[]
+  notes?: string
+}
+type OrderItem = { product_name: string; quantity: number; subtotal: number; selected_options?: SelectedOptions | null }
+
+// What the customer picked for one product (size, base, extras, notes…)
+function ItemOptions({ opts }: { opts?: SelectedOptions | null }) {
+  if (!opts) return null
+  const groups = Object.entries(opts.variables ?? {})
+    .map(([k, v]) => [k, (Array.isArray(v) ? v : [v]).filter(Boolean)] as const)
+    .filter(([, vals]) => vals.length > 0)
+  if (!groups.length && !opts.color && !opts.additionals?.length && !opts.notes) return null
+  return (
+    <div className="cj-item-opts">
+      {groups.map(([k, vals]) => <div key={k} className="cj-opt"><span className="cj-opt-k">{k}</span>{vals.join(' · ')}</div>)}
+      {opts.color && <div className="cj-opt"><span className="cj-opt-k">Color</span>{opts.color}</div>}
+      {!!opts.additionals?.length && (
+        <div className="cj-opt"><span className="cj-opt-k">Extras</span>{opts.additionals.map(a => `+ ${a.name}`).join(' · ')}</div>
+      )}
+      {opts.notes && <div className="cj-opt cj-opt-note">{opts.notes}</div>}
+    </div>
+  )
+}
+
 // A short two-note chime, made on the spot (no sound file)
 function chime(ctx: AudioContext) {
   const now = ctx.currentTime
@@ -120,6 +147,8 @@ export default function CajeroPage() {
   const [noteEdit, setNoteEdit]     = useState<{ order: Order; text: string } | null>(null)
   const [noteSaving, setNoteSaving] = useState(false)
   const [noteError, setNoteError]   = useState('')
+  // an order opened to see its products and what the customer chose
+  const [orderView, setOrderView]   = useState<{ order: Order; items: OrderItem[] | null; notes: string | null; deliveryType: string | null; error: string } | null>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   // the alert's sound: browsers only allow it after a touch on the page
   const audioRef = useRef<AudioContext | null>(null)
@@ -327,6 +356,23 @@ export default function CajeroPage() {
       setPayError('Error de conexion. Intentalo de nuevo.')
     } finally {
       setPaySaving(false)
+    }
+  }
+
+  async function openOrder(order: Order, e?: React.MouseEvent) {
+    e?.stopPropagation()
+    setOrderView({ order, items: null, notes: null, deliveryType: order.delivery_type, error: '' })
+    const pin = sessionStorage.getItem(SESSION_KEY(storeId)) ?? ''
+    const fail = (error: string) => setOrderView(v => (v && v.order.id === order.id ? { ...v, error } : v))
+    try {
+      const res = await fetch(`/api/caja?storeId=${storeId}&orderId=${order.id}`, { headers: { 'x-cajero-pin': pin } })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) { fail(json.error ?? 'No se pudo cargar el pedido'); return }
+      setOrderView(v => (v && v.order.id === order.id
+        ? { ...v, items: json.items ?? [], notes: json.customer_notes ?? null, deliveryType: json.delivery_type ?? v.deliveryType }
+        : v))
+    } catch {
+      fail('Error de conexion. Intentalo de nuevo.')
     }
   }
 
@@ -588,6 +634,7 @@ export default function CajeroPage() {
                 <div className="cj-cash-call-name">
                   {o.customer_name}{o.order_number != null ? <span> · #{o.order_number}</span> : null}
                 </div>
+                <button type="button" className="cj-view-link" onClick={() => openOrder(o)}>Ver pedido</button>
                 {isPos(o) ? (
                   <div className="cj-cash-call-sub">
                     Lleva el punto de venta al kiosko y cobra <strong>{bcvRate > 0
@@ -616,6 +663,7 @@ export default function CajeroPage() {
                 <div className="cj-pos-todo-name">
                   {o.customer_name}{o.order_number != null ? <span> · #{o.order_number}</span> : null}
                 </div>
+                <button type="button" className="cj-view-link" onClick={() => openOrder(o)}>Ver pedido</button>
                 <div className="cj-pos-todo-sub">
                   <strong>{bcvRate > 0
                     ? `Bs ${(Number(o.total) * bcvRate).toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -758,9 +806,12 @@ export default function CajeroPage() {
                         <button className="cj-mixed-btn" onClick={e => openPayEditor(order, e)}>Pago mixto</button>
                       </div>
                     )}
-                    <button className="cj-note-btn" onClick={e => openNoteEditor(order, e)}>
-                      {order.payment_note ? 'Editar nota' : '+ Agregar nota'}
-                    </button>
+                    <div className="cj-footer-links">
+                      <button className="cj-note-btn" onClick={e => openOrder(order, e)}>Ver pedido</button>
+                      <button className="cj-note-btn" onClick={e => openNoteEditor(order, e)}>
+                        {order.payment_note ? 'Editar nota' : '+ Agregar nota'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               )
@@ -827,6 +878,50 @@ export default function CajeroPage() {
               <button className="cj-modal-save" disabled={paySaving || Math.abs(payRemaining) >= 0.01} onClick={savePayment}>
                 {paySaving ? 'Guardando...' : 'Guardar pago'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* THE CUSTOMER'S ORDER: products and what they chose */}
+      {orderView && (
+        <div className="cj-modal" onClick={() => setOrderView(null)}>
+          <div className="cj-modal-card" onClick={e => e.stopPropagation()}>
+            <div className="cj-modal-title">
+              Pedido{orderView.order.order_number != null ? ` #${orderView.order.order_number}` : ''}
+            </div>
+            <div className="cj-modal-sub">
+              {orderView.order.customer_name}
+              {orderView.deliveryType === 'delivery' ? ' · Delivery' : orderView.deliveryType === 'pickup' ? ' · Retiro' : ''}
+              {' · '}<strong>${Number(orderView.order.total).toFixed(2)}</strong>
+            </div>
+
+            {orderView.error ? (
+              <div className="cj-pin-error">{orderView.error}</div>
+            ) : orderView.items === null ? (
+              <div className="cj-order-loading">Cargando pedido...</div>
+            ) : orderView.items.length === 0 ? (
+              <div className="cj-order-loading">Este pedido no tiene productos registrados.</div>
+            ) : (
+              <div className="cj-order-items">
+                {orderView.items.map((it, i) => (
+                  <div key={i} className="cj-order-item">
+                    <div className="cj-order-qty">{it.quantity}</div>
+                    <div className="cj-order-body">
+                      <div className="cj-order-name">{it.product_name}</div>
+                      <ItemOptions opts={it.selected_options} />
+                    </div>
+                    <div className="cj-order-price">${Number(it.subtotal).toFixed(2)}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {orderView.notes && (
+              <div className="cj-note" style={{ marginTop: 12 }}><span className="cj-note-k">Nota del cliente</span> {orderView.notes}</div>
+            )}
+            <div className="cj-modal-actions">
+              <button className="cj-modal-cancel" onClick={() => setOrderView(null)}>Cerrar</button>
             </div>
           </div>
         </div>

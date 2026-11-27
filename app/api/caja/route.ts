@@ -58,6 +58,16 @@ export async function GET(req: Request) {
   if (result.denied) return Response.json({ error: 'PIN incorrecto', requiresPin: true }, { status: 401 })
   if (!result.store) return Response.json({ error: 'Tienda no encontrada' }, { status: 404 })
 
+  // One order's products with what the customer picked for each (opened on demand)
+  const orderId = searchParams.get('orderId')
+  if (orderId) {
+    const { data: one } = await supa.from('orders').select('store_id, customer_notes, delivery_type').eq('id', orderId).maybeSingle()
+    if (!one || one.store_id !== storeId) return Response.json({ error: 'Pedido no encontrado' }, { status: 404 })
+    const { data: items } = await supa.from('order_items')
+      .select('product_name, quantity, subtotal, selected_options').eq('order_id', orderId)
+    return Response.json({ items: items ?? [], customer_notes: one.customer_notes, delivery_type: one.delivery_type })
+  }
+
   const { data: orders } = await supa
     .from('orders')
     .select('id,customer_name,customer_phone,payment_method,payment_proof_url,payment_status,payment_verified_by,payment_split,payment_modified_by,payment_modified_at,payment_note,payment_note_by,payment_note_at,total,status,created_at,delivery_type,order_number,cash_call_at,from_kiosk')

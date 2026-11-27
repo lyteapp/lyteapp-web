@@ -314,6 +314,30 @@
   margin-top: 8px; background: none; border: none; padding: 4px 0;
   font-family: inherit; font-size: 13px; font-weight: 600; color: #7C3AED; cursor: pointer;
 }
+.cj-footer-links { display: flex; gap: 18px; }
+.cj-view-link {
+  margin-top: 4px; background: none; border: none; padding: 2px 0;
+  font-family: inherit; font-size: 13px; font-weight: 700; color: inherit; text-decoration: underline; cursor: pointer; opacity: 0.8;
+}
+
+/* ── THE CUSTOMER'S ORDER ── */
+.cj-order-loading { font-size: 13px; color: #64748B; padding: 8px 0; }
+.cj-order-items { display: flex; flex-direction: column; gap: 12px; }
+.cj-order-item { display: flex; align-items: flex-start; gap: 10px; }
+.cj-order-qty {
+  flex-shrink: 0; width: 26px; height: 26px; border-radius: 7px; background: #EDE9FE; color: #5B21B6;
+  font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+}
+.cj-order-body { flex: 1; min-width: 0; }
+.cj-order-name { font-size: 15px; font-weight: 700; color: #0F172A; line-height: 26px; }
+.cj-order-price { flex-shrink: 0; font-size: 14px; font-weight: 700; color: #475569; line-height: 26px; }
+.cj-item-opts { display: flex; flex-direction: column; gap: 3px; margin: 2px 0 2px; }
+.cj-opt { font-size: 14px; color: #1E293B; line-height: 1.4; }
+.cj-opt-k {
+  display: inline-block; margin-right: 6px; font-size: 10px; font-weight: 800;
+  letter-spacing: 0.05em; text-transform: uppercase; color: #94A3B8;
+}
+.cj-opt-note { font-style: italic; }
 .cj-note-input {
   width: 100%; box-sizing: border-box; padding: 10px 12px; resize: vertical;
   border: 1.5px solid #E2E8F0; border-radius: 10px; outline: none;

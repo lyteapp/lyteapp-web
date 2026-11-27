@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import { supabase } from '../../lib/supabase'
 import type { ActiveDelivery } from './page'
+import { fetchBestRoute, isOffRoute, routeProgress, type NavRoute, type NavProgress } from '../../lib/driverRoute'
+import { whatsappLink } from '../../lib/phone'
 
 const DriverMap = dynamic(() => import('./DriverMap'), { ssr: false, loading: () => (
   <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#E8EEF4' }}>
@@ -38,49 +40,13 @@ type InstallState = 'hidden' | 'ios' | 'android' | 'installed'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type BeforeInstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> }
 
-type NavStep = {
-  instruction: string
-  distanceM: number
-  maneuverPos: [number, number]
-  modifier: string
-}
-
-function haversineDistance([lat1, lon1]: [number, number], [lat2, lon2]: [number, number]): number {
-  const R = 6371000
-  const φ1 = lat1 * Math.PI / 180, φ2 = lat2 * Math.PI / 180
-  const Δφ = (lat2 - lat1) * Math.PI / 180
-  const Δλ = (lon2 - lon1) * Math.PI / 180
-  const a = Math.sin(Δφ/2)**2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2)**2
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
-
 function fmtDist(m: number): string {
   return m < 1000 ? `${Math.round(m / 10) * 10}m` : `${(m / 1000).toFixed(1)}km`
 }
 
-function buildInstruction(type: string, modifier: string, name: string): string {
-  const via = name ? ` en ${name}` : ''
-  if (type === 'depart')   return `Inicia la ruta${via}`
-  if (type === 'arrive')   return 'Llegaste al destino'
-  if (type === 'turn' || type === 'end of road') {
-    if (modifier === 'uturn')        return `Da vuelta en U${via}`
-    if (modifier === 'sharp left')   return `Gira fuerte a la izquierda${via}`
-    if (modifier === 'sharp right')  return `Gira fuerte a la derecha${via}`
-    if (modifier === 'left')         return `Gira a la izquierda${via}`
-    if (modifier === 'right')        return `Gira a la derecha${via}`
-    if (modifier === 'slight left')  return `Leve a la izquierda${via}`
-    if (modifier === 'slight right') return `Leve a la derecha${via}`
-    return `Continua${via}`
-  }
-  if (type === 'fork') {
-    if (modifier?.includes('left'))  return `Toma la izquierda en el cruce${via}`
-    if (modifier?.includes('right')) return `Toma la derecha en el cruce${via}`
-  }
-  if (type === 'merge')     return `Incorporese${via}`
-  if (type === 'on ramp')   return `Toma la rampa${via}`
-  if (type === 'off ramp')  return `Sal de la autopista${via}`
-  if (type === 'roundabout' || type === 'rotary') return `Toma la rotonda${via}`
-  return `Continua${via}`
+function fmtEta(s: number): string {
+  const min = Math.max(1, Math.round(s / 60))
+  return min < 60 ? `${min} min` : `${Math.floor(min / 60)} h ${min % 60} min`
 }
 
 function NavArrow({ modifier }: { modifier: string }) {
@@ -159,11 +125,11 @@ export default function DriverClient({
 
   // ── Navigation ────────────────────────────────────────────────────
   const [navMode, setNavMode]         = useState(false)
-  const [routeCoords, setRouteCoords] = useState<[number, number][]>([])
-  const [navSteps, setNavSteps]       = useState<NavStep[]>([])
-  const [navStepIdx, setNavStepIdx]   = useState(0)
+  const [navRoute, setNavRoute]       = useState<NavRoute | null>(null)
+  const [navProgress, setNavProgress] = useState<NavProgress | null>(null)
   const [navLoading, setNavLoading]   = useState(false)
-  const [totalDist, setTotalDist]     = useState(0)
+  const [navNote, setNavNote]         = useState('')
+  const [showContact, setShowContact] = useState(false)
   const [newDeliveryFlash, setNewDeliveryFlash] = useState(false)
   const [showProof, setShowProof] = useState(false)
   const [orders, setOrders] = useState<AvailableOrder[]>([])
@@ -179,6 +145,13 @@ export default function DriverClient({
   const prevDelivery        = useRef<ActiveDelivery | null>(initialDelivery)
   const autoPickedUpRef     = useRef<string | null>(null)
   const autoNavRef          = useRef<string | null>(null)
+  // following the driver along the route (read from GPS callbacks, so refs)
+  const navRouteRef         = useRef<NavRoute | null>(null)
+  const segHint             = useRef(0)
+  const offCount            = useRef(0)
+  const lastReroute         = useRef(0)
+  const gpsCourse            = useRef<{ heading: number; at: number } | null>(null)
+  const rerouteRef           = useRef<() => void>(() => {})
   const storeOrdersChannel  = useRef<ReturnType<typeof supabase.channel> | null>(null)
 
   // ── Compass ───────────────────────────────────────────────────────
@@ -246,6 +219,19 @@ export default function DriverClient({
     if (!precise && Date.now() - lastGoodFix.current < 30_000) return
     if (precise) lastGoodFix.current = Date.now()
     setDriverPos([lat, lng])
+    const route = navRouteRef.current
+    if (route) {
+      const pr = routeProgress(route, [lat, lng], segHint.current)
+      segHint.current = pr.segIdx
+      setNavProgress(pr)
+      // several fixes in a row off the road (not one bad reading): draw a new route
+      offCount.current = isOffRoute(pr.offRouteM, acc) && !pr.arrived ? offCount.current + 1 : 0
+      if (offCount.current >= 3 && Date.now() - lastReroute.current > 15_000) {
+        offCount.current = 0
+        lastReroute.current = Date.now()
+        rerouteRef.current()
+      }
+    }
     pendingFix.current = { lat, lng, acc }
     const wait = 2000 - (Date.now() - lastSentAt.current)
     if (wait <= 0) flushLocation()
@@ -288,6 +274,10 @@ export default function DriverClient({
       pos => {
         sendLocation(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy)
         setGpsStatus('active')
+        // the way the vehicle is really going: only while it moves (a still phone's heading is noise)
+        if (pos.coords.speed != null && pos.coords.speed > 2 && pos.coords.heading != null && !Number.isNaN(pos.coords.heading)) {
+          gpsCourse.current = { heading: pos.coords.heading, at: Date.now() }
+        }
         if (!compassActive && pos.coords.heading != null && !Number.isNaN(pos.coords.heading)) {
           setHeading(pos.coords.heading)
         }
@@ -630,49 +620,49 @@ export default function DriverClient({
   }
 
   // ── Navigation ────────────────────────────────────────────────────
-  async function startNavigation() {
+  // `reroute` = the driver left the road: the new line replaces the old one
+  // without leaving navigation or blanking the screen
+  async function startNavigation(reroute = false) {
     if (!driverPos || !delivery?.customer_lat || !delivery?.customer_lng) return
-    setNavLoading(true)
-    try {
-      const [dLat, dLng] = driverPos
-      const res = await fetch(
-        `https://router.project-osrm.org/route/v1/driving/${dLng},${dLat};${delivery.customer_lng},${delivery.customer_lat}?steps=true&overview=full&geometries=geojson`
-      )
-      const data = await res.json()
-      if (data.code !== 'Ok' || !data.routes?.length) throw new Error('no route')
-      const route = data.routes[0]
-      setRouteCoords(route.geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]))
-      setTotalDist(route.distance)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setNavSteps(route.legs[0].steps.map((s: any) => ({
-        instruction: buildInstruction(s.maneuver.type, s.maneuver.modifier ?? '', s.name ?? ''),
-        distanceM:   s.distance,
-        maneuverPos: [s.maneuver.location[1], s.maneuver.location[0]] as [number, number],
-        modifier:    s.maneuver.modifier ?? s.maneuver.type ?? 'straight',
-      })))
-      setNavStepIdx(0)
+    if (!reroute) setNavLoading(true)
+    setNavNote(reroute ? 'Recalculando ruta…' : '')
+    // the heading only counts when it is recent (the vehicle was moving a moment ago)
+    const course = gpsCourse.current && Date.now() - gpsCourse.current.at < 8000 ? gpsCourse.current.heading : null
+    const route = await fetchBestRoute({
+      from: driverPos,
+      to: [delivery.customer_lat, delivery.customer_lng],
+      bearing: course,
+      mapboxToken,
+    })
+    if (route) {
+      navRouteRef.current = route
+      segHint.current = 0
+      offCount.current = 0
+      setNavRoute(route)
+      setNavProgress(routeProgress(route, driverPos, 0))
       setNavMode(true)
-    } catch { /* fall back to static map */ }
+      setNavNote('')
+    } else if (reroute) {
+      setNavNote('No se pudo recalcular. Sigue la línea del mapa.')
+    } else {
+      setNavNote('No se pudo calcular la ruta. Revisa tu conexión e intenta de nuevo.')
+    }
     setNavLoading(false)
   }
+  rerouteRef.current = () => { startNavigation(true) }
 
   function stopNavigation() {
+    navRouteRef.current = null
+    segHint.current = 0
+    offCount.current = 0
     setNavMode(false)
-    setRouteCoords([])
-    setNavSteps([])
-    setNavStepIdx(0)
-    setTotalDist(0)
+    setNavRoute(null)
+    setNavProgress(null)
+    setNavNote('')
   }
 
-  useEffect(() => {
-    if (!navMode || !driverPos || navSteps.length === 0) return
-    const step = navSteps[navStepIdx]
-    if (!step || navStepIdx >= navSteps.length - 1) return
-    if (haversineDistance(driverPos, step.maneuverPos) < 40) setNavStepIdx(i => i + 1)
-  }, [driverPos, navMode, navSteps, navStepIdx])
-
   const isActive = gpsStatus === 'active'
-  const currentStep = navSteps[navStepIdx] ?? null
+  const currentStep = navProgress?.next ?? null
 
   return (
     <div className="dsp-root">
@@ -706,6 +696,62 @@ export default function DriverClient({
           </span>
         </button>
       </div>
+
+      {/* Contact the customer: call, or WhatsApp (with quick messages) */}
+      {showContact && delivery?.customer_phone && (() => {
+        const phone = delivery.customer_phone
+        const hi = `Hola ${delivery.customer_name}, soy ${driverName} de ${storeName}.`
+        const quick = [
+          { label: 'Ya voy en camino', text: `${hi} Ya voy en camino con tu pedido.` },
+          { label: 'Ya llegué', text: `${hi} Ya llegué con tu pedido, ¿puedes salir a recibirlo?` },
+          { label: 'No encuentro la dirección', text: `${hi} No encuentro la dirección, ¿me ayudas con una referencia?` },
+        ]
+        const chat = whatsappLink(phone)
+        return (
+          <div className="dsp-day-overlay" onClick={() => setShowContact(false)}>
+            <div className="dsp-day-sheet" onClick={e => e.stopPropagation()} role="dialog" aria-label="Contactar al cliente">
+              <div className="dsp-day-grip" />
+              <div className="dsp-day-head">
+                <div>
+                  <div className="dsp-day-title">{delivery.customer_name}</div>
+                  <div className="dsp-day-date">{phone}</div>
+                </div>
+                <button className="dsp-day-close" onClick={() => setShowContact(false)} aria-label="Cerrar">
+                  <svg viewBox="0 0 20 20" fill="currentColor"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" /></svg>
+                </button>
+              </div>
+              <div className="dsp-day-body">
+                <div className="dsp-contact-main">
+                  <a className="dsp-contact-btn call" href={`tel:${phone.replace(/[^\d+]/g, '')}`} onClick={() => setShowContact(false)}>
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.042 11.042 0 005.516 5.516l.773-1.548a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-1C7.82 18 2 8.18 2 3z" /></svg>
+                    Llamar
+                  </a>
+                  {chat ? (
+                    <a className="dsp-contact-btn wa" href={chat} target="_blank" rel="noopener noreferrer" onClick={() => setShowContact(false)}>
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>
+                      WhatsApp
+                    </a>
+                  ) : (
+                    <div className="dsp-contact-btn off">WhatsApp no disponible</div>
+                  )}
+                </div>
+                {chat ? (
+                  <>
+                    <div className="dsp-contact-lbl">Mensajes rápidos por WhatsApp</div>
+                    <div className="dsp-contact-quick">
+                      {quick.map(q => (
+                        <a key={q.label} href={whatsappLink(phone, q.text) ?? chat} target="_blank" rel="noopener noreferrer" className="dsp-contact-chip" onClick={() => setShowContact(false)}>{q.label}</a>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="dsp-contact-lbl">Este número no parece válido para WhatsApp. Puedes llamarlo.</div>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Today's sheet */}
       {showDay && (
@@ -822,7 +868,7 @@ export default function DriverClient({
                   customerName={delivery.customer_name}
                   driverLat={driverPos?.[0] ?? null}
                   driverLng={driverPos?.[1] ?? null}
-                  routeCoords={routeCoords}
+                  routeCoords={navProgress ? navProgress.ahead : navRoute?.coords}
                   followDriver={navMode}
                   heading={heading}
                   mapboxToken={mapboxToken}
@@ -840,11 +886,16 @@ export default function DriverClient({
               <div className="dsp-active-info">
                 {navMode && currentStep ? (
                   <div className="dsp-nav-instruction">
-                    <div className="dsp-nav-arrow"><NavArrow modifier={currentStep.modifier} /></div>
+                    <div className="dsp-nav-arrow"><NavArrow modifier={currentStep.step.modifier} /></div>
                     <div className="dsp-nav-text">
-                      <div className="dsp-nav-dist">{fmtDist(currentStep.distanceM)}</div>
-                      <div className="dsp-nav-instr">{currentStep.instruction}</div>
-                      {totalDist > 0 && <div className="dsp-nav-total">Total: {fmtDist(totalDist)}</div>}
+                      <div className="dsp-nav-dist">{fmtDist(currentStep.distM)}</div>
+                      <div className="dsp-nav-instr">{currentStep.step.instruction}</div>
+                      {navProgress && (
+                        <div className="dsp-nav-total">
+                          {navProgress.arrived ? 'Llegaste' : `Faltan ${fmtDist(navProgress.remainingM)} · ${fmtEta(navProgress.etaS)}`}
+                          {navNote ? ` · ${navNote}` : ''}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -916,17 +967,17 @@ export default function DriverClient({
                 {(delivery.customer_phone || (delivery.customer_lat && delivery.customer_lng)) && (
                   <div className="dsp-actions-row">
                     {delivery.customer_phone && (
-                      <a href={`tel:${delivery.customer_phone}`} className="dsp-btn-call">
+                      <button type="button" className="dsp-btn-call" onClick={() => setShowContact(true)}>
                         <svg viewBox="0 0 20 20" fill="currentColor" width="17" height="17">
                           <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.042 11.042 0 005.516 5.516l.773-1.548a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-1C7.82 18 2 8.18 2 3z"/>
                         </svg>
-                        Llamar
-                      </a>
+                        Contactar
+                      </button>
                     )}
                     {delivery.customer_lat && delivery.customer_lng && (
                       <button
                         className={navMode ? 'dsp-btn-nav-stop' : 'dsp-btn-nav'}
-                        onClick={navMode ? stopNavigation : startNavigation}
+                        onClick={navMode ? stopNavigation : () => startNavigation()}
                         disabled={navLoading}
                       >
                         {navLoading ? 'Calculando...' : navMode ? 'Parar ruta' : 'Como llegar'}
@@ -934,6 +985,7 @@ export default function DriverClient({
                     )}
                   </div>
                 )}
+                {!navMode && navNote && <div className="dsp-nav-note" role="status">{navNote}</div>}
                 {delivery.order_proof_url && (
                   <button className="dsp-btn-proof" onClick={() => setShowProof(true)}>
                     <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">

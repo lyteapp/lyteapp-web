@@ -1,16 +1,58 @@
 import { NextRequest, NextResponse, after } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+function metersBetween(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const R = 6371000
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+// A delivery order has to come from a point inside one of the store's delivery
+// zones (when it has any). If the check itself can't run, the order goes through:
+// a lookup problem must never stop a store from taking orders.
+async function zoneProblem(storeId: string, lat: unknown, lng: unknown): Promise<string | null> {
+  try {
+    if (!process.env.SUPABASE_SERVICE_KEY) return null
+    const svc = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } })
+    const [zonesRes, storeRes] = await Promise.all([
+      svc.from('delivery_zones').select('center_lat, center_lng, radius_m').eq('store_id', storeId),
+      svc.from('stores').select('checkout_settings').eq('id', storeId).maybeSingle(),
+    ])
+    if (zonesRes.error || storeRes.error) return null
+    const zones = zonesRes.data ?? []
+    const cs = (storeRes.data?.checkout_settings ?? {}) as { showLocationBox?: boolean }
+    if (!zones.length || cs.showLocationBox === false) return null
+    if (typeof lat !== 'number' || typeof lng !== 'number' || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return 'Marca tu ubicación en el mapa o comparte tu GPS para confirmar que estás dentro de una zona de entrega'
+    }
+    // (1 m of slack: the browser and the server round the distance differently)
+    const inside = zones.some(z => metersBetween(lat, lng, Number(z.center_lat), Number(z.center_lng)) <= Number(z.radius_m) + 1)
+    return inside ? null : 'Tu ubicación está fuera de las zonas de entrega. Elige una ubicación dentro de la cobertura para continuar'
+  } catch {
+    return null
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const {
       id, store_id, customer_name, customer_phone, customer_notes,
       payment_method, total, delivery_type, service_type, payment_proof_url, items, kiosk_cash, from_kiosk,
+      customer_lat, customer_lng, zone_check,
     } = body
 
     if (!id || !store_id || !customer_name || !customer_phone) {
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
+    }
+
+    // (only enforced for clients that say they ran the zone check, so a page
+    // opened before this rule shipped doesn't get its orders refused)
+    if (delivery_type === 'delivery' && zone_check === true) {
+      const problem = await zoneProblem(store_id, customer_lat, customer_lng)
+      if (problem) return NextResponse.json({ error: problem }, { status: 422 })
     }
 
     // Use anon key — same RLS policy that lets the browser insert orders

@@ -1330,7 +1330,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
   const [customerLat, setCustomerLat] = useState<number | null>(null)
   const [customerLng, setCustomerLng] = useState<number | null>(null)
   const [deliveryZones] = useState<DeliveryZone[]>(initialDeliveryZones)
-  const [matchedZone, setMatchedZone] = useState<DeliveryZone | null>(null)
+  // Worked out on every render rather than set from an effect, so it can never lag behind the location
+  const matchedZone: DeliveryZone | null = customerLat !== null && customerLng !== null
+    ? (deliveryZones
+        .filter(z => haversineMeters(customerLat, customerLng, z.center_lat, z.center_lng) <= z.radius_m)
+        .sort((a, b) => a.radius_m - b.radius_m)[0] ?? null)
+    : null
   const [customerAddress, setCustomerAddress] = useState('')
   const [customerCity, setCustomerCity] = useState('')
   const [customerState, setCustomerState] = useState('')
@@ -1898,20 +1903,6 @@ export default function StoreShell({ store, products, categories = [], initialBc
     try { localStorage.removeItem(`cart-${store.slug}`) } catch {}
   }
 
-
-
-  useEffect(() => {
-    if (customerLat === null || customerLng === null || deliveryZones.length === 0) {
-      setMatchedZone(null)
-      return
-    }
-    const hits = deliveryZones.filter(z =>
-      haversineMeters(customerLat, customerLng, z.center_lat, z.center_lng) <= z.radius_m
-    )
-    hits.sort((a, b) => a.radius_m - b.radius_m)
-    setMatchedZone(hits[0] ?? null)
-  }, [customerLat, customerLng, deliveryZones])
-
   // ── Scroll-spy: highlight whichever category pill matches the section in view ──
   useEffect(() => {
     if (!catalogMounted) return
@@ -2041,6 +2032,12 @@ export default function StoreShell({ store, products, categories = [], initialBc
     : 0
   const orderTotal  = cartTotal + deliveryFeeAmt
   const showLocForm = savedLocations.length === 0 || showNewLoc
+  // With delivery zones set, the delivery location has to be a point inside one of them
+  const zoneRule = deliveryType === 'delivery' && cs.showLocationBox !== false && deliveryZones.length > 0
+  const zoneProblem: string | null = !zoneRule ? null
+    : customerLat === null ? 'Marca tu ubicación en el mapa o comparte tu GPS para confirmar que estás dentro de una zona de entrega'
+    : matchedZone === null ? 'Tu ubicación está fuera de las zonas de entrega. Elige una ubicación dentro de la cobertura para continuar'
+    : null
 
   function getProdQty(productId: string): number {
     return Object.values(cart).filter(i => (i.productId ?? i.id) === productId).reduce((s, i) => s + i.quantity, 0)
@@ -3426,8 +3423,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     if (is('delivery')) {
       if (deliveryType === 'delivery' && cs.showLocationBox !== false && !customerLat && !customerAddress.trim())
         return 'Ingresa tu direccion o comparte tu ubicacion GPS para continuar'
-      if (deliveryType === 'delivery' && deliveryZones.length > 0 && customerLat !== null && matchedZone === null)
-        return 'Ubicacion desconocida, por favor contactenos para coordinar tu entrega'
+      if (zoneProblem) return zoneProblem
       if (deliveryType === 'national' && (!shippingName.trim() || !shippingCedula.trim() || !shippingPhone.trim() || !customerCity.trim() || !customerState.trim()))
         return 'Completa los datos del envio para continuar'
       if (deliveryType === 'national' && shippingAgencies.length > 0 && !selectedAgencyId) return 'Selecciona la agencia de envio'
@@ -3491,6 +3487,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
           id: newOrderId, store_id: store.id,
           customer_name: customerName.trim(), customer_phone: customerPhone.trim(),
           customer_notes: customerNotes.trim() || null,
+          customer_lat: customerLat, customer_lng: customerLng, zone_check: true,
           payment_method: paymentLabel || null, total: orderTotal,
           delivery_type: isPickup ? 'pickup' : isNational ? 'national' : 'delivery',
           service_type: askServiceType ? serviceType : null,
@@ -4767,7 +4764,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
     if (coIdx === 0) { setError(''); setView('catalog'); return }
     coGo(coSteps[coIdx - 1])
   }
-  const submitDisabled = submitting || cartItems.length === 0 || (deliveryType === 'delivery' && deliveryZones.length > 0 && customerLat !== null && matchedZone === null)
+  const submitDisabled = submitting || cartItems.length === 0 || zoneProblem !== null
 
   if (view === 'checkout') return (
     <>
@@ -5129,29 +5126,10 @@ export default function StoreShell({ store, products, categories = [], initialBc
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
                     </svg>
                     <span style={{ flex: 1 }}>Ubicacion seleccionada</span>
-                    {mapboxToken && (
-                      <button type="button" onClick={() => setShowMapPicker(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#059669', padding: 0 }}>
-                        Cambiar
-                      </button>
-                    )}
+                    <button type="button" onClick={() => (mapboxToken ? setShowMapPicker(true) : requestLocation())} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#059669', padding: 0 }}>
+                      {mapboxToken ? 'Cambiar' : 'Actualizar'}
+                    </button>
                   </div>
-                )}
-                {locationState === 'granted' && deliveryZones.length > 0 && (
-                  matchedZone ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: coAccentTint, borderRadius: 10, padding: '10px 14px', fontSize: 13, color: coAccent, fontWeight: 500 }}>
-                      <svg viewBox="0 0 20 20" fill={coAccent} width="14" height="14" style={{ flexShrink: 0 }}>
-                        <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                      </svg>
-                      <span>Zona: <strong>{matchedZone.name ?? 'Sin nombre'}</strong> · Envio {currencySymbol}{(matchedZone.fee ?? 0).toFixed(2)}</span>
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FFF7ED', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#92400E' }}>
-                      <svg viewBox="0 0 20 20" fill="#F59E0B" width="14" height="14" style={{ flexShrink: 0 }}>
-                        <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-                      </svg>
-                      Tu ubicacion esta fuera de las zonas de cobertura
-                    </div>
-                  )
                 )}
                 {locationState === 'denied' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8, background: '#FFF7ED', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#92400E' }}>
@@ -5223,6 +5201,27 @@ export default function StoreShell({ store, products, categories = [], initialBc
                   </div>
                 )}
               </div>
+            )}
+
+            {/* Zone check: always visible while the store has delivery zones, whichever way the location was set */}
+            {zoneRule && (
+              matchedZone ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: coAccentTint, borderRadius: 10, padding: '10px 14px', marginTop: 12, fontSize: 13, color: coAccent, fontWeight: 500 }}>
+                  <svg viewBox="0 0 20 20" fill={coAccent} width="14" height="14" style={{ flexShrink: 0 }}>
+                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                  </svg>
+                  <span>Zona: <strong>{matchedZone.name ?? 'Sin nombre'}</strong> · Envio {currencySymbol}{(matchedZone.fee ?? 0).toFixed(2)}</span>
+                </div>
+              ) : (
+                <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: 8, background: customerLat === null ? '#FFF7ED' : '#FEF2F2', borderRadius: 10, padding: '10px 14px', marginTop: 12, fontSize: 13, color: customerLat === null ? '#92400E' : '#B91C1C', fontWeight: 500 }}>
+                  <svg viewBox="0 0 20 20" fill={customerLat === null ? '#F59E0B' : '#EF4444'} width="14" height="14" style={{ flexShrink: 0 }}>
+                    <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                  </svg>
+                  <span>{customerLat === null
+                    ? 'Esta tienda entrega solo en zonas de cobertura. Comparte tu GPS o marca tu ubicación en el mapa para verificarla.'
+                    : 'Tu ubicación está fuera de las zonas de entrega. Elige otra ubicación dentro de la cobertura para poder confirmar el pedido.'}</span>
+                </div>
+              )
             )}
           </div>
         )}
@@ -5514,6 +5513,7 @@ export default function StoreShell({ store, products, categories = [], initialBc
         </div>
 
         {error && <div className="sf-co-error">{error}</div>}
+        {!error && zoneProblem && <div className="sf-co-error">{zoneProblem}</div>}
         {coSteps ? (
           <div className="sf-co-stepnav">
             <button type="button" className="sf-co-step-back" onClick={coBack}>
